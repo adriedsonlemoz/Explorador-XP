@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.2
+
+- Corrigida a compilação no GitHub Actions: adicionado o import de `androidx.activity.compose.setContent` em `MainActivity.kt`.
+- Removido código não utilizado da Activity.
+- Workflow atualizado para obter o `versionName` diretamente de `app/build.gradle.kts` ao nomear e publicar o APK.
+- Versão sincronizada para `versionCode 2`.
+
 ## 0.1.0-alpha.1
 
 - Início do projeto Android nativo em Kotlin + Jetpack Compose.

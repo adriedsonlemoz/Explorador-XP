@@ -28,7 +28,14 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Preparar APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Explorador-XP-0.1.0-alpha.1.apk
+        shell: bash
+        run: |
+          APP_VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          test -n "$APP_VERSION"
+          APK_NAME="Explorador-XP-${APP_VERSION}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$APK_NAME"
+          echo "APK_NAME=$APK_NAME" >> "$GITHUB_ENV"
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
 
       - name: Atualizar tag de desenvolvimento
         env:
@@ -45,4 +52,4 @@ jobs:
         run: |
           gh release view explorador-xp-dev >/dev/null 2>&1 || \
             gh release create explorador-xp-dev --title "Explorador XP - Desenvolvimento" --prerelease --notes "Build de desenvolvimento atual."
-          gh release upload explorador-xp-dev Explorador-XP-0.1.0-alpha.1.apk --clobber
+          gh release upload explorador-xp-dev "$APK_NAME" --clobber

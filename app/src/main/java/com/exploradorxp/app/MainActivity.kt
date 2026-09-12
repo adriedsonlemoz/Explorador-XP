@@ -1,7 +1,6 @@
 package com.exploradorxp.app
 
 import android.Manifest
-import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -15,6 +14,7 @@ import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -60,7 +60,6 @@ private fun ExplorerApp(
     viewModel: ExplorerViewModel = viewModel(),
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val activity = context as? Activity
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var accessGranted by remember { mutableStateOf(hasFileAccess(context)) }
 
