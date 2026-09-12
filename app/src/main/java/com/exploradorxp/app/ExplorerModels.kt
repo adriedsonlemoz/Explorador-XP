@@ -3,7 +3,7 @@ package com.exploradorxp.app
 import java.io.File
 
 enum class ViewMode { LIST, GRID }
-enum class ExplorerTab { FILES, RECENT, FAVORITES }
+enum class ExplorerTab { FILES, DOWNLOADS, FAVORITES }
 enum class SortMode { NAME, DATE, SIZE, TYPE }
 enum class ClipboardMode { COPY, CUT }
 
@@ -11,6 +11,7 @@ data class FileItem(
     val file: File,
     val iconRes: Int,
     val isFavorite: Boolean = false,
+    val createdAt: Long = 0L,
 ) {
     val name: String get() = file.name.ifBlank { file.absolutePath }
     val isDirectory: Boolean get() = file.isDirectory
@@ -46,6 +47,7 @@ data class ExplorerUiState(
     val clipboard: ClipboardState? = null,
     val canGoBack: Boolean = false,
     val canGoForward: Boolean = false,
+    val showHidden: Boolean = false,
     val storageInfo: StorageInfo = StorageInfo(),
 )
 

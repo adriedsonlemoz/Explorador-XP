@@ -7,32 +7,43 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.attribute.BasicFileAttributes
 
 class FileRepository(private val prefs: PreferencesStore) {
     val root: File = Environment.getExternalStorageDirectory()
+    val downloads: File = File(root, Environment.DIRECTORY_DOWNLOADS)
 
     suspend fun listDirectory(
         directory: File,
         query: String,
         sortMode: SortMode,
+        showHidden: Boolean,
     ): List<FileItem> = withContext(Dispatchers.IO) {
         val favorites = prefs.favorites()
         val filtered = directory.listFiles()
             .orEmpty()
             .asSequence()
+            .filter { showHidden || !isHidden(it) }
             .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
-            .map { FileItem(it, FileIconMapper.iconFor(it), it.absolutePath in favorites) }
+            .map { toFileItem(it, it.absolutePath in favorites) }
             .toList()
         sort(filtered, sortMode)
     }
 
-    suspend fun favoriteItems(query: String, sortMode: SortMode): List<FileItem> = withContext(Dispatchers.IO) {
+    suspend fun favoriteItems(
+        query: String,
+        sortMode: SortMode,
+        showHidden: Boolean,
+    ): List<FileItem> = withContext(Dispatchers.IO) {
         val favorites = prefs.favorites()
         val items = favorites.asSequence()
             .map(::File)
             .filter(File::exists)
+            .filter { showHidden || !isHidden(it) }
             .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
-            .map { FileItem(it, FileIconMapper.iconFor(it), true) }
+            .map { toFileItem(it, true) }
             .toList()
         sort(items, sortMode)
     }
@@ -43,10 +54,14 @@ class FileRepository(private val prefs: PreferencesStore) {
             .map(::File)
             .filter(File::exists)
             .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
-            .map { FileItem(it, FileIconMapper.iconFor(it), it.absolutePath in favoritePaths) }
+            .map { toFileItem(it, it.absolutePath in favoritePaths) }
             .toList()
-        if (sortMode == SortMode.DATE) items.sortedByDescending { it.lastModified } else items
+        if (sortMode == SortMode.DATE) items.sortedByDescending { it.createdAt } else items
     }
+
+    fun showHidden(): Boolean = prefs.showHidden()
+
+    fun setShowHidden(show: Boolean) = prefs.setShowHidden(show)
 
     suspend fun createFolder(parent: File, name: String): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
@@ -111,11 +126,32 @@ class FileRepository(private val prefs: PreferencesStore) {
         StorageInfo(totalBytes = stat.totalBytes, freeBytes = stat.availableBytes)
     }.getOrDefault(StorageInfo())
 
+    private fun toFileItem(file: File, favorite: Boolean): FileItem {
+        return FileItem(
+            file = file,
+            iconRes = FileIconMapper.iconFor(file),
+            isFavorite = favorite,
+            createdAt = creationTime(file),
+        )
+    }
+
+    private fun creationTime(file: File): Long {
+        return runCatching {
+            Files.readAttributes(
+                file.toPath(),
+                BasicFileAttributes::class.java,
+                LinkOption.NOFOLLOW_LINKS,
+            ).creationTime().toMillis()
+        }.getOrNull()?.takeIf { it > 0L } ?: file.lastModified()
+    }
+
+    private fun isHidden(file: File): Boolean = file.name.startsWith('.') || runCatching { file.isHidden }.getOrDefault(false)
+
     private fun sort(items: List<FileItem>, sortMode: SortMode): List<FileItem> {
         val directoryFirst = compareByDescending<FileItem> { it.isDirectory }
         val detailComparator = when (sortMode) {
             SortMode.NAME -> compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.name }
-            SortMode.DATE -> compareByDescending<FileItem> { it.lastModified }
+            SortMode.DATE -> compareByDescending<FileItem> { it.createdAt }
             SortMode.SIZE -> compareByDescending<FileItem> { it.size }
             SortMode.TYPE -> compareBy<FileItem> { it.extension }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
         }

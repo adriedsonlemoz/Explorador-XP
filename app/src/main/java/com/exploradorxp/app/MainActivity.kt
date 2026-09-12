@@ -17,8 +17,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -29,6 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hideSystemBars()
         setContent {
             MaterialTheme(
                 colorScheme = lightColorScheme(
@@ -48,8 +50,21 @@ class MainActivity : ComponentActivity() {
                     surface = XpSurface,
                 )
             ) {
-                ExplorerApp(modifier = Modifier.statusBarsPadding().navigationBarsPadding())
+                ExplorerApp(modifier = Modifier)
             }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideSystemBars()
+    }
+
+    private fun hideSystemBars() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
 }
@@ -102,7 +117,6 @@ private fun ExplorerApp(
         accessGranted = accessGranted,
         onRequestAccess = ::requestFileAccess,
         onBack = viewModel::goBack,
-        onForward = viewModel::goForward,
         onUp = viewModel::goUp,
         onRefresh = viewModel::refresh,
         onItemClick = viewModel::onItemClick,
@@ -111,6 +125,7 @@ private fun ExplorerApp(
         onToggleSearch = { viewModel.setSearchVisible(!state.searchVisible) },
         onQueryChange = viewModel::setQuery,
         onToggleView = viewModel::toggleViewMode,
+        onToggleHidden = viewModel::setShowHidden,
         onSortMode = viewModel::setSortMode,
         onTabChange = viewModel::setTab,
         onCopy = viewModel::copySelected,

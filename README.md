@@ -2,18 +2,18 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.2` (`versionCode 2`)  
+**Versão atual:** `0.1.0-alpha.3` (`versionCode 3`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
 
 ## O que já está implementado
 
-- Interface principal baseada no mockup aprovado: cabeçalho azul XP, barra de navegação, breadcrumb, cartão de armazenamento, lista/grade e navegação inferior.
+- Interface principal baseada no mockup aprovado: cabeçalho azul XP compacto, ações Voltar/Subir/Exibir integradas ao topo, barra de localização compacta, indicador de armazenamento, lista/grade e navegação inferior.
 - 147 ícones XP gerados para o projeto integrados diretamente em `res/drawable-nodpi`.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
-- Histórico Voltar / Avançar e ação Subir.
+- Histórico de navegação com Voltar, além da ação Subir.
 - Busca no diretório atual.
 - Modos Lista e Grade.
 - Ordenação por nome, data, tamanho e tipo.
@@ -23,10 +23,13 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Abrir arquivos pelo app compatível via `FileProvider`.
 - Compartilhar arquivos.
 - Favoritos persistentes.
-- Recentes persistentes.
+- Atalho fixo para a pasta Downloads do armazenamento.
+- Data e horário de criação visíveis nos itens; propriedades exibem criação e modificação.
+- Opção persistente para mostrar/ocultar arquivos ocultos.
 - Propriedades básicas de arquivos/pastas.
 - Fluxo para conceder `MANAGE_EXTERNAL_STORAGE` em Android 11+.
 - Launcher adaptativo baseado na pasta XP, evitando o ícone quadrado.
+- Modo tela inteira imersivo com barras do sistema ocultas.
 
 ## Estrutura
 

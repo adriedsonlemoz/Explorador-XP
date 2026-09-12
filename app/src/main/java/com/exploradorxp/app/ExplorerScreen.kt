@@ -71,7 +71,6 @@ fun ExplorerScreen(
     accessGranted: Boolean,
     onRequestAccess: () -> Unit,
     onBack: () -> Unit,
-    onForward: () -> Unit,
     onUp: () -> Unit,
     onRefresh: () -> Unit,
     onItemClick: (FileItem) -> Unit,
@@ -80,6 +79,7 @@ fun ExplorerScreen(
     onToggleSearch: () -> Unit,
     onQueryChange: (String) -> Unit,
     onToggleView: () -> Unit,
+    onToggleHidden: (Boolean) -> Unit,
     onSortMode: (SortMode) -> Unit,
     onTabChange: (ExplorerTab) -> Unit,
     onCopy: () -> Unit,
@@ -116,9 +116,14 @@ fun ExplorerScreen(
                 onShowMore = { showMore = it },
                 onNewFolder = { showNewFolder = true },
                 onRefresh = onRefresh,
-                canPaste = state.clipboard != null && state.tab == ExplorerTab.FILES,
+                canPaste = state.clipboard != null && state.tab != ExplorerTab.FAVORITES,
                 onPaste = onPaste,
                 onSort = { showSort = true },
+                canBack = state.canGoBack,
+                onBack = onBack,
+                onUp = onUp,
+                viewMode = state.viewMode,
+                onToggleView = onToggleView,
             )
         } else {
             SelectionHeader(
@@ -131,26 +136,19 @@ fun ExplorerScreen(
             )
         }
 
-        if (state.tab == ExplorerTab.FILES) {
-            NavigationToolbar(
-                canBack = state.canGoBack,
-                canForward = state.canGoForward,
-                onBack = onBack,
-                onForward = onForward,
-                onUp = onUp,
-                viewMode = state.viewMode,
-                onToggleView = onToggleView,
+        if (state.tab != ExplorerTab.FAVORITES) {
+            CompactLocationBar(
+                currentDir = state.currentDir,
+                showHidden = state.showHidden,
+                onShowHiddenChange = onToggleHidden,
+                onNavigateTo = onNavigateTo,
             )
-            BreadcrumbBar(currentDir = state.currentDir, onNavigateTo = onNavigateTo)
             StorageCard(state.storageInfo)
         } else {
-            SectionTitle(
-                title = if (state.tab == ExplorerTab.RECENT) "Recentes" else "Favoritos",
-                icon = if (state.tab == ExplorerTab.RECENT) R.drawable.recent else R.drawable.favorites,
-            )
+            SectionTitle(title = "Favoritos", icon = R.drawable.favorites)
         }
 
-        if (!accessGranted && state.tab == ExplorerTab.FILES) {
+        if (!accessGranted && state.tab != ExplorerTab.FAVORITES) {
             PermissionBanner(onRequestAccess)
         }
 
@@ -259,41 +257,69 @@ private fun XpHeader(
     canPaste: Boolean,
     onPaste: () -> Unit,
     onSort: () -> Unit,
+    canBack: Boolean,
+    onBack: () -> Unit,
+    onUp: () -> Unit,
+    viewMode: ViewMode,
+    onToggleView: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .background(Brush.verticalGradient(listOf(XpBlueLight, XpBlue, XpBlueDark)))
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
+        XpHeaderButton(
+            icon = R.drawable.back,
+            contentDescription = "Voltar",
+            enabled = canBack,
+            onClick = onBack,
+        )
+        Spacer(Modifier.width(4.dp))
+        XpHeaderButton(
+            icon = R.drawable.up,
+            contentDescription = "Subir",
+            enabled = true,
+            onClick = onUp,
+        )
+        Spacer(Modifier.width(4.dp))
+        XpHeaderButton(
+            icon = if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
+            contentDescription = "Exibir",
+            enabled = true,
+            onClick = onToggleView,
+        )
+        Spacer(Modifier.width(8.dp))
         androidx.compose.foundation.Image(
             painter = painterResource(R.drawable.folder),
             contentDescription = null,
-            modifier = Modifier.size(42.dp),
+            modifier = Modifier.size(30.dp),
             contentScale = ContentScale.Fit,
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(7.dp))
         if (searchVisible) {
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChange,
                 singleLine = true,
-                placeholder = { Text("Pesquisar arquivos") },
-                modifier = Modifier.weight(1f).height(52.dp),
+                placeholder = { Text("Pesquisar") },
+                modifier = Modifier.weight(1f).height(44.dp),
             )
         } else {
             Text(
                 text = "Explorador",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
+                fontSize = 21.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
         }
-        XpIconButton(icon = R.drawable.search, contentDescription = "Pesquisar", onClick = onToggleSearch)
+        XpIconButton(icon = R.drawable.search, contentDescription = "Pesquisar", onClick = onToggleSearch, iconSize = 25, buttonSize = 38)
         Box {
-            XpIconButton(icon = R.drawable.more, contentDescription = "Mais", onClick = { onShowMore(true) })
+            XpIconButton(icon = R.drawable.more, contentDescription = "Mais", onClick = { onShowMore(true) }, iconSize = 23, buttonSize = 38)
             DropdownMenu(expanded = showMore, onDismissRequest = { onShowMore(false) }) {
                 DropdownMenuItem(text = { Text("Nova pasta") }, onClick = {
                     onShowMore(false); onNewFolder()
@@ -311,6 +337,32 @@ private fun XpHeader(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun XpHeaderButton(
+    icon: Int,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0x332B8BF0))
+            .border(1.dp, Color(0x99B9DDFF), RoundedCornerShape(8.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+    ) {
+        androidx.compose.foundation.Image(
+            painter = painterResource(icon),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(27.dp),
+            contentScale = ContentScale.Fit,
+            alpha = if (enabled) 1f else .35f,
+        )
     }
 }
 
@@ -346,59 +398,12 @@ private fun SelectionHeader(
 }
 
 @Composable
-private fun NavigationToolbar(
-    canBack: Boolean,
-    canForward: Boolean,
-    onBack: () -> Unit,
-    onForward: () -> Unit,
-    onUp: () -> Unit,
-    viewMode: ViewMode,
-    onToggleView: () -> Unit,
+private fun CompactLocationBar(
+    currentDir: File,
+    showHidden: Boolean,
+    onShowHiddenChange: (Boolean) -> Unit,
+    onNavigateTo: (File) -> Unit,
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 8.dp)
-    ) {
-        XpToolbarButton(
-            icon = R.drawable.back,
-            label = "Voltar",
-            enabled = canBack,
-            onClick = onBack,
-            modifier = Modifier.weight(1f)
-        )
-        XpToolbarButton(
-            icon = R.drawable.up,
-            label = "Subir",
-            enabled = true,
-            onClick = onUp,
-            modifier = Modifier.weight(1f)
-        )
-        XpToolbarButton(
-            icon = if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
-            label = "Exibir",
-            enabled = true,
-            onClick = onToggleView,
-            modifier = Modifier.weight(1f)
-        )
-    }
-    // Avançar fica disponível pelo histórico, mas não ocupa espaço fixo no layout móvel.
-    if (canForward) {
-        TextButton(onClick = onForward, modifier = Modifier.padding(start = 8.dp)) {
-            androidx.compose.foundation.Image(
-                painter = painterResource(R.drawable.forward),
-                contentDescription = null,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(Modifier.width(6.dp))
-            Text("Avançar", color = XpBlueDark)
-        }
-    }
-}
-
-@Composable
-private fun BreadcrumbBar(currentDir: File, onNavigateTo: (File) -> Unit) {
     val root = android.os.Environment.getExternalStorageDirectory()
     val segments = remember(currentDir.absolutePath) {
         buildList<Pair<String, File>> {
@@ -413,74 +418,171 @@ private fun BreadcrumbBar(currentDir: File, onNavigateTo: (File) -> Unit) {
             }
         }
     }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
         modifier = Modifier
-            .padding(horizontal = 10.dp, vertical = 2.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color.White)
-            .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(R.drawable.folder),
-            contentDescription = null,
-            modifier = Modifier.size(28.dp)
-        )
-        Spacer(Modifier.width(8.dp))
-        segments.forEachIndexed { index, pair ->
-            TextButton(onClick = { onNavigateTo(pair.second) }) {
-                Text(pair.first, color = Color(0xFF132A55), fontWeight = FontWeight.SemiBold)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .weight(1f)
+                .height(44.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(Color.White)
+                .border(1.dp, XpBorder, RoundedCornerShape(9.dp))
+                .padding(horizontal = 9.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(R.drawable.drive_hdd),
+                    contentDescription = null,
+                    modifier = Modifier.size(25.dp)
+                )
+                Spacer(Modifier.width(7.dp))
+                segments.forEachIndexed { index, pair ->
+                    Text(
+                        text = pair.first,
+                        color = Color(0xFF132A55),
+                        fontWeight = if (index == segments.lastIndex) FontWeight.Bold else FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        modifier = Modifier.clickable { onNavigateTo(pair.second) }
+                    )
+                    if (index != segments.lastIndex) {
+                        Text("  ›  ", color = XpBlueDark, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                    }
+                }
             }
-            if (index != segments.lastIndex) {
-                Text("›", color = XpBlueDark, fontWeight = FontWeight.Bold, fontSize = 26.sp)
-            }
+            Text("▾", color = XpBlueDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .height(44.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(Color(0xFFE6F1FF))
+                .border(1.dp, XpBorder, RoundedCornerShape(9.dp))
+                .clickable { onShowHiddenChange(!showHidden) }
+                .padding(horizontal = 8.dp)
+        ) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(R.drawable.visible),
+                contentDescription = null,
+                modifier = Modifier.size(23.dp),
+            )
+            Spacer(Modifier.width(5.dp))
+            Text("Ocultos", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(6.dp))
+            HiddenToggleIndicator(checked = showHidden)
+        }
+    }
+}
+
+@Composable
+private fun HiddenToggleIndicator(checked: Boolean) {
+    Box(
+        modifier = Modifier
+            .width(36.dp)
+            .height(20.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (checked) Color(0xFF2E80D8) else Color(0xFF9CAFC7))
+            .padding(2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White)
+        )
     }
 }
 
 @Composable
 private fun StorageCard(info: StorageInfo) {
     val used = formatBytes(info.usedBytes)
+    val free = formatBytes(info.freeBytes)
     val total = formatBytes(info.totalBytes)
-    Column(
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(Color(0xFFE4F0FF))
-            .border(1.dp, XpBorder, RoundedCornerShape(12.dp))
-            .padding(12.dp)
+            .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 9.dp, vertical = 8.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.foundation.Image(
-                painter = painterResource(R.drawable.drive_hdd),
-                contentDescription = null,
-                modifier = Modifier.size(46.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp)
-                        .clip(RoundedCornerShape(7.dp))
-                        .background(Color(0xFFD8E2EF))
-                        .border(1.dp, Color(0xFF7891B2), RoundedCornerShape(7.dp))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(info.usedFraction)
-                            .fillMaxHeight()
-                            .background(Brush.verticalGradient(listOf(Color(0xFF61E65E), Color(0xFF13A92E))))
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                Text("$used de $total usados (${(info.usedFraction * 100).toInt()}%)", color = Color(0xFF183363), fontSize = 15.sp)
+        androidx.compose.foundation.Image(
+            painter = painterResource(R.drawable.drive_hdd),
+            contentDescription = "Armazenamento interno",
+            modifier = Modifier.size(38.dp),
+            contentScale = ContentScale.Fit,
+        )
+        Spacer(Modifier.width(9.dp))
+
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .height(30.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFF7891B2), RoundedCornerShape(8.dp))
+        ) {
+            Box(
+                contentAlignment = Alignment.CenterStart,
+                modifier = Modifier
+                    .weight(info.usedFraction.coerceAtLeast(0.001f))
+                    .fillMaxHeight()
+                    .background(Brush.verticalGradient(listOf(Color(0xFF61E65E), Color(0xFF13A92E))))
+            ) {
+                Text(
+                    text = "$used usados",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            }
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight((1f - info.usedFraction).coerceAtLeast(0.001f))
+                    .fillMaxHeight()
+                    .background(Color(0xFFD8E2EF))
+            ) {
+                Text(
+                    text = "Livre: $free",
+                    color = Color(0xFF183363),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 6.dp)
+                )
             }
         }
+
+        Spacer(Modifier.width(9.dp))
+        Text(
+            text = "Total: $total",
+            color = Color(0xFF183363),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+            maxLines = 1,
+        )
     }
 }
 
@@ -604,8 +706,8 @@ private fun FileListRow(
                 }
             }
             Text(
-                if (item.isDirectory) "${formatDate(item.lastModified)}  •  Pasta de arquivos"
-                else "${formatDate(item.lastModified)}  •  ${formatBytes(item.size)}",
+                if (item.isDirectory) "${formatDate(item.createdAt)}  •  ${formatTime(item.createdAt)}  •  Pasta de arquivos"
+                else "${formatDate(item.createdAt)}  •  ${formatTime(item.createdAt)}  •  ${formatBytes(item.size)}",
                 color = XpTextSecondary,
                 fontSize = 13.sp,
                 maxLines = 1,
@@ -670,6 +772,14 @@ private fun FileGrid(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    "${formatDate(item.createdAt)} • ${formatTime(item.createdAt)}",
+                    fontSize = 10.sp,
+                    color = XpTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -692,10 +802,10 @@ private fun BottomNavigation(selected: ExplorerTab, onTabChange: (ExplorerTab) -
             modifier = Modifier.weight(1f)
         )
         BottomNavItem(
-            label = "Recentes",
-            icon = R.drawable.recent,
-            selected = selected == ExplorerTab.RECENT,
-            onClick = { onTabChange(ExplorerTab.RECENT) },
+            label = "Downloads",
+            icon = R.drawable.folder_downloads,
+            selected = selected == ExplorerTab.DOWNLOADS,
+            onClick = { onTabChange(ExplorerTab.DOWNLOADS) },
             modifier = Modifier.weight(1f)
         )
         BottomNavItem(
@@ -748,11 +858,11 @@ private fun XpToolbarButton(
 }
 
 @Composable
-private fun XpIconButton(icon: Int, contentDescription: String, onClick: () -> Unit, iconSize: Int = 30) {
+private fun XpIconButton(icon: Int, contentDescription: String, onClick: () -> Unit, iconSize: Int = 30, buttonSize: Int = 44) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(44.dp)
+            .size(buttonSize.dp)
             .clip(RoundedCornerShape(9.dp))
             .clickable(onClick = onClick)
     ) {
@@ -781,7 +891,7 @@ private fun EmptyState(tab: ExplorerTab, query: String) {
         Text(
             when {
                 query.isNotBlank() -> "Nenhum resultado para “$query”."
-                tab == ExplorerTab.RECENT -> "Nenhum arquivo recente ainda."
+                tab == ExplorerTab.DOWNLOADS -> "A pasta Downloads está vazia."
                 tab == ExplorerTab.FAVORITES -> "Nenhum favorito ainda."
                 else -> "Esta pasta está vazia."
             },
@@ -834,6 +944,7 @@ private fun PropertiesDialog(file: File, onDismiss: () -> Unit) {
                 }
                 Text("Tipo: ${if (file.isDirectory) "Pasta" else file.extension.ifBlank { "Arquivo" }.uppercase()}")
                 if (file.isFile) Text("Tamanho: ${formatBytes(file.length())}")
+                Text("Criado: ${formatDateTime(fileCreationTime(file))}")
                 Text("Modificado: ${formatDateTime(file.lastModified())}")
                 Text("Caminho: ${file.absolutePath}", fontSize = 12.sp, color = XpTextSecondary)
                 Text("Leitura: ${if (file.canRead()) "Sim" else "Não"} • Escrita: ${if (file.canWrite()) "Sim" else "Não"}")
@@ -873,9 +984,24 @@ private fun formatDate(time: Long): String {
     return DateFormat.getDateInstance(DateFormat.MEDIUM, Locale("pt", "BR")).format(Date(time))
 }
 
+private fun formatTime(time: Long): String {
+    if (time <= 0L) return "--:--"
+    return DateFormat.getTimeInstance(DateFormat.SHORT, Locale("pt", "BR")).format(Date(time))
+}
+
 private fun formatDateTime(time: Long): String {
     if (time <= 0L) return "Data desconhecida"
     return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale("pt", "BR")).format(Date(time))
+}
+
+private fun fileCreationTime(file: File): Long {
+    return runCatching {
+        java.nio.file.Files.readAttributes(
+            file.toPath(),
+            java.nio.file.attribute.BasicFileAttributes::class.java,
+            java.nio.file.LinkOption.NOFOLLOW_LINKS,
+        ).creationTime().toMillis()
+    }.getOrNull()?.takeIf { it > 0L } ?: file.lastModified()
 }
 
 private fun formatBytes(bytes: Long): String {

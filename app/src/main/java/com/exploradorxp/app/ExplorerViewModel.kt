@@ -23,6 +23,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     private val _uiState = MutableStateFlow(
         ExplorerUiState(
             currentDir = repository.root,
+            showHidden = repository.showHidden(),
             storageInfo = repository.storageInfo(),
         )
     )
@@ -41,9 +42,18 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             val state = _uiState.value
             val items = runCatching {
                 when (state.tab) {
-                    ExplorerTab.FILES -> repository.listDirectory(state.currentDir, state.query, state.sortMode)
-                    ExplorerTab.RECENT -> repository.recentItems(state.query, state.sortMode)
-                    ExplorerTab.FAVORITES -> repository.favoriteItems(state.query, state.sortMode)
+                    ExplorerTab.FILES,
+                    ExplorerTab.DOWNLOADS -> repository.listDirectory(
+                        state.currentDir,
+                        state.query,
+                        state.sortMode,
+                        state.showHidden,
+                    )
+                    ExplorerTab.FAVORITES -> repository.favoriteItems(
+                        state.query,
+                        state.sortMode,
+                        state.showHidden,
+                    )
                 }
             }.getOrElse {
                 _events.tryEmit(ExplorerEvent.ShowMessage(it.message ?: "Não foi possível listar os arquivos."))
@@ -72,7 +82,6 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         } else {
             repository.addRecent(item.file)
             _events.tryEmit(ExplorerEvent.OpenFile(item.file))
-            if (state.tab == ExplorerTab.RECENT) refresh()
         }
     }
 
@@ -109,7 +118,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         _uiState.update {
             it.copy(
                 currentDir = directory,
-                tab = ExplorerTab.FILES,
+                tab = browsingTabFor(directory),
                 selectedPaths = emptySet(),
                 query = "",
             )
@@ -137,8 +146,17 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setTab(tab: ExplorerTab) {
-        _uiState.update { it.copy(tab = tab, selectedPaths = emptySet(), query = "") }
-        refresh()
+        when (tab) {
+            ExplorerTab.FILES -> navigateTo(repository.root)
+            ExplorerTab.DOWNLOADS -> {
+                repository.downloads.mkdirs()
+                navigateTo(repository.downloads)
+            }
+            ExplorerTab.FAVORITES -> {
+                _uiState.update { it.copy(tab = ExplorerTab.FAVORITES, selectedPaths = emptySet(), query = "") }
+                refresh()
+            }
+        }
     }
 
     fun setQuery(query: String) {
@@ -159,6 +177,12 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun setSortMode(sortMode: SortMode) {
         _uiState.update { it.copy(sortMode = sortMode) }
+        refresh()
+    }
+
+    fun setShowHidden(show: Boolean) {
+        repository.setShowHidden(show)
+        _uiState.update { it.copy(showHidden = show) }
         refresh()
     }
 
@@ -244,4 +268,14 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     fun selectedFiles(): List<File> = _uiState.value.selectedPaths.map(::File).filter(File::exists)
 
     fun fileByPath(path: String): File? = File(path).takeIf(File::exists)
+
+    private fun browsingTabFor(directory: File): ExplorerTab {
+        val dirPath = runCatching { directory.canonicalPath }.getOrDefault(directory.absolutePath)
+        val downloadsPath = runCatching { repository.downloads.canonicalPath }.getOrDefault(repository.downloads.absolutePath)
+        return if (dirPath == downloadsPath || dirPath.startsWith(downloadsPath + File.separator)) {
+            ExplorerTab.DOWNLOADS
+        } else {
+            ExplorerTab.FILES
+        }
+    }
 }

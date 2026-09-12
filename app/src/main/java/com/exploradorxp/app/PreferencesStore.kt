@@ -22,6 +22,12 @@ class PreferencesStore(context: Context) {
         return added
     }
 
+    fun showHidden(): Boolean = prefs.getBoolean(KEY_SHOW_HIDDEN, false)
+
+    fun setShowHidden(show: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_HIDDEN, show).apply()
+    }
+
     fun addRecent(file: File) {
         val items = recents().toMutableList()
         items.remove(file.absolutePath)
@@ -45,5 +51,6 @@ class PreferencesStore(context: Context) {
     companion object {
         private const val KEY_FAVORITES = "favorites"
         private const val KEY_RECENTS = "recents"
+        private const val KEY_SHOW_HIDDEN = "show_hidden"
     }
 }
