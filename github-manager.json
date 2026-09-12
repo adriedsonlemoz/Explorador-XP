@@ -1,0 +1,10 @@
+{
+  "projectName": "Explorador XP",
+  "versionName": "0.1.0-alpha.1",
+  "versionCode": 1,
+  "applicationId": "com.exploradorxp.app",
+  "namespace": "com.exploradorxp.app",
+  "language": "Kotlin",
+  "type": "Android",
+  "ui": "Jetpack Compose"
+}

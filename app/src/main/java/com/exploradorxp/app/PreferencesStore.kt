@@ -1,0 +1,49 @@
+package com.exploradorxp.app
+
+import android.content.Context
+import org.json.JSONArray
+import java.io.File
+
+class PreferencesStore(context: Context) {
+    private val prefs = context.getSharedPreferences("explorador_xp", Context.MODE_PRIVATE)
+
+    fun favorites(): Set<String> = prefs.getStringSet(KEY_FAVORITES, emptySet())?.toSet().orEmpty()
+
+    fun toggleFavorite(file: File): Boolean {
+        val current = favorites().toMutableSet()
+        val added = if (current.contains(file.absolutePath)) {
+            current.remove(file.absolutePath)
+            false
+        } else {
+            current.add(file.absolutePath)
+            true
+        }
+        prefs.edit().putStringSet(KEY_FAVORITES, current).apply()
+        return added
+    }
+
+    fun addRecent(file: File) {
+        val items = recents().toMutableList()
+        items.remove(file.absolutePath)
+        items.add(0, file.absolutePath)
+        while (items.size > 50) items.removeLast()
+        val array = JSONArray()
+        items.forEach(array::put)
+        prefs.edit().putString(KEY_RECENTS, array.toString()).apply()
+    }
+
+    fun recents(): List<String> {
+        val raw = prefs.getString(KEY_RECENTS, null) ?: return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            buildList {
+                for (i in 0 until array.length()) add(array.getString(i))
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    companion object {
+        private const val KEY_FAVORITES = "favorites"
+        private const val KEY_RECENTS = "recents"
+    }
+}

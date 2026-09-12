@@ -1,0 +1,884 @@
+[
+  {
+    "name": "back",
+    "category": "actions",
+    "file": "actions/back.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "check",
+    "category": "actions",
+    "file": "actions/check.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "close",
+    "category": "actions",
+    "file": "actions/close.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "copy",
+    "category": "actions",
+    "file": "actions/copy.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "cut",
+    "category": "actions",
+    "file": "actions/cut.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "delete",
+    "category": "actions",
+    "file": "actions/delete.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "forward",
+    "category": "actions",
+    "file": "actions/forward.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "menu",
+    "category": "actions",
+    "file": "actions/menu.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "more",
+    "category": "actions",
+    "file": "actions/more.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "paste",
+    "category": "actions",
+    "file": "actions/paste.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "properties",
+    "category": "actions",
+    "file": "actions/properties.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "refresh",
+    "category": "actions",
+    "file": "actions/refresh.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "rename",
+    "category": "actions",
+    "file": "actions/rename.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "search",
+    "category": "actions",
+    "file": "actions/search.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "select_all",
+    "category": "actions",
+    "file": "actions/select_all.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "settings",
+    "category": "actions",
+    "file": "actions/settings.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "share",
+    "category": "actions",
+    "file": "actions/share.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "up",
+    "category": "actions",
+    "file": "actions/up.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "bluetooth",
+    "category": "devices",
+    "file": "devices/bluetooth.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "camera",
+    "category": "devices",
+    "file": "devices/camera.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "cloud",
+    "category": "devices",
+    "file": "devices/cloud.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "device_mobile",
+    "category": "devices",
+    "file": "devices/device_mobile.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "drive_cd",
+    "category": "devices",
+    "file": "devices/drive_cd.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "drive_external",
+    "category": "devices",
+    "file": "devices/drive_external.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "drive_hdd",
+    "category": "devices",
+    "file": "devices/drive_hdd.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "drive_sd",
+    "category": "devices",
+    "file": "devices/drive_sd.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "drive_ssd",
+    "category": "devices",
+    "file": "devices/drive_ssd.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "drive_usb",
+    "category": "devices",
+    "file": "devices/drive_usb.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "network",
+    "category": "devices",
+    "file": "devices/network.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "printer",
+    "category": "devices",
+    "file": "devices/printer.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_3gp",
+    "category": "file_types",
+    "file": "file_types/file_3gp.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_7z",
+    "category": "file_types",
+    "file": "file_types/file_7z.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_aac",
+    "category": "file_types",
+    "file": "file_types/file_aac.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_ai",
+    "category": "file_types",
+    "file": "file_types/file_ai.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_avi",
+    "category": "file_types",
+    "file": "file_types/file_avi.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_bin",
+    "category": "file_types",
+    "file": "file_types/file_bin.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_bmp",
+    "category": "file_types",
+    "file": "file_types/file_bmp.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_bz2",
+    "category": "file_types",
+    "file": "file_types/file_bz2.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_c",
+    "category": "file_types",
+    "file": "file_types/file_c.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_code",
+    "category": "file_types",
+    "file": "file_types/file_code.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_cpp",
+    "category": "file_types",
+    "file": "file_types/file_cpp.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_css",
+    "category": "file_types",
+    "file": "file_types/file_css.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_csv",
+    "category": "file_types",
+    "file": "file_types/file_csv.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_db",
+    "category": "file_types",
+    "file": "file_types/file_db.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_deb",
+    "category": "file_types",
+    "file": "file_types/file_deb.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_dmg",
+    "category": "file_types",
+    "file": "file_types/file_dmg.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_doc",
+    "category": "file_types",
+    "file": "file_types/file_doc.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_docx",
+    "category": "file_types",
+    "file": "file_types/file_docx.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_eps",
+    "category": "file_types",
+    "file": "file_types/file_eps.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_epub",
+    "category": "file_types",
+    "file": "file_types/file_epub.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_flac",
+    "category": "file_types",
+    "file": "file_types/file_flac.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_gif",
+    "category": "file_types",
+    "file": "file_types/file_gif.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_gif_alt",
+    "category": "file_types",
+    "file": "file_types/file_gif_alt.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_gz",
+    "category": "file_types",
+    "file": "file_types/file_gz.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_h",
+    "category": "file_types",
+    "file": "file_types/file_h.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_heic",
+    "category": "file_types",
+    "file": "file_types/file_heic.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_html",
+    "category": "file_types",
+    "file": "file_types/file_html.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_ico",
+    "category": "file_types",
+    "file": "file_types/file_ico.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_java",
+    "category": "file_types",
+    "file": "file_types/file_java.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_jpg",
+    "category": "file_types",
+    "file": "file_types/file_jpg.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_js",
+    "category": "file_types",
+    "file": "file_types/file_js.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_json",
+    "category": "file_types",
+    "file": "file_types/file_json.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_kt",
+    "category": "file_types",
+    "file": "file_types/file_kt.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_log",
+    "category": "file_types",
+    "file": "file_types/file_log.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_m4a",
+    "category": "file_types",
+    "file": "file_types/file_m4a.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_md",
+    "category": "file_types",
+    "file": "file_types/file_md.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_mkv",
+    "category": "file_types",
+    "file": "file_types/file_mkv.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_mobi",
+    "category": "file_types",
+    "file": "file_types/file_mobi.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_mov",
+    "category": "file_types",
+    "file": "file_types/file_mov.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_mp3",
+    "category": "file_types",
+    "file": "file_types/file_mp3.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_mp4",
+    "category": "file_types",
+    "file": "file_types/file_mp4.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_odp",
+    "category": "file_types",
+    "file": "file_types/file_odp.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_ods",
+    "category": "file_types",
+    "file": "file_types/file_ods.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_odt",
+    "category": "file_types",
+    "file": "file_types/file_odt.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_ogg",
+    "category": "file_types",
+    "file": "file_types/file_ogg.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_pdf",
+    "category": "file_types",
+    "file": "file_types/file_pdf.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_php",
+    "category": "file_types",
+    "file": "file_types/file_php.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_png",
+    "category": "file_types",
+    "file": "file_types/file_png.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_ppt",
+    "category": "file_types",
+    "file": "file_types/file_ppt.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_pptx",
+    "category": "file_types",
+    "file": "file_types/file_pptx.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_psd",
+    "category": "file_types",
+    "file": "file_types/file_psd.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_py",
+    "category": "file_types",
+    "file": "file_types/file_py.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_rar",
+    "category": "file_types",
+    "file": "file_types/file_rar.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_rpm",
+    "category": "file_types",
+    "file": "file_types/file_rpm.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_rtf",
+    "category": "file_types",
+    "file": "file_types/file_rtf.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_sh",
+    "category": "file_types",
+    "file": "file_types/file_sh.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_sqlite",
+    "category": "file_types",
+    "file": "file_types/file_sqlite.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_svg",
+    "category": "file_types",
+    "file": "file_types/file_svg.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_tar",
+    "category": "file_types",
+    "file": "file_types/file_tar.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_tif",
+    "category": "file_types",
+    "file": "file_types/file_tif.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_tiff",
+    "category": "file_types",
+    "file": "file_types/file_tiff.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_torrent",
+    "category": "file_types",
+    "file": "file_types/file_torrent.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_txt",
+    "category": "file_types",
+    "file": "file_types/file_txt.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_wav",
+    "category": "file_types",
+    "file": "file_types/file_wav.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_webm",
+    "category": "file_types",
+    "file": "file_types/file_webm.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_webp",
+    "category": "file_types",
+    "file": "file_types/file_webp.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_xls",
+    "category": "file_types",
+    "file": "file_types/file_xls.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_xlsx",
+    "category": "file_types",
+    "file": "file_types/file_xlsx.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_xml",
+    "category": "file_types",
+    "file": "file_types/file_xml.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_xz",
+    "category": "file_types",
+    "file": "file_types/file_xz.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_yaml",
+    "category": "file_types",
+    "file": "file_types/file_yaml.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_yml",
+    "category": "file_types",
+    "file": "file_types/file_yml.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "file_zip",
+    "category": "file_types",
+    "file": "file_types/file_zip.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder",
+    "category": "folders",
+    "file": "folders/folder.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_compressed",
+    "category": "folders",
+    "file": "folders/folder_compressed.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_documents",
+    "category": "folders",
+    "file": "folders/folder_documents.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_downloads",
+    "category": "folders",
+    "file": "folders/folder_downloads.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_favorite",
+    "category": "folders",
+    "file": "folders/folder_favorite.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_images",
+    "category": "folders",
+    "file": "folders/folder_images.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_music",
+    "category": "folders",
+    "file": "folders/folder_music.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_new",
+    "category": "folders",
+    "file": "folders/folder_new.png",
+    "source": "derived asset"
+  },
+  {
+    "name": "folder_open",
+    "category": "folders",
+    "file": "folders/folder_open.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_shared",
+    "category": "folders",
+    "file": "folders/folder_shared.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_shortcut",
+    "category": "folders",
+    "file": "folders/folder_shortcut.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "folder_videos",
+    "category": "folders",
+    "file": "folders/folder_videos.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "desktop",
+    "category": "locations",
+    "file": "locations/desktop.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "documents",
+    "category": "locations",
+    "file": "locations/documents.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "downloads",
+    "category": "locations",
+    "file": "locations/downloads.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "favorites",
+    "category": "locations",
+    "file": "locations/favorites.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "help",
+    "category": "locations",
+    "file": "locations/help.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "home",
+    "category": "locations",
+    "file": "locations/home.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "music",
+    "category": "locations",
+    "file": "locations/music.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "pictures",
+    "category": "locations",
+    "file": "locations/pictures.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "recent",
+    "category": "locations",
+    "file": "locations/recent.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "trash_empty",
+    "category": "locations",
+    "file": "locations/trash_empty.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "trash_full",
+    "category": "locations",
+    "file": "locations/trash_full.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "videos",
+    "category": "locations",
+    "file": "locations/videos.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "error",
+    "category": "misc",
+    "file": "misc/error.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_apk",
+    "category": "misc",
+    "file": "misc/file_apk.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_bat",
+    "category": "misc",
+    "file": "misc/file_bat.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_exe",
+    "category": "misc",
+    "file": "misc/file_exe.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_ini",
+    "category": "misc",
+    "file": "misc/file_ini.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_iso",
+    "category": "misc",
+    "file": "misc/file_iso.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_new",
+    "category": "misc",
+    "file": "misc/file_new.png",
+    "source": "derived asset"
+  },
+  {
+    "name": "file_sql",
+    "category": "misc",
+    "file": "misc/file_sql.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_ttf",
+    "category": "misc",
+    "file": "misc/file_ttf.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "file_unknown",
+    "category": "misc",
+    "file": "misc/file_unknown.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "info",
+    "category": "misc",
+    "file": "misc/info.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "link",
+    "category": "misc",
+    "file": "misc/link.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "shortcut",
+    "category": "misc",
+    "file": "misc/shortcut.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "warning",
+    "category": "misc",
+    "file": "misc/warning.png",
+    "source": "generated atlas"
+  },
+  {
+    "name": "locked",
+    "category": "status",
+    "file": "status/locked.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "unlocked",
+    "category": "status",
+    "file": "status/unlocked.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "visible",
+    "category": "status",
+    "file": "status/visible.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "sort",
+    "category": "view",
+    "file": "view/sort.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "view_grid",
+    "category": "view",
+    "file": "view/view_grid.png",
+    "source": "supplemental generated asset"
+  },
+  {
+    "name": "view_list",
+    "category": "view",
+    "file": "view/view_list.png",
+    "source": "supplemental generated asset"
+  }
+]
