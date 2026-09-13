@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.1.0-alpha.9
+
+- Toque longo em arquivo/pasta entra diretamente no modo de seleção, sem abrir janela central.
+- A barra de ferramentas troca temporariamente para sete ações: Copiar, Mover, Excluir, Renomear, Compartilhar, Propriedades e Selecionar tudo.
+- Ao concluir/cancelar a seleção, a barra normal de navegação volta automaticamente.
+- Menu contextual do botão de opções remodelado como menu compacto em lista, mais próximo do Explorer clássico.
+- Menus Arquivo, Editar, Exibir, Favoritos, Ferramentas e Ajuda mantidos como menus suspensos compactos.
+- Ferramentas agora usa `Organizar ›` com submenu lateral para Nome, Data, Tamanho, Tipo e preferência persistente `Pastas primeiro`.
+- Removida a necessidade da janela separada de ordenação.
+- Ajuda ganhou Manual de Ajuda, Sobre e Doação.
+- Sobre exibe `Desenvolvido por Adriedson Lemos`.
+- Doação exibe a chave PIX `adriedson@outlook.com`.
+- Adicionado visualizador interno para imagens, textos/código, HTML, PDF, ZIP, áudio/vídeo e APK.
+- Arquivos de texto/código podem ser editados e salvos dentro do Explorador XP.
+- HTML oferece visualização renderizada e código-fonte.
+- ZIP mostra o conteúdo e permite extração segura para uma pasta ao lado do arquivo.
+- Formatos ainda não suportados continuam abrindo pelo seletor de aplicativos do Android.
+- Versão sincronizada para `0.1.0-alpha.9` / `versionCode 9`.
+
 ## 0.1.0-alpha.8
 
 - Corrigido erro de compilação em `ExplorerScreen.kt` introduzido na alpha.7.

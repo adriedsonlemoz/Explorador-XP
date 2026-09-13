@@ -24,6 +24,7 @@ class FileRepository(
         query: String,
         sortMode: SortMode,
         showHidden: Boolean,
+        foldersFirst: Boolean,
     ): List<FileItem> = withContext(Dispatchers.IO) {
         val favorites = prefs.favorites()
         val filtered = directory.listFiles()
@@ -33,13 +34,14 @@ class FileRepository(
             .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
             .map { toFileItem(it, it.absolutePath in favorites) }
             .toList()
-        sort(filtered, sortMode)
+        sort(filtered, sortMode, foldersFirst)
     }
 
     suspend fun favoriteItems(
         query: String,
         sortMode: SortMode,
         showHidden: Boolean,
+        foldersFirst: Boolean,
     ): List<FileItem> = withContext(Dispatchers.IO) {
         val favorites = prefs.favorites()
         val items = favorites.asSequence()
@@ -49,7 +51,7 @@ class FileRepository(
             .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
             .map { toFileItem(it, true) }
             .toList()
-        sort(items, sortMode)
+        sort(items, sortMode, foldersFirst)
     }
 
     suspend fun recentItems(query: String, sortMode: SortMode): List<FileItem> = withContext(Dispatchers.IO) {
@@ -198,15 +200,18 @@ class FileRepository(
 
     private fun isHidden(file: File): Boolean = file.name.startsWith('.') || runCatching { file.isHidden }.getOrDefault(false)
 
-    private fun sort(items: List<FileItem>, sortMode: SortMode): List<FileItem> {
-        val directoryFirst = compareByDescending<FileItem> { it.isDirectory }
+    private fun sort(items: List<FileItem>, sortMode: SortMode, foldersFirst: Boolean): List<FileItem> {
         val detailComparator = when (sortMode) {
             SortMode.NAME -> compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.name }
             SortMode.DATE -> compareByDescending<FileItem> { it.createdAt }
             SortMode.SIZE -> compareByDescending<FileItem> { it.size }
             SortMode.TYPE -> compareBy<FileItem> { it.extension }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
         }
-        return items.sortedWith(directoryFirst.then(detailComparator))
+        return if (foldersFirst) {
+            items.sortedWith(compareByDescending<FileItem> { it.isDirectory }.then(detailComparator))
+        } else {
+            items.sortedWith(detailComparator)
+        }
     }
 
     private fun uniqueTarget(parent: File, originalName: String): File {

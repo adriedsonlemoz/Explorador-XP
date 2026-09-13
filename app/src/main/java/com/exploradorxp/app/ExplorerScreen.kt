@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
@@ -50,9 +52,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -69,6 +73,8 @@ val XpSelection = Color(0xFFD9E9FB)
 val XpChrome = Color(0xFFF2F4F8)
 val XpChromeBorder = Color(0xFFB8C7DA)
 val XpPanel = Color(0xFFF6FAFF)
+
+private enum class FileMenuAction { OPEN, COPY, MOVE, RENAME, DELETE, SHARE, FAVORITE, PROPERTIES, SELECT }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -88,6 +94,7 @@ fun ExplorerScreen(
     onToggleView: () -> Unit,
     onToggleHidden: (Boolean) -> Unit,
     onSortMode: (SortMode) -> Unit,
+    onFoldersFirstChange: (Boolean) -> Unit,
     onTabChange: (ExplorerTab) -> Unit,
     onCopy: () -> Unit,
     onCut: () -> Unit,
@@ -103,6 +110,7 @@ fun ExplorerScreen(
     onSelectAll: () -> Unit,
     onClearSelection: () -> Unit,
     onSelectOnly: (File) -> Unit,
+    onToggleSelection: (File) -> Unit,
     onToggleFavorite: (File) -> Unit,
     onCreateFolder: (String) -> Unit,
     onRename: (File, String) -> Unit,
@@ -113,9 +121,10 @@ fun ExplorerScreen(
     var propertiesTarget by remember { mutableStateOf<File?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<File?>(null) }
-    var contextTarget by remember { mutableStateOf<FileItem?>(null) }
     var showFolderContext by remember { mutableStateOf(false) }
-    var showSort by remember { mutableStateOf(false) }
+    var showManual by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
+    var showDonation by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -133,7 +142,6 @@ fun ExplorerScreen(
             canPaste = state.clipboard != null && state.tab != ExplorerTab.FAVORITES,
             onPaste = onPaste,
             onClearClipboard = onClearClipboard,
-            onSort = { showSort = true },
             canBack = state.canGoBack,
             canForward = state.canGoForward,
             onBack = onBack,
@@ -144,6 +152,10 @@ fun ExplorerScreen(
             onToggleView = onToggleView,
             showHidden = state.showHidden,
             onShowHiddenChange = onToggleHidden,
+            sortMode = state.sortMode,
+            foldersFirst = state.foldersFirst,
+            onSortMode = onSortMode,
+            onFoldersFirstChange = onFoldersFirstChange,
             onNavigateTo = onNavigateTo,
             storageLocations = state.storageLocations,
             onOpenDownloads = { onTabChange(ExplorerTab.DOWNLOADS) },
@@ -151,9 +163,21 @@ fun ExplorerScreen(
             selectionCount = state.selectedPaths.size,
             onCopySelection = onCopy,
             onCutSelection = onCut,
-            onShareSelection = onShare,
+            onShareSelection = { onShare(); onClearSelection() },
             onDeleteSelection = { showDeleteConfirm = true },
+            onRenameSelection = {
+                state.selectedPaths.singleOrNull()?.let { renameTarget = File(it) }
+                onClearSelection()
+            },
+            onPropertiesSelection = {
+                state.selectedPaths.singleOrNull()?.let { propertiesTarget = File(it) }
+                onClearSelection()
+            },
+            onSelectAll = onSelectAll,
             onClearSelection = onClearSelection,
+            onShowManual = { showManual = true },
+            onShowAbout = { showAbout = true },
+            onShowDonation = { showDonation = true },
         )
 
         val internalRoot = state.storageLocations.firstOrNull { !it.removable }?.root
@@ -188,7 +212,20 @@ fun ExplorerScreen(
                     items = state.items,
                     selectedPaths = state.selectedPaths,
                     onItemClick = onItemClick,
-                    onContextMenu = { contextTarget = it },
+                    onMenuAction = { item, action ->
+                        when (action) {
+                            FileMenuAction.OPEN -> onOpenTarget(item.file)
+                            FileMenuAction.COPY -> onCopyTarget(item.file)
+                            FileMenuAction.MOVE -> onCutTarget(item.file)
+                            FileMenuAction.RENAME -> renameTarget = item.file
+                            FileMenuAction.DELETE -> deleteTarget = item.file
+                            FileMenuAction.SHARE -> onShareTarget(item.file)
+                            FileMenuAction.FAVORITE -> onToggleFavorite(item.file)
+                            FileMenuAction.PROPERTIES -> propertiesTarget = item.file
+                            FileMenuAction.SELECT -> onSelectOnly(item.file)
+                        }
+                    },
+                    onLongSelect = { onToggleSelection(it.file) },
                     onBlankLongPress = { showFolderContext = true },
                 )
             } else {
@@ -196,7 +233,20 @@ fun ExplorerScreen(
                     items = state.items,
                     selectedPaths = state.selectedPaths,
                     onItemClick = onItemClick,
-                    onContextMenu = { contextTarget = it },
+                    onMenuAction = { item, action ->
+                        when (action) {
+                            FileMenuAction.OPEN -> onOpenTarget(item.file)
+                            FileMenuAction.COPY -> onCopyTarget(item.file)
+                            FileMenuAction.MOVE -> onCutTarget(item.file)
+                            FileMenuAction.RENAME -> renameTarget = item.file
+                            FileMenuAction.DELETE -> deleteTarget = item.file
+                            FileMenuAction.SHARE -> onShareTarget(item.file)
+                            FileMenuAction.FAVORITE -> onToggleFavorite(item.file)
+                            FileMenuAction.PROPERTIES -> propertiesTarget = item.file
+                            FileMenuAction.SELECT -> onSelectOnly(item.file)
+                        }
+                    },
+                    onLongSelect = { onToggleSelection(it.file) },
                     onBlankLongPress = { showFolderContext = true },
                 )
             }
@@ -268,21 +318,6 @@ fun ExplorerScreen(
         )
     }
 
-    contextTarget?.let { item ->
-        FileContextDialog(
-            item = item,
-            onDismiss = { contextTarget = null },
-            onOpen = { contextTarget = null; onOpenTarget(item.file) },
-            onCopy = { contextTarget = null; onCopyTarget(item.file) },
-            onMove = { contextTarget = null; onCutTarget(item.file) },
-            onRename = { contextTarget = null; renameTarget = item.file },
-            onDelete = { contextTarget = null; deleteTarget = item.file },
-            onShare = { contextTarget = null; onShareTarget(item.file) },
-            onFavorite = { contextTarget = null; onToggleFavorite(item.file) },
-            onProperties = { contextTarget = null; propertiesTarget = item.file },
-            onSelect = { contextTarget = null; onSelectOnly(item.file) },
-        )
-    }
 
     if (showFolderContext) {
         FolderContextDialog(
@@ -297,16 +332,10 @@ fun ExplorerScreen(
         )
     }
 
-    if (showSort) {
-        SortDialog(
-            current = state.sortMode,
-            onDismiss = { showSort = false },
-            onSelect = {
-                showSort = false
-                onSortMode(it)
-            }
-        )
-    }
+    if (showManual) HelpManualDialog(onDismiss = { showManual = false })
+    if (showAbout) AboutDialog(onDismiss = { showAbout = false })
+    if (showDonation) DonationDialog(onDismiss = { showDonation = false })
+
 }
 
 @Composable
@@ -321,7 +350,6 @@ private fun XpHeader(
     canPaste: Boolean,
     onPaste: () -> Unit,
     onClearClipboard: () -> Unit,
-    onSort: () -> Unit,
     canBack: Boolean,
     canForward: Boolean,
     onBack: () -> Unit,
@@ -332,6 +360,10 @@ private fun XpHeader(
     onToggleView: () -> Unit,
     showHidden: Boolean,
     onShowHiddenChange: (Boolean) -> Unit,
+    sortMode: SortMode,
+    foldersFirst: Boolean,
+    onSortMode: (SortMode) -> Unit,
+    onFoldersFirstChange: (Boolean) -> Unit,
     onNavigateTo: (File) -> Unit,
     storageLocations: List<StorageLocation>,
     onOpenDownloads: () -> Unit,
@@ -341,13 +373,20 @@ private fun XpHeader(
     onCutSelection: () -> Unit,
     onShareSelection: () -> Unit,
     onDeleteSelection: () -> Unit,
+    onRenameSelection: () -> Unit,
+    onPropertiesSelection: () -> Unit,
+    onSelectAll: () -> Unit,
     onClearSelection: () -> Unit,
+    onShowManual: () -> Unit,
+    onShowAbout: () -> Unit,
+    onShowDonation: () -> Unit,
 ) {
     var fileMenu by remember { mutableStateOf(false) }
     var editMenu by remember { mutableStateOf(false) }
     var viewMenu by remember { mutableStateOf(false) }
     var favoritesMenu by remember { mutableStateOf(false) }
     var toolsMenu by remember { mutableStateOf(false) }
+    var organizeMenu by remember { mutableStateOf(false) }
     var helpMenu by remember { mutableStateOf(false) }
     var addressMenu by remember { mutableStateOf(false) }
 
@@ -379,7 +418,6 @@ private fun XpHeader(
     val displayPath = pathEntries.joinToString("  ›  ") { it.first }
 
     Column(Modifier.fillMaxWidth()) {
-        // Barra de título clássica do Explorer XP
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -396,7 +434,7 @@ private fun XpHeader(
             )
             Spacer(Modifier.width(7.dp))
             Text(
-                text = "Explorador",
+                text = if (selectionCount > 0) "$selectionCount selecionado(s)" else "Explorador",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
@@ -404,6 +442,14 @@ private fun XpHeader(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            if (selectionCount > 0) {
+                Text(
+                    "Cancelar",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    modifier = Modifier.clickable(onClick = onClearSelection).padding(horizontal = 8.dp, vertical = 6.dp)
+                )
+            }
             XpWindowControl("—", Color(0xFF2C78D1))
             Spacer(Modifier.width(2.dp))
             XpWindowControl("□", Color(0xFF2C78D1))
@@ -411,7 +457,6 @@ private fun XpHeader(
             XpWindowControl("×", Color(0xFFE65236))
         }
 
-        // Menu clássico: Arquivo / Editar / Exibir / Favoritos / Ferramentas / Ajuda
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -424,9 +469,10 @@ private fun XpHeader(
             Box {
                 XpMenuLabel("Arquivo", fileMenu) { fileMenu = true }
                 DropdownMenu(expanded = fileMenu, onDismissRequest = { fileMenu = false }) {
-                    DropdownMenuItem(text = { Text("Nova pasta") }, onClick = { fileMenu = false; onNewFolder() })
-                    if (canPaste) DropdownMenuItem(text = { Text("Colar") }, onClick = { fileMenu = false; onPaste() })
-                    DropdownMenuItem(text = { Text("Atualizar") }, onClick = { fileMenu = false; onRefresh() })
+                    DropdownMenuItem(text = { Text("Nova pasta", fontSize = 12.sp) }, onClick = { fileMenu = false; onNewFolder() })
+                    if (canPaste) DropdownMenuItem(text = { Text("Colar", fontSize = 12.sp) }, onClick = { fileMenu = false; onPaste() })
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text("Atualizar", fontSize = 12.sp) }, onClick = { fileMenu = false; onRefresh() })
                 }
             }
 
@@ -434,18 +480,19 @@ private fun XpHeader(
                 XpMenuLabel("Editar", editMenu) { editMenu = true }
                 DropdownMenu(expanded = editMenu, onDismissRequest = { editMenu = false }) {
                     if (selectionCount > 0) {
-                        DropdownMenuItem(text = { Text("Copiar seleção ($selectionCount)") }, onClick = { editMenu = false; onCopySelection() })
-                        DropdownMenuItem(text = { Text("Mover seleção ($selectionCount)") }, onClick = { editMenu = false; onCutSelection() })
-                        DropdownMenuItem(text = { Text("Compartilhar seleção") }, onClick = { editMenu = false; onShareSelection() })
-                        DropdownMenuItem(text = { Text("Excluir seleção") }, onClick = { editMenu = false; onDeleteSelection() })
-                        DropdownMenuItem(text = { Text("Cancelar seleção") }, onClick = { editMenu = false; onClearSelection() })
+                        DropdownMenuItem(text = { Text("Copiar seleção ($selectionCount)", fontSize = 12.sp) }, onClick = { editMenu = false; onCopySelection() })
+                        DropdownMenuItem(text = { Text("Mover seleção ($selectionCount)", fontSize = 12.sp) }, onClick = { editMenu = false; onCutSelection() })
+                        DropdownMenuItem(text = { Text("Compartilhar seleção", fontSize = 12.sp) }, onClick = { editMenu = false; onShareSelection() })
+                        DropdownMenuItem(text = { Text("Excluir seleção", fontSize = 12.sp) }, onClick = { editMenu = false; onDeleteSelection() })
+                        DropdownMenuItem(text = { Text("Selecionar tudo", fontSize = 12.sp) }, onClick = { editMenu = false; onSelectAll() })
+                        DropdownMenuItem(text = { Text("Cancelar seleção", fontSize = 12.sp) }, onClick = { editMenu = false; onClearSelection() })
                         HorizontalDivider()
                     }
                     if (canPaste) {
-                        DropdownMenuItem(text = { Text("Colar") }, onClick = { editMenu = false; onPaste() })
-                        DropdownMenuItem(text = { Text("Cancelar copiar/mover") }, onClick = { editMenu = false; onClearClipboard() })
+                        DropdownMenuItem(text = { Text("Colar", fontSize = 12.sp) }, onClick = { editMenu = false; onPaste() })
+                        DropdownMenuItem(text = { Text("Cancelar copiar/mover", fontSize = 12.sp) }, onClick = { editMenu = false; onClearClipboard() })
                     }
-                    DropdownMenuItem(text = { Text("Atualizar") }, onClick = { editMenu = false; onRefresh() })
+                    DropdownMenuItem(text = { Text("Atualizar", fontSize = 12.sp) }, onClick = { editMenu = false; onRefresh() })
                 }
             }
 
@@ -453,46 +500,81 @@ private fun XpHeader(
                 XpMenuLabel("Exibir", viewMenu) { viewMenu = true }
                 DropdownMenu(expanded = viewMenu, onDismissRequest = { viewMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text(if (viewMode == ViewMode.LIST) "Exibir como ícones" else "Exibir como lista") },
+                        text = { Text(if (viewMode == ViewMode.LIST) "Exibir como ícones" else "Exibir como lista", fontSize = 12.sp) },
                         onClick = { viewMenu = false; onToggleView() },
                     )
                     DropdownMenuItem(
-                        text = { Text(if (showHidden) "Ocultar arquivos ocultos ✓" else "Mostrar arquivos ocultos") },
+                        text = { Text(if (showHidden) "Ocultar arquivos ocultos ✓" else "Mostrar arquivos ocultos", fontSize = 12.sp) },
                         onClick = { viewMenu = false; onShowHiddenChange(!showHidden) },
                     )
-                    DropdownMenuItem(text = { Text("Ordenar por...") }, onClick = { viewMenu = false; onSort() })
-                    DropdownMenuItem(text = { Text("Atualizar") }, onClick = { viewMenu = false; onRefresh() })
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text("Atualizar", fontSize = 12.sp) }, onClick = { viewMenu = false; onRefresh() })
                 }
             }
 
             Box {
                 XpMenuLabel("Favoritos", favoritesMenu) { favoritesMenu = true }
                 DropdownMenu(expanded = favoritesMenu, onDismissRequest = { favoritesMenu = false }) {
-                    DropdownMenuItem(text = { Text("Abrir Favoritos") }, onClick = { favoritesMenu = false; onOpenFavorites() })
+                    DropdownMenuItem(text = { Text("Abrir Favoritos", fontSize = 12.sp) }, onClick = { favoritesMenu = false; onOpenFavorites() })
                 }
             }
 
             Box {
                 XpMenuLabel("Ferramentas", toolsMenu) { toolsMenu = true }
-                DropdownMenu(expanded = toolsMenu, onDismissRequest = { toolsMenu = false }) {
-                    DropdownMenuItem(text = { Text("Ordenar") }, onClick = { toolsMenu = false; onSort() })
-                    DropdownMenuItem(text = { Text("Atualizar") }, onClick = { toolsMenu = false; onRefresh() })
+                DropdownMenu(expanded = toolsMenu, onDismissRequest = { toolsMenu = false; organizeMenu = false }) {
+                    Box {
+                        DropdownMenuItem(
+                            text = { Text("Organizar", fontSize = 12.sp) },
+                            trailingIcon = { Text("▶", fontSize = 10.sp) },
+                            onClick = { organizeMenu = true },
+                        )
+                        DropdownMenu(
+                            expanded = organizeMenu,
+                            onDismissRequest = { organizeMenu = false },
+                            offset = DpOffset(154.dp, (-38).dp),
+                        ) {
+                            SortMode.entries.forEach { mode ->
+                                val label = when (mode) {
+                                    SortMode.NAME -> "Nome"
+                                    SortMode.DATE -> "Data"
+                                    SortMode.SIZE -> "Tamanho"
+                                    SortMode.TYPE -> "Tipo"
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(if (sortMode == mode) "✓  $label" else "    $label", fontSize = 12.sp) },
+                                    onClick = {
+                                        organizeMenu = false
+                                        toolsMenu = false
+                                        onSortMode(mode)
+                                    }
+                                )
+                            }
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(if (foldersFirst) "✓  Pastas primeiro" else "    Pastas primeiro", fontSize = 12.sp) },
+                                onClick = {
+                                    onFoldersFirstChange(!foldersFirst)
+                                    organizeMenu = false
+                                    toolsMenu = false
+                                }
+                            )
+                        }
+                    }
+                    DropdownMenuItem(text = { Text("Atualizar", fontSize = 12.sp) }, onClick = { toolsMenu = false; onRefresh() })
                 }
             }
 
             Box {
                 XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
                 DropdownMenu(expanded = helpMenu, onDismissRequest = { helpMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Explorador XP 0.1.0-alpha.8") },
-                        enabled = false,
-                        onClick = {},
-                    )
+                    DropdownMenuItem(text = { Text("Manual de Ajuda", fontSize = 12.sp) }, onClick = { helpMenu = false; onShowManual() })
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text("Sobre", fontSize = 12.sp) }, onClick = { helpMenu = false; onShowAbout() })
+                    DropdownMenuItem(text = { Text("Doação", fontSize = 12.sp) }, onClick = { helpMenu = false; onShowDonation() })
                 }
             }
         }
 
-        // Barra de ferramentas: todos os comandos cabem sem rolagem horizontal.
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -502,26 +584,35 @@ private fun XpHeader(
                 .border(1.dp, XpChromeBorder)
                 .padding(horizontal = 2.dp)
         ) {
-            XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack, Modifier.weight(1f))
-            XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward, Modifier.weight(1f))
-            XpClassicToolButton(R.drawable.home, "Início", true, onHome, Modifier.weight(1f))
-            XpClassicToolButton(R.drawable.up, "Subir", true, onUp, Modifier.weight(1f))
-            XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch, Modifier.weight(1f))
-            if (canPaste) {
-                XpClassicToolButton(R.drawable.paste, "Colar", true, onPaste, Modifier.weight(1f))
+            if (selectionCount > 0) {
+                XpClassicToolButton(R.drawable.copy, "Copiar", true, onCopySelection, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.move, "Mover", true, onCutSelection, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.delete, "Excluir", true, onDeleteSelection, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.rename, "Renomear", selectionCount == 1, onRenameSelection, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.share, "Compart.", true, onShareSelection, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.properties, "Propried.", selectionCount == 1, onPropertiesSelection, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.select_all, "Todos", true, onSelectAll, Modifier.weight(1f))
             } else {
-                XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.home, "Início", true, onHome, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.up, "Subir", true, onUp, Modifier.weight(1f))
+                XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch, Modifier.weight(1f))
+                if (canPaste) {
+                    XpClassicToolButton(R.drawable.paste, "Colar", true, onPaste, Modifier.weight(1f))
+                } else {
+                    XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads, Modifier.weight(1f))
+                }
+                XpClassicToolButton(
+                    if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
+                    "Exibir",
+                    true,
+                    onToggleView,
+                    Modifier.weight(1f),
+                )
             }
-            XpClassicToolButton(
-                if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
-                "Exibir",
-                true,
-                onToggleView,
-                Modifier.weight(1f),
-            )
         }
 
-        // Barra de endereço fina, como no Windows Explorer
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -549,11 +640,9 @@ private fun XpHeader(
                     contentScale = ContentScale.Fit,
                 )
                 Spacer(Modifier.width(5.dp))
-                if (searchVisible) {
+                if (searchVisible && selectionCount == 0) {
                     Box(modifier = Modifier.weight(1f)) {
-                        if (query.isBlank()) {
-                            Text("Pesquisar nesta pasta", color = Color(0xFF777777), fontSize = 11.sp)
-                        }
+                        if (query.isBlank()) Text("Pesquisar nesta pasta", color = Color(0xFF777777), fontSize = 11.sp)
                         BasicTextField(
                             value = query,
                             onValueChange = onQueryChange,
@@ -578,9 +667,7 @@ private fun XpHeader(
                         color = XpBlueDark,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        modifier = Modifier
-                            .clickable { addressMenu = true }
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                        modifier = Modifier.clickable { addressMenu = true }.padding(horizontal = 5.dp, vertical = 2.dp)
                     )
                     DropdownMenu(expanded = addressMenu, onDismissRequest = { addressMenu = false }) {
                         effectiveLocations.forEach { location ->
@@ -593,7 +680,7 @@ private fun XpHeader(
                                         contentScale = ContentScale.Fit,
                                     )
                                 },
-                                text = { Text(location.label) },
+                                text = { Text(location.label, fontSize = 12.sp) },
                                 onClick = { addressMenu = false; onNavigateTo(location.root) },
                             )
                         }
@@ -608,7 +695,7 @@ private fun XpHeader(
                                             modifier = Modifier.size(22.dp),
                                         )
                                     },
-                                    text = { Text(label) },
+                                    text = { Text(label, fontSize = 12.sp) },
                                     onClick = { addressMenu = false; onNavigateTo(file) },
                                 )
                             }
@@ -849,6 +936,104 @@ private fun SectionTitle(title: String, icon: Int) {
 }
 
 @Composable
+private fun HelpManualDialog(onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp)
+                .background(Color(0xFFF8F8F2))
+                .border(1.dp, XpBorder)
+        ) {
+            XpDialogTitle("Manual de Ajuda", onDismiss)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(14.dp)
+            ) {
+                HelpSection("Navegação", "Use Voltar e Avançar para percorrer o histórico, Início para retornar ao armazenamento principal e Subir para voltar uma pasta. O campo Endereço permite trocar entre os armazenamentos disponíveis.")
+                HelpSection("Arquivos e pastas", "Toque para abrir. Toque e segure para entrar no modo de seleção. O botão de opções do item abre o menu contextual clássico com ações rápidas.")
+                HelpSection("Copiar, mover e colar", "Selecione um ou mais itens e use Copiar ou Mover. Ao navegar até a pasta de destino, o botão Downloads é temporariamente substituído por Colar. Também é possível segurar uma área vazia e escolher Colar aqui.")
+                HelpSection("Downloads", "O botão Downloads abre diretamente a pasta Download do armazenamento interno.")
+                HelpSection("Favoritos", "Adicione arquivos ou pastas aos Favoritos pelo menu contextual. A lista de Favoritos fica disponível no menu Favoritos do cabeçalho.")
+                HelpSection("Armazenamento", "Na página inicial são exibidos espaço usado, livre e total. O campo Endereço mostra o armazenamento interno e cartões SD detectados.")
+                HelpSection("Visualizador interno", "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem ser abertos dentro do Explorador XP. Formatos ainda não suportados continuam disponíveis em Abrir com...")
+                HelpSection("Organização", "Em Ferramentas > Organizar escolha Nome, Data, Tamanho ou Tipo e ative ou desative Pastas primeiro.")
+                HelpSection("Arquivos ocultos", "Em Exibir é possível mostrar ou ocultar arquivos ocultos. A preferência fica salva.")
+            }
+        }
+    }
+}
+
+@Composable
+private fun AboutDialog(onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .widthIn(min = 270.dp, max = 330.dp)
+                .background(Color(0xFFF8F8F2))
+                .border(1.dp, XpBorder)
+        ) {
+            XpDialogTitle("Sobre", onDismiss)
+            Column(Modifier.padding(18.dp)) {
+                Text("Explorador XP", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                Spacer(Modifier.height(6.dp))
+                Text("Versão 0.1.0-alpha.9", fontSize = 12.sp, color = XpTextSecondary)
+                Spacer(Modifier.height(18.dp))
+                Text("Desenvolvido por Adriedson Lemos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DonationDialog(onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .widthIn(min = 270.dp, max = 330.dp)
+                .background(Color(0xFFF8F8F2))
+                .border(1.dp, XpBorder)
+        ) {
+            XpDialogTitle("Doação", onDismiss)
+            Column(Modifier.padding(18.dp)) {
+                Text("Chave PIX", fontSize = 12.sp, color = XpTextSecondary)
+                Spacer(Modifier.height(5.dp))
+                Text("adriedson@outlook.com", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+            }
+        }
+    }
+}
+
+@Composable
+private fun XpDialogTitle(title: String, onDismiss: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .background(Brush.verticalGradient(listOf(XpBlueLight, XpBlueDark)))
+            .padding(horizontal = 10.dp)
+    ) {
+        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp, modifier = Modifier.clickable(onClick = onDismiss).padding(6.dp))
+    }
+}
+
+@Composable
+private fun HelpSection(title: String, text: String) {
+    Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+    Spacer(Modifier.height(3.dp))
+    Text(text, fontSize = 12.sp, color = Color(0xFF303030))
+    Spacer(Modifier.height(14.dp))
+}
+
+@Composable
 private fun FileContextDialog(
     item: FileItem,
     onDismiss: () -> Unit,
@@ -865,69 +1050,27 @@ private fun FileContextDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .widthIn(min = 270.dp, max = 330.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(XpChrome)
-                .border(1.dp, XpBorder, RoundedCornerShape(6.dp))
+                .widthIn(min = 220.dp, max = 270.dp)
+                .background(Color(0xFFF8F8F2))
+                .border(1.dp, Color(0xFF7D8FA6))
+                .padding(vertical = 3.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(XpBlueLight, XpBlueDark)))
-                    .padding(horizontal = 10.dp, vertical = 7.dp)
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(item.iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(30.dp),
-                    contentScale = ContentScale.Fit,
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = item.name,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "×",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    modifier = Modifier.clickable(onClick = onDismiss).padding(horizontal = 5.dp),
-                )
-            }
-
             ContextActionRow(item.iconRes, "Abrir", onOpen)
-            HorizontalDivider(color = XpChromeBorder)
-            Row(Modifier.fillMaxWidth()) {
-                ContextActionCell(R.drawable.copy, "Copiar", onCopy, Modifier.weight(1f))
-                ContextActionCell(R.drawable.move, "Mover", onMove, Modifier.weight(1f))
-                ContextActionCell(R.drawable.rename, "Renomear", onRename, Modifier.weight(1f))
-            }
-            Row(Modifier.fillMaxWidth()) {
-                ContextActionCell(R.drawable.delete, "Excluir", onDelete, Modifier.weight(1f), danger = true)
-                if (!item.isDirectory) {
-                    ContextActionCell(R.drawable.share, "Compartilhar", onShare, Modifier.weight(1f))
-                } else {
-                    Spacer(Modifier.weight(1f))
-                }
-                ContextActionCell(
-                    if (item.isFavorite) R.drawable.favorites else R.drawable.folder_favorite,
-                    if (item.isFavorite) "Desfavoritar" else "Favoritar",
-                    onFavorite,
-                    Modifier.weight(1f),
-                )
-            }
-            HorizontalDivider(color = XpChromeBorder)
-            Row(Modifier.fillMaxWidth()) {
-                ContextActionCell(R.drawable.properties, "Propriedades", onProperties, Modifier.weight(1f))
-                ContextActionCell(R.drawable.select_all, "Selecionar", onSelect, Modifier.weight(1f))
-            }
+            HorizontalDivider(color = Color(0xFFD2D2C8))
+            ContextActionRow(R.drawable.copy, "Copiar", onCopy)
+            ContextActionRow(R.drawable.move, "Mover", onMove)
+            ContextActionRow(R.drawable.rename, "Renomear", onRename)
+            ContextActionRow(R.drawable.delete, "Excluir", onDelete)
+            if (!item.isDirectory) ContextActionRow(R.drawable.share, "Compartilhar", onShare)
+            HorizontalDivider(color = Color(0xFFD2D2C8))
+            ContextActionRow(
+                if (item.isFavorite) R.drawable.favorites else R.drawable.folder_favorite,
+                if (item.isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
+                onFavorite,
+            )
+            ContextActionRow(R.drawable.properties, "Propriedades", onProperties)
+            HorizontalDivider(color = Color(0xFFD2D2C8))
+            ContextActionRow(R.drawable.select_all, "Selecionar", onSelect)
         }
     }
 }
@@ -946,34 +1089,65 @@ private fun FolderContextDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .widthIn(min = 250.dp, max = 310.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(XpChrome)
-                .border(1.dp, XpBorder, RoundedCornerShape(6.dp))
+                .widthIn(min = 210.dp, max = 260.dp)
+                .background(Color(0xFFF8F8F2))
+                .border(1.dp, Color(0xFF7D8FA6))
+                .padding(vertical = 3.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(XpBlueLight, XpBlueDark)))
-                    .padding(horizontal = 10.dp, vertical = 7.dp)
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(R.drawable.folder_open),
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Ações da pasta", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.clickable(onClick = onDismiss).padding(horizontal = 5.dp))
-            }
             if (canPaste) ContextActionRow(R.drawable.paste, "Colar aqui", onPaste)
             ContextActionRow(R.drawable.folder_new, "Nova pasta", onNewFolder)
             if (canSelectAll) ContextActionRow(R.drawable.select_all, "Selecionar tudo", onSelectAll)
+            HorizontalDivider(color = Color(0xFFD2D2C8))
             ContextActionRow(R.drawable.refresh, "Atualizar", onRefresh)
-            ContextActionRow(R.drawable.properties, "Propriedades da pasta", onProperties)
+            ContextActionRow(R.drawable.properties, "Propriedades", onProperties)
         }
     }
+}
+
+@Composable
+private fun XpFileDropdownMenu(
+    item: FileItem,
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    onAction: (FileMenuAction) -> Unit,
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        modifier = Modifier.background(Color(0xFFF8F8F2)).border(1.dp, Color(0xFF7D8FA6)),
+    ) {
+        XpContextMenuItem(item.iconRes, "Abrir") { onAction(FileMenuAction.OPEN) }
+        HorizontalDivider(color = Color(0xFFD2D2C8))
+        XpContextMenuItem(R.drawable.copy, "Copiar") { onAction(FileMenuAction.COPY) }
+        XpContextMenuItem(R.drawable.move, "Mover") { onAction(FileMenuAction.MOVE) }
+        XpContextMenuItem(R.drawable.rename, "Renomear") { onAction(FileMenuAction.RENAME) }
+        XpContextMenuItem(R.drawable.delete, "Excluir") { onAction(FileMenuAction.DELETE) }
+        if (!item.isDirectory) XpContextMenuItem(R.drawable.share, "Compartilhar") { onAction(FileMenuAction.SHARE) }
+        HorizontalDivider(color = Color(0xFFD2D2C8))
+        XpContextMenuItem(
+            if (item.isFavorite) R.drawable.favorites else R.drawable.folder_favorite,
+            if (item.isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
+        ) { onAction(FileMenuAction.FAVORITE) }
+        XpContextMenuItem(R.drawable.properties, "Propriedades") { onAction(FileMenuAction.PROPERTIES) }
+        HorizontalDivider(color = Color(0xFFD2D2C8))
+        XpContextMenuItem(R.drawable.select_all, "Selecionar") { onAction(FileMenuAction.SELECT) }
+    }
+}
+
+@Composable
+private fun XpContextMenuItem(icon: Int, label: String, onClick: () -> Unit) {
+    DropdownMenuItem(
+        leadingIcon = {
+            androidx.compose.foundation.Image(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(21.dp),
+                contentScale = ContentScale.Fit,
+            )
+        },
+        text = { Text(label, fontSize = 12.sp, color = Color(0xFF202020)) },
+        onClick = onClick,
+    )
 }
 
 @Composable
@@ -1024,7 +1198,8 @@ private fun FileList(
     items: List<FileItem>,
     selectedPaths: Set<String>,
     onItemClick: (FileItem) -> Unit,
-    onContextMenu: (FileItem) -> Unit,
+    onMenuAction: (FileItem, FileMenuAction) -> Unit,
+    onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
     LazyColumn(
@@ -1041,7 +1216,8 @@ private fun FileList(
                 item = item,
                 selected = item.file.absolutePath in selectedPaths,
                 onClick = { onItemClick(item) },
-                onContextMenu = { onContextMenu(item) },
+                onLongSelect = { onLongSelect(item) },
+                onMenuAction = { action -> onMenuAction(item, action) },
             )
             HorizontalDivider(color = Color(0xFFD8E1ED), thickness = 1.dp)
         }
@@ -1054,14 +1230,15 @@ private fun FileListRow(
     item: FileItem,
     selected: Boolean,
     onClick: () -> Unit,
-    onContextMenu: () -> Unit,
+    onLongSelect: () -> Unit,
+    onMenuAction: (FileMenuAction) -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .background(if (selected) XpSelection else Color.Transparent)
-            .combinedClickable(onClick = onClick, onLongClick = onContextMenu)
+            .combinedClickable(onClick = onClick, onLongClick = onLongSelect)
             .padding(horizontal = 9.dp, vertical = 5.dp)
     ) {
         androidx.compose.foundation.Image(
@@ -1098,7 +1275,16 @@ private fun FileListRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        XpIconButton(R.drawable.more, "Opções", onClick = onContextMenu, iconSize = 21, buttonSize = 34)
+        var menuExpanded by remember(item.file.absolutePath) { mutableStateOf(false) }
+        Box {
+            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 21, buttonSize = 34)
+            XpFileDropdownMenu(
+                item = item,
+                expanded = menuExpanded,
+                onDismiss = { menuExpanded = false },
+                onAction = { action -> menuExpanded = false; onMenuAction(action) },
+            )
+        }
     }
 }
 
@@ -1108,7 +1294,8 @@ private fun FileGrid(
     items: List<FileItem>,
     selectedPaths: Set<String>,
     onItemClick: (FileItem) -> Unit,
-    onContextMenu: (FileItem) -> Unit,
+    onMenuAction: (FileItem, FileMenuAction) -> Unit,
+    onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
     LazyVerticalGrid(
@@ -1121,13 +1308,14 @@ private fun FileGrid(
             .combinedClickable(onClick = {}, onLongClick = onBlankLongPress),
     ) {
         items(items, key = { it.file.absolutePath }) { item ->
+            var menuExpanded by remember(item.file.absolutePath) { mutableStateOf(false) }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (item.file.absolutePath in selectedPaths) XpSelection else Color.White)
                     .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
-                    .combinedClickable(onClick = { onItemClick(item) }, onLongClick = { onContextMenu(item) })
+                    .combinedClickable(onClick = { onItemClick(item) }, onLongClick = { onLongSelect(item) })
                     .padding(7.dp)
             ) {
                 androidx.compose.foundation.Image(
@@ -1152,6 +1340,20 @@ private fun FileGrid(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Box {
+                    Text(
+                        "⋮",
+                        color = XpBlueDark,
+                        fontSize = 18.sp,
+                        modifier = Modifier.clickable { menuExpanded = true }.padding(horizontal = 12.dp, vertical = 2.dp)
+                    )
+                    XpFileDropdownMenu(
+                        item = item,
+                        expanded = menuExpanded,
+                        onDismiss = { menuExpanded = false },
+                        onAction = { action -> menuExpanded = false; onMenuAction(item, action) },
+                    )
+                }
             }
         }
     }

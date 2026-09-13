@@ -24,6 +24,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         ExplorerUiState(
             currentDir = repository.root,
             showHidden = repository.showHidden(),
+            foldersFirst = prefs.foldersFirst(),
             storageInfo = repository.storageInfo(),
             storageLocations = repository.storageLocations(),
         )
@@ -49,11 +50,13 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                         state.query,
                         state.sortMode,
                         state.showHidden,
+                        state.foldersFirst,
                     )
                     ExplorerTab.FAVORITES -> repository.favoriteItems(
                         state.query,
                         state.sortMode,
                         state.showHidden,
+                        state.foldersFirst,
                     )
                 }
             }.getOrElse {
@@ -183,6 +186,12 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun setSortMode(sortMode: SortMode) {
         _uiState.update { it.copy(sortMode = sortMode) }
+        refresh()
+    }
+
+    fun setFoldersFirst(enabled: Boolean) {
+        prefs.setFoldersFirst(enabled)
+        _uiState.update { it.copy(foldersFirst = enabled) }
         refresh()
     }
 

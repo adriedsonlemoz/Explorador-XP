@@ -48,6 +48,7 @@ data class ExplorerUiState(
     val searchVisible: Boolean = false,
     val viewMode: ViewMode = ViewMode.LIST,
     val sortMode: SortMode = SortMode.NAME,
+    val foldersFirst: Boolean = true,
     val tab: ExplorerTab = ExplorerTab.FILES,
     val selectedPaths: Set<String> = emptySet(),
     val clipboard: ClipboardState? = null,

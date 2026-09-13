@@ -28,6 +28,12 @@ class PreferencesStore(context: Context) {
         prefs.edit().putBoolean(KEY_SHOW_HIDDEN, show).apply()
     }
 
+    fun foldersFirst(): Boolean = prefs.getBoolean(KEY_FOLDERS_FIRST, true)
+
+    fun setFoldersFirst(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FOLDERS_FIRST, enabled).apply()
+    }
+
     fun addRecent(file: File) {
         val items = recents().toMutableList()
         items.remove(file.absolutePath)
@@ -52,5 +58,6 @@ class PreferencesStore(context: Context) {
         private const val KEY_FAVORITES = "favorites"
         private const val KEY_RECENTS = "recents"
         private const val KEY_SHOW_HIDDEN = "show_hidden"
+        private const val KEY_FOLDERS_FIRST = "folders_first"
     }
 }

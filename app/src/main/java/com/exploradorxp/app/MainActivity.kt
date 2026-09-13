@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -77,6 +78,7 @@ private fun ExplorerApp(
     val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var accessGranted by remember { mutableStateOf(hasFileAccess(context)) }
+    var viewerFile by remember { mutableStateOf<File?>(null) }
 
     val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         accessGranted = hasFileAccess(context)
@@ -105,11 +107,25 @@ private fun ExplorerApp(
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
             when (event) {
-                is ExplorerEvent.OpenFile -> openFile(context, event.file)
+                is ExplorerEvent.OpenFile -> {
+                    if (supportsInternalViewer(event.file)) viewerFile = event.file
+                    else openFile(context, event.file)
+                }
                 is ExplorerEvent.ShareFiles -> shareFiles(context, event.files)
                 is ExplorerEvent.ShowMessage -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    val activeViewer = viewerFile
+    if (activeViewer != null) {
+        BackHandler { viewerFile = null }
+        InternalViewerScreen(
+            file = activeViewer,
+            onClose = { viewerFile = null },
+            onOpenExternal = { openFile(context, activeViewer) },
+        )
+        return
     }
 
     ExplorerScreen(
@@ -128,6 +144,7 @@ private fun ExplorerApp(
         onToggleView = viewModel::toggleViewMode,
         onToggleHidden = viewModel::setShowHidden,
         onSortMode = viewModel::setSortMode,
+        onFoldersFirstChange = viewModel::setFoldersFirst,
         onTabChange = viewModel::setTab,
         onCopy = viewModel::copySelected,
         onCut = viewModel::cutSelected,
@@ -143,6 +160,7 @@ private fun ExplorerApp(
         onSelectAll = viewModel::selectAllVisible,
         onClearSelection = viewModel::clearSelection,
         onSelectOnly = viewModel::selectOnly,
+        onToggleSelection = viewModel::toggleSelection,
         onToggleFavorite = viewModel::toggleFavorite,
         onCreateFolder = viewModel::createFolder,
         onRename = viewModel::rename,

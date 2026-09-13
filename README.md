@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.8` (`versionCode 8`)  
+**Versão atual:** `0.1.0-alpha.9` (`versionCode 9`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -17,10 +17,11 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Busca no diretório atual.
 - Modos Lista e Grade.
 - Ordenação por nome, data, tamanho e tipo.
-- Toque longo abre menu contextual central; a opção **Selecionar** ativa a seleção múltipla sem substituir o cabeçalho.
+- Toque longo entra diretamente no modo de seleção; a barra de ferramentas troca temporariamente para ações de seleção e volta ao normal ao concluir/cancelar.
 - Copiar, recortar/mover e colar, incluindo pastas recursivas; quando há conteúdo na área de transferência, **Downloads** vira temporariamente **Colar** na barra de ferramentas.
 - Criar pasta, renomear e excluir.
-- Abrir arquivos pelo app compatível via `FileProvider`.
+- Visualizador interno para imagens, textos/código editáveis, HTML, PDF, ZIP, áudio/vídeo e informações de APK; formatos não suportados continuam disponíveis via `Abrir com...`.
+- Abertura externa por aplicativo compatível via `FileProvider` quando necessário.
 - Compartilhar arquivos.
 - Favoritos persistentes.
 - Atalho fixo para a pasta Downloads do armazenamento.
@@ -58,13 +59,17 @@ O app usa acesso amplo ao armazenamento compartilhado porque sua função princi
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
 
-## Interface alpha.7
+## Interface alpha.9
 
 A interface segue o Explorer do Windows XP adaptado a telas Android. O cabeçalho possui menu clássico, barra de ferramentas compacta e campo Endereço. O Endereço também permite alternar entre armazenamento interno e cartão SD quando detectado. O cartão de capacidade fica restrito à página inicial, deixando as pastas com mais área útil.
 
 Os ícones principais de pastas, navegação e dispositivos foram atualizados para uma aparência mais próxima do Windows XP, mantendo os recursos já existentes para tipos de arquivo.
 
 Na alpha.7, a barra de ferramentas foi compactada para caber inteira sem rolagem horizontal. O toque longo em arquivo/pasta abre as ações no centro da tela; o toque longo em área vazia oferece Colar, Nova pasta, Selecionar tudo, Atualizar e Propriedades.
+
+Na alpha.9, os menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda seguem um fluxo mais próximo do Explorer clássico, com menus suspensos compactos. Ferramentas ganhou `Organizar ›` com nome, data, tamanho, tipo e `Pastas primeiro`. Ajuda ganhou Manual de Ajuda, Sobre e Doação.
+
+O modo de seleção passa a usar a própria barra de ferramentas com sete ações: Copiar, Mover, Excluir, Renomear, Compartilhar, Propriedades e Selecionar tudo. O menu contextual do botão de opções foi remodelado para uma lista compacta no estilo clássico.
 
 ## Build
 
