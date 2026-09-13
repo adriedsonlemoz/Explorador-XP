@@ -10,14 +10,15 @@ enum class ClipboardMode { COPY, CUT }
 data class FileItem(
     val file: File,
     val iconRes: Int,
+    val name: String,
+    val isDirectory: Boolean,
+    val size: Long,
+    val modifiedAt: Long,
+    val extension: String,
     val isFavorite: Boolean = false,
-    val createdAt: Long = 0L,
 ) {
-    val name: String get() = file.name.ifBlank { file.absolutePath }
-    val isDirectory: Boolean get() = file.isDirectory
-    val size: Long get() = if (file.isFile) file.length() else 0L
-    val lastModified: Long get() = file.lastModified()
-    val extension: String get() = file.extension.lowercase()
+    // Mantido com o mesmo nome usado pela interface para evitar leituras extras do sistema de arquivos.
+    val createdAt: Long get() = modifiedAt
 }
 
 data class ClipboardState(

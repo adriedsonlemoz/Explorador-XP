@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.1.0-alpha.11
+
+- Novo ícone oficial do aplicativo: pasta dourada sobre fundo grafite, sem borda branca.
+- Launcher preparado em versões adaptativa, round e mipmaps legados para manter recorte correto em launchers e telas do Android.
+- Permissão de arquivos virou o primeiro fluxo do app: sem acesso, abre imediatamente um pop-up central com botão **Liberar acesso**.
+- O app não inicia mais a varredura do armazenamento antes de a permissão ser concedida.
+- Imagens passam a ser decodificadas fora da thread principal, com amostragem de resolução e indicador de carregamento.
+- Textos/código passam a ser lidos em I/O; arquivos grandes usam prévia limitada para evitar congelamentos.
+- Visualização somente leitura de texto passou a usar `TextView` nativo e edição usa `EditText` nativo, reduzindo custo de recomposição.
+- Renderização de páginas PDF movida para I/O com carregamento assíncrono.
+- Leitura da lista de arquivos ZIP e análise de APK movidas para I/O; ZIPs muito grandes usam prévia limitada.
+- Metadados dos itens (nome, tipo, tamanho, data e extensão) são capturados uma única vez na listagem, evitando chamadas repetidas ao sistema de arquivos durante recomposições.
+- Atualizações de busca receberam debounce e listagens antigas são canceladas ao iniciar uma nova, reduzindo trabalho duplicado.
+- Consultas de armazenamento deixaram de bloquear a thread principal durante a atualização.
+- Versão sincronizada para `0.1.0-alpha.11` / `versionCode 11`.
+
 ## 0.1.0-alpha.10
 
 - Aplicado o `Explorador XP Icon Pack v2` aos ícones principais de navegação, seleção e operações.

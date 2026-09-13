@@ -3,6 +3,9 @@ package com.exploradorxp.app
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -11,6 +14,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class ExplorerViewModel(application: Application) : AndroidViewModel(application) {
@@ -25,8 +29,6 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             currentDir = repository.root,
             showHidden = repository.showHidden(),
             foldersFirst = prefs.foldersFirst(),
-            storageInfo = repository.storageInfo(),
-            storageLocations = repository.storageLocations(),
         )
     )
     val uiState: StateFlow<ExplorerUiState> = _uiState.asStateFlow()
@@ -34,14 +36,31 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     private val _events = MutableSharedFlow<ExplorerEvent>(extraBufferCapacity = 8)
     val events: SharedFlow<ExplorerEvent> = _events.asSharedFlow()
 
+    private var refreshJob: Job? = null
+    private var searchJob: Job? = null
+
     init {
-        refresh()
+        // Na primeira abertura sem permissão, não faz varredura inútil do armazenamento.
+        if (hasFileAccess(application)) startRefresh()
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        searchJob?.cancel()
+        startRefresh()
+    }
+
+    private fun startRefresh() {
+        if (!hasFileAccess(getApplication())) {
+            refreshJob?.cancel()
+            _uiState.update { it.copy(loading = false, items = emptyList()) }
+            return
+        }
+
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
             val state = _uiState.value
+
             val items = runCatching {
                 when (state.tab) {
                     ExplorerTab.FILES,
@@ -63,12 +82,20 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                 _events.tryEmit(ExplorerEvent.ShowMessage(it.message ?: "Não foi possível listar os arquivos."))
                 emptyList()
             }
-            _uiState.update {
-                it.copy(
+
+            val storageInfo = withContext(Dispatchers.IO) { repository.storageInfo(state.currentDir) }
+            val storageLocations = if (state.storageLocations.isEmpty()) {
+                withContext(Dispatchers.IO) { repository.storageLocations() }
+            } else {
+                state.storageLocations
+            }
+
+            _uiState.update { current ->
+                current.copy(
                     items = items,
                     loading = false,
-                    storageInfo = repository.storageInfo(state.currentDir),
-                    storageLocations = repository.storageLocations(),
+                    storageInfo = storageInfo,
+                    storageLocations = storageLocations,
                     canGoBack = historyIndex > 0,
                     canGoForward = historyIndex < history.lastIndex,
                 )
@@ -170,7 +197,11 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun setQuery(query: String) {
         _uiState.update { it.copy(query = query) }
-        refresh()
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(180)
+            startRefresh()
+        }
     }
 
     fun setSearchVisible(visible: Boolean) {

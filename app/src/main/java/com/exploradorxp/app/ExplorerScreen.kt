@@ -967,7 +967,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             Column(Modifier.padding(18.dp)) {
                 Text("Explorador XP", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
                 Spacer(Modifier.height(6.dp))
-                Text("Versão 0.1.0-alpha.10", fontSize = 12.sp, color = XpTextSecondary)
+                Text("Versão ${BuildConfig.VERSION_NAME}", fontSize = 12.sp, color = XpTextSecondary)
                 Spacer(Modifier.height(18.dp))
                 Text("Desenvolvido por Adriedson Lemos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }

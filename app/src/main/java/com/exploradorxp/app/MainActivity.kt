@@ -21,7 +21,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -81,11 +84,11 @@ private fun ExplorerApp(
 
     val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         accessGranted = hasFileAccess(context)
-        viewModel.refresh()
+        if (accessGranted) viewModel.refresh()
     }
     val legacyPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         accessGranted = hasFileAccess(context)
-        viewModel.refresh()
+        if (accessGranted) viewModel.refresh()
     }
 
     fun requestFileAccess() {
@@ -114,6 +117,11 @@ private fun ExplorerApp(
                 is ExplorerEvent.ShowMessage -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    if (!accessGranted) {
+        PermissionAccessDialog(onRequestAccess = ::requestFileAccess)
+        return
     }
 
     val activeViewer = viewerFile
@@ -164,6 +172,25 @@ private fun ExplorerApp(
         onCreateFolder = viewModel::createFolder,
         onRename = viewModel::rename,
         modifier = modifier,
+    )
+}
+
+@Composable
+private fun PermissionAccessDialog(onRequestAccess: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { /* Acesso é necessário para usar o gerenciador. */ },
+        title = { Text("Acesso aos arquivos") },
+        text = {
+            Text(
+                "O Explorador XP precisa de acesso aos arquivos para mostrar, abrir, copiar, mover e organizar o armazenamento. " +
+                    "Toque em Liberar acesso e ative a permissão na próxima tela."
+            )
+        },
+        confirmButton = {
+            Button(onClick = onRequestAccess) {
+                Text("Liberar acesso")
+            }
+        },
     )
 }
 

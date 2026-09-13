@@ -86,8 +86,10 @@ object FileIconMapper {
         "mobi" to R.drawable.file_mobi,
     )
 
-    fun iconFor(file: File): Int {
-        if (file.isDirectory) return folderIconFor(file.name)
+    fun iconFor(file: File): Int = iconFor(file, file.isDirectory)
+
+    fun iconFor(file: File, isDirectory: Boolean): Int {
+        if (isDirectory) return folderIconFor(file.name)
         return extensionMap[file.extension.lowercase()] ?: R.drawable.file_unknown
     }
 

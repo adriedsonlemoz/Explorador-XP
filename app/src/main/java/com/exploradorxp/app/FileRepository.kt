@@ -8,9 +8,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.LinkOption
-import java.nio.file.attribute.BasicFileAttributes
 
 class FileRepository(
     private val context: Context,
@@ -180,22 +177,23 @@ class FileRepository(
         runCatching { file.canonicalPath }.getOrDefault(file.absolutePath)
 
     private fun toFileItem(file: File, favorite: Boolean): FileItem {
+        // Captura os metadados uma única vez durante a listagem. Isso evita chamadas
+        // repetidas ao sistema de arquivos a cada recomposição da interface.
+        val isDirectory = file.isDirectory
+        val name = file.name.ifBlank { file.absolutePath }
+        val extension = if (isDirectory) "" else file.extension.lowercase()
+        val size = if (isDirectory) 0L else file.length()
+        val modifiedAt = file.lastModified()
         return FileItem(
             file = file,
-            iconRes = FileIconMapper.iconFor(file),
+            iconRes = FileIconMapper.iconFor(file, isDirectory),
+            name = name,
+            isDirectory = isDirectory,
+            size = size,
+            modifiedAt = modifiedAt,
+            extension = extension,
             isFavorite = favorite,
-            createdAt = creationTime(file),
         )
-    }
-
-    private fun creationTime(file: File): Long {
-        return runCatching {
-            Files.readAttributes(
-                file.toPath(),
-                BasicFileAttributes::class.java,
-                LinkOption.NOFOLLOW_LINKS,
-            ).creationTime().toMillis()
-        }.getOrNull()?.takeIf { it > 0L } ?: file.lastModified()
     }
 
     private fun isHidden(file: File): Boolean = file.name.startsWith('.') || runCatching { file.isHidden }.getOrDefault(false)
