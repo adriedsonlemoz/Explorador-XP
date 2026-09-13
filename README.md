@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.11` (`versionCode 11`)  
+**Versão atual:** `0.1.0-alpha.12` (`versionCode 12`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -58,6 +58,10 @@ docs/
 O app usa acesso amplo ao armazenamento compartilhado porque sua função principal é gerenciamento de arquivos. Em Android 11+, o usuário precisa conceder manualmente **Acesso a todos os arquivos**. Em versões anteriores, o app solicita as permissões legadas necessárias.
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
+
+## Interface alpha.12
+
+O ícone do launcher foi corrigido estruturalmente para o padrão Adaptive Icon do Android. O fundo grafite agora é uma camada separada que ocupa toda a máscara escolhida pelo sistema, enquanto a pasta dourada fica isolada em uma camada foreground transparente, maior e centralizada. Isso elimina o efeito de “ícone dentro de outro ícone” que deixava a arte pequena nas telas de permissões, configurações e instalador. Android 13+ também recebeu uma camada monocromática própria para ícones temáticos.
 
 ## Interface alpha.11
 

@@ -1,0 +1,7 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <bitmap
+            android:src="@drawable/launcher_explorer_monochrome"
+            android:gravity="fill" />
+    </item>
+</layer-list>

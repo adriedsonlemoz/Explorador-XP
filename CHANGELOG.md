@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.1.0-alpha.12
+
+- Corrigida a estrutura do ícone adaptativo: o fundo grafite agora é uma camada separada e a pasta dourada é um foreground transparente.
+- Removido o efeito de dupla máscara que fazia o ícone aparecer pequeno dentro do próprio recorte do Android.
+- Pasta do launcher ampliada e recentralizada para ocupar melhor a área útil sem depender de bordas desenhadas na própria imagem.
+- Adicionada camada monocromática dedicada para Android 13+ e suporte a ícones temáticos.
+- Mipmaps normal e round regenerados a partir da mesma composição para manter consistência em telas do sistema.
+- Versão sincronizada para `0.1.0-alpha.12` / `versionCode 12`.
+
 ## 0.1.0-alpha.11
 
 - Novo ícone oficial do aplicativo: pasta dourada sobre fundo grafite, sem borda branca.
