@@ -156,7 +156,7 @@ private fun ViewerToolbar(file: File, onOpenExternal: () -> Unit) {
             color = Color(0xFF303030),
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onOpenExternal) { Text("Abrir com...", color = XpBlueDark, fontSize = 11.sp) }
+        TextButton(onClick = onOpenExternal) { Text("Abrir com...", color = XpBlueDark, fontSize = 12.sp) }
     }
 }
 
@@ -214,7 +214,7 @@ private fun HtmlViewer(file: File) {
             horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = { sourceMode = !sourceMode }) {
-                Text(if (sourceMode) "Visualizar página" else "Ver código-fonte", fontSize = 11.sp)
+                Text(if (sourceMode) "Visualizar página" else "Ver código-fonte", fontSize = 12.sp)
             }
         }
         if (sourceMode) {
@@ -255,7 +255,7 @@ private fun TextEditorViewer(file: File, modifier: Modifier = Modifier) {
         ) {
             Text(
                 if (editing) "Modo de edição" else "Somente leitura",
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 color = XpTextSecondary,
                 modifier = Modifier.weight(1f)
             )
@@ -269,16 +269,16 @@ private fun TextEditorViewer(file: File, modifier: Modifier = Modifier) {
                         if (result.isSuccess) editing = false
                     }
                 }
-            }) { Text(if (editing) "Salvar" else "Editar", fontSize = 11.sp) }
+            }) { Text(if (editing) "Salvar" else "Editar", fontSize = 12.sp) }
             if (editing) {
                 TextButton(onClick = {
                     text = readTextPreview(file)
                     editing = false
-                }) { Text("Cancelar", fontSize = 11.sp) }
+                }) { Text("Cancelar", fontSize = 12.sp) }
             }
         }
         if (status.isNotBlank()) {
-            Text(status, fontSize = 10.sp, color = XpTextSecondary, modifier = Modifier.padding(horizontal = 10.dp))
+            Text(status, fontSize = 12.sp, color = XpTextSecondary, modifier = Modifier.padding(horizontal = 10.dp))
         }
         if (editing) {
             OutlinedTextField(
@@ -341,7 +341,7 @@ private fun PdfViewer(file: File) {
             modifier = Modifier.fillMaxWidth().background(XpPanel).padding(4.dp)
         ) {
             TextButton(enabled = pageIndex > 0, onClick = { pageIndex-- }) { Text("◀ Anterior") }
-            Text("Página ${pageIndex + 1} de ${renderer.pageCount}", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 10.dp))
+            Text("Página ${pageIndex + 1} de ${renderer.pageCount}", fontSize = 12.sp, modifier = Modifier.padding(horizontal = 10.dp))
             TextButton(enabled = pageIndex < renderer.pageCount - 1, onClick = { pageIndex++ }) { Text("Próxima ▶") }
         }
         Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
@@ -371,7 +371,7 @@ private fun ZipViewer(file: File) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().background(XpPanel).padding(horizontal = 8.dp)
         ) {
-            Text("${entries.size} item(ns) no arquivo", fontSize = 11.sp, modifier = Modifier.weight(1f))
+            Text("${entries.size} item(ns) no arquivo", fontSize = 12.sp, modifier = Modifier.weight(1f))
             TextButton(onClick = {
                 scope.launch {
                     status = "Extraindo..."
@@ -381,10 +381,10 @@ private fun ZipViewer(file: File) {
                         onFailure = { it.message ?: "Falha ao extrair" },
                     )
                 }
-            }) { Text("Extrair", fontSize = 11.sp) }
+            }) { Text("Extrair", fontSize = 12.sp) }
         }
         if (status.isNotBlank()) {
-            Text(status, fontSize = 10.sp, color = XpTextSecondary, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+            Text(status, fontSize = 12.sp, color = XpTextSecondary, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
         }
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(entries) { entry ->
@@ -393,7 +393,7 @@ private fun ZipViewer(file: File) {
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text(entry.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (!entry.directory) Text(formatViewerBytes(entry.size), fontSize = 10.sp, color = XpTextSecondary)
+                        if (!entry.directory) Text(formatViewerBytes(entry.size), fontSize = 12.sp, color = XpTextSecondary)
                     }
                 }
                 HorizontalDivider(color = Color(0xFFE0E0E0))
@@ -466,8 +466,8 @@ private fun ViewerStatusBar(file: File) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().height(26.dp).background(XpChrome).border(1.dp, XpChromeBorder).padding(horizontal = 8.dp)
     ) {
-        Text(file.extension.uppercase().ifBlank { "ARQUIVO" }, fontSize = 10.sp, modifier = Modifier.weight(1f))
-        Text(formatViewerBytes(file.length()), fontSize = 10.sp)
+        Text(file.extension.uppercase().ifBlank { "ARQUIVO" }, fontSize = 11.sp, modifier = Modifier.weight(1f))
+        Text(formatViewerBytes(file.length()), fontSize = 11.sp)
     }
 }
 

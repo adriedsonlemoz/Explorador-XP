@@ -446,15 +446,11 @@ private fun XpHeader(
                 Text(
                     "Cancelar",
                     color = Color.White,
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
                     modifier = Modifier.clickable(onClick = onClearSelection).padding(horizontal = 8.dp, vertical = 6.dp)
                 )
             }
-            XpWindowControl("—", Color(0xFF2C78D1))
-            Spacer(Modifier.width(2.dp))
-            XpWindowControl("□", Color(0xFF2C78D1))
-            Spacer(Modifier.width(2.dp))
-            XpWindowControl("×", Color(0xFFE65236))
         }
 
         Row(
@@ -525,7 +521,7 @@ private fun XpHeader(
                     Box {
                         DropdownMenuItem(
                             text = { Text("Organizar", fontSize = 12.sp) },
-                            trailingIcon = { Text("▶", fontSize = 10.sp) },
+                            trailingIcon = { Text("▶", fontSize = 11.sp) },
                             onClick = { organizeMenu = true },
                         )
                         DropdownMenu(
@@ -579,7 +575,7 @@ private fun XpHeader(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(58.dp)
                 .background(XpChrome)
                 .border(1.dp, XpChromeBorder)
                 .padding(horizontal = 2.dp)
@@ -622,7 +618,7 @@ private fun XpHeader(
                 .border(1.dp, XpChromeBorder)
                 .padding(horizontal = 5.dp, vertical = 4.dp)
         ) {
-            Text("Endereço", color = Color(0xFF5A5A5A), fontSize = 10.sp)
+            Text("Endereço", color = Color(0xFF5A5A5A), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(5.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -642,12 +638,12 @@ private fun XpHeader(
                 Spacer(Modifier.width(5.dp))
                 if (searchVisible && selectionCount == 0) {
                     Box(modifier = Modifier.weight(1f)) {
-                        if (query.isBlank()) Text("Pesquisar nesta pasta", color = Color(0xFF777777), fontSize = 11.sp)
+                        if (query.isBlank()) Text("Pesquisar nesta pasta", color = Color(0xFF777777), fontSize = 12.sp)
                         BasicTextField(
                             value = query,
                             onValueChange = onQueryChange,
                             singleLine = true,
-                            textStyle = TextStyle(color = Color(0xFF202020), fontSize = 11.sp),
+                            textStyle = TextStyle(color = Color(0xFF202020), fontSize = 12.sp),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -655,7 +651,7 @@ private fun XpHeader(
                     Text(
                         text = displayPath,
                         color = Color(0xFF202020),
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -719,25 +715,12 @@ private fun isInsideOrSame(file: File, root: File): Boolean {
 }
 
 @Composable
-private fun XpWindowControl(symbol: String, color: Color) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(24.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(Brush.verticalGradient(listOf(color.copy(alpha = .75f), color)))
-            .border(1.dp, Color.White.copy(alpha = .8f), RoundedCornerShape(4.dp))
-    ) {
-        Text(symbol, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-    }
-}
-
-@Composable
 private fun XpMenuLabel(label: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         text = label,
         color = Color(0xFF202020),
         fontSize = 11.sp,
+        fontWeight = FontWeight.Medium,
         modifier = Modifier
             .background(if (selected) Color(0xFFDCE9F8) else Color.Transparent)
             .clickable(onClick = onClick)
@@ -764,16 +747,17 @@ private fun XpClassicToolButton(
         androidx.compose.foundation.Image(
             painter = painterResource(icon),
             contentDescription = label,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(30.dp),
             contentScale = ContentScale.Fit,
             alpha = if (enabled) 1f else .30f,
         )
         Text(
             text = label,
             color = if (enabled) Color(0xFF202020) else Color(0xFF999999),
-            fontSize = 8.sp,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
-            overflow = TextOverflow.Clip,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -879,7 +863,7 @@ private fun StorageCard(info: StorageInfo) {
                     text = "Livre: $free",
                     color = XpBlueDark,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(horizontal = 6.dp)
@@ -983,7 +967,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             Column(Modifier.padding(18.dp)) {
                 Text("Explorador XP", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
                 Spacer(Modifier.height(6.dp))
-                Text("Versão 0.1.0-alpha.9", fontSize = 12.sp, color = XpTextSecondary)
+                Text("Versão 0.1.0-alpha.10", fontSize = 12.sp, color = XpTextSecondary)
                 Spacer(Modifier.height(18.dp))
                 Text("Desenvolvido por Adriedson Lemos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -1185,7 +1169,7 @@ private fun ContextActionCell(
         Text(
             text = label,
             color = if (danger) Color(0xFF9C1B12) else Color(0xFF202020),
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -1270,14 +1254,14 @@ private fun FileListRow(
                 if (item.isDirectory) "${formatDate(item.createdAt)}  •  ${formatTime(item.createdAt)}  •  Pasta de arquivos"
                 else "${formatDate(item.createdAt)}  •  ${formatTime(item.createdAt)}  •  ${formatBytes(item.size)}",
                 color = XpTextSecondary,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         var menuExpanded by remember(item.file.absolutePath) { mutableStateOf(false) }
         Box {
-            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 21, buttonSize = 34)
+            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 24, buttonSize = 36)
             XpFileDropdownMenu(
                 item = item,
                 expanded = menuExpanded,
@@ -1327,7 +1311,7 @@ private fun FileGrid(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     item.name,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -1335,17 +1319,18 @@ private fun FileGrid(
                 Spacer(Modifier.height(3.dp))
                 Text(
                     "${formatDate(item.createdAt)} • ${formatTime(item.createdAt)}",
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     color = XpTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Box {
-                    Text(
-                        "⋮",
-                        color = XpBlueDark,
-                        fontSize = 18.sp,
-                        modifier = Modifier.clickable { menuExpanded = true }.padding(horizontal = 12.dp, vertical = 2.dp)
+                    XpIconButton(
+                        R.drawable.more,
+                        "Opções",
+                        onClick = { menuExpanded = true },
+                        iconSize = 24,
+                        buttonSize = 36,
                     )
                     XpFileDropdownMenu(
                         item = item,
@@ -1387,7 +1372,7 @@ private fun ExplorerStatusBar(
                 "${items.size} ${if (items.size == 1) "objeto" else "objetos"}"
             },
             color = Color(0xFF303030),
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             maxLines = 1,
             modifier = Modifier.weight(1f),
         )
@@ -1402,7 +1387,7 @@ private fun ExplorerStatusBar(
         Text(
             text = formatBytes(sizeBytes),
             color = Color(0xFF303030),
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             maxLines = 1,
             modifier = Modifier.padding(start = 9.dp),
         )

@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.10
+
+- Aplicado o `Explorador XP Icon Pack v2` aos ícones principais de navegação, seleção e operações.
+- Ícones da barra superior ampliados e reforçados visualmente, mantendo a barra sem rolagem horizontal.
+- Botão lateral de opções atualizado: removida a antiga bolinha azul e adotado o novo ícone retangular clássico.
+- O mesmo novo ícone de opções passou a ser usado também na visualização em grade.
+- Tipografia compacta normalizada: legendas da barra, endereço, metadados e barra de status ficaram mais legíveis e consistentes.
+- Removidos do cabeçalho principal os controles decorativos de minimizar, maximizar e fechar.
+- Removido o modo tela inteira/imersivo; as barras de status e navegação do Android permanecem visíveis.
+- Visualizador interno teve textos de interface pequenos normalizados para 12sp, mantendo a barra de status compacta.
+- Versão sincronizada para `0.1.0-alpha.10` / `versionCode 10`.
+
 ## 0.1.0-alpha.9
 
 - Toque longo em arquivo/pasta entra diretamente no modo de seleção, sem abrir janela central.

@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.9` (`versionCode 9`)  
+**Versão atual:** `0.1.0-alpha.10` (`versionCode 10`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -30,7 +30,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Propriedades básicas de arquivos/pastas.
 - Fluxo para conceder `MANAGE_EXTERNAL_STORAGE` em Android 11+.
 - Novo launcher legado/adaptativo com fundo azul XP, pasta amarela e lupa.
-- Modo tela inteira imersivo com barras do sistema ocultas.
+- Barras de status e navegação do Android permanecem visíveis; o modo imersivo/tela inteira foi removido.
 
 ## Estrutura
 
@@ -59,7 +59,7 @@ O app usa acesso amplo ao armazenamento compartilhado porque sua função princi
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
 
-## Interface alpha.9
+## Interface alpha.10
 
 A interface segue o Explorer do Windows XP adaptado a telas Android. O cabeçalho possui menu clássico, barra de ferramentas compacta e campo Endereço. O Endereço também permite alternar entre armazenamento interno e cartão SD quando detectado. O cartão de capacidade fica restrito à página inicial, deixando as pastas com mais área útil.
 
@@ -70,6 +70,8 @@ Na alpha.7, a barra de ferramentas foi compactada para caber inteira sem rolagem
 Na alpha.9, os menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda seguem um fluxo mais próximo do Explorer clássico, com menus suspensos compactos. Ferramentas ganhou `Organizar ›` com nome, data, tamanho, tipo e `Pastas primeiro`. Ajuda ganhou Manual de Ajuda, Sobre e Doação.
 
 O modo de seleção passa a usar a própria barra de ferramentas com sete ações: Copiar, Mover, Excluir, Renomear, Compartilhar, Propriedades e Selecionar tudo. O menu contextual do botão de opções foi remodelado para uma lista compacta no estilo clássico.
+
+Na alpha.10, o pacote de ícones v2 foi aplicado às ações principais da barra e aos botões de opções. Os ícones superiores ficaram maiores e mais encorpados, e o botão lateral de opções deixou de usar a bolinha azul. A tipografia compacta foi normalizada para melhorar a legibilidade sem perder o layout de Explorer clássico. Os controles decorativos de minimizar, maximizar e fechar foram removidos do cabeçalho principal. O aplicativo também deixou o modo imersivo: as barras de sistema do Android voltam a permanecer visíveis.
 
 ## Build
 

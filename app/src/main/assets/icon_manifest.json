@@ -3,7 +3,7 @@
     "name": "back",
     "category": "actions",
     "file": "actions/back.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "check",
@@ -15,31 +15,31 @@
     "name": "close",
     "category": "actions",
     "file": "actions/close.png",
-    "source": "supplemental generated asset"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "copy",
     "category": "actions",
     "file": "actions/copy.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "cut",
     "category": "actions",
     "file": "actions/cut.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "delete",
     "category": "actions",
     "file": "actions/delete.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "forward",
     "category": "actions",
     "file": "actions/forward.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "menu",
@@ -51,43 +51,43 @@
     "name": "more",
     "category": "actions",
     "file": "actions/more.png",
-    "source": "supplemental generated asset"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "paste",
     "category": "actions",
     "file": "actions/paste.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "properties",
     "category": "actions",
     "file": "actions/properties.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "refresh",
     "category": "actions",
     "file": "actions/refresh.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "rename",
     "category": "actions",
     "file": "actions/rename.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "search",
     "category": "actions",
     "file": "actions/search.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "select_all",
     "category": "actions",
     "file": "actions/select_all.png",
-    "source": "supplemental generated asset"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "settings",
@@ -99,13 +99,13 @@
     "name": "share",
     "category": "actions",
     "file": "actions/share.png",
-    "source": "supplemental generated asset"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "up",
     "category": "actions",
     "file": "actions/up.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "bluetooth",
@@ -639,7 +639,7 @@
     "name": "folder_downloads",
     "category": "folders",
     "file": "folders/folder_downloads.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "folder_favorite",
@@ -723,7 +723,7 @@
     "name": "home",
     "category": "locations",
     "file": "locations/home.png",
-    "source": "generated atlas"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "music",
@@ -873,12 +873,12 @@
     "name": "view_grid",
     "category": "view",
     "file": "view/view_grid.png",
-    "source": "supplemental generated asset"
+    "source": "Explorador XP Icon Pack v2"
   },
   {
     "name": "view_list",
     "category": "view",
     "file": "view/view_list.png",
-    "source": "supplemental generated asset"
+    "source": "Explorador XP Icon Pack v2"
   }
 ]

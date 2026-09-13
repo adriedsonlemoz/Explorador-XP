@@ -6,6 +6,7 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">false</item>
         <item name="android:colorAccent">#0A63D8</item>
     </style>
 </resources>
