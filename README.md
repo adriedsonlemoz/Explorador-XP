@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.6` (`versionCode 6`)  
+**Versão atual:** `0.1.0-alpha.7` (`versionCode 7`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -10,15 +10,15 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 ## O que já está implementado
 
 - Interface principal baseada no Explorer clássico do Windows XP: barra de título azul, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, barra de ferramentas compacta, barra de endereço, indicador de armazenamento, lista/grade e barra de status inferior.
-- 150 ícones XP integrados ao projeto integrados diretamente em `res/drawable-nodpi`.
+- 151 recursos PNG no conjunto visual XP, integrados diretamente em `res/drawable-nodpi`.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
 - Histórico de navegação com Voltar e Avançar, além da ação Subir.
 - Busca no diretório atual.
 - Modos Lista e Grade.
 - Ordenação por nome, data, tamanho e tipo.
-- Seleção por toque longo.
-- Copiar, recortar/mover e colar, incluindo pastas recursivas.
+- Toque longo abre menu contextual central; a opção **Selecionar** ativa a seleção múltipla sem substituir o cabeçalho.
+- Copiar, recortar/mover e colar, incluindo pastas recursivas; quando há conteúdo na área de transferência, **Downloads** vira temporariamente **Colar** na barra de ferramentas.
 - Criar pasta, renomear e excluir.
 - Abrir arquivos pelo app compatível via `FileProvider`.
 - Compartilhar arquivos.
@@ -28,7 +28,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Opção persistente para mostrar/ocultar arquivos ocultos.
 - Propriedades básicas de arquivos/pastas.
 - Fluxo para conceder `MANAGE_EXTERNAL_STORAGE` em Android 11+.
-- Launcher adaptativo baseado na pasta XP, evitando o ícone quadrado.
+- Novo launcher legado/adaptativo com fundo azul XP, pasta amarela e lupa.
 - Modo tela inteira imersivo com barras do sistema ocultas.
 
 ## Estrutura
@@ -44,7 +44,7 @@ app/src/main/java/com/exploradorxp/app/
   PreferencesStore.kt
 
 app/src/main/res/drawable-nodpi/
-  150 PNGs do pacote visual XP
+  151 PNGs do pacote visual XP
 
 docs/
   mockup_explorador_android_xp.png
@@ -58,11 +58,13 @@ O app usa acesso amplo ao armazenamento compartilhado porque sua função princi
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
 
-## Interface alpha.6
+## Interface alpha.7
 
 A interface segue o Explorer do Windows XP adaptado a telas Android. O cabeçalho possui menu clássico, barra de ferramentas compacta e campo Endereço. O Endereço também permite alternar entre armazenamento interno e cartão SD quando detectado. O cartão de capacidade fica restrito à página inicial, deixando as pastas com mais área útil.
 
 Os ícones principais de pastas, navegação e dispositivos foram atualizados para uma aparência mais próxima do Windows XP, mantendo os recursos já existentes para tipos de arquivo.
+
+Na alpha.7, a barra de ferramentas foi compactada para caber inteira sem rolagem horizontal. O toque longo em arquivo/pasta abre as ações no centro da tela; o toque longo em área vazia oferece Colar, Nova pasta, Selecionar tudo, Atualizar e Propriedades.
 
 ## Build
 

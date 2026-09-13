@@ -1,17 +1,27 @@
 # CHANGELOG
 
+## 0.1.0-alpha.7
+
+- Toque longo em arquivo/pasta agora abre um **menu contextual central**, sem substituir o cabeçalho do Explorer.
+- Menu contextual inclui Abrir, Copiar, Mover, Renomear, Excluir, Compartilhar (arquivos), Favoritar/Desfavoritar, Propriedades e Selecionar.
+- Toque longo em área vazia abre ações da pasta atual: Colar, Nova pasta, Selecionar tudo, Atualizar e Propriedades.
+- Ao copiar ou mover, o botão **Downloads** da barra de ferramentas é temporariamente substituído por **Colar**.
+- A área de transferência é limpa após uma colagem concluída e pode ser cancelada pelo menu Editar.
+- Seleção múltipla não substitui mais o cabeçalho; suas ações ficam disponíveis pelo menu **Editar**.
+- Barra de ferramentas redimensionada para caber Voltar, Avançar, Início, Subir, Pesquisar, Downloads/Colar e Exibir sem rolagem horizontal.
+- Ícones da barra foram reduzidos para melhorar a adaptação a telas estreitas.
+- Novo ícone do aplicativo: pasta XP em fundo azul clássico com lupa, incluindo launcher legado e adaptativo.
+- Versão sincronizada para `0.1.0-alpha.7` / `versionCode 7`.
+
 ## 0.1.0-alpha.6
 
 - Aplicado o layout aprovado do Explorer XP móvel como referência principal da interface.
-- Adicionado botão **Início** na barra de ferramentas, entre Avançar e Subir.
-- O campo **Endereço** agora funciona também como seletor de armazenamento.
+- Adicionado botão **Início** na barra de ferramentas.
+- O campo **Endereço** passou a funcionar também como seletor de armazenamento.
 - O menu do endereço mostra **Armazenamento interno** e, quando disponível, **Cartão SD**.
-- A barra de endereço identifica o volume atual e continua exibindo o caminho da pasta navegada.
-- O cartão com usado/livre/total agora aparece apenas na página inicial do armazenamento interno.
+- O cartão com usado/livre/total passou a aparecer apenas na página inicial do armazenamento interno.
 - Navegação para cartão SD passou a respeitar o limite da raiz do volume ao usar Subir.
 - Atualizado o conjunto visual principal de pastas, ações e dispositivos com ícones mais próximos do Windows XP.
-- Mantidas as funções existentes: arquivos ocultos, Downloads, favoritos, busca, lista/grade, seleção e operações de arquivo.
-- Versão sincronizada em `build.gradle.kts`, `github-manager.json`, README e workflow automático de APK.
 
 # Changelog
 

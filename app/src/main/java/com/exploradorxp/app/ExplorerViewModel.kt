@@ -87,8 +87,6 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun onItemLongClick(item: FileItem) = toggleSelection(item.file)
-
     fun toggleSelection(file: File) {
         _uiState.update { state ->
             val updated = state.selectedPaths.toMutableSet()
@@ -194,19 +192,28 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         refresh()
     }
 
-    fun copySelected() = setClipboard(ClipboardMode.COPY)
-    fun cutSelected() = setClipboard(ClipboardMode.CUT)
+    fun copySelected() = setClipboard(selectedFiles(), ClipboardMode.COPY)
+    fun cutSelected() = setClipboard(selectedFiles(), ClipboardMode.CUT)
 
-    private fun setClipboard(mode: ClipboardMode) {
-        val files = selectedFiles()
-        if (files.isEmpty()) return
-        _uiState.update { it.copy(clipboard = ClipboardState(files, mode), selectedPaths = emptySet()) }
+    fun copyFile(file: File) = setClipboard(listOf(file), ClipboardMode.COPY)
+    fun cutFile(file: File) = setClipboard(listOf(file), ClipboardMode.CUT)
+
+    private fun setClipboard(files: List<File>, mode: ClipboardMode) {
+        val existing = files.filter(File::exists)
+        if (existing.isEmpty()) return
+        _uiState.update { it.copy(clipboard = ClipboardState(existing, mode), selectedPaths = emptySet()) }
         _events.tryEmit(
             ExplorerEvent.ShowMessage(
-                if (mode == ClipboardMode.COPY) "${files.size} item(ns) pronto(s) para copiar."
-                else "${files.size} item(ns) pronto(s) para mover."
+                if (mode == ClipboardMode.COPY) "${existing.size} item(ns) pronto(s) para copiar."
+                else "${existing.size} item(ns) pronto(s) para mover."
             )
         )
+    }
+
+    fun clearClipboard() {
+        if (_uiState.value.clipboard == null) return
+        _uiState.update { it.copy(clipboard = null) }
+        _events.tryEmit(ExplorerEvent.ShowMessage("Operação de copiar/mover cancelada."))
     }
 
     fun pasteClipboard() {
@@ -215,14 +222,44 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             repository.paste(clipboard, destination)
                 .onSuccess {
-                    if (clipboard.mode == ClipboardMode.CUT) {
-                        _uiState.update { it.copy(clipboard = null) }
-                    }
+                    _uiState.update { it.copy(clipboard = null) }
                     _events.emit(ExplorerEvent.ShowMessage("Operação concluída."))
                     refresh()
                 }
                 .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao colar.")) }
         }
+    }
+
+    fun deleteFile(file: File) {
+        if (!file.exists()) return
+        viewModelScope.launch {
+            repository.delete(listOf(file))
+                .onSuccess {
+                    _uiState.update { it.copy(selectedPaths = it.selectedPaths - file.absolutePath) }
+                    _events.emit(ExplorerEvent.ShowMessage("Item excluído."))
+                    refresh()
+                }
+                .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao excluir.")) }
+        }
+    }
+
+    fun shareFile(file: File) {
+        if (file.exists() && file.isFile) _events.tryEmit(ExplorerEvent.ShareFiles(listOf(file)))
+    }
+
+    fun openFileOrFolder(file: File) {
+        if (!file.exists()) return
+        if (file.isDirectory) {
+            navigateTo(file)
+        } else {
+            repository.addRecent(file)
+            _events.tryEmit(ExplorerEvent.OpenFile(file))
+        }
+    }
+
+    fun selectAllVisible() {
+        val paths = _uiState.value.items.map { it.file.absolutePath }.toSet()
+        _uiState.update { it.copy(selectedPaths = paths) }
     }
 
     fun deleteSelected() {
