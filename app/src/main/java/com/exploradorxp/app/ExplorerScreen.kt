@@ -61,11 +61,14 @@ import java.util.Locale
 val XpBlue = Color(0xFF0A67D8)
 val XpBlueDark = Color(0xFF0752B8)
 val XpBlueLight = Color(0xFF4BA4FF)
-val XpBackground = Color(0xFFEAF4FF)
+val XpBackground = Color(0xFFE9F2FC)
 val XpSurface = Color(0xFFFFFFFF)
-val XpBorder = Color(0xFF78A9E6)
-val XpTextSecondary = Color(0xFF3E5682)
-val XpSelection = Color(0xFFD8EAFE)
+val XpBorder = Color(0xFF2E7FD3)
+val XpTextSecondary = Color(0xFF36577F)
+val XpSelection = Color(0xFFD9E9FB)
+val XpChrome = Color(0xFFF2F4F8)
+val XpChromeBorder = Color(0xFFB8C7DA)
+val XpPanel = Color(0xFFF6FAFF)
 
 @Composable
 fun ExplorerScreen(
@@ -130,7 +133,7 @@ fun ExplorerScreen(
                 showHidden = state.showHidden,
                 onShowHiddenChange = onToggleHidden,
                 onNavigateTo = onNavigateTo,
-                onOpenFiles = { onTabChange(ExplorerTab.FILES) },
+                onOpenDownloads = { onTabChange(ExplorerTab.DOWNLOADS) },
                 onOpenFavorites = { onTabChange(ExplorerTab.FAVORITES) },
             )
         } else {
@@ -183,9 +186,9 @@ fun ExplorerScreen(
             }
         }
 
-        BottomNavigation(
-            selected = state.tab,
-            onTabChange = onTabChange,
+        ExplorerStatusBar(
+            items = state.items,
+            selectedPaths = state.selectedPaths,
         )
     }
 
@@ -268,7 +271,7 @@ private fun XpHeader(
     showHidden: Boolean,
     onShowHiddenChange: (Boolean) -> Unit,
     onNavigateTo: (File) -> Unit,
-    onOpenFiles: () -> Unit,
+    onOpenDownloads: () -> Unit,
     onOpenFavorites: () -> Unit,
 ) {
     var fileMenu by remember { mutableStateOf(false) }
@@ -334,8 +337,8 @@ private fun XpHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(27.dp)
-                .background(Color(0xFFF3F1E8))
-                .border(1.dp, Color(0xFFC9C6BA))
+                .background(XpChrome)
+                .border(1.dp, XpChromeBorder)
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 4.dp)
         ) {
@@ -391,7 +394,7 @@ private fun XpHeader(
                 XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
                 DropdownMenu(expanded = helpMenu, onDismissRequest = { helpMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("Explorador XP 0.1.0-alpha.4") },
+                        text = { Text("Explorador XP 0.1.0-alpha.5") },
                         enabled = false,
                         onClick = {},
                     )
@@ -405,8 +408,8 @@ private fun XpHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(57.dp)
-                .background(Color(0xFFF3F1E8))
-                .border(1.dp, Color(0xFFC9C6BA))
+                .background(XpChrome)
+                .border(1.dp, XpChromeBorder)
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 5.dp)
         ) {
@@ -415,7 +418,7 @@ private fun XpHeader(
             XpToolbarSeparator()
             XpClassicToolButton(R.drawable.up, "Subir", true, onUp)
             XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch)
-            XpClassicToolButton(R.drawable.folder_open, "Pastas", true, onOpenFiles)
+            XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads)
             XpClassicToolButton(
                 if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
                 "Exibir",
@@ -430,8 +433,8 @@ private fun XpHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(38.dp)
-                .background(Color(0xFFF3F1E8))
-                .border(1.dp, Color(0xFFC9C6BA))
+                .background(XpChrome)
+                .border(1.dp, XpChromeBorder)
                 .padding(horizontal = 5.dp, vertical = 4.dp)
         ) {
             Text("Endereço", color = Color(0xFF5A5A5A), fontSize = 10.sp)
@@ -565,7 +568,7 @@ private fun XpToolbarSeparator() {
             .padding(horizontal = 2.dp, vertical = 8.dp)
             .width(1.dp)
             .fillMaxHeight()
-            .background(Color(0xFFC9C6BA))
+            .background(XpChromeBorder)
     )
 }
 
@@ -612,7 +615,7 @@ private fun StorageCard(info: StorageInfo) {
             .padding(horizontal = 8.dp, vertical = 2.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFFE4F0FF))
+            .background(XpPanel)
             .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
             .padding(horizontal = 9.dp, vertical = 8.dp)
     ) {
@@ -629,7 +632,7 @@ private fun StorageCard(info: StorageInfo) {
                 .weight(1f)
                 .height(30.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, Color(0xFF7891B2), RoundedCornerShape(8.dp))
+                .border(1.dp, XpBorder, RoundedCornerShape(8.dp))
         ) {
             Box(
                 contentAlignment = Alignment.CenterStart,
@@ -653,11 +656,11 @@ private fun StorageCard(info: StorageInfo) {
                 modifier = Modifier
                     .weight((1f - info.usedFraction).coerceAtLeast(0.001f))
                     .fillMaxHeight()
-                    .background(Color(0xFFD8E2EF))
+                    .background(Color(0xFFE1ECF8))
             ) {
                 Text(
                     text = "Livre: $free",
-                    color = Color(0xFF183363),
+                    color = XpBlueDark,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 11.sp,
                     maxLines = 1,
@@ -670,7 +673,7 @@ private fun StorageCard(info: StorageInfo) {
         Spacer(Modifier.width(9.dp))
         Text(
             text = "Total: $total",
-            color = Color(0xFF183363),
+            color = XpBlueDark,
             fontWeight = FontWeight.SemiBold,
             fontSize = 12.sp,
             maxLines = 1,
@@ -730,10 +733,10 @@ private fun FileList(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .padding(horizontal = 3.dp)
+            .clip(RoundedCornerShape(5.dp))
             .background(Color.White)
-            .border(1.dp, XpBorder, RoundedCornerShape(12.dp))
+            .border(1.dp, XpBorder, RoundedCornerShape(5.dp))
     ) {
         items(items, key = { it.file.absolutePath }) { item ->
             FileListRow(
@@ -770,21 +773,21 @@ private fun FileListRow(
             .fillMaxWidth()
             .background(if (selected) XpSelection else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 12.dp, vertical = 9.dp)
+            .padding(horizontal = 9.dp, vertical = 5.dp)
     ) {
         androidx.compose.foundation.Image(
             painter = painterResource(item.iconRes),
             contentDescription = null,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(36.dp),
             contentScale = ContentScale.Fit,
         )
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(9.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     item.name,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
+                    fontSize = 15.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -801,13 +804,13 @@ private fun FileListRow(
                 if (item.isDirectory) "${formatDate(item.createdAt)}  •  ${formatTime(item.createdAt)}  •  Pasta de arquivos"
                 else "${formatDate(item.createdAt)}  •  ${formatTime(item.createdAt)}  •  ${formatBytes(item.size)}",
                 color = XpTextSecondary,
-                fontSize = 13.sp,
+                fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         Box {
-            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 26)
+            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 21, buttonSize = 34)
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 DropdownMenuItem(text = { Text(if (item.isFavorite) "Remover dos favoritos" else "Adicionar aos favoritos") }, onClick = {
                     menuExpanded = false; onToggleFavorite()
@@ -835,7 +838,7 @@ private fun FileGrid(
     onItemLongClick: (FileItem) -> Unit,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 105.dp),
+        columns = GridCells.Adaptive(minSize = 96.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxSize().padding(8.dp),
@@ -848,18 +851,18 @@ private fun FileGrid(
                     .background(if (item.file.absolutePath in selectedPaths) XpSelection else Color.White)
                     .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
                     .combinedClickable(onClick = { onItemClick(item) }, onLongClick = { onItemLongClick(item) })
-                    .padding(10.dp)
+                    .padding(7.dp)
             ) {
                 androidx.compose.foundation.Image(
                     painter = painterResource(item.iconRes),
                     contentDescription = null,
-                    modifier = Modifier.size(58.dp),
+                    modifier = Modifier.size(48.dp),
                     contentScale = ContentScale.Fit,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     item.name,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -878,50 +881,52 @@ private fun FileGrid(
 }
 
 @Composable
-private fun BottomNavigation(selected: ExplorerTab, onTabChange: (ExplorerTab) -> Unit) {
+private fun ExplorerStatusBar(
+    items: List<FileItem>,
+    selectedPaths: Set<String>,
+) {
+    val selectedItems = items.filter { it.file.absolutePath in selectedPaths }
+    val hasSelection = selectedItems.isNotEmpty()
+    val shownItems = if (hasSelection) selectedItems else items
+    val sizeBytes = shownItems.asSequence()
+        .filterNot { it.isDirectory }
+        .sumOf { it.size }
+
     Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFDCEBFF))
-            .border(1.dp, XpBorder)
-            .padding(4.dp)
+            .height(27.dp)
+            .background(XpChrome)
+            .border(1.dp, XpChromeBorder)
+            .padding(horizontal = 7.dp)
     ) {
-        BottomNavItem(
-            label = "Arquivos",
-            icon = R.drawable.folder,
-            selected = selected == ExplorerTab.FILES,
-            onClick = { onTabChange(ExplorerTab.FILES) },
-            modifier = Modifier.weight(1f)
+        Text(
+            text = if (hasSelection) {
+                "${selectedItems.size} selecionado(s)"
+            } else {
+                "${items.size} ${if (items.size == 1) "objeto" else "objetos"}"
+            },
+            color = Color(0xFF303030),
+            fontSize = 10.sp,
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
         )
-        BottomNavItem(
-            label = "Downloads",
-            icon = R.drawable.folder_downloads,
-            selected = selected == ExplorerTab.DOWNLOADS,
-            onClick = { onTabChange(ExplorerTab.DOWNLOADS) },
-            modifier = Modifier.weight(1f)
-        )
-        BottomNavItem(
-            label = "Favoritos",
-            icon = R.drawable.favorites,
-            selected = selected == ExplorerTab.FAVORITES,
-            onClick = { onTabChange(ExplorerTab.FAVORITES) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
 
-@Composable
-private fun BottomNavItem(label: String, icon: Int, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) Color(0xFFBFD9FF) else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp)
-    ) {
-        androidx.compose.foundation.Image(painterResource(icon), null, modifier = Modifier.size(32.dp))
-        Text(label, color = if (selected) XpBlueDark else Color(0xFF405274), fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp)
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(1.dp)
+                .background(XpChromeBorder)
+        )
+
+        Text(
+            text = formatBytes(sizeBytes),
+            color = Color(0xFF303030),
+            fontSize = 10.sp,
+            maxLines = 1,
+            modifier = Modifier.padding(start = 9.dp),
+        )
     }
 }
 

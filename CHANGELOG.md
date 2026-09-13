@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0-alpha.5
+
+- Navegação inferior removida e substituída por barra de status no estilo Windows Explorer XP.
+- Barra de status mostra quantidade de objetos e tamanho dos arquivos exibidos; com seleção, mostra quantidade e tamanho selecionados.
+- Botão **Pastas** da barra de ferramentas substituído por **Downloads**.
+- Ícones e linhas da visualização em lista ficaram menores e mais compactos.
+- Visualização em grade também foi compactada.
+- Tons de fundo, bordas, seleção, armazenamento e barra de status foram harmonizados com a família azul do cabeçalho.
+- Mantidos armazenamento compacto, arquivos ocultos, data/hora, favoritos e operações de arquivo.
+
+
 ## 0.1.0-alpha.4
 
 - Cabeçalho redesenhado para reproduzir mais fielmente o Windows Explorer do XP em formato móvel.

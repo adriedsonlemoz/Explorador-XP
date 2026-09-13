@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-alpha.5",
   "kotlin_files": 7,
   "xp_png_icons": 147,
   "drawable_references": 102,
@@ -10,9 +10,12 @@
     "xp_classic_menu_bar",
     "xp_classic_toolbar",
     "xp_classic_address_bar",
+    "downloads_toolbar_shortcut",
+    "xp_status_bar",
+    "compact_file_rows",
+    "harmonized_blue_palette",
     "show_hidden_toggle",
     "creation_date_time",
-    "downloads_tab",
     "compact_storage_meter",
     "immersive_fullscreen"
   ]
