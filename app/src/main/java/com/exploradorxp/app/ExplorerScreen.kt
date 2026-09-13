@@ -484,7 +484,7 @@ private fun XpHeader(
                 XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
                 DropdownMenu(expanded = helpMenu, onDismissRequest = { helpMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("Explorador XP 0.1.0-alpha.7") },
+                        text = { Text("Explorador XP 0.1.0-alpha.8") },
                         enabled = false,
                         onClick = {},
                     )
@@ -1108,6 +1108,8 @@ private fun FileGrid(
     items: List<FileItem>,
     selectedPaths: Set<String>,
     onItemClick: (FileItem) -> Unit,
+    onContextMenu: (FileItem) -> Unit,
+    onBlankLongPress: () -> Unit,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 96.dp),

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.1.0-alpha.8
+
+- Corrigido erro de compilação em `ExplorerScreen.kt` introduzido na alpha.7.
+- `FileGrid` agora recebe corretamente `onContextMenu` e `onBlankLongPress`, usados pelo menu contextual e pelo toque longo em área vazia.
+- Corrigidos os erros `No parameter with name onContextMenu`, `No parameter with name onBlankLongPress` e referências não resolvidas associadas.
+- Versão sincronizada para `0.1.0-alpha.8` / `versionCode 8`.
+
 ## 0.1.0-alpha.7
 
 - Toque longo em arquivo/pasta agora abre um **menu contextual central**, sem substituir o cabeçalho do Explorer.
