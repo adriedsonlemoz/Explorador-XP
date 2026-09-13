@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -71,6 +73,7 @@ fun ExplorerScreen(
     accessGranted: Boolean,
     onRequestAccess: () -> Unit,
     onBack: () -> Unit,
+    onForward: () -> Unit,
     onUp: () -> Unit,
     onRefresh: () -> Unit,
     onItemClick: (FileItem) -> Unit,
@@ -99,7 +102,6 @@ fun ExplorerScreen(
     var propertiesTarget by remember { mutableStateOf<File?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showSort by remember { mutableStateOf(false) }
-    var showMore by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -108,22 +110,28 @@ fun ExplorerScreen(
     ) {
         if (state.selectedPaths.isEmpty()) {
             XpHeader(
+                currentDir = state.currentDir,
                 searchVisible = state.searchVisible,
                 query = state.query,
                 onQueryChange = onQueryChange,
                 onToggleSearch = onToggleSearch,
-                showMore = showMore,
-                onShowMore = { showMore = it },
                 onNewFolder = { showNewFolder = true },
                 onRefresh = onRefresh,
                 canPaste = state.clipboard != null && state.tab != ExplorerTab.FAVORITES,
                 onPaste = onPaste,
                 onSort = { showSort = true },
                 canBack = state.canGoBack,
+                canForward = state.canGoForward,
                 onBack = onBack,
+                onForward = onForward,
                 onUp = onUp,
                 viewMode = state.viewMode,
                 onToggleView = onToggleView,
+                showHidden = state.showHidden,
+                onShowHiddenChange = onToggleHidden,
+                onNavigateTo = onNavigateTo,
+                onOpenFiles = { onTabChange(ExplorerTab.FILES) },
+                onOpenFavorites = { onTabChange(ExplorerTab.FAVORITES) },
             )
         } else {
             SelectionHeader(
@@ -137,12 +145,6 @@ fun ExplorerScreen(
         }
 
         if (state.tab != ExplorerTab.FAVORITES) {
-            CompactLocationBar(
-                currentDir = state.currentDir,
-                showHidden = state.showHidden,
-                onShowHiddenChange = onToggleHidden,
-                onNavigateTo = onNavigateTo,
-            )
             StorageCard(state.storageInfo)
         } else {
             SectionTitle(title = "Favoritos", icon = R.drawable.favorites)
@@ -246,94 +248,251 @@ fun ExplorerScreen(
 
 @Composable
 private fun XpHeader(
+    currentDir: File,
     searchVisible: Boolean,
     query: String,
     onQueryChange: (String) -> Unit,
     onToggleSearch: () -> Unit,
-    showMore: Boolean,
-    onShowMore: (Boolean) -> Unit,
     onNewFolder: () -> Unit,
     onRefresh: () -> Unit,
     canPaste: Boolean,
     onPaste: () -> Unit,
     onSort: () -> Unit,
     canBack: Boolean,
+    canForward: Boolean,
     onBack: () -> Unit,
+    onForward: () -> Unit,
     onUp: () -> Unit,
     viewMode: ViewMode,
     onToggleView: () -> Unit,
+    showHidden: Boolean,
+    onShowHiddenChange: (Boolean) -> Unit,
+    onNavigateTo: (File) -> Unit,
+    onOpenFiles: () -> Unit,
+    onOpenFavorites: () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(XpBlueLight, XpBlue, XpBlueDark)))
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-    ) {
-        XpHeaderButton(
-            icon = R.drawable.back,
-            contentDescription = "Voltar",
-            enabled = canBack,
-            onClick = onBack,
-        )
-        Spacer(Modifier.width(4.dp))
-        XpHeaderButton(
-            icon = R.drawable.up,
-            contentDescription = "Subir",
-            enabled = true,
-            onClick = onUp,
-        )
-        Spacer(Modifier.width(4.dp))
-        XpHeaderButton(
-            icon = if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
-            contentDescription = "Exibir",
-            enabled = true,
-            onClick = onToggleView,
-        )
-        Spacer(Modifier.width(8.dp))
-        androidx.compose.foundation.Image(
-            painter = painterResource(R.drawable.folder),
-            contentDescription = null,
-            modifier = Modifier.size(30.dp),
-            contentScale = ContentScale.Fit,
-        )
-        Spacer(Modifier.width(7.dp))
-        if (searchVisible) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                placeholder = { Text("Pesquisar") },
-                modifier = Modifier.weight(1f).height(44.dp),
+    var fileMenu by remember { mutableStateOf(false) }
+    var editMenu by remember { mutableStateOf(false) }
+    var viewMenu by remember { mutableStateOf(false) }
+    var favoritesMenu by remember { mutableStateOf(false) }
+    var toolsMenu by remember { mutableStateOf(false) }
+    var helpMenu by remember { mutableStateOf(false) }
+    var addressMenu by remember { mutableStateOf(false) }
+
+    val root = android.os.Environment.getExternalStorageDirectory()
+    val pathEntries = remember(currentDir.absolutePath) {
+        buildList<Pair<String, File>> {
+            add("Armazenamento interno" to root)
+            val relative = currentDir.absolutePath.removePrefix(root.absolutePath).trim('/')
+            if (relative.isNotBlank()) {
+                var cursor = root
+                relative.split('/').filter(String::isNotBlank).forEach { part ->
+                    cursor = File(cursor, part)
+                    add(part to cursor)
+                }
+            }
+        }
+    }
+    val displayPath = pathEntries.joinToString("  ›  ") { it.first }
+
+    Column(Modifier.fillMaxWidth()) {
+        // Barra de título clássica do Explorer XP
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(38.dp)
+                .background(Brush.verticalGradient(listOf(Color(0xFF2F92F6), Color(0xFF0A67D8), Color(0xFF0752B8))))
+                .padding(horizontal = 7.dp)
+        ) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(R.drawable.folder),
+                contentDescription = null,
+                modifier = Modifier.size(27.dp),
+                contentScale = ContentScale.Fit,
             )
-        } else {
+            Spacer(Modifier.width(7.dp))
             Text(
                 text = "Explorador",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 21.sp,
+                fontSize = 18.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+            )
+            XpWindowControl("—", Color(0xFF2C78D1))
+            Spacer(Modifier.width(2.dp))
+            XpWindowControl("□", Color(0xFF2C78D1))
+            Spacer(Modifier.width(2.dp))
+            XpWindowControl("×", Color(0xFFE65236))
+        }
+
+        // Menu clássico: Arquivo / Editar / Exibir / Favoritos / Ferramentas / Ajuda
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(27.dp)
+                .background(Color(0xFFF3F1E8))
+                .border(1.dp, Color(0xFFC9C6BA))
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 4.dp)
+        ) {
+            Box {
+                XpMenuLabel("Arquivo", fileMenu) { fileMenu = true }
+                DropdownMenu(expanded = fileMenu, onDismissRequest = { fileMenu = false }) {
+                    DropdownMenuItem(text = { Text("Nova pasta") }, onClick = { fileMenu = false; onNewFolder() })
+                    if (canPaste) DropdownMenuItem(text = { Text("Colar") }, onClick = { fileMenu = false; onPaste() })
+                    DropdownMenuItem(text = { Text("Atualizar") }, onClick = { fileMenu = false; onRefresh() })
+                }
+            }
+
+            Box {
+                XpMenuLabel("Editar", editMenu) { editMenu = true }
+                DropdownMenu(expanded = editMenu, onDismissRequest = { editMenu = false }) {
+                    if (canPaste) DropdownMenuItem(text = { Text("Colar") }, onClick = { editMenu = false; onPaste() })
+                    DropdownMenuItem(text = { Text("Atualizar") }, onClick = { editMenu = false; onRefresh() })
+                }
+            }
+
+            Box {
+                XpMenuLabel("Exibir", viewMenu) { viewMenu = true }
+                DropdownMenu(expanded = viewMenu, onDismissRequest = { viewMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(if (viewMode == ViewMode.LIST) "Exibir como ícones" else "Exibir como lista") },
+                        onClick = { viewMenu = false; onToggleView() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (showHidden) "Ocultar arquivos ocultos ✓" else "Mostrar arquivos ocultos") },
+                        onClick = { viewMenu = false; onShowHiddenChange(!showHidden) },
+                    )
+                    DropdownMenuItem(text = { Text("Ordenar por...") }, onClick = { viewMenu = false; onSort() })
+                    DropdownMenuItem(text = { Text("Atualizar") }, onClick = { viewMenu = false; onRefresh() })
+                }
+            }
+
+            Box {
+                XpMenuLabel("Favoritos", favoritesMenu) { favoritesMenu = true }
+                DropdownMenu(expanded = favoritesMenu, onDismissRequest = { favoritesMenu = false }) {
+                    DropdownMenuItem(text = { Text("Abrir Favoritos") }, onClick = { favoritesMenu = false; onOpenFavorites() })
+                }
+            }
+
+            Box {
+                XpMenuLabel("Ferramentas", toolsMenu) { toolsMenu = true }
+                DropdownMenu(expanded = toolsMenu, onDismissRequest = { toolsMenu = false }) {
+                    DropdownMenuItem(text = { Text("Ordenar") }, onClick = { toolsMenu = false; onSort() })
+                    DropdownMenuItem(text = { Text("Atualizar") }, onClick = { toolsMenu = false; onRefresh() })
+                }
+            }
+
+            Box {
+                XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
+                DropdownMenu(expanded = helpMenu, onDismissRequest = { helpMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Explorador XP 0.1.0-alpha.4") },
+                        enabled = false,
+                        onClick = {},
+                    )
+                }
+            }
+        }
+
+        // Barra de ferramentas compacta no padrão do Explorer XP
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(57.dp)
+                .background(Color(0xFFF3F1E8))
+                .border(1.dp, Color(0xFFC9C6BA))
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 5.dp)
+        ) {
+            XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack)
+            XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward)
+            XpToolbarSeparator()
+            XpClassicToolButton(R.drawable.up, "Subir", true, onUp)
+            XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch)
+            XpClassicToolButton(R.drawable.folder_open, "Pastas", true, onOpenFiles)
+            XpClassicToolButton(
+                if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
+                "Exibir",
+                true,
+                onToggleView,
             )
         }
-        XpIconButton(icon = R.drawable.search, contentDescription = "Pesquisar", onClick = onToggleSearch, iconSize = 25, buttonSize = 38)
-        Box {
-            XpIconButton(icon = R.drawable.more, contentDescription = "Mais", onClick = { onShowMore(true) }, iconSize = 23, buttonSize = 38)
-            DropdownMenu(expanded = showMore, onDismissRequest = { onShowMore(false) }) {
-                DropdownMenuItem(text = { Text("Nova pasta") }, onClick = {
-                    onShowMore(false); onNewFolder()
-                })
-                DropdownMenuItem(text = { Text("Atualizar") }, onClick = {
-                    onShowMore(false); onRefresh()
-                })
-                DropdownMenuItem(text = { Text("Ordenar") }, onClick = {
-                    onShowMore(false); onSort()
-                })
-                if (canPaste) {
-                    DropdownMenuItem(text = { Text("Colar") }, onClick = {
-                        onShowMore(false); onPaste()
-                    })
+
+        // Barra de endereço fina, como no Windows Explorer
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(38.dp)
+                .background(Color(0xFFF3F1E8))
+                .border(1.dp, Color(0xFFC9C6BA))
+                .padding(horizontal = 5.dp, vertical = 4.dp)
+        ) {
+            Text("Endereço", color = Color(0xFF5A5A5A), fontSize = 10.sp)
+            Spacer(Modifier.width(5.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(Color.White)
+                    .border(1.dp, Color(0xFF8EA6C7))
+                    .padding(horizontal = 5.dp)
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(if (currentDir == root) R.drawable.drive_hdd else R.drawable.folder),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Spacer(Modifier.width(5.dp))
+                if (searchVisible) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (query.isBlank()) {
+                            Text("Pesquisar nesta pasta", color = Color(0xFF777777), fontSize = 11.sp)
+                        }
+                        BasicTextField(
+                            value = query,
+                            onValueChange = onQueryChange,
+                            singleLine = true,
+                            textStyle = TextStyle(color = Color(0xFF202020), fontSize = 11.sp),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                } else {
+                    Text(
+                        text = displayPath,
+                        color = Color(0xFF202020),
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Box {
+                    Text(
+                        text = "▾",
+                        color = XpBlueDark,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier
+                            .clickable { addressMenu = true }
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                    DropdownMenu(expanded = addressMenu, onDismissRequest = { addressMenu = false }) {
+                        pathEntries.forEach { (label, file) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = { addressMenu = false; onNavigateTo(file) },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -341,29 +500,73 @@ private fun XpHeader(
 }
 
 @Composable
-private fun XpHeaderButton(
-    icon: Int,
-    contentDescription: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
+private fun XpWindowControl(symbol: String, color: Color) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(38.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x332B8BF0))
-            .border(1.dp, Color(0x99B9DDFF), RoundedCornerShape(8.dp))
+            .size(24.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(Brush.verticalGradient(listOf(color.copy(alpha = .75f), color)))
+            .border(1.dp, Color.White.copy(alpha = .8f), RoundedCornerShape(4.dp))
+    ) {
+        Text(symbol, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun XpMenuLabel(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        text = label,
+        color = Color(0xFF202020),
+        fontSize = 11.sp,
+        modifier = Modifier
+            .background(if (selected) Color(0xFFDCE9F8) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 5.dp)
+    )
+}
+
+@Composable
+private fun XpClassicToolButton(
+    icon: Int,
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .width(57.dp)
+            .fillMaxHeight()
             .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 3.dp)
     ) {
         androidx.compose.foundation.Image(
             painter = painterResource(icon),
-            contentDescription = contentDescription,
+            contentDescription = label,
             modifier = Modifier.size(27.dp),
             contentScale = ContentScale.Fit,
-            alpha = if (enabled) 1f else .35f,
+            alpha = if (enabled) 1f else .30f,
+        )
+        Text(
+            text = label,
+            color = if (enabled) Color(0xFF202020) else Color(0xFF999999),
+            fontSize = 9.sp,
+            maxLines = 1,
         )
     }
+}
+
+@Composable
+private fun XpToolbarSeparator() {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 2.dp, vertical = 8.dp)
+            .width(1.dp)
+            .fillMaxHeight()
+            .background(Color(0xFFC9C6BA))
+    )
 }
 
 @Composable
@@ -394,117 +597,6 @@ private fun SelectionHeader(
         XpIconButton(R.drawable.cut, "Recortar", onCut)
         XpIconButton(R.drawable.share, "Compartilhar", onShare)
         XpIconButton(R.drawable.delete, "Excluir", onDelete)
-    }
-}
-
-@Composable
-private fun CompactLocationBar(
-    currentDir: File,
-    showHidden: Boolean,
-    onShowHiddenChange: (Boolean) -> Unit,
-    onNavigateTo: (File) -> Unit,
-) {
-    val root = android.os.Environment.getExternalStorageDirectory()
-    val segments = remember(currentDir.absolutePath) {
-        buildList<Pair<String, File>> {
-            add("Armazenamento interno" to root)
-            val relative = currentDir.absolutePath.removePrefix(root.absolutePath).trim('/')
-            if (relative.isNotBlank()) {
-                var cursor = root
-                relative.split('/').filter(String::isNotBlank).forEach { part ->
-                    cursor = File(cursor, part)
-                    add(part to cursor)
-                }
-            }
-        }
-    }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .weight(1f)
-                .height(44.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(Color.White)
-                .border(1.dp, XpBorder, RoundedCornerShape(9.dp))
-                .padding(horizontal = 9.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .weight(1f)
-                    .horizontalScroll(rememberScrollState())
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(R.drawable.drive_hdd),
-                    contentDescription = null,
-                    modifier = Modifier.size(25.dp)
-                )
-                Spacer(Modifier.width(7.dp))
-                segments.forEachIndexed { index, pair ->
-                    Text(
-                        text = pair.first,
-                        color = Color(0xFF132A55),
-                        fontWeight = if (index == segments.lastIndex) FontWeight.Bold else FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        maxLines = 1,
-                        modifier = Modifier.clickable { onNavigateTo(pair.second) }
-                    )
-                    if (index != segments.lastIndex) {
-                        Text("  ›  ", color = XpBlueDark, fontWeight = FontWeight.Bold, fontSize = 19.sp)
-                    }
-                }
-            }
-            Text("▾", color = XpBlueDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .height(44.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(Color(0xFFE6F1FF))
-                .border(1.dp, XpBorder, RoundedCornerShape(9.dp))
-                .clickable { onShowHiddenChange(!showHidden) }
-                .padding(horizontal = 8.dp)
-        ) {
-            androidx.compose.foundation.Image(
-                painter = painterResource(R.drawable.visible),
-                contentDescription = null,
-                modifier = Modifier.size(23.dp),
-            )
-            Spacer(Modifier.width(5.dp))
-            Text("Ocultos", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.width(6.dp))
-            HiddenToggleIndicator(checked = showHidden)
-        }
-    }
-}
-
-@Composable
-private fun HiddenToggleIndicator(checked: Boolean) {
-    Box(
-        modifier = Modifier
-            .width(36.dp)
-            .height(20.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (checked) Color(0xFF2E80D8) else Color(0xFF9CAFC7))
-            .padding(2.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(16.dp)
-                .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.White)
-        )
     }
 }
 

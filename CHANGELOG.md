@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.0-alpha.4
+
+- Cabeçalho redesenhado para reproduzir mais fielmente o Windows Explorer do XP em formato móvel.
+- Nova barra de título azul com ícone do Explorador e controles visuais de janela.
+- Adicionada barra de menus clássica: Arquivo, Editar, Exibir, Favoritos, Ferramentas e Ajuda.
+- Barra de ferramentas agora usa Voltar, Avançar, Subir, Pesquisar, Pastas e Exibir com os ícones XP existentes.
+- Botão Avançar conectado ao histórico real de navegação já existente.
+- Barra de endereço compacta com caminho atual e menu dos diretórios ancestrais.
+- Busca passa a ocupar a própria barra de endereço quando ativada.
+- Opção Mostrar/Ocultar arquivos ocultos movida para o menu Exibir, liberando espaço vertical.
+- Mantido o medidor compacto de armazenamento da alpha.3.
+- Mantidas as abas Arquivos, Downloads e Favoritos e todas as operações de arquivo existentes.
+- Versão sincronizada para `versionCode 4`.
+
 ## 0.1.0-alpha.3
 
 - Interface principal compactada para aproveitar melhor telas de celular.
