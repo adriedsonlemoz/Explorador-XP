@@ -1,5 +1,6 @@
 package com.exploradorxp.app
 
+import android.content.Context
 import android.os.Environment
 import android.os.StatFs
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,10 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.attribute.BasicFileAttributes
 
-class FileRepository(private val prefs: PreferencesStore) {
+class FileRepository(
+    private val context: Context,
+    private val prefs: PreferencesStore,
+) {
     val root: File = Environment.getExternalStorageDirectory()
     val downloads: File = File(root, Environment.DIRECTORY_DOWNLOADS)
 
@@ -121,10 +125,57 @@ class FileRepository(private val prefs: PreferencesStore) {
     fun toggleFavorite(file: File): Boolean = prefs.toggleFavorite(file)
     fun addRecent(file: File) = prefs.addRecent(file)
 
-    fun storageInfo(): StorageInfo = runCatching {
-        val stat = StatFs(root.absolutePath)
+    fun storageLocations(): List<StorageLocation> {
+        val locations = mutableListOf(StorageLocation("Armazenamento interno", root, removable = false))
+        val seen = mutableSetOf(canonicalOrAbsolute(root))
+
+        context.getExternalFilesDirs(null)
+            .filterNotNull()
+            .mapNotNull(::volumeRootFromAppExternalDir)
+            .forEach { candidate ->
+                val canonical = canonicalOrAbsolute(candidate)
+                if (canonical !in seen && candidate.exists() && candidate.isDirectory) {
+                    seen += canonical
+                    val index = locations.count { it.removable } + 1
+                    locations += StorageLocation(
+                        label = if (index == 1) "Cartão SD" else "Cartão SD $index",
+                        root = candidate,
+                        removable = true,
+                    )
+                }
+            }
+
+        return locations
+    }
+
+    fun storageRootFor(directory: File): File {
+        val directoryPath = canonicalOrAbsolute(directory)
+        return storageLocations()
+            .map { it.root }
+            .sortedByDescending { canonicalOrAbsolute(it).length }
+            .firstOrNull { candidate ->
+                val rootPath = canonicalOrAbsolute(candidate)
+                directoryPath == rootPath || directoryPath.startsWith(rootPath + File.separator)
+            }
+            ?: root
+    }
+
+    fun storageInfo(directory: File = root): StorageInfo = runCatching {
+        val storageRoot = storageRootFor(directory)
+        val stat = StatFs(storageRoot.absolutePath)
         StorageInfo(totalBytes = stat.totalBytes, freeBytes = stat.availableBytes)
     }.getOrDefault(StorageInfo())
+
+    private fun volumeRootFromAppExternalDir(appDir: File): File? {
+        val normalized = appDir.absolutePath.replace('\\', '/')
+        val marker = "/Android/"
+        val index = normalized.indexOf(marker)
+        if (index <= 0) return null
+        return File(normalized.substring(0, index))
+    }
+
+    private fun canonicalOrAbsolute(file: File): String =
+        runCatching { file.canonicalPath }.getOrDefault(file.absolutePath)
 
     private fun toFileItem(file: File, favorite: Boolean): FileItem {
         return FileItem(

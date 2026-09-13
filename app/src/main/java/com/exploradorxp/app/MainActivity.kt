@@ -118,6 +118,7 @@ private fun ExplorerApp(
         onRequestAccess = ::requestFileAccess,
         onBack = viewModel::goBack,
         onForward = viewModel::goForward,
+        onHome = viewModel::goHome,
         onUp = viewModel::goUp,
         onRefresh = viewModel::refresh,
         onItemClick = viewModel::onItemClick,

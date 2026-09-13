@@ -25,6 +25,12 @@ data class ClipboardState(
     val mode: ClipboardMode,
 )
 
+data class StorageLocation(
+    val label: String,
+    val root: File,
+    val removable: Boolean = false,
+)
+
 data class StorageInfo(
     val totalBytes: Long = 0L,
     val freeBytes: Long = 0L,
@@ -49,6 +55,7 @@ data class ExplorerUiState(
     val canGoForward: Boolean = false,
     val showHidden: Boolean = false,
     val storageInfo: StorageInfo = StorageInfo(),
+    val storageLocations: List<StorageLocation> = emptyList(),
 )
 
 sealed interface ExplorerEvent {

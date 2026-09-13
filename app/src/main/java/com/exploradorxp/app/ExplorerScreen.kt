@@ -77,6 +77,7 @@ fun ExplorerScreen(
     onRequestAccess: () -> Unit,
     onBack: () -> Unit,
     onForward: () -> Unit,
+    onHome: () -> Unit,
     onUp: () -> Unit,
     onRefresh: () -> Unit,
     onItemClick: (FileItem) -> Unit,
@@ -127,12 +128,14 @@ fun ExplorerScreen(
                 canForward = state.canGoForward,
                 onBack = onBack,
                 onForward = onForward,
+                onHome = onHome,
                 onUp = onUp,
                 viewMode = state.viewMode,
                 onToggleView = onToggleView,
                 showHidden = state.showHidden,
                 onShowHiddenChange = onToggleHidden,
                 onNavigateTo = onNavigateTo,
+                storageLocations = state.storageLocations,
                 onOpenDownloads = { onTabChange(ExplorerTab.DOWNLOADS) },
                 onOpenFavorites = { onTabChange(ExplorerTab.FAVORITES) },
             )
@@ -147,9 +150,13 @@ fun ExplorerScreen(
             )
         }
 
-        if (state.tab != ExplorerTab.FAVORITES) {
+        val internalRoot = state.storageLocations.firstOrNull { !it.removable }?.root
+            ?: android.os.Environment.getExternalStorageDirectory()
+        val isHomePage = state.tab == ExplorerTab.FILES && samePath(state.currentDir, internalRoot)
+
+        if (isHomePage) {
             StorageCard(state.storageInfo)
-        } else {
+        } else if (state.tab == ExplorerTab.FAVORITES) {
             SectionTitle(title = "Favoritos", icon = R.drawable.favorites)
         }
 
@@ -265,12 +272,14 @@ private fun XpHeader(
     canForward: Boolean,
     onBack: () -> Unit,
     onForward: () -> Unit,
+    onHome: () -> Unit,
     onUp: () -> Unit,
     viewMode: ViewMode,
     onToggleView: () -> Unit,
     showHidden: Boolean,
     onShowHiddenChange: (Boolean) -> Unit,
     onNavigateTo: (File) -> Unit,
+    storageLocations: List<StorageLocation>,
     onOpenDownloads: () -> Unit,
     onOpenFavorites: () -> Unit,
 ) {
@@ -282,14 +291,25 @@ private fun XpHeader(
     var helpMenu by remember { mutableStateOf(false) }
     var addressMenu by remember { mutableStateOf(false) }
 
-    val root = android.os.Environment.getExternalStorageDirectory()
-    val pathEntries = remember(currentDir.absolutePath) {
+    val fallbackRoot = android.os.Environment.getExternalStorageDirectory()
+    val effectiveLocations = storageLocations.ifEmpty {
+        listOf(StorageLocation("Armazenamento interno", fallbackRoot, removable = false))
+    }
+    val currentLocation = remember(currentDir.absolutePath, effectiveLocations) {
+        effectiveLocations
+            .sortedByDescending { canonicalPathOf(it.root).length }
+            .firstOrNull { location -> isInsideOrSame(currentDir, location.root) }
+            ?: effectiveLocations.first()
+    }
+    val pathEntries = remember(currentDir.absolutePath, currentLocation.root.absolutePath) {
         buildList<Pair<String, File>> {
-            add("Armazenamento interno" to root)
-            val relative = currentDir.absolutePath.removePrefix(root.absolutePath).trim('/')
+            add(currentLocation.label to currentLocation.root)
+            val rootPath = canonicalPathOf(currentLocation.root)
+            val currentPath = canonicalPathOf(currentDir)
+            val relative = currentPath.removePrefix(rootPath).trim(File.separatorChar, '/')
             if (relative.isNotBlank()) {
-                var cursor = root
-                relative.split('/').filter(String::isNotBlank).forEach { part ->
+                var cursor = currentLocation.root
+                relative.split(File.separatorChar, '/').filter(String::isNotBlank).forEach { part ->
                     cursor = File(cursor, part)
                     add(part to cursor)
                 }
@@ -394,7 +414,7 @@ private fun XpHeader(
                 XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
                 DropdownMenu(expanded = helpMenu, onDismissRequest = { helpMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("Explorador XP 0.1.0-alpha.5") },
+                        text = { Text("Explorador XP 0.1.0-alpha.6") },
                         enabled = false,
                         onClick = {},
                     )
@@ -416,6 +436,7 @@ private fun XpHeader(
             XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack)
             XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward)
             XpToolbarSeparator()
+            XpClassicToolButton(R.drawable.home, "Início", true, onHome)
             XpClassicToolButton(R.drawable.up, "Subir", true, onUp)
             XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch)
             XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads)
@@ -449,7 +470,7 @@ private fun XpHeader(
                     .padding(horizontal = 5.dp)
             ) {
                 androidx.compose.foundation.Image(
-                    painter = painterResource(if (currentDir == root) R.drawable.drive_hdd else R.drawable.folder),
+                    painter = painterResource(if (currentLocation.removable) R.drawable.drive_sd else R.drawable.drive_hdd),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     contentScale = ContentScale.Fit,
@@ -489,17 +510,52 @@ private fun XpHeader(
                             .padding(horizontal = 5.dp, vertical = 2.dp)
                     )
                     DropdownMenu(expanded = addressMenu, onDismissRequest = { addressMenu = false }) {
-                        pathEntries.forEach { (label, file) ->
+                        effectiveLocations.forEach { location ->
                             DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = { addressMenu = false; onNavigateTo(file) },
+                                leadingIcon = {
+                                    androidx.compose.foundation.Image(
+                                        painter = painterResource(if (location.removable) R.drawable.drive_sd else R.drawable.drive_hdd),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                        contentScale = ContentScale.Fit,
+                                    )
+                                },
+                                text = { Text(location.label) },
+                                onClick = { addressMenu = false; onNavigateTo(location.root) },
                             )
+                        }
+                        if (pathEntries.size > 1) {
+                            HorizontalDivider()
+                            pathEntries.dropLast(1).forEach { (label, file) ->
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        androidx.compose.foundation.Image(
+                                            painter = painterResource(R.drawable.folder),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(22.dp),
+                                        )
+                                    },
+                                    text = { Text(label) },
+                                    onClick = { addressMenu = false; onNavigateTo(file) },
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+private fun canonicalPathOf(file: File): String =
+    runCatching { file.canonicalPath }.getOrDefault(file.absolutePath)
+
+private fun samePath(a: File, b: File): Boolean = canonicalPathOf(a) == canonicalPathOf(b)
+
+private fun isInsideOrSame(file: File, root: File): Boolean {
+    val filePath = canonicalPathOf(file)
+    val rootPath = canonicalPathOf(root)
+    return filePath == rootPath || filePath.startsWith(rootPath + File.separator)
 }
 
 @Composable

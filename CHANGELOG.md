@@ -1,3 +1,18 @@
+# CHANGELOG
+
+## 0.1.0-alpha.6
+
+- Aplicado o layout aprovado do Explorer XP móvel como referência principal da interface.
+- Adicionado botão **Início** na barra de ferramentas, entre Avançar e Subir.
+- O campo **Endereço** agora funciona também como seletor de armazenamento.
+- O menu do endereço mostra **Armazenamento interno** e, quando disponível, **Cartão SD**.
+- A barra de endereço identifica o volume atual e continua exibindo o caminho da pasta navegada.
+- O cartão com usado/livre/total agora aparece apenas na página inicial do armazenamento interno.
+- Navegação para cartão SD passou a respeitar o limite da raiz do volume ao usar Subir.
+- Atualizado o conjunto visual principal de pastas, ações e dispositivos com ícones mais próximos do Windows XP.
+- Mantidas as funções existentes: arquivos ocultos, Downloads, favoritos, busca, lista/grade, seleção e operações de arquivo.
+- Versão sincronizada em `build.gradle.kts`, `github-manager.json`, README e workflow automático de APK.
+
 # Changelog
 
 ## 0.1.0-alpha.5

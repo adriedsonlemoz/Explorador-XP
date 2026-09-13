@@ -15,7 +15,7 @@ import java.io.File
 
 class ExplorerViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = PreferencesStore(application)
-    private val repository = FileRepository(prefs)
+    private val repository = FileRepository(application, prefs)
 
     private val history = mutableListOf(repository.root)
     private var historyIndex = 0
@@ -25,6 +25,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             currentDir = repository.root,
             showHidden = repository.showHidden(),
             storageInfo = repository.storageInfo(),
+            storageLocations = repository.storageLocations(),
         )
     )
     val uiState: StateFlow<ExplorerUiState> = _uiState.asStateFlow()
@@ -63,7 +64,8 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                 it.copy(
                     items = items,
                     loading = false,
-                    storageInfo = repository.storageInfo(),
+                    storageInfo = repository.storageInfo(state.currentDir),
+                    storageLocations = repository.storageLocations(),
                     canGoBack = historyIndex > 0,
                     canGoForward = historyIndex < history.lastIndex,
                 )
@@ -138,11 +140,17 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         navigateTo(history[historyIndex], recordHistory = false)
     }
 
+    fun goHome() = navigateTo(repository.root)
+
     fun goUp() {
-        val parent = _uiState.value.currentDir.parentFile ?: return
-        val rootPath = repository.root.absolutePath
-        if (!parent.absolutePath.startsWith(rootPath)) return
-        navigateTo(parent)
+        val current = _uiState.value.currentDir
+        val boundary = repository.storageRootFor(current)
+        val parent = current.parentFile ?: return
+        val parentPath = runCatching { parent.canonicalPath }.getOrDefault(parent.absolutePath)
+        val boundaryPath = runCatching { boundary.canonicalPath }.getOrDefault(boundary.absolutePath)
+        if (parentPath == boundaryPath || parentPath.startsWith(boundaryPath + File.separator)) {
+            navigateTo(parent)
+        }
     }
 
     fun setTab(tab: ExplorerTab) {
