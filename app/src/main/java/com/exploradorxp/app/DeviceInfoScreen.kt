@@ -1,5 +1,9 @@
 package com.exploradorxp.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -26,14 +31,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.PhoneAndroid
@@ -41,6 +47,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Nfc
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.SdCard
 import androidx.compose.material.icons.rounded.Sensors
@@ -52,6 +59,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -126,6 +134,40 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
         }
     }
 
+    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri ->
+        val current = snapshot ?: return@rememberLauncherForActivityResult
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { DeviceInfoShare.savePng(context, uri, current) }
+            }
+            Toast.makeText(
+                context,
+                if (result.isSuccess) "Imagem salva." else "Não foi possível salvar a imagem.",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    fun copySummary(current: DeviceInfoSnapshot) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Informações do dispositivo", current.toShareSummary()))
+        Toast.makeText(context, "Resumo copiado.", Toast.LENGTH_SHORT).show()
+    }
+
+    fun shareImage(current: DeviceInfoSnapshot) {
+        scope.launch {
+            val shareIntent = withContext(Dispatchers.IO) {
+                runCatching { DeviceInfoShare.createShareIntent(context, current) }.getOrNull()
+            }
+            if (shareIntent != null) {
+                context.startActivity(Intent.createChooser(shareIntent, "Compartilhar informações do dispositivo"))
+            } else {
+                Toast.makeText(context, "Não foi possível preparar a imagem.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -169,6 +211,7 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
                             modifier = Modifier
                                 .weight(1f)
                                 .verticalScroll(rememberScrollState())
+                                .navigationBarsPadding()
                                 .padding(horizontal = 12.dp, vertical = 12.dp),
                         ) {
                             DeviceHero(info)
@@ -214,12 +257,29 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
                                 CapabilityGrid(info)
                             }
 
+                            DeviceSection(
+                                title = "Sensores • ${info.sensorCount} detectados",
+                                icon = Icons.Rounded.Sensors,
+                                iconTint = DevicePurple,
+                            ) {
+                                SensorGrid(info)
+                            }
+
                             ExplorerVersionCard(info)
+
+                            ShareDeviceCard(
+                                enabled = !loading,
+                                onCopy = { copySummary(info) },
+                                onSaveImage = { imageLauncher.launch(deviceInfoImageFileName()) },
+                                onShareImage = { shareImage(info) },
+                            )
 
                             AiReportCard(
                                 enabled = !loading,
                                 onExport = { exportLauncher.launch(deviceInfoExportFileName()) },
                             )
+
+                            Spacer(Modifier.height(72.dp))
                         }
                     }
                 }
@@ -248,7 +308,7 @@ private fun DeviceInfoHeader(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(42.dp)
+                .size(38.dp)
                 .background(Color.White.copy(alpha = .18f), CircleShape)
                 .border(1.dp, Color.White.copy(alpha = .26f), CircleShape),
         ) {
@@ -256,7 +316,7 @@ private fun DeviceInfoHeader(
                 imageVector = Icons.Rounded.Info,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(27.dp),
+                modifier = Modifier.size(24.dp),
             )
         }
         Spacer(Modifier.width(10.dp))
@@ -265,7 +325,7 @@ private fun DeviceInfoHeader(
                 "Informações do dispositivo",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -288,10 +348,8 @@ private fun DeviceInfoHeader(
                 Icon(Icons.Rounded.Refresh, contentDescription = "Atualizar", tint = Color.White)
             }
         }
-        TextButton(onClick = onDismiss) {
-            Text("Fechar", color = Color.White, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.width(3.dp))
-            Icon(Icons.Rounded.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+        TextButton(onClick = onDismiss, modifier = Modifier.height(40.dp)) {
+            Text("Fechar", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
     }
 }
@@ -576,8 +634,6 @@ private fun CapabilityGrid(info: DeviceInfoSnapshot) {
         CapabilityUi("Câmera", info.hasCamera, Icons.Rounded.CameraAlt),
         CapabilityUi("Flash", info.hasFlash, Icons.Rounded.FlashOn),
         CapabilityUi("Digital", info.hasFingerprint, Icons.Rounded.Fingerprint),
-        CapabilityUi("Acelerômetro", info.hasAccelerometer, Icons.Rounded.Sensors),
-        CapabilityUi("Giroscópio", info.hasGyroscope, Icons.Rounded.ScreenRotation),
         CapabilityUi("Cartão removível", info.hasRemovableStorage, Icons.Rounded.SdCard),
     )
 
@@ -590,6 +646,37 @@ private fun CapabilityGrid(info: DeviceInfoSnapshot) {
                 CapabilityTile(capability, Modifier.weight(1f))
             }
             repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+        }
+    }
+}
+
+@Composable
+private fun SensorGrid(info: DeviceInfoSnapshot) {
+    val sensors = listOf(
+        CapabilityUi("Acelerômetro", info.hasAccelerometer, Icons.Rounded.Sensors),
+        CapabilityUi("Giroscópio", info.hasGyroscope, Icons.Rounded.ScreenRotation),
+        CapabilityUi("Bússola", info.hasMagnetometer, Icons.Rounded.Explore),
+        CapabilityUi("Luz ambiente", info.hasLightSensor, Icons.Rounded.Sensors),
+        CapabilityUi("Proximidade", info.hasProximitySensor, Icons.Rounded.Sensors),
+        CapabilityUi("Barômetro", info.hasBarometer, Icons.Rounded.Sensors),
+        CapabilityUi("Contador de passos", info.hasStepCounter, Icons.Rounded.Sensors),
+        CapabilityUi("Passos em tempo real", info.hasStepDetector, Icons.Rounded.Sensors),
+        CapabilityUi("Gravidade", info.hasGravitySensor, Icons.Rounded.Sensors),
+        CapabilityUi("Movimento linear", info.hasLinearAcceleration, Icons.Rounded.Sensors),
+        CapabilityUi("Rotação 3D", info.hasRotationVector, Icons.Rounded.ScreenRotation),
+        CapabilityUi("Temperatura", info.hasAmbientTemperature, Icons.Rounded.Sensors),
+        CapabilityUi("Umidade", info.hasRelativeHumidity, Icons.Rounded.Sensors),
+    )
+
+    sensors.chunked(2).forEach { rowItems ->
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        ) {
+            rowItems.forEach { sensor ->
+                CapabilityTile(sensor, Modifier.weight(1f))
+            }
+            if (rowItems.size == 1) Spacer(Modifier.weight(1f))
         }
     }
 }
@@ -670,6 +757,75 @@ private fun ExplorerVersionCard(info: DeviceInfoSnapshot) {
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
         )
+    }
+}
+
+@Composable
+private fun ShareDeviceCard(
+    enabled: Boolean,
+    onCopy: () -> Unit,
+    onSaveImage: () -> Unit,
+    onShareImage: () -> Unit,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(16.dp))
+            .border(1.dp, DeviceBorder, RoundedCornerShape(16.dp))
+            .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(36.dp).background(DevicePurple.copy(alpha = .12f), RoundedCornerShape(11.dp)),
+            ) {
+                Icon(Icons.Rounded.Share, contentDescription = null, tint = DevicePurple, modifier = Modifier.size(21.dp))
+            }
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Compartilhar informações", fontWeight = FontWeight.Bold, color = DeviceNavy, fontSize = 14.sp)
+                Text(
+                    "Resumo simples para copiar ou uma imagem pronta para enviar em qualquer aplicativo.",
+                    color = DeviceMuted,
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = onCopy,
+                enabled = enabled,
+                shape = RoundedCornerShape(11.dp),
+                modifier = Modifier.weight(1f).height(42.dp),
+            ) {
+                Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(5.dp))
+                Text("Copiar", fontSize = 11.sp)
+            }
+            OutlinedButton(
+                onClick = onSaveImage,
+                enabled = enabled,
+                shape = RoundedCornerShape(11.dp),
+                modifier = Modifier.weight(1f).height(42.dp),
+            ) {
+                Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(5.dp))
+                Text("Salvar PNG", fontSize = 11.sp)
+            }
+        }
+        Button(
+            onClick = onShareImage,
+            enabled = enabled,
+            colors = ButtonDefaults.buttonColors(containerColor = DevicePurple),
+            shape = RoundedCornerShape(11.dp),
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+        ) {
+            Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Compartilhar imagem", fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+        }
     }
 }
 

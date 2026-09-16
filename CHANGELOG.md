@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.1.0-alpha.25
+
+- Corrigido o rodapé da tela **Informações do dispositivo** para respeitar a barra de navegação do Android e permitir rolar o botão **Exportar relatório para IA** completamente acima dos controles do sistema.
+- Adicionado espaço final extra no conteúdo rolável para evitar corte em aparelhos com navegação por três botões ou barra transparente.
+- A detecção de sensores passou a usar `SensorManager`, lendo os sensores realmente expostos pelo aparelho.
+- Nova seção **Sensores** com acelerômetro, giroscópio, magnetômetro/bússola, luz ambiente, proximidade, barômetro, contador/detector de passos, gravidade, aceleração linear, vetor de rotação, temperatura ambiente e umidade.
+- O relatório para IA foi atualizado para `schema_version=2` e ganhou seção `[sensors]` com os novos estados.
+- Adicionado **Copiar resumo**, que envia ao clipboard apenas um resumo legível das principais especificações.
+- Adicionado **Salvar PNG**, que gera localmente uma ficha visual do aparelho sem capturar a tela e sem incluir identificadores sensíveis.
+- Adicionado **Compartilhar imagem**, que gera a ficha em cache e abre o compartilhamento padrão do Android via `FileProvider`.
+- A imagem compartilhável inclui sistema, CPU, RAM, armazenamento, tela, bateria e recursos/sensores, mas exclui IMEI, serial, Android ID, MAC, localização e arquivos pessoais.
+- Ajustado o cabeçalho da tela para ocupar menos largura em aparelhos estreitos.
+- Versão sincronizada para `0.1.0-alpha.25` / `versionCode 25`.
+
 ## 0.1.0-alpha.24
 
 - Redesenhada diretamente em Jetpack Compose a tela **Informações do dispositivo**, usando a referência visual apenas como guia e sem adicionar imagens/fotos falsas do aparelho.

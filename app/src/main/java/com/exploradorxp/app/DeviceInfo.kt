@@ -9,6 +9,8 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.provider.Settings
 import java.time.Instant
 import java.time.ZoneId
@@ -61,6 +63,19 @@ data class DeviceInfoSnapshot(
     val hasFingerprint: Boolean,
     val hasAccelerometer: Boolean,
     val hasGyroscope: Boolean,
+    val hasMagnetometer: Boolean,
+    val hasLightSensor: Boolean,
+    val hasProximitySensor: Boolean,
+    val hasBarometer: Boolean,
+    val hasStepCounter: Boolean,
+    val hasStepDetector: Boolean,
+    val hasGravitySensor: Boolean,
+    val hasLinearAcceleration: Boolean,
+    val hasRotationVector: Boolean,
+    val hasAmbientTemperature: Boolean,
+    val hasRelativeHumidity: Boolean,
+    val sensorCount: Int,
+    val sensorInventory: List<String>,
     val hasRemovableStorage: Boolean,
     val appVersionName: String,
     val appVersionCode: Int,
@@ -132,6 +147,14 @@ object DeviceInfoCollector {
                 .any { Environment.isExternalStorageRemovable(it) }
         }.getOrDefault(false)
 
+        val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        fun hasSensor(type: Int): Boolean = sensorManager.getDefaultSensor(type) != null
+        val sensors = runCatching { sensorManager.getSensorList(Sensor.TYPE_ALL) }.getOrDefault(emptyList())
+        val sensorCount = sensors.size
+        val sensorInventory = sensors.mapIndexed { index, sensor ->
+            "${index + 1}|type=${sensor.type}|name=${reportValue(sensor.name)}|vendor=${reportValue(sensor.vendor)}|version=${sensor.version}"
+        }
+
         val socManufacturer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MANUFACTURER else null
         val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL else null
         val abis = Build.SUPPORTED_ABIS?.toList().orEmpty()
@@ -180,8 +203,21 @@ object DeviceInfoCollector {
             hasCamera = packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY),
             hasFlash = packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH),
             hasFingerprint = packageManager.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT),
-            hasAccelerometer = packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER),
-            hasGyroscope = packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_GYROSCOPE),
+            hasAccelerometer = hasSensor(Sensor.TYPE_ACCELEROMETER),
+            hasGyroscope = hasSensor(Sensor.TYPE_GYROSCOPE),
+            hasMagnetometer = hasSensor(Sensor.TYPE_MAGNETIC_FIELD),
+            hasLightSensor = hasSensor(Sensor.TYPE_LIGHT),
+            hasProximitySensor = hasSensor(Sensor.TYPE_PROXIMITY),
+            hasBarometer = hasSensor(Sensor.TYPE_PRESSURE),
+            hasStepCounter = hasSensor(Sensor.TYPE_STEP_COUNTER),
+            hasStepDetector = hasSensor(Sensor.TYPE_STEP_DETECTOR),
+            hasGravitySensor = hasSensor(Sensor.TYPE_GRAVITY),
+            hasLinearAcceleration = hasSensor(Sensor.TYPE_LINEAR_ACCELERATION),
+            hasRotationVector = hasSensor(Sensor.TYPE_ROTATION_VECTOR),
+            hasAmbientTemperature = hasSensor(Sensor.TYPE_AMBIENT_TEMPERATURE),
+            hasRelativeHumidity = hasSensor(Sensor.TYPE_RELATIVE_HUMIDITY),
+            sensorCount = sensorCount,
+            sensorInventory = sensorInventory,
             hasRemovableStorage = removable,
             appVersionName = BuildConfig.VERSION_NAME,
             appVersionCode = BuildConfig.VERSION_CODE,
@@ -191,7 +227,7 @@ object DeviceInfoCollector {
 
 fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("EXPLORADOR XP - RELATORIO DO DISPOSITIVO")
-    appendLine("schema_version=1")
+    appendLine("schema_version=2")
     appendLine("generated_at=$collectedAt")
     appendLine("purpose=diagnostico_tecnico_e_analise_por_ia")
     appendLine()
@@ -266,8 +302,29 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("camera=$hasCamera")
     appendLine("camera_flash=$hasFlash")
     appendLine("fingerprint=$hasFingerprint")
+    appendLine()
+    appendLine("[sensors]")
+    appendLine("sensor_count=$sensorCount")
     appendLine("accelerometer=$hasAccelerometer")
     appendLine("gyroscope=$hasGyroscope")
+    appendLine("magnetometer=$hasMagnetometer")
+    appendLine("light_sensor=$hasLightSensor")
+    appendLine("proximity_sensor=$hasProximitySensor")
+    appendLine("barometer=$hasBarometer")
+    appendLine("step_counter=$hasStepCounter")
+    appendLine("step_detector=$hasStepDetector")
+    appendLine("gravity_sensor=$hasGravitySensor")
+    appendLine("linear_acceleration=$hasLinearAcceleration")
+    appendLine("rotation_vector=$hasRotationVector")
+    appendLine("ambient_temperature=$hasAmbientTemperature")
+    appendLine("relative_humidity=$hasRelativeHumidity")
+    appendLine()
+    appendLine("[sensor_inventory]")
+    if (sensorInventory.isEmpty()) {
+        appendLine("none=true")
+    } else {
+        sensorInventory.forEach { appendLine(it) }
+    }
     appendLine()
     appendLine("[explorador_xp]")
     appendLine("version_name=${reportValue(appVersionName)}")
@@ -277,6 +334,31 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("Preferir os campos numericos *_bytes para calculos e os campos *_human para explicacoes ao usuario.")
     appendLine("Nao inferir capacidade inexistente quando um campo estiver como Nao disponivel.")
     appendLine("Os valores representam o estado informado pelo Android no momento generated_at.")
+}
+
+fun DeviceInfoSnapshot.toShareSummary(): String = buildString {
+    appendLine("Explorador XP — Informações do dispositivo")
+    appendLine("${deviceName} • ${manufacturer.smartReportTitle()} ${model}")
+    appendLine("Android ${androidVersion} • API ${apiLevel} • Patch ${securityPatch}")
+    appendLine("Processador: ${listOfNotNull(socManufacturer, socModel).joinToString(" ").ifBlank { hardware }}")
+    appendLine("CPU: ${cpuCores} núcleos • ${if (is64Bit) "64 bits" else "32 bits"}")
+    appendLine("RAM: ${humanBytes(ramTotalBytes)} • ${humanBytes(ramAvailableBytes)} livre")
+    appendLine("Armazenamento: ${humanBytes(storageTotalBytes)} • ${humanBytes(storageAvailableBytes)} livre")
+    appendLine("Tela: ${displayWidthPx} × ${displayHeightPx}px${if (refreshRateHz > 0f) " • ${refreshRateHz.toInt()} Hz" else ""}")
+    appendLine("Bateria: ${batteryPercent?.let { "$it%" } ?: "N/D"} • $batteryStatus")
+    appendLine("Sensores detectados: $sensorCount")
+    appendLine("Gerado pelo Explorador XP ${appVersionName}")
+}
+
+fun deviceInfoImageFileName(): String {
+    val stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", Locale.ROOT)
+        .withZone(ZoneId.systemDefault())
+        .format(Instant.now())
+    return "ExploradorXP-dispositivo-$stamp.png"
+}
+
+private fun String.smartReportTitle(): String = lowercase().replaceFirstChar { char ->
+    if (char.isLowerCase()) char.titlecase() else char.toString()
 }
 
 fun deviceInfoExportFileName(): String {

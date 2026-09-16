@@ -49,9 +49,22 @@ class DeviceInfoReportTest {
             hasFingerprint = true,
             hasAccelerometer = true,
             hasGyroscope = true,
+            hasMagnetometer = true,
+            hasLightSensor = true,
+            hasProximitySensor = true,
+            hasBarometer = false,
+            hasStepCounter = true,
+            hasStepDetector = true,
+            hasGravitySensor = true,
+            hasLinearAcceleration = true,
+            hasRotationVector = true,
+            hasAmbientTemperature = false,
+            hasRelativeHumidity = false,
+            sensorCount = 12,
+            sensorInventory = listOf("1|type=1|name=Accelerometer|vendor=Example|version=1"),
             hasRemovableStorage = false,
-            appVersionName = "0.1.0-alpha.24",
-            appVersionCode = 23,
+            appVersionName = "0.1.0-alpha.25",
+            appVersionCode = 25,
         )
 
         val report = snapshot.toAiReport()
@@ -59,9 +72,19 @@ class DeviceInfoReportTest {
         assertTrue(report.contains("ram_total_bytes=8000000000"))
         assertTrue(report.contains("resolution_px=1080x2400"))
         assertTrue(report.contains("nfc=true"))
+        assertTrue(report.contains("[sensors]"))
+        assertTrue(report.contains("magnetometer=true"))
+        assertTrue(report.contains("sensor_count=12"))
+        assertTrue(report.contains("[sensor_inventory]"))
+        assertTrue(report.contains("name=Accelerometer"))
         assertTrue(report.contains("contains_imei=false"))
         assertTrue(report.contains("contains_location=false"))
         assertFalse(report.contains("imei_value="))
         assertFalse(report.contains("android_id_value="))
+
+        val summary = snapshot.toShareSummary()
+        assertTrue(summary.contains("Android 16"))
+        assertTrue(summary.contains("Sensores detectados: 12"))
+        assertFalse(summary.contains("fingerprint"))
     }
 }

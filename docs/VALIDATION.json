@@ -1,17 +1,24 @@
 {
-  "version_build": "0.1.0-alpha.24",
-  "version_code_build": 24,
-  "manager_version": "0.1.0-alpha.24",
-  "manager_code": 24,
+  "version_build": "0.1.0-alpha.25",
+  "version_code_build": 25,
+  "manager_version": "0.1.0-alpha.25",
+  "manager_code": 25,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
-  "kotlin_files": 18,
+  "kotlin_files": 19,
   "xp_png_icons": 165,
   "drawable_references": 119,
   "xml_files": 10,
   "static_validation_ok": true,
   "ui_changes": [
+    "device_info_ai_report_schema_v2_sensors",
+    "device_info_share_png_fileprovider",
+    "device_info_save_png",
+    "device_info_copy_summary",
+    "device_info_extended_sensor_grid",
+    "device_info_sensor_manager_detection",
+    "device_info_navigation_bar_bottom_space",
     "device_info_alpha24_compose_redesign",
     "device_info_no_fake_device_image",
     "device_info_material_vector_icons",
@@ -113,7 +120,8 @@
     "alpha21_kotlin_parser_syntax_check": "passed_without_android_classpath; unresolved platform symbols expected",
     "alpha21_full_android_gradle_build": "pending_ci",
     "alpha23_json_xml_yaml_static_validation": "passed",
-    "alpha23_full_android_gradle_build": "pending_ci"
+    "alpha23_full_android_gradle_build": "pending_ci",
+    "alpha25_full_android_gradle_build": "pending_ci"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
@@ -207,7 +215,29 @@
       "location",
       "accounts",
       "user file listing/content"
-    ]
+    ],
+    "sensor_source": "Android SensorManager getDefaultSensor / TYPE_ALL count",
+    "sensor_types": [
+      "accelerometer",
+      "gyroscope",
+      "magnetometer",
+      "light",
+      "proximity",
+      "pressure/barometer",
+      "step_counter",
+      "step_detector",
+      "gravity",
+      "linear_acceleration",
+      "rotation_vector",
+      "ambient_temperature",
+      "relative_humidity"
+    ],
+    "quick_share": [
+      "clipboard_summary",
+      "png_save_via_SAF",
+      "png_share_via_FileProvider"
+    ],
+    "ai_report_schema_version": 2
   },
   "drawable_xxxhdpi_png_icons": 150,
   "icon_runtime_cache": "6 MiB LRU; max 2 concurrent background decodes",

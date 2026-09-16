@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.24` (`versionCode 24`)  
+**Versão atual:** `0.1.0-alpha.25` (`versionCode 25`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -10,7 +10,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 ## O que já está implementado
 
 - Interface principal baseada no Explorer clássico do Windows XP: barra de título azul, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, barra de ferramentas compacta, barra de endereço, indicador de armazenamento, lista/grade e barra de status inferior.
-- 152 recursos PNG no conjunto visual XP, integrados diretamente em `res/drawable-nodpi`.
+- Pacote visual XP com ícones PNG otimizados por densidade Android; os 150 ícones comuns usados na navegação ficam em `drawable-xxxhdpi`, com variantes grandes apenas onde necessário.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
 - Histórico de navegação com Voltar e Avançar, além da ação Subir.
@@ -30,6 +30,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Propriedades básicas de arquivos/pastas.
 - Na primeira abertura sem permissão, um pop-up central obrigatório explica o acesso aos arquivos e leva diretamente à tela do Android para conceder `MANAGE_EXTERNAL_STORAGE`.
 - **Informações do dispositivo** ganhou painel visual moderno feito integralmente em Compose: resumo do aparelho, indicadores de RAM/armazenamento/bateria, sistema, recursos e exportação para IA, sem foto fake nem banco fixo de especificações.
+- O painel também detecta sensores reais via `SensorManager` e oferece **Copiar resumo**, **Salvar PNG** e **Compartilhar imagem**, mantendo identificadores sensíveis fora das saídas rápidas.
 - Launcher legado/adaptativo atualizado com nova arte da pasta dourada e órbita azul, agora com margem de segurança maior, sem borda aparente e com transparência correta para evitar cortes na máscara adaptativa do Android.
 - Ícones PNG usados na navegação foram otimizados para densidade Android: o conjunto comum saiu de 256×256 `nodpi` para 192×192 em `drawable-xxxhdpi`, permitindo que o sistema decodifique tamanhos menores em telas de densidade inferior.
 - Ícones dos itens da lista/grade são decodificados em background e reutilizados por um cache LRU de 6 MiB, evitando a primeira decodificação pesada no frame da rolagem; os primeiros tipos visíveis são aquecidos de forma assíncrona.
@@ -79,7 +80,7 @@ A primeira alpha prioriza o armazenamento compartilhado primário. O suporte ded
 
 ## Dispositivo e diagnóstico alpha.21
 
-- **Ferramentas → Informações do dispositivo** abre um painel local com dados reais expostos pelo Android, sem cadastro manual por modelo.
+- **Ferramentas → Informações do dispositivo** abre um painel local com dados reais expostos pelo Android, sensores detectados pelo `SensorManager`, resumo copiável, ficha PNG compartilhável e relatório técnico para IA.
 - A tela prioriza informações fáceis de entender: nome/modelo, fabricante, Android/API, patch de segurança, processador, núcleos/arquitetura, RAM, armazenamento interno, resolução/taxa de atualização, bateria e recursos disponíveis.
 - RAM, armazenamento e bateria têm indicadores compactos para leitura rápida; os valores variáveis podem ser atualizados sem fechar a tela.
 - **Exportar relatório para IA** usa o seletor de arquivos do Android e gera um `.txt` estruturado com valores humanos e valores brutos úteis para diagnóstico.

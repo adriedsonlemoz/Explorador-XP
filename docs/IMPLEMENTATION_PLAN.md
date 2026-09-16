@@ -21,7 +21,7 @@
 - Build 20 confirmou geração real do Baseline Profile e `assemblePerformance`; como o perfil consumiu 8m38s, a alpha.21 separa definitivamente o build normal da regeneração pesada.
 - Alpha.21 adiciona **Ferramentas → Informações do dispositivo**, com painel simples e relatório TXT técnico para IA, sem identificadores únicos ou coleta do conteúdo dos arquivos.
 - Alpha.23 otimiza os 150 PNGs comuns para recursos `xxxhdpi`, move a decodificação dos ícones de `FileItem` para background e adiciona cache LRU de 6 MiB.
-- Próximo: gerar a alpha.23, executar Macrobenchmark e comparar `FrameTimingMetric`/jank com a linha anterior, além de validar visualmente lista e grade no aparelho.
+- Próximo: validar a alpha.25 no aparelho e depois executar Macrobenchmark para comparar `FrameTimingMetric`/jank após a otimização de ícones.
 - Depois da medição dos ícones: atualizar Compose/AndroidX de forma controlada, comparando métricas antes/depois.
 
 ## Depois
@@ -34,3 +34,13 @@
 - [x] Melhorar hierarquia visual sem inserir foto/imagem falsa do modelo.
 - [x] Integrar atualização ao cabeçalho e manter exportação para IA.
 - [x] Exibir recursos com estado legível Disponível/Não disponível.
+
+### Alpha 25 — Sensores e compartilhamento
+
+- [x] Respeitar barra de navegação no rodapé e impedir corte das ações finais.
+- [x] Detectar sensores adicionais usando `SensorManager`.
+- [x] Separar Recursos de Sensores na interface.
+- [x] Adicionar resumo copiável.
+- [x] Gerar PNG local com ficha do dispositivo.
+- [x] Compartilhar PNG via `FileProvider`.
+- [x] Expandir relatório técnico para IA com seção `[sensors]`.
