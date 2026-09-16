@@ -1291,6 +1291,9 @@ private fun FileList(
     onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
+    val iconsToWarm = remember(items) { items.asSequence().take(32).map { it.iconRes }.distinct().toList() }
+    PreloadResourceIcons(iconsToWarm)
+
     // Estado de rolagem próprio por pasta/aba: reinicia no topo ao navegar,
     // em vez de manter a posição da listagem anterior.
     val listState = remember(scrollKey) { LazyListState() }
@@ -1335,8 +1338,8 @@ private fun FileListRow(
             .combinedClickable(onClick = onClick, onLongClick = onLongSelect)
             .padding(horizontal = 9.dp, vertical = 5.dp)
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(item.iconRes),
+        CachedResourceIcon(
+            resId = item.iconRes,
             contentDescription = null,
             modifier = Modifier.size(36.dp),
             contentScale = ContentScale.Fit,
@@ -1392,6 +1395,9 @@ private fun FileGrid(
     onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
+    val iconsToWarm = remember(items) { items.asSequence().take(32).map { it.iconRes }.distinct().toList() }
+    PreloadResourceIcons(iconsToWarm)
+
     // Mesma lógica da lista: reinicia a rolagem ao trocar de pasta/aba.
     val gridState = remember(scrollKey) { LazyGridState() }
     LazyVerticalGrid(
@@ -1415,8 +1421,8 @@ private fun FileGrid(
                     .combinedClickable(onClick = { onItemClick(item) }, onLongClick = { onLongSelect(item) })
                     .padding(7.dp)
             ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(item.iconRes),
+                CachedResourceIcon(
+                    resId = item.iconRes,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     contentScale = ContentScale.Fit,
@@ -1561,7 +1567,7 @@ private fun EmptyState(tab: ExplorerTab, query: String) {
         modifier = Modifier.fillMaxSize().padding(24.dp)
     ) {
         androidx.compose.foundation.Image(
-            painter = painterResource(if (query.isNotBlank()) R.drawable.search else R.drawable.folder_open),
+            painter = painterResource(if (query.isNotBlank()) R.drawable.search_large else R.drawable.folder_open_large),
             contentDescription = null,
             modifier = Modifier.size(72.dp)
         )

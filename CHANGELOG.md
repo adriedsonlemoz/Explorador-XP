@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.23
+
+- Otimizado o pipeline de ícones que aparece durante a rolagem de arquivos e pastas.
+- Os 150 PNGs comuns de 256×256 em `drawable-nodpi` foram convertidos para 192×192 em `drawable-xxxhdpi`, permitindo que o Android aplique a densidade correta e decodifique bitmaps menores conforme o aparelho.
+- Adicionado `CachedResourceIcon`, com decodificação de PNG em `Dispatchers.IO` e cache LRU limitado a 6 MiB para retirar a primeira decodificação dos ícones da thread principal.
+- Lista e grade agora usam o cache assíncrono para os ícones de cada `FileItem` e aquecem, em background, os tipos presentes nos primeiros itens da pasta.
+- Mantido o visual original dos ícones; não foram trocados por desenhos genéricos ou vetores diferentes.
+- Criadas variantes grandes separadas para `file_apk`, `folder_open` e `search`, preservando qualidade nas telas em que esses recursos aparecem com 72–86 dp sem obrigar a lista a carregar bitmaps grandes.
+- O conjunto comprimido dos 150 ícones comuns caiu de aproximadamente 3,84 MiB para 3,00 MiB, antes da compactação final do APK.
+- Corrigido o `DeviceInfoReportTest` para acompanhar o `versionCode` atual.
+- Versão sincronizada para `0.1.0-alpha.23` / `versionCode 23`.
+
 ## 0.1.0-alpha.22
 
 - Aplicado novo ícone do aplicativo ao projeto, substituindo o launcher anterior por uma pasta dourada com órbita azul.

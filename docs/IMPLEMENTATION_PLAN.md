@@ -20,8 +20,9 @@
 - Alpha.20 corrige a compilação do módulo `:baselineprofile` após o build 19 confirmar testes + lint verdes; `@LargeTest` agora tem runner/rules AndroidX Test declarados explicitamente.
 - Build 20 confirmou geração real do Baseline Profile e `assemblePerformance`; como o perfil consumiu 8m38s, a alpha.21 separa definitivamente o build normal da regeneração pesada.
 - Alpha.21 adiciona **Ferramentas → Informações do dispositivo**, com painel simples e relatório TXT técnico para IA, sem identificadores únicos ou coleta do conteúdo dos arquivos.
-- Próximo: validar a alpha.21 no GitHub, confirmar a redução do tempo do workflow normal e revisar o relatório real exportado em pelo menos dois aparelhos.
-- Após a linha de base: otimizar decodificação/uso dos PNGs e atualizar Compose/AndroidX de forma controlada, comparando métricas antes/depois.
+- Alpha.23 otimiza os 150 PNGs comuns para recursos `xxxhdpi`, move a decodificação dos ícones de `FileItem` para background e adiciona cache LRU de 6 MiB.
+- Próximo: gerar a alpha.23, executar Macrobenchmark e comparar `FrameTimingMetric`/jank com a linha anterior, além de validar visualmente lista e grade no aparelho.
+- Depois da medição dos ícones: atualizar Compose/AndroidX de forma controlada, comparando métricas antes/depois.
 
 ## Depois
 - Suporte a SMB/rede local como módulo independente.

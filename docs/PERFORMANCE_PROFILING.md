@@ -56,3 +56,11 @@ A regeneração do perfil e os Macrobenchmarks ficam no workflow separado **Dese
 ## Dependências de instrumentação do módulo produtor
 
 Desde a alpha.20, `:baselineprofile` declara explicitamente `androidx.test:runner:1.7.0` e `androidx.test:rules:1.7.0`. Isso é necessário porque os testes de geração/benchmark usam `androidx.test.filters.LargeTest`; não devemos depender de esse pacote chegar de forma transitiva por outra biblioteca.
+
+## Otimização de ícones — alpha.23
+
+Os ícones de arquivos/pastas usados no caminho de rolagem deixaram de depender da primeira decodificação síncrona de `painterResource()` no item. A lista e a grade usam `CachedResourceIcon`, que decodifica PNGs em `Dispatchers.IO`, limita a duas decodificações simultâneas e guarda bitmaps em um LRU de 6 MiB.
+
+Os 150 PNGs comuns também foram convertidos de 256×256 `nodpi` para 192×192 em `drawable-xxxhdpi`. Assim, o Android pode aplicar density scaling durante a decodificação em aparelhos mdpi/hdpi/xhdpi/xxhdpi, em vez de manter sempre o bitmap bruto de 256×256. Variantes grandes separadas são usadas nas poucas telas que precisam de 72–86 dp.
+
+A validação recomendada é comparar o `FrameTimingMetric` da alpha.23 com a linha anterior usando a mesma pasta de benchmark e confirmar em aparelho físico se desaparecem os engasgos quando novos tipos de arquivo entram na viewport.

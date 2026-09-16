@@ -590,7 +590,7 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
     ) {
         Image(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk),
+            painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk_large),
             contentDescription = null,
             modifier = Modifier.size(86.dp),
         )

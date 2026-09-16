@@ -1,17 +1,21 @@
 {
-  "version_build": "0.1.0-alpha.22",
-  "version_code_build": 22,
-  "manager_version": "0.1.0-alpha.22",
-  "manager_code": 22,
+  "version_build": "0.1.0-alpha.23",
+  "version_code_build": 23,
+  "manager_version": "0.1.0-alpha.23",
+  "manager_code": 23,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
-  "kotlin_files": 17,
-  "xp_png_icons": 162,
-  "drawable_references": 155,
-  "xml_files": 12,
+  "kotlin_files": 18,
+  "xp_png_icons": 165,
+  "drawable_references": 119,
+  "xml_files": 10,
   "static_validation_ok": true,
   "ui_changes": [
+    "large_icon_variants",
+    "file_icon_lru_cache",
+    "file_icon_background_decode",
+    "file_icon_density_optimized",
     "launcher_alpha22_orbit_icon",
     "launcher_transparent_adaptive_bg",
     "launcher_double_mask_removed",
@@ -85,7 +89,7 @@
   "performance_build": "performance",
   "r8_enabled_release": true,
   "shrink_resources_release": true,
-  "drawable_nodpi_png_icons": 152,
+  "drawable_nodpi_png_icons": 5,
   "validation_environment": {
     "xml_parse": "ok",
     "workflow_yaml_parse": "ok",
@@ -104,7 +108,9 @@
     "uploaded_ci_log_20": "analyzed_successful_tests_lint_baseline_generation_and_assemblePerformance",
     "alpha21_json_xml_yaml_static_validation": "passed",
     "alpha21_kotlin_parser_syntax_check": "passed_without_android_classpath; unresolved platform symbols expected",
-    "alpha21_full_android_gradle_build": "pending_ci"
+    "alpha21_full_android_gradle_build": "pending_ci",
+    "alpha23_json_xml_yaml_static_validation": "passed",
+    "alpha23_full_android_gradle_build": "pending_ci"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
@@ -199,5 +205,16 @@
       "accounts",
       "user file listing/content"
     ]
+  },
+  "drawable_xxxhdpi_png_icons": 150,
+  "icon_runtime_cache": "6 MiB LRU; max 2 concurrent background decodes",
+  "icon_asset_validation": {
+    "common_icons_192_xxxhdpi": true,
+    "large_variants": [
+      "file_apk_large",
+      "folder_open_large",
+      "search_large"
+    ],
+    "launcher_assets_excluded_from_resize": true
   }
 }

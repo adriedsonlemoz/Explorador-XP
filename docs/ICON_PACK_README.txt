@@ -14,5 +14,7 @@ Estrutura:
 - mockup/       referência da interface final
 - reference/    catálogo visual dos ícones
 
-Os PNGs individuais existentes no pacote foram preservados para uso direto no projeto Android/Kotlin.
-Sugestão: usar os arquivos em res/drawable-nodpi/ e controlar o tamanho em dp pelo Compose.
+Os PNGs individuais existentes no pacote continuam preservando a identidade visual original.
+Desde a alpha.23, os 150 ícones comuns usados pela interface ficam em `res/drawable-xxxhdpi/` com 192×192, para que o Android aplique density scaling e reduza custo de decodificação/memória. O Compose continua controlando o tamanho final em dp.
+
+`drawable-nodpi` fica reservado ao launcher e às variantes grandes usadas em telas específicas (`file_apk_large`, `folder_open_large`, `search_large`).
