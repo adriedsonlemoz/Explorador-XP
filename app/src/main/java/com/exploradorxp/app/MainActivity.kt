@@ -171,6 +171,7 @@ private fun ExplorerApp(
         onToggleFavorite = viewModel::toggleFavorite,
         onCreateFolder = viewModel::createFolder,
         onRename = viewModel::rename,
+        onCancelTransfer = viewModel::cancelTransfer,
         modifier = modifier,
     )
 }

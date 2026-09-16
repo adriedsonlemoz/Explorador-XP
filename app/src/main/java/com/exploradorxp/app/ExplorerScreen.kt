@@ -38,6 +38,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -122,6 +123,7 @@ fun ExplorerScreen(
     onToggleFavorite: (File) -> Unit,
     onCreateFolder: (String) -> Unit,
     onRename: (File, String) -> Unit,
+    onCancelTransfer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showNewFolder by remember { mutableStateOf(false) }
@@ -345,6 +347,10 @@ fun ExplorerScreen(
     if (showManual) HelpManualDialog(onDismiss = { showManual = false })
     if (showAbout) AboutDialog(onDismiss = { showAbout = false })
     if (showDonation) DonationDialog(onDismiss = { showDonation = false })
+
+    state.transfer?.let { transfer ->
+        TransferProgressDialog(transfer = transfer, onCancel = onCancelTransfer)
+    }
 
 }
 
@@ -1005,6 +1011,79 @@ private fun DonationDialog(onDismiss: () -> Unit) {
                 Text("Chave PIX", fontSize = 12.sp, color = XpTextSecondary)
                 Spacer(Modifier.height(5.dp))
                 Text("adriedson@outlook.com", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit) {
+    val animatedFraction by animateFloatAsState(
+        targetValue = transfer.fraction,
+        animationSpec = tween(180),
+        label = "transferFraction",
+    )
+    val title = when (transfer.kind) {
+        TransferKind.COPY -> "Copiando arquivos"
+        TransferKind.MOVE -> "Movendo arquivos"
+        TransferKind.DELETE -> "Excluindo arquivos"
+    }
+    val icon = when (transfer.kind) {
+        TransferKind.COPY -> R.drawable.copy
+        TransferKind.MOVE -> R.drawable.cut
+        TransferKind.DELETE -> R.drawable.delete
+    }
+    Dialog(
+        onDismissRequest = onCancel,
+        properties = DialogProperties(dismissOnClickOutside = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(min = 280.dp, max = 340.dp)
+                .background(Color(0xFFF8F8F2))
+                .border(1.dp, XpBorder)
+        ) {
+            XpDialogTitle(title, onCancel)
+            Column(Modifier.padding(18.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(icon),
+                        contentDescription = null,
+                        modifier = Modifier.size(34.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = transfer.currentName.ifBlank { "Preparando…" },
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+                LinearProgressIndicator(
+                    progress = { animatedFraction },
+                    color = XpBlue,
+                    trackColor = Color(0xFFDCE6F2),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(5.dp)),
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "${transfer.done} de ${transfer.total} item(ns) • ${(animatedFraction * 100).toInt()}%",
+                    fontSize = 12.sp,
+                    color = XpTextSecondary,
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = onCancel,
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text("Cancelar")
+                }
             }
         }
     }

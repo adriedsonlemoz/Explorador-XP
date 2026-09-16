@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.13",
-  "version_code_build": 13,
-  "manager_version": "0.1.0-alpha.13",
-  "manager_code": 13,
+  "version_build": "0.1.0-alpha.14",
+  "version_code_build": 14,
+  "manager_version": "0.1.0-alpha.14",
+  "manager_code": 14,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
@@ -39,6 +39,9 @@
     "list_grid_item_placement_animation",
     "storage_bar_animated_transition",
     "properties_dialog_animate_content_size",
-    "status_bar_memoized_totals"
+    "status_bar_memoized_totals",
+    "transfer_progress_dialog",
+    "cancellable_copy_move_delete",
+    "transfer_progress_throttled_updates"
   ]
 }

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.1.0-alpha.14
+
+- Copiar, mover e excluir agora exibem uma janela de progresso dedicada (ícone da ação, nome do item atual, barra animada e contagem "X de Y itens • Z%"), em vez de deixar a interface sem retorno durante a operação.
+- Adicionado botão **Cancelar** na janela de progresso: interrompe cópia, mover ou exclusão em qualquer ponto, com aviso "Operação cancelada." e atualização imediata da listagem.
+- `FileRepository.paste()` e `FileRepository.delete()` passam a contar o total de itens antes de iniciar e relatam progresso por item processado, incluindo o caminho rápido de mover no mesmo volume (renomear em vez de copiar).
+- Atualizações de progresso são agrupadas em intervalos de ~80 ms para evitar sobrecarga de recomposição em transferências com muitos arquivos, sempre garantindo a emissão final em 100%.
+- Nova transferência cancela automaticamente qualquer cópia/mover/exclusão ainda em andamento, evitando duas operações concorrentes sobre o armazenamento.
+- Versão sincronizada para `0.1.0-alpha.14` / `versionCode 14`.
+
 ## 0.1.0-alpha.13
 
 - Corrigida leitura bloqueante de arquivo na tela de Propriedades: tamanho, datas de criação/modificação e permissões de leitura/escrita agora são apuradas em `Dispatchers.IO` em vez de na thread de composição, com indicador de carregamento enquanto os dados chegam.

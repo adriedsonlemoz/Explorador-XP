@@ -3,6 +3,7 @@ package com.exploradorxp.app
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -38,6 +39,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     private var refreshJob: Job? = null
     private var searchJob: Job? = null
+    private var transferJob: Job? = null
 
     init {
         // Na primeira abertura sem permissão, não faz varredura inútil do armazenamento.
@@ -259,28 +261,22 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     fun pasteClipboard() {
         val clipboard = _uiState.value.clipboard ?: return
         val destination = _uiState.value.currentDir
-        viewModelScope.launch {
-            repository.paste(clipboard, destination)
-                .onSuccess {
-                    _uiState.update { it.copy(clipboard = null) }
-                    _events.emit(ExplorerEvent.ShowMessage("Operação concluída."))
-                    refresh()
-                }
-                .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao colar.")) }
-        }
+        val kind = if (clipboard.mode == ClipboardMode.CUT) TransferKind.MOVE else TransferKind.COPY
+        _uiState.update { it.copy(clipboard = null) }
+        runTransfer(
+            kind = kind,
+            successMessage = "Operação concluída.",
+            failureFallback = "Falha ao colar.",
+        ) { onProgress -> repository.paste(clipboard, destination, onProgress) }
     }
 
     fun deleteFile(file: File) {
         if (!file.exists()) return
-        viewModelScope.launch {
-            repository.delete(listOf(file))
-                .onSuccess {
-                    _uiState.update { it.copy(selectedPaths = it.selectedPaths - file.absolutePath) }
-                    _events.emit(ExplorerEvent.ShowMessage("Item excluído."))
-                    refresh()
-                }
-                .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao excluir.")) }
-        }
+        runTransfer(
+            kind = TransferKind.DELETE,
+            successMessage = "Item excluído.",
+            failureFallback = "Falha ao excluir.",
+        ) { onProgress -> repository.delete(listOf(file), onProgress) }
     }
 
     fun shareFile(file: File) {
@@ -305,15 +301,12 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     fun deleteSelected() {
         val files = selectedFiles()
         if (files.isEmpty()) return
-        viewModelScope.launch {
-            repository.delete(files)
-                .onSuccess {
-                    clearSelection()
-                    _events.emit(ExplorerEvent.ShowMessage("${files.size} item(ns) excluído(s)."))
-                    refresh()
-                }
-                .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao excluir.")) }
-        }
+        val count = files.size
+        runTransfer(
+            kind = TransferKind.DELETE,
+            successMessage = "$count item(ns) excluído(s).",
+            failureFallback = "Falha ao excluir.",
+        ) { onProgress -> repository.delete(files, onProgress) }
     }
 
     fun createFolder(name: String) {
@@ -353,6 +346,49 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     fun selectedFiles(): List<File> = _uiState.value.selectedPaths.map(::File).filter(File::exists)
 
     fun fileByPath(path: String): File? = File(path).takeIf(File::exists)
+
+    /** Cancela a cópia/mover/exclusão em andamento, se houver. */
+    fun cancelTransfer() {
+        transferJob?.cancel()
+    }
+
+    /**
+     * Executa uma cópia/mover/exclusão relatando progresso no [ExplorerUiState.transfer],
+     * cancelável a qualquer momento via [cancelTransfer]. Uma transferência nova cancela
+     * automaticamente qualquer uma ainda em andamento.
+     */
+    private fun runTransfer(
+        kind: TransferKind,
+        successMessage: String,
+        failureFallback: String,
+        operation: suspend ((TransferProgress) -> Unit) -> Result<Unit>,
+    ) {
+        transferJob?.cancel()
+        transferJob = viewModelScope.launch {
+            _uiState.update { it.copy(transfer = TransferState(kind, done = 0, total = 1, currentName = "")) }
+            val result = operation { progress ->
+                _uiState.update {
+                    it.copy(transfer = TransferState(kind, progress.done, progress.total, progress.currentName))
+                }
+            }
+            _uiState.update { it.copy(transfer = null) }
+            result
+                .onSuccess {
+                    clearSelection()
+                    _events.tryEmit(ExplorerEvent.ShowMessage(successMessage))
+                    refresh()
+                }
+                .onFailure { error ->
+                    val message = if (error is CancellationException) {
+                        "Operação cancelada."
+                    } else {
+                        error.message ?: failureFallback
+                    }
+                    _events.tryEmit(ExplorerEvent.ShowMessage(message))
+                    refresh()
+                }
+        }
+    }
 
     private fun browsingTabFor(directory: File): ExplorerTab {
         val dirPath = runCatching { directory.canonicalPath }.getOrDefault(directory.absolutePath)

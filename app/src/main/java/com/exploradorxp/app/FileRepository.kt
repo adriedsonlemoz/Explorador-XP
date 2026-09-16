@@ -4,10 +4,12 @@ import android.content.Context
 import android.os.Environment
 import android.os.StatFs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import kotlin.coroutines.coroutineContext
 
 class FileRepository(
     private val context: Context,
@@ -88,17 +90,33 @@ class FileRepository(
         }
     }
 
-    suspend fun delete(files: List<File>): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun delete(files: List<File>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
+            val total = files.sumOf { countEntries(it) }.coerceAtLeast(1)
+            var done = 0
+            val ticker = ProgressTicker(total, onProgress)
             files.forEach { file ->
-                check(deleteRecursively(file)) { "Não foi possível excluir ${file.name}." }
+                coroutineContext.ensureActive()
+                check(deleteRecursively(file) { name ->
+                    done++
+                    ticker.report(done, name)
+                }) { "Não foi possível excluir ${file.name}." }
             }
+            ticker.reportFinal(done, "")
         }
     }
 
-    suspend fun paste(clipboard: ClipboardState, destination: File): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun paste(
+        clipboard: ClipboardState,
+        destination: File,
+        onProgress: (TransferProgress) -> Unit = {},
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
+            val total = clipboard.files.sumOf { countEntries(it) }.coerceAtLeast(1)
+            var done = 0
+            val ticker = ProgressTicker(total, onProgress)
             clipboard.files.forEach { source ->
+                coroutineContext.ensureActive()
                 require(source.exists()) { "${source.name} não existe mais." }
                 if (clipboard.mode == ClipboardMode.CUT && source.parentFile?.canonicalPath == destination.canonicalPath) {
                     return@forEach
@@ -110,14 +128,21 @@ class FileRepository(
                 }
                 val target = uniqueTarget(destination, source.name)
                 if (clipboard.mode == ClipboardMode.CUT && source.renameTo(target)) {
-                    // Fast-path move on the same volume.
+                    // Fast-path move no mesmo volume: sem cópia byte a byte, então
+                    // o progresso avança de uma vez para todo o subconteúdo movido.
+                    done += countEntries(target)
+                    ticker.report(done, target.name)
                 } else {
-                    copyRecursively(source, target)
+                    copyRecursively(source, target) { name ->
+                        done++
+                        ticker.report(done, name)
+                    }
                     if (clipboard.mode == ClipboardMode.CUT) {
                         check(deleteRecursively(source)) { "O item foi copiado, mas não foi possível remover a origem." }
                     }
                 }
             }
+            ticker.reportFinal(done, "")
         }
     }
 
@@ -226,11 +251,13 @@ class FileRepository(
         return candidate
     }
 
-    private fun copyRecursively(source: File, target: File) {
+    private suspend fun copyRecursively(source: File, target: File, onEntry: (String) -> Unit) {
+        coroutineContext.ensureActive()
         if (source.isDirectory) {
             check(target.mkdirs() || target.isDirectory) { "Não foi possível criar ${target.name}." }
+            onEntry(target.name)
             source.listFiles().orEmpty().forEach { child ->
-                copyRecursively(child, File(target, child.name))
+                copyRecursively(child, File(target, child.name), onEntry)
             }
         } else {
             target.parentFile?.mkdirs()
@@ -238,11 +265,46 @@ class FileRepository(
                 FileOutputStream(target).use { output -> input.copyTo(output) }
             }
             target.setLastModified(source.lastModified())
+            onEntry(target.name)
         }
     }
 
-    private fun deleteRecursively(file: File): Boolean {
-        if (file.isDirectory) file.listFiles().orEmpty().forEach { if (!deleteRecursively(it)) return false }
-        return file.delete() || !file.exists()
+    private fun deleteRecursively(file: File, onEntry: (String) -> Unit = {}): Boolean {
+        if (file.isDirectory) file.listFiles().orEmpty().forEach { if (!deleteRecursively(it, onEntry)) return false }
+        val removed = file.delete() || !file.exists()
+        if (removed) onEntry(file.name)
+        return removed
+    }
+
+    /** Conta pastas e arquivos (incluindo a própria raiz) para estimar o total de uma transferência. */
+    private fun countEntries(file: File): Int {
+        return if (file.isDirectory) {
+            1 + file.listFiles().orEmpty().sumOf { countEntries(it) }
+        } else {
+            1
+        }
+    }
+
+    /**
+     * Agrupa atualizações de progresso para não sobrecarregar a UI a cada arquivo processado
+     * em transferências grandes: emite no máximo a cada ~80 ms, sempre garantindo a emissão final.
+     */
+    private class ProgressTicker(
+        private val total: Int,
+        private val onProgress: (TransferProgress) -> Unit,
+    ) {
+        private var lastEmitMs = 0L
+
+        fun report(done: Int, currentName: String) {
+            val now = System.currentTimeMillis()
+            if (now - lastEmitMs >= 80L || done >= total) {
+                lastEmitMs = now
+                onProgress(TransferProgress(done.coerceAtMost(total), total, currentName))
+            }
+        }
+
+        fun reportFinal(done: Int, currentName: String) {
+            onProgress(TransferProgress(done.coerceAtMost(total), total, currentName))
+        }
     }
 }

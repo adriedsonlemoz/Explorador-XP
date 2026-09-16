@@ -6,6 +6,24 @@ enum class ViewMode { LIST, GRID }
 enum class ExplorerTab { FILES, DOWNLOADS, FAVORITES }
 enum class SortMode { NAME, DATE, SIZE, TYPE }
 enum class ClipboardMode { COPY, CUT }
+enum class TransferKind { COPY, MOVE, DELETE }
+
+/** Progresso relatado pelo [FileRepository] durante cópia, mover ou exclusão. */
+data class TransferProgress(
+    val done: Int,
+    val total: Int,
+    val currentName: String,
+)
+
+/** Estado exibido na UI enquanto uma transferência está em andamento. */
+data class TransferState(
+    val kind: TransferKind,
+    val done: Int,
+    val total: Int,
+    val currentName: String,
+) {
+    val fraction: Float get() = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
+}
 
 data class FileItem(
     val file: File,
@@ -53,6 +71,7 @@ data class ExplorerUiState(
     val tab: ExplorerTab = ExplorerTab.FILES,
     val selectedPaths: Set<String> = emptySet(),
     val clipboard: ClipboardState? = null,
+    val transfer: TransferState? = null,
     val canGoBack: Boolean = false,
     val canGoForward: Boolean = false,
     val showHidden: Boolean = false,

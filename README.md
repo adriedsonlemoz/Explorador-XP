@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.13` (`versionCode 13`)  
+**Versão atual:** `0.1.0-alpha.14` (`versionCode 14`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -18,7 +18,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Modos Lista e Grade.
 - Ordenação por nome, data, tamanho e tipo.
 - Toque longo entra diretamente no modo de seleção; a barra de ferramentas troca temporariamente para ações de seleção e volta ao normal ao concluir/cancelar.
-- Copiar, recortar/mover e colar, incluindo pastas recursivas; quando há conteúdo na área de transferência, **Downloads** vira temporariamente **Colar** na barra de ferramentas.
+- Copiar, recortar/mover e colar, incluindo pastas recursivas; quando há conteúdo na área de transferência, **Downloads** vira temporariamente **Colar** na barra de ferramentas. Cópia, mover e exclusão exibem uma janela de progresso com o item atual, contagem e barra animada, com opção de **Cancelar** a qualquer momento.
 - Criar pasta, renomear e excluir.
 - Visualizador interno para imagens, textos/código editáveis, HTML, PDF, ZIP, áudio/vídeo e informações de APK; formatos não suportados continuam disponíveis via `Abrir com...`.
 - Abertura externa por aplicativo compatível via `FileProvider` quando necessário.
@@ -58,6 +58,10 @@ docs/
 O app usa acesso amplo ao armazenamento compartilhado porque sua função principal é gerenciamento de arquivos. Em Android 11+, o usuário precisa conceder manualmente **Acesso a todos os arquivos**. Em versões anteriores, o app solicita as permissões legadas necessárias.
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
+
+## Interface alpha.14
+
+Cópia, mover e exclusão deixam de ser operações "silenciosas": agora abrem uma janela de progresso no estilo do app (título, ícone da ação, nome do item atual, barra de progresso animada, contagem "X de Y itens" e percentual), com um botão **Cancelar** que interrompe a operação a qualquer momento. O total de itens é calculado antes de começar, então a barra reflete o andamento real mesmo em pastas com muitos arquivos. Mover dentro do mesmo volume continua usando o caminho rápido (renomear em vez de copiar byte a byte), mas agora também é refletido na barra de progresso. Internamente, as atualizações de progresso são agrupadas a cada ~80 ms para não sobrecarregar a interface durante transferências com milhares de arquivos.
 
 ## Interface alpha.13
 
