@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.1.0-alpha.13
+
+- Corrigida leitura bloqueante de arquivo na tela de Propriedades: tamanho, datas de criação/modificação e permissões de leitura/escrita agora são apuradas em `Dispatchers.IO` em vez de na thread de composição, com indicador de carregamento enquanto os dados chegam.
+- Lista e grade de arquivos passam a ter estado de rolagem próprio por pasta/aba, reiniciando no topo ao navegar em vez de herdar a posição da pasta anterior.
+- Itens da lista e da grade recebem animação curta de posição (`animateItem`) ao reordenar por nome, data, tamanho ou tipo.
+- Barra de progresso do cartão de armazenamento passa a animar a transição de proporção usada/livre ao alternar entre armazenamento interno e cartão SD, em vez de saltar direto ao novo valor.
+- Diálogo de Propriedades ganhou `animateContentSize` para acomodar a troca entre o estado de carregamento e os detalhes sem um salto abrupto de altura.
+- Barra de status inferior deixou de refiltrar e resomar a lista de itens a cada recomposição não relacionada, recalculando apenas quando a listagem ou a seleção mudam de fato.
+- Versão sincronizada para `0.1.0-alpha.13` / `versionCode 13`.
+
 ## 0.1.0-alpha.12
 
 - Corrigida a estrutura do ícone adaptativo: o fundo grafite agora é uma camada separada e a pasta dourada é um foreground transparente.

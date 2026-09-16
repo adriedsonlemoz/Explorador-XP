@@ -18,9 +18,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
@@ -40,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +63,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -209,6 +217,7 @@ fun ExplorerScreen(
                 EmptyState(state.tab, state.query)
             } else if (state.viewMode == ViewMode.LIST) {
                 FileList(
+                    scrollKey = "${state.tab}|${state.currentDir.absolutePath}",
                     items = state.items,
                     selectedPaths = state.selectedPaths,
                     onItemClick = onItemClick,
@@ -230,6 +239,7 @@ fun ExplorerScreen(
                 )
             } else {
                 FileGrid(
+                    scrollKey = "${state.tab}|${state.currentDir.absolutePath}",
                     items = state.items,
                     selectedPaths = state.selectedPaths,
                     onItemClick = onItemClick,
@@ -809,6 +819,12 @@ private fun StorageCard(info: StorageInfo) {
     val used = formatBytes(info.usedBytes)
     val free = formatBytes(info.freeBytes)
     val total = formatBytes(info.totalBytes)
+    // Anima a transição da barra ao trocar de volume (interno/SD) em vez de saltar direto ao novo valor.
+    val animatedUsedFraction by animateFloatAsState(
+        targetValue = info.usedFraction,
+        animationSpec = tween(320),
+        label = "storageUsedFraction",
+    )
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -838,7 +854,7 @@ private fun StorageCard(info: StorageInfo) {
             Box(
                 contentAlignment = Alignment.CenterStart,
                 modifier = Modifier
-                    .weight(info.usedFraction.coerceAtLeast(0.001f))
+                    .weight(animatedUsedFraction.coerceAtLeast(0.001f))
                     .fillMaxHeight()
                     .background(Brush.verticalGradient(listOf(Color(0xFF61E65E), Color(0xFF13A92E))))
             ) {
@@ -855,7 +871,7 @@ private fun StorageCard(info: StorageInfo) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .weight((1f - info.usedFraction).coerceAtLeast(0.001f))
+                    .weight((1f - animatedUsedFraction).coerceAtLeast(0.001f))
                     .fillMaxHeight()
                     .background(Color(0xFFE1ECF8))
             ) {
@@ -1179,6 +1195,7 @@ private fun ContextActionCell(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FileList(
+    scrollKey: String,
     items: List<FileItem>,
     selectedPaths: Set<String>,
     onItemClick: (FileItem) -> Unit,
@@ -1186,7 +1203,11 @@ private fun FileList(
     onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
+    // Estado de rolagem próprio por pasta/aba: reinicia no topo ao navegar,
+    // em vez de manter a posição da listagem anterior.
+    val listState = remember(scrollKey) { LazyListState() }
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 3.dp)
@@ -1202,6 +1223,7 @@ private fun FileList(
                 onClick = { onItemClick(item) },
                 onLongSelect = { onLongSelect(item) },
                 onMenuAction = { action -> onMenuAction(item, action) },
+                modifier = Modifier.animateItem(placementSpec = tween(220)),
             )
             HorizontalDivider(color = Color(0xFFD8E1ED), thickness = 1.dp)
         }
@@ -1216,10 +1238,11 @@ private fun FileListRow(
     onClick: () -> Unit,
     onLongSelect: () -> Unit,
     onMenuAction: (FileMenuAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(if (selected) XpSelection else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongSelect)
@@ -1275,6 +1298,7 @@ private fun FileListRow(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FileGrid(
+    scrollKey: String,
     items: List<FileItem>,
     selectedPaths: Set<String>,
     onItemClick: (FileItem) -> Unit,
@@ -1282,7 +1306,10 @@ private fun FileGrid(
     onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
+    // Mesma lógica da lista: reinicia a rolagem ao trocar de pasta/aba.
+    val gridState = remember(scrollKey) { LazyGridState() }
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Adaptive(minSize = 96.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1296,6 +1323,7 @@ private fun FileGrid(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
+                    .animateItem(placementSpec = tween(220))
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (item.file.absolutePath in selectedPaths) XpSelection else Color.White)
                     .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
@@ -1349,12 +1377,15 @@ private fun ExplorerStatusBar(
     items: List<FileItem>,
     selectedPaths: Set<String>,
 ) {
-    val selectedItems = items.filter { it.file.absolutePath in selectedPaths }
-    val hasSelection = selectedItems.isNotEmpty()
-    val shownItems = if (hasSelection) selectedItems else items
-    val sizeBytes = shownItems.asSequence()
-        .filterNot { it.isDirectory }
-        .sumOf { it.size }
+    // Recalcula apenas quando a lista de itens ou a seleção realmente mudam,
+    // em vez de refiltrar/resomar a cada recomposição do restante da tela.
+    val (hasSelection, sizeBytes, shownCount) = remember(items, selectedPaths) {
+        val selectedItems = items.filter { it.file.absolutePath in selectedPaths }
+        val selected = selectedItems.isNotEmpty()
+        val shownItems = if (selected) selectedItems else items
+        val size = shownItems.asSequence().filterNot { it.isDirectory }.sumOf { it.size }
+        Triple(selected, size, shownItems.size)
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1367,9 +1398,9 @@ private fun ExplorerStatusBar(
     ) {
         Text(
             text = if (hasSelection) {
-                "${selectedItems.size} selecionado(s)"
+                "$shownCount selecionado(s)"
             } else {
-                "${items.size} ${if (items.size == 1) "objeto" else "objetos"}"
+                "$shownCount ${if (shownCount == 1) "objeto" else "objetos"}"
             },
             color = Color(0xFF303030),
             fontSize = 11.sp,
@@ -1487,13 +1518,42 @@ private fun NameDialog(
     )
 }
 
+private data class FilePropertiesInfo(
+    val isDirectory: Boolean,
+    val extension: String,
+    val sizeBytes: Long,
+    val createdAt: Long,
+    val modifiedAt: Long,
+    val canRead: Boolean,
+    val canWrite: Boolean,
+)
+
 @Composable
 private fun PropertiesDialog(file: File, onDismiss: () -> Unit) {
+    // As consultas ao sistema de arquivos (tamanho, datas, permissões) saem da
+    // thread de composição e rodam em Dispatchers.IO, evitando travar a UI ao abrir o diálogo.
+    val info by produceState<FilePropertiesInfo?>(initialValue = null, file.absolutePath) {
+        value = withContext(Dispatchers.IO) {
+            FilePropertiesInfo(
+                isDirectory = file.isDirectory,
+                extension = file.extension,
+                sizeBytes = if (file.isFile) file.length() else 0L,
+                createdAt = fileCreationTime(file),
+                modifiedAt = file.lastModified(),
+                canRead = file.canRead(),
+                canWrite = file.canWrite(),
+            )
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Propriedades") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+                modifier = Modifier.animateContentSize(tween(150)),
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.foundation.Image(
                         painterResource(FileIconMapper.iconFor(file)),
@@ -1503,12 +1563,21 @@ private fun PropertiesDialog(file: File, onDismiss: () -> Unit) {
                     Spacer(Modifier.width(10.dp))
                     Text(file.name, fontWeight = FontWeight.Bold)
                 }
-                Text("Tipo: ${if (file.isDirectory) "Pasta" else file.extension.ifBlank { "Arquivo" }.uppercase()}")
-                if (file.isFile) Text("Tamanho: ${formatBytes(file.length())}")
-                Text("Criado: ${formatDateTime(fileCreationTime(file))}")
-                Text("Modificado: ${formatDateTime(file.lastModified())}")
-                Text("Caminho: ${file.absolutePath}", fontSize = 12.sp, color = XpTextSecondary)
-                Text("Leitura: ${if (file.canRead()) "Sim" else "Não"} • Escrita: ${if (file.canWrite()) "Sim" else "Não"}")
+                val current = info
+                if (current == null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(color = XpBlue, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Carregando detalhes…", color = XpTextSecondary, fontSize = 13.sp)
+                    }
+                } else {
+                    Text("Tipo: ${if (current.isDirectory) "Pasta" else current.extension.ifBlank { "Arquivo" }.uppercase()}")
+                    if (!current.isDirectory) Text("Tamanho: ${formatBytes(current.sizeBytes)}")
+                    Text("Criado: ${formatDateTime(current.createdAt)}")
+                    Text("Modificado: ${formatDateTime(current.modifiedAt)}")
+                    Text("Caminho: ${file.absolutePath}", fontSize = 12.sp, color = XpTextSecondary)
+                    Text("Leitura: ${if (current.canRead) "Sim" else "Não"} • Escrita: ${if (current.canWrite) "Sim" else "Não"}")
+                }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Fechar") } }

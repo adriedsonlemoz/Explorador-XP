@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.12",
-  "version_code_build": 12,
-  "manager_version": "0.1.0-alpha.12",
-  "manager_code": 12,
+  "version_build": "0.1.0-alpha.13",
+  "version_code_build": 13,
+  "manager_version": "0.1.0-alpha.13",
+  "manager_code": 13,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
@@ -33,6 +33,12 @@
     "cancel_previous_refresh",
     "storage_info_off_main_thread",
     "system_bars_visible",
-    "icon_pack_v2_applied"
+    "icon_pack_v2_applied",
+    "properties_async_io",
+    "per_folder_scroll_state",
+    "list_grid_item_placement_animation",
+    "storage_bar_animated_transition",
+    "properties_dialog_animate_content_size",
+    "status_bar_memoized_totals"
   ]
 }

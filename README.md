@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.12` (`versionCode 12`)  
+**Versão atual:** `0.1.0-alpha.13` (`versionCode 13`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -58,6 +58,10 @@ docs/
 O app usa acesso amplo ao armazenamento compartilhado porque sua função principal é gerenciamento de arquivos. Em Android 11+, o usuário precisa conceder manualmente **Acesso a todos os arquivos**. Em versões anteriores, o app solicita as permissões legadas necessárias.
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
+
+## Interface alpha.13
+
+Foco em desempenho e polimento visual, sem mudanças de layout. As Propriedades de arquivo/pasta (tamanho, datas de criação/modificação, permissões de leitura/escrita) deixaram de ser lidas na thread de composição e passaram a ser carregadas em `Dispatchers.IO`, com um indicador de carregamento breve enquanto os dados chegam. A lista e a grade de arquivos agora reiniciam a rolagem no topo ao trocar de pasta ou aba, em vez de manter a posição da pasta visitada anteriormente, e os itens são reordenados com uma animação curta de posição ao mudar a ordenação. O indicador de espaço usado no cartão de armazenamento faz uma transição suave ao alternar entre armazenamento interno e cartão SD. A barra de status inferior deixou de recalcular contagem e tamanho total a cada recomposição não relacionada à lista.
 
 ## Interface alpha.12
 
