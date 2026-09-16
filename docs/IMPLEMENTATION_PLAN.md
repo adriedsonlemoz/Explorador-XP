@@ -13,8 +13,8 @@
 - Lixeira opcional do próprio app antes da exclusão permanente.
 
 ## Qualidade e desempenho em andamento
-- Testes JVM iniciais adicionados na alpha.15 para projeção da listagem em memória.
-- Próximo: testes instrumentados de navegação/operações de arquivo e Macrobenchmark/Baseline Profile para medir scroll, abertura de pasta e inicialização no aparelho.
+- Testes JVM iniciais adicionados na alpha.15 para projeção da listagem em memória; o workflow da alpha.16 mantém testes e lint obrigatórios antes do APK.
+- Próximo: executar o build da alpha.16 no GitHub, validar o APK `performance` no aparelho e então adicionar testes instrumentados de navegação/operações de arquivo + Macrobenchmark/Baseline Profile para medir scroll, abertura de pasta e inicialização.
 
 ## Depois
 - Suporte a SMB/rede local como módulo independente.

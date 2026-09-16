@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.15",
-  "version_code_build": 15,
-  "manager_version": "0.1.0-alpha.15",
-  "manager_code": 15,
+  "version_build": "0.1.0-alpha.16",
+  "version_code_build": 16,
+  "manager_version": "0.1.0-alpha.16",
+  "manager_code": 16,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
@@ -55,7 +55,9 @@
     "duplicate_blank_area_gesture_layer_removed",
     "unit_tests_added",
     "ci_test_and_lint",
-    "performance_apk_r8_shrink_resources"
+    "performance_apk_r8_shrink_resources",
+    "properties_producestate_lint_fix",
+    "ci_actions_node24_generation"
   ],
   "unit_test_files": 1,
   "performance_build": "performance",
@@ -69,6 +71,13 @@
     "repository_compilecheck_with_stubs": "ok",
     "viewmodel_compilecheck_with_stubs": "ok",
     "unit_test_source_compilecheck_with_junit_stub": "ok",
-    "full_android_gradle_build": "pending_ci_android_sdk_not_available_in_local_environment"
+    "full_android_gradle_build": "pending_ci_android_sdk_not_available_in_local_environment",
+    "uploaded_ci_log_15": "analyzed_and_fixed_in_alpha_16"
+  },
+  "ci_build_15_result": {
+    "testDebugUnitTest": "executed",
+    "lintDebug": "failed_before_fix",
+    "lint_error": "ProduceStateDoesNotAssignValue at ExplorerScreen.kt PropertiesDialog",
+    "assemblePerformance": "not_reached"
   }
 }

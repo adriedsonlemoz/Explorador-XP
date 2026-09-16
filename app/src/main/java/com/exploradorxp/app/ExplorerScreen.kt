@@ -1609,7 +1609,7 @@ private fun PropertiesDialog(file: File, onDismiss: () -> Unit) {
     // As consultas ao sistema de arquivos (tamanho, datas, permissões) saem da
     // thread de composição e rodam em Dispatchers.IO, evitando travar a UI ao abrir o diálogo.
     val info by produceState<FilePropertiesInfo?>(initialValue = null, file.absolutePath) {
-        value = withContext(Dispatchers.IO) {
+        val loadedInfo = withContext(Dispatchers.IO) {
             FilePropertiesInfo(
                 isDirectory = file.isDirectory,
                 extension = file.extension,
@@ -1620,6 +1620,7 @@ private fun PropertiesDialog(file: File, onDismiss: () -> Unit) {
                 canWrite = file.canWrite(),
             )
         }
+        value = loadedInfo
     }
 
     AlertDialog(

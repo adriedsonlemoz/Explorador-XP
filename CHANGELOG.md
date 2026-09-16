@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.1.0-alpha.16
+
+- Corrigido erro de `lintDebug` em `ExplorerScreen.kt` (`ProduceStateDoesNotAssignValue`) no diálogo de Propriedades.
+- Mantida a leitura de metadados em `Dispatchers.IO`; o resultado agora é atribuído explicitamente ao estado produzido, sem voltar a bloquear a thread principal.
+- Confirmado pelo log do build 15 que `compileDebugUnitTestKotlin` e `testDebugUnitTest` foram executados antes da falha de lint.
+- Workflow atualizado de `actions/checkout@v4`, `actions/setup-java@v4` e `gradle/actions/setup-gradle@v4` para as gerações `v6`, removendo dependência das actions com runtime Node 20 avisadas pelo runner.
+- Mantidos `testDebugUnitTest` + `lintDebug` como portas obrigatórias antes de `assemblePerformance`; nenhum baseline/supressão foi usado para mascarar o erro.
+- Versão sincronizada para `0.1.0-alpha.16` / `versionCode 16`.
+
 ## 0.1.0-alpha.15
 
 - Navegação passou a usar snapshot de diretório em memória: busca, ordenação, `Pastas primeiro` e filtro de ocultos não relêem mais o armazenamento a cada alteração.
