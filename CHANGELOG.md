@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.1.0-alpha.22
+
+- Aplicado novo ícone do aplicativo ao projeto, substituindo o launcher anterior por uma pasta dourada com órbita azul.
+- A arte do launcher recebeu margem de segurança extra para evitar corte do símbolo nas máscaras adaptativas do Android.
+- O foreground do ícone passou a usar fundo transparente no adaptive icon, eliminando a borda/quadriculado escuro visto fora da arte.
+- Atualizados `ic_launcher`, `ic_launcher_round` e `launcher_explorer_foreground.png` em todas as densidades.
+- Ajustados `ic_launcher.xml` e `ic_launcher_round.xml` para usar fundo transparente e inset de segurança no foreground.
+- Mantido o ícone monocromático separado para compatibilidade com themed icons do Android 13+.
+- Versão sincronizada para `0.1.0-alpha.22` / `versionCode 22`.
+
 ## 0.1.0-alpha.21
 
 - Adicionado **Ferramentas → Informações do dispositivo**, com leitura real dos dados expostos pelo Android, sem banco fixo de especificações por modelo.

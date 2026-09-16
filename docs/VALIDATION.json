@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.21",
-  "version_code_build": 21,
-  "manager_version": "0.1.0-alpha.21",
-  "manager_code": 21,
+  "version_build": "0.1.0-alpha.22",
+  "version_code_build": 22,
+  "manager_version": "0.1.0-alpha.22",
+  "manager_code": 22,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
@@ -12,6 +12,8 @@
   "xml_files": 12,
   "static_validation_ok": true,
   "ui_changes": [
+    "launcher_alpha22_orbit_icon",
+    "launcher_transparent_adaptive_bg",
     "launcher_double_mask_removed",
     "android13_monochrome_icon",
     "launcher_art_scaled_up",
