@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.23",
-  "version_code_build": 23,
-  "manager_version": "0.1.0-alpha.23",
-  "manager_code": 23,
+  "version_build": "0.1.0-alpha.24",
+  "version_code_build": 24,
+  "manager_version": "0.1.0-alpha.24",
+  "manager_code": 24,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
@@ -12,6 +12,9 @@
   "xml_files": 10,
   "static_validation_ok": true,
   "ui_changes": [
+    "device_info_alpha24_compose_redesign",
+    "device_info_no_fake_device_image",
+    "device_info_material_vector_icons",
     "large_icon_variants",
     "file_icon_lru_cache",
     "file_icon_background_decode",

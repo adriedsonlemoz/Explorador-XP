@@ -27,3 +27,10 @@
 ## Depois
 - Suporte a SMB/rede local como módulo independente.
 - Temas XP adicionais sem descaracterizar o layout aprovado.
+
+### Alpha 24 — Informações do dispositivo
+
+- [x] Redesenhar o painel em Compose usando os dados reais já coletados.
+- [x] Melhorar hierarquia visual sem inserir foto/imagem falsa do modelo.
+- [x] Integrar atualização ao cabeçalho e manter exportação para IA.
+- [x] Exibir recursos com estado legível Disponível/Não disponível.

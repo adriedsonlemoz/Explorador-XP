@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.23` (`versionCode 23`)  
+**Versão atual:** `0.1.0-alpha.24` (`versionCode 24`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -29,6 +29,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Opção persistente para mostrar/ocultar arquivos ocultos.
 - Propriedades básicas de arquivos/pastas.
 - Na primeira abertura sem permissão, um pop-up central obrigatório explica o acesso aos arquivos e leva diretamente à tela do Android para conceder `MANAGE_EXTERNAL_STORAGE`.
+- **Informações do dispositivo** ganhou painel visual moderno feito integralmente em Compose: resumo do aparelho, indicadores de RAM/armazenamento/bateria, sistema, recursos e exportação para IA, sem foto fake nem banco fixo de especificações.
 - Launcher legado/adaptativo atualizado com nova arte da pasta dourada e órbita azul, agora com margem de segurança maior, sem borda aparente e com transparência correta para evitar cortes na máscara adaptativa do Android.
 - Ícones PNG usados na navegação foram otimizados para densidade Android: o conjunto comum saiu de 256×256 `nodpi` para 192×192 em `drawable-xxxhdpi`, permitindo que o sistema decodifique tamanhos menores em telas de densidade inferior.
 - Ícones dos itens da lista/grade são decodificados em background e reutilizados por um cache LRU de 6 MiB, evitando a primeira decodificação pesada no frame da rolagem; os primeiros tipos visíveis são aquecidos de forma assíncrona.

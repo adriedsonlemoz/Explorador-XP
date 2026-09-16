@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.1.0-alpha.24
+
+- Redesenhada diretamente em Jetpack Compose a tela **Informações do dispositivo**, usando a referência visual apenas como guia e sem adicionar imagens/fotos falsas do aparelho.
+- Novo cabeçalho azul com ações de atualizar e fechar integradas, removendo o rodapé separado de atualização.
+- Novo cartão principal do dispositivo com nome, fabricante/modelo, estado ativo e atalhos visuais para Android, RAM e armazenamento.
+- Memória, armazenamento e bateria agora usam cartões compactos com ícones vetoriais, cores próprias e barras de progresso.
+- Seções Sistema, Bateria e Recursos receberam hierarquia visual mais forte, divisores e ícones vetoriais leves.
+- Recursos passaram a exibir claramente `Disponível` / `Não disponível`, mantendo somente dados reais coletados do Android.
+- Adicionado destaque contextual quando o aparelho está conectado à energia.
+- Cartão do Explorador XP e área **Relatório para IA** foram modernizados, mantendo o mesmo mecanismo de exportação e as mesmas regras de privacidade.
+- Nenhuma imagem nova foi incorporada à tela; o redesign usa componentes Compose e Material Icons.
+- Versão sincronizada para `0.1.0-alpha.24` / `versionCode 24`.
+
 ## 0.1.0-alpha.23
 
 - Otimizado o pipeline de ícones que aparece durante a rolagem de arquivos e pastas.

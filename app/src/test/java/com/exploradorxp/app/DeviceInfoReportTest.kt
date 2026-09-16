@@ -50,7 +50,7 @@ class DeviceInfoReportTest {
             hasAccelerometer = true,
             hasGyroscope = true,
             hasRemovableStorage = false,
-            appVersionName = "0.1.0-alpha.23",
+            appVersionName = "0.1.0-alpha.24",
             appVersionCode = 23,
         )
 
