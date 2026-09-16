@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.1.0-alpha.21
+
+- Adicionado **Ferramentas → Informações do dispositivo**, com leitura real dos dados expostos pelo Android, sem banco fixo de especificações por modelo.
+- O painel mostra apenas informações úteis para uso comum: nome/modelo, fabricante, Android/API, patch de segurança, processador, CPU, RAM, armazenamento, tela, bateria e recursos disponíveis.
+- RAM, armazenamento e bateria ganharam indicadores visuais compactos; a tela pode ser atualizada sem fechar o painel.
+- Adicionada a opção **Exportar relatório para IA**, usando o seletor de arquivos do Android para salvar um TXT estruturado com valores humanos e valores brutos para diagnóstico.
+- O relatório inclui detalhes técnicos extras como ABI, kernel/build, bytes de RAM/armazenamento, densidade/taxa da tela, estado da bateria e recursos, mas exclui IMEI, serial, Android ID, MAC, localização, contas e lista/conteúdo de arquivos do usuário.
+- A coleta e a escrita do relatório executam I/O fora da thread principal.
+- Adicionado teste JVM para validar os campos técnicos e o contrato de privacidade do relatório para IA.
+- O workflow **Gerar APK** deixou de iniciar Managed Virtual Device e regenerar Baseline Profile em todo build; agora valida e reutiliza `app/src/main/baseline-prof.txt` antes do `assemblePerformance`.
+- A geração pesada do Baseline Profile e os Macrobenchmarks permanecem no workflow separado **Desempenho e Baseline Profile**.
+- O log do build 20 confirmou testes JVM, lint, geração real de Baseline Profile e `assemblePerformance` com sucesso; a geração do perfil consumiu 8m38s e motivou a separação dos workflows.
+- Versão sincronizada para `0.1.0-alpha.21` / `versionCode 21`.
+
 ## 0.1.0-alpha.20
 
 - Analisado o log `Gerar APK 19`: `testDebugUnitTest` e `lintDebug` passaram; o job avançou até a compilação do módulo `:baselineprofile`.

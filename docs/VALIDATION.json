@@ -1,12 +1,12 @@
 {
-  "version_build": "0.1.0-alpha.20",
-  "version_code_build": 20,
-  "manager_version": "0.1.0-alpha.20",
-  "manager_code": 20,
+  "version_build": "0.1.0-alpha.21",
+  "version_code_build": 21,
+  "manager_version": "0.1.0-alpha.21",
+  "manager_code": 21,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
-  "kotlin_files": 14,
+  "kotlin_files": 17,
   "xp_png_icons": 162,
   "drawable_references": 155,
   "xml_files": 12,
@@ -70,9 +70,16 @@
     "ci_generate_baseline_before_performance_apk",
     "performance_reports_workflow",
     "properties_launchedeffect_lint_fix",
-    "baselineprofile_explicit_androidx_test_runner_rules"
+    "baselineprofile_explicit_androidx_test_runner_rules",
+    "device_info_tools_panel",
+    "device_info_real_android_data",
+    "device_info_async_collection",
+    "device_info_ai_txt_export",
+    "device_info_privacy_excludes_unique_ids",
+    "normal_ci_reuses_embedded_baseline_profile",
+    "baseline_generation_moved_to_performance_workflow_only"
   ],
-  "unit_test_files": 1,
+  "unit_test_files": 2,
   "performance_build": "performance",
   "r8_enabled_release": true,
   "shrink_resources_release": true,
@@ -84,14 +91,18 @@
     "repository_compilecheck_with_stubs": "ok",
     "viewmodel_compilecheck_with_stubs": "ok",
     "unit_test_source_compilecheck_with_junit_stub": "ok",
-    "full_android_gradle_build": "pending_ci_android_sdk_not_available_in_local_environment",
+    "full_android_gradle_build": "build_20_success_before_alpha21_changes; alpha21_pending_ci",
     "uploaded_ci_log_15": "analyzed_and_fixed_in_alpha_16",
     "uploaded_ci_log_16": "analyzed_and_fixed_in_alpha_17",
-    "baselineprofile_android_execution": "pending_ci_managed_device",
+    "baselineprofile_android_execution": "build_20_success_8m38s",
     "macrobenchmark_physical_device": "pending_after_ci_structure_validation",
     "baselineprofile_source_compilecheck_with_stubs": "ok_with_explicit_androidx_test_runner_rules",
     "uploaded_ci_log_18": "analyzed_and_fixed_in_alpha_19",
-    "uploaded_ci_log_19": "analyzed_and_fixed_in_alpha_20"
+    "uploaded_ci_log_19": "analyzed_and_fixed_in_alpha_20",
+    "uploaded_ci_log_20": "analyzed_successful_tests_lint_baseline_generation_and_assemblePerformance",
+    "alpha21_json_xml_yaml_static_validation": "passed",
+    "alpha21_kotlin_parser_syntax_check": "passed_without_android_classpath; unresolved platform symbols expected",
+    "alpha21_full_android_gradle_build": "pending_ci"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
@@ -115,7 +126,9 @@
     "merge_into_main": true,
     "seed_profile": "app/src/main/baseline-prof.txt",
     "androidx_test_runner": "1.7.0",
-    "androidx_test_rules": "1.7.0"
+    "androidx_test_rules": "1.7.0",
+    "normal_apk_workflow_regenerates_profile": false,
+    "performance_workflow_regenerates_profile": true
   },
   "macrobenchmark": {
     "library": "androidx.benchmark:benchmark-macro-junit4:1.5.0",
@@ -147,5 +160,42 @@
       "Unresolved reference 'LargeTest'"
     ],
     "assemblePerformance": "not_reached"
+  },
+  "ci_build_20_result": {
+    "testDebugUnitTest": "passed",
+    "lintDebug": "passed",
+    "baselineProfileGeneration": "passed",
+    "baselineProfileGenerationDuration": "8m38s",
+    "assemblePerformance": "passed",
+    "assemblePerformanceDuration": "1m38s",
+    "apkPublished": "passed"
+  },
+  "device_info": {
+    "entry_point": "Ferramentas > Informações do dispositivo",
+    "screen_fields": [
+      "device_name",
+      "manufacturer_model",
+      "android_api",
+      "security_patch",
+      "processor",
+      "cpu_cores_architecture",
+      "ram",
+      "internal_storage",
+      "display",
+      "battery",
+      "capabilities",
+      "app_version"
+    ],
+    "export_format": "text/plain structured for AI",
+    "collection_thread": "Dispatchers.IO",
+    "excluded_sensitive_fields": [
+      "IMEI",
+      "serial",
+      "Android ID",
+      "MAC address",
+      "location",
+      "accounts",
+      "user file listing/content"
+    ]
   }
 }

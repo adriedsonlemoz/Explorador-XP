@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.20` (`versionCode 20`)  
+**Versão atual:** `0.1.0-alpha.21` (`versionCode 21`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -45,9 +45,12 @@ app/src/main/java/com/exploradorxp/app/
   FileDisplayFormatter.kt
   FileIconMapper.kt
   PreferencesStore.kt
+  DeviceInfo.kt
+  DeviceInfoScreen.kt
 
 app/src/test/java/com/exploradorxp/app/
   ExplorerItemTransformsTest.kt
+  DeviceInfoReportTest.kt
 
 baselineprofile/src/main/java/com/exploradorxp/benchmark/
   BaselineProfileGenerator.kt
@@ -69,6 +72,16 @@ O app usa acesso amplo ao armazenamento compartilhado porque sua função princi
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
 
+
+
+## Dispositivo e diagnóstico alpha.21
+
+- **Ferramentas → Informações do dispositivo** abre um painel local com dados reais expostos pelo Android, sem cadastro manual por modelo.
+- A tela prioriza informações fáceis de entender: nome/modelo, fabricante, Android/API, patch de segurança, processador, núcleos/arquitetura, RAM, armazenamento interno, resolução/taxa de atualização, bateria e recursos disponíveis.
+- RAM, armazenamento e bateria têm indicadores compactos para leitura rápida; os valores variáveis podem ser atualizados sem fechar a tela.
+- **Exportar relatório para IA** usa o seletor de arquivos do Android e gera um `.txt` estruturado com valores humanos e valores brutos úteis para diagnóstico.
+- A exportação é propositalmente mais detalhada que a tela e inclui ABI, kernel/build, bytes de RAM/armazenamento, densidade, bateria e recursos. Não coleta IMEI, serial, Android ID, MAC, localização, contas nem lista/conteúdo dos arquivos do usuário.
+- O workflow normal **Gerar APK** deixou de regenerar Baseline Profile a cada build; ele valida o perfil já embarcado e segue para `assemblePerformance`. A geração pesada por Managed Virtual Device permanece no workflow separado **Desempenho e Baseline Profile**.
 
 ## Correção de build alpha.20
 
@@ -95,7 +108,7 @@ A primeira alpha prioriza o armazenamento compartilhado primário. O suporte ded
 - O benchmark cria dados artificiais em `/sdcard/Download/ExploradorXP-Benchmark`, sem usar ou modificar os arquivos pessoais do usuário.
 - `ReportDrawnWhen` informa quando a listagem terminou o carregamento, permitindo medir o estado realmente pronto para interação.
 - Novo workflow **Desempenho e Baseline Profile** gera o perfil e publica relatórios. As métricas em emulador servem como sinal de regressão; medições finais devem ser confirmadas em aparelho físico.
-- O workflow **Gerar APK** agora gera o Baseline Profile antes do `assemblePerformance`, garantindo que o APK alpha de desempenho seja montado com o perfil mais recente.
+- O workflow **Gerar APK** reutiliza o Baseline Profile já embarcado e não inicia mais um emulador em toda compilação. A regeneração do perfil fica concentrada no workflow **Desempenho e Baseline Profile**.
 
 ### Comandos de desempenho
 

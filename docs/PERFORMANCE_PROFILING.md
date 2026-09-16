@@ -48,7 +48,9 @@ O emulador é adequado para gerar o Baseline Profile e detectar regressões gros
 
 ## APK performance
 
-O workflow `Gerar APK` executa a geração do Baseline Profile antes do `assemblePerformance`. O build final continua com R8 e `shrinkResources`.
+Desde a alpha.21, o workflow `Gerar APK` **não** inicia mais o dispositivo gerenciado nem regenera o perfil em toda compilação. Ele valida que `app/src/main/baseline-prof.txt` existe e segue diretamente para `assemblePerformance`, mantendo R8 e `shrinkResources`.
+
+A regeneração do perfil e os Macrobenchmarks ficam no workflow separado **Desempenho e Baseline Profile**. Isso preserva a otimização embarcada sem adicionar cerca de 8–9 minutos a cada APK comum. O build 20 mediu 8m38s apenas na geração do perfil.
 
 
 ## Dependências de instrumentação do módulo produtor

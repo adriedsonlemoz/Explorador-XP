@@ -135,6 +135,7 @@ fun ExplorerScreen(
     var showManual by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var showDonation by remember { mutableStateOf(false) }
+    var showDeviceInfo by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -188,6 +189,7 @@ fun ExplorerScreen(
             onShowManual = { showManual = true },
             onShowAbout = { showAbout = true },
             onShowDonation = { showDonation = true },
+            onShowDeviceInfo = { showDeviceInfo = true },
         )
 
         val internalRoot = state.storageLocations.firstOrNull { !it.removable }?.root
@@ -346,6 +348,7 @@ fun ExplorerScreen(
     if (showManual) HelpManualDialog(onDismiss = { showManual = false })
     if (showAbout) AboutDialog(onDismiss = { showAbout = false })
     if (showDonation) DonationDialog(onDismiss = { showDonation = false })
+    if (showDeviceInfo) DeviceInfoDialog(onDismiss = { showDeviceInfo = false })
 
     state.transfer?.let { transfer ->
         TransferProgressDialog(transfer = transfer, onCancel = onCancelTransfer)
@@ -395,6 +398,7 @@ private fun XpHeader(
     onShowManual: () -> Unit,
     onShowAbout: () -> Unit,
     onShowDonation: () -> Unit,
+    onShowDeviceInfo: () -> Unit,
 ) {
     var fileMenu by remember { mutableStateOf(false) }
     var editMenu by remember { mutableStateOf(false) }
@@ -571,6 +575,12 @@ private fun XpHeader(
                             )
                         }
                     }
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Informações do dispositivo", fontSize = 12.sp) },
+                        onClick = { toolsMenu = false; onShowDeviceInfo() },
+                    )
+                    HorizontalDivider()
                     DropdownMenuItem(text = { Text("Atualizar", fontSize = 12.sp) }, onClick = { toolsMenu = false; onRefresh() })
                 }
             }
