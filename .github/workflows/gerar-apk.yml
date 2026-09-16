@@ -45,6 +45,17 @@ jobs:
             exit "$LINT_STATUS"
           fi
 
+      - name: Liberar KVM para Baseline Profile
+        shell: bash
+        run: |
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+
+      - name: Gerar Baseline Profile dos caminhos críticos
+        run: >-
+          gradle :app:generateBaselineProfile
+          -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=BaselineProfile
+          --stacktrace
+
       - name: Gerar APK otimizado de desempenho
         run: gradle :app:assemblePerformance --stacktrace
 

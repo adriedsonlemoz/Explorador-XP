@@ -1,0 +1,11 @@
+# Perfil inicial direcionado aos caminhos críticos da alpha.18.
+# O gerador automatizado em :baselineprofile produz uma versão baseada em execução real.
+HSPLcom/exploradorxp/app/MainActivity;->**(**)**
+HSPLcom/exploradorxp/app/MainActivityKt;->**(**)**
+HSPLcom/exploradorxp/app/ExplorerScreenKt;->**(**)**
+HSPLcom/exploradorxp/app/ExplorerViewModel;->**(**)**
+HSPLcom/exploradorxp/app/FileRepository;->**(**)**
+HSPLcom/exploradorxp/app/ExplorerItemTransforms;->**(**)**
+HSPLcom/exploradorxp/app/FileDisplayFormatter;->**(**)**
+HSPLcom/exploradorxp/app/FileIconMapper;->**(**)**
+HSPLcom/exploradorxp/app/PreferencesStore;->**(**)**

@@ -13,8 +13,11 @@
 - Lixeira opcional do próprio app antes da exclusão permanente.
 
 ## Qualidade e desempenho em andamento
-- Testes JVM iniciais adicionados na alpha.15 para projeção da listagem em memória; o workflow da alpha.17 mantém testes e lint obrigatórios antes do APK e imprime o relatório completo quando o lint falha.
-- Próximo: executar o build da alpha.17 no GitHub. Se testes, lint e `assemblePerformance` passarem, validar o APK no aparelho e então adicionar testes instrumentados de navegação/operações de arquivo + Macrobenchmark/Baseline Profile para medir scroll, abertura de pasta e inicialização.
+- Alpha.18 adiciona `:baselineprofile`, ProfileInstaller, perfil inicial embarcado e geração automática por jornada real.
+- Macrobenchmark mede inicialização e rolagem com `StartupTimingMetric` e `FrameTimingMetric`, comparando sem compilação antecipada x Baseline Profile.
+- O CI de APK passa a gerar o perfil antes do `assemblePerformance`; workflow separado publica JSON/traces para consulta.
+- Próximo: validar a alpha.18 no GitHub e, depois, executar os Macrobenchmarks em aparelho físico para estabelecer a linha de base real de TTID/TTFD e jank.
+- Após a linha de base: otimizar decodificação/uso dos PNGs e atualizar Compose/AndroidX de forma controlada, comparando métricas antes/depois.
 
 ## Depois
 - Suporte a SMB/rede local como módulo independente.

@@ -1,0 +1,67 @@
+name: Desempenho e Baseline Profile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle 8.9
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.9'
+
+      - name: Liberar KVM para o emulador
+        shell: bash
+        run: |
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+
+      - name: Gerar Baseline Profile
+        run: >-
+          gradle :app:generateBaselineProfile
+          -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=BaselineProfile
+          --stacktrace
+
+      - name: Localizar tarefa Macrobenchmark
+        id: benchmark_task
+        shell: bash
+        run: |
+          gradle :baselineprofile:tasks --all > baselineprofile-tasks.txt
+          TASK=$(grep -Eo 'pixel6Api33[^ ]*Benchmark[^ ]*AndroidTest' baselineprofile-tasks.txt | head -n 1)
+          if [ -z "$TASK" ]; then
+            echo "Nenhuma tarefa de benchmark GMD encontrada."
+            cat baselineprofile-tasks.txt
+            exit 1
+          fi
+          echo "task=$TASK" >> "$GITHUB_OUTPUT"
+
+      - name: Executar Macrobenchmark no emulador (sinal de regressão)
+        run: >-
+          gradle :baselineprofile:${{ steps.benchmark_task.outputs.task }}
+          -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=Macrobenchmark
+          -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+          --stacktrace
+
+      - name: Publicar relatórios de desempenho
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: explorador-xp-performance-reports
+          if-no-files-found: warn
+          path: |
+            app/src/main/generated/baselineProfiles/**
+            baselineprofile/build/outputs/**
+            baselineprofile-tasks.txt

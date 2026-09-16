@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ExploradorXP"
 include(":app")
+include(":baselineprofile")

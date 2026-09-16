@@ -1,15 +1,15 @@
 {
-  "version_build": "0.1.0-alpha.17",
-  "version_code_build": 17,
-  "manager_version": "0.1.0-alpha.17",
-  "manager_code": 17,
+  "version_build": "0.1.0-alpha.18",
+  "version_code_build": 18,
+  "manager_version": "0.1.0-alpha.18",
+  "manager_code": 18,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
-  "kotlin_files": 10,
+  "kotlin_files": 14,
   "xp_png_icons": 162,
   "drawable_references": 155,
-  "xml_files": 10,
+  "xml_files": 12,
   "static_validation_ok": true,
   "ui_changes": [
     "launcher_double_mask_removed",
@@ -59,7 +59,16 @@
     "properties_producestate_lint_fix",
     "ci_actions_node24_generation",
     "api26_safe_mutable_list_trim",
-    "ci_full_lint_report_on_failure"
+    "ci_full_lint_report_on_failure",
+    "baseline_profile_seed_added",
+    "baseline_profile_generator_module",
+    "profileinstaller_added",
+    "macrobenchmark_startup_and_scroll",
+    "synthetic_benchmark_dataset",
+    "report_drawn_when_ready",
+    "profileable_manifest",
+    "ci_generate_baseline_before_performance_apk",
+    "performance_reports_workflow"
   ],
   "unit_test_files": 1,
   "performance_build": "performance",
@@ -75,7 +84,10 @@
     "unit_test_source_compilecheck_with_junit_stub": "ok",
     "full_android_gradle_build": "pending_ci_android_sdk_not_available_in_local_environment",
     "uploaded_ci_log_15": "analyzed_and_fixed_in_alpha_16",
-    "uploaded_ci_log_16": "analyzed_and_fixed_in_alpha_17"
+    "uploaded_ci_log_16": "analyzed_and_fixed_in_alpha_17",
+    "baselineprofile_android_execution": "pending_ci_managed_device",
+    "macrobenchmark_physical_device": "pending_after_ci_structure_validation",
+    "baselineprofile_source_compilecheck_with_stubs": "ok"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
@@ -90,5 +102,25 @@
     "lint_reported_totals": "3 errors, 51 warnings",
     "produceState_error_from_build_15": "not_reproduced",
     "assemblePerformance": "not_reached"
+  },
+  "baseline_profile": {
+    "plugin": "androidx.baselineprofile:1.5.0",
+    "profileinstaller": "1.4.1",
+    "producer_module": ":baselineprofile",
+    "managed_device": "Pixel 6 API 33 aosp",
+    "merge_into_main": true,
+    "seed_profile": "app/src/main/baseline-prof.txt"
+  },
+  "macrobenchmark": {
+    "library": "androidx.benchmark:benchmark-macro-junit4:1.5.0",
+    "metrics": [
+      "StartupTimingMetric",
+      "FrameTimingMetric"
+    ],
+    "comparisons": [
+      "CompilationMode.None",
+      "CompilationMode.Partial(BaselineProfileMode.Require)"
+    ],
+    "dataset": "600 files + 40 directories in isolated benchmark folder"
   }
 }

@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.18
+
+- Implementado Baseline Profile no app com plugin `androidx.baselineprofile` 1.5.0 e `ProfileInstaller` 1.4.1.
+- Adicionado perfil inicial direcionado a `MainActivity`, Compose do Explorer, ViewModel, repositório, transformações, formatação, ícones e preferências.
+- Criado módulo `:baselineprofile` com geração automática usando `BaselineProfileRule`, separando startup do percurso de rolagem para manter o Startup Profile enxuto.
+- Adicionados Macrobenchmarks para inicialização e rolagem, comparando `CompilationMode.None` com `CompilationMode.Partial(BaselineProfileMode.Require)`.
+- Adicionado dataset sintético isolado com 600 arquivos e 40 pastas para medições reproduzíveis.
+- `MainActivity` ganhou entrada opcional de automação de desempenho e `ReportDrawnWhen`, sem alteração visual no uso normal.
+- Manifest passou a declarar o app como `profileable` para medições não-debuggable.
+- Novo workflow `Desempenho e Baseline Profile` gera perfil e relatórios; `Gerar APK` também atualiza o perfil antes de montar o APK `performance`.
+- Versão atualizada para `0.1.0-alpha.18` / `versionCode 18`.
+
 ## 0.1.0-alpha.17
 
 - Corrigido erro `NewApi` apontado pelo build 16 em `ExplorerViewModel.kt`: `removeLast()` foi substituído por `removeAt(lastIndex)` para manter compatibilidade com Android API 26–34.

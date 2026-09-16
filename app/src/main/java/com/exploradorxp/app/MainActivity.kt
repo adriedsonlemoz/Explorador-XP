@@ -14,6 +14,7 @@ import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +42,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
 import java.io.File
 
+private const val EXTRA_PERFORMANCE_START_PATH = "com.exploradorxp.app.extra.PERFORMANCE_START_PATH"
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +67,10 @@ class MainActivity : ComponentActivity() {
                         .background(XpBlueDark)
                         .safeDrawingPadding()
                 ) {
-                    ExplorerApp(modifier = Modifier.fillMaxSize())
+                    ExplorerApp(
+                        modifier = Modifier.fillMaxSize(),
+                        initialDirectoryPath = intent.getStringExtra(EXTRA_PERFORMANCE_START_PATH),
+                    )
                 }
             }
         }
@@ -75,12 +81,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ExplorerApp(
     modifier: Modifier = Modifier,
+    initialDirectoryPath: String? = null,
     viewModel: ExplorerViewModel = viewModel(),
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var accessGranted by remember { mutableStateOf(hasFileAccess(context)) }
     var viewerFile by remember { mutableStateOf<File?>(null) }
+    var initialDirectoryHandled by remember(initialDirectoryPath) { mutableStateOf(false) }
 
     val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         accessGranted = hasFileAccess(context)
@@ -116,6 +124,30 @@ private fun ExplorerApp(
                 is ExplorerEvent.ShareFiles -> shareFiles(context, event.files)
                 is ExplorerEvent.ShowMessage -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    // Entrada opcional usada somente pelas rotinas de desempenho. Não muda o fluxo normal.
+    LaunchedEffect(accessGranted, initialDirectoryPath) {
+        if (accessGranted && !initialDirectoryHandled && !initialDirectoryPath.isNullOrBlank()) {
+            initialDirectoryHandled = true
+            viewModel.navigateTo(File(initialDirectoryPath))
+        }
+    }
+
+    // Permite que Macrobenchmark diferencie primeiro frame de conteúdo realmente pronto.
+    // Quando a automação fornece uma pasta-alvo, só sinaliza Fully Drawn depois que
+    // essa pasta específica terminou de carregar — nunca durante o refresh inicial da raiz.
+    val performanceTargetPath = remember(initialDirectoryPath) {
+        initialDirectoryPath?.takeIf { it.isNotBlank() }?.let { File(it).absolutePath }
+    }
+    ReportDrawnWhen {
+        !accessGranted || if (performanceTargetPath == null) {
+            !state.loading
+        } else {
+            initialDirectoryHandled &&
+                state.currentDir.absolutePath == performanceTargetPath &&
+                !state.loading
         }
     }
 

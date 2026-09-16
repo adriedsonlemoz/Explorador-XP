@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.17` (`versionCode 17`)  
+**Versão atual:** `0.1.0-alpha.18` (`versionCode 18`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -49,6 +49,11 @@ app/src/main/java/com/exploradorxp/app/
 app/src/test/java/com/exploradorxp/app/
   ExplorerItemTransformsTest.kt
 
+baselineprofile/src/main/java/com/exploradorxp/benchmark/
+  BaselineProfileGenerator.kt
+  ExplorerMacrobenchmark.kt
+  BenchmarkFixtures.kt
+
 app/src/main/res/drawable-nodpi/
   152 PNGs do pacote visual XP
 
@@ -63,6 +68,30 @@ docs/
 O app usa acesso amplo ao armazenamento compartilhado porque sua função principal é gerenciamento de arquivos. Em Android 11+, o usuário precisa conceder manualmente **Acesso a todos os arquivos**. Em versões anteriores, o app solicita as permissões legadas necessárias.
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
+
+## Desempenho alpha.18
+
+- Adicionado módulo `:baselineprofile` com **BaselineProfileRule** e **Macrobenchmark**.
+- O perfil separa a inicialização (Startup Profile) da jornada de pasta grande + rolagem (Baseline Profile), evitando colocar todo o scroll no caminho de startup.
+- `ProfileInstaller 1.4.1` foi integrado para permitir que o perfil embarcado também seja aplicado em instalações por APK/sideload quando suportado.
+- Foi adicionado um perfil inicial em `app/src/main/baseline-prof.txt` para os caminhos centrais do Explorer; a geração automatizada produz um perfil baseado em execução real e é mesclada em `src/main`.
+- Macrobenchmarks comparam inicialização e fluidez de rolagem **com e sem Baseline Profile** usando `StartupTimingMetric` e `FrameTimingMetric`.
+- O benchmark cria dados artificiais em `/sdcard/Download/ExploradorXP-Benchmark`, sem usar ou modificar os arquivos pessoais do usuário.
+- `ReportDrawnWhen` informa quando a listagem terminou o carregamento, permitindo medir o estado realmente pronto para interação.
+- Novo workflow **Desempenho e Baseline Profile** gera o perfil e publica relatórios. As métricas em emulador servem como sinal de regressão; medições finais devem ser confirmadas em aparelho físico.
+- O workflow **Gerar APK** agora gera o Baseline Profile antes do `assemblePerformance`, garantindo que o APK alpha de desempenho seja montado com o perfil mais recente.
+
+### Comandos de desempenho
+
+```bash
+# Gera/atualiza o Baseline Profile via dispositivo gerenciado
+gradle :app:generateBaselineProfile
+
+# Lista as tarefas de benchmark disponíveis
+gradle :baselineprofile:tasks --all
+```
+
+Os resultados detalhados do Macrobenchmark ficam em `baselineprofile/build/outputs/` e incluem JSON e traces Perfetto quando disponíveis.
 
 ## Correção de build alpha.17
 
