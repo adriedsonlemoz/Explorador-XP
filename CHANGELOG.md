@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.1.0-alpha.15
+
+- Navegação passou a usar snapshot de diretório em memória: busca, ordenação, `Pastas primeiro` e filtro de ocultos não relêem mais o armazenamento a cada alteração.
+- Adicionado cache LRU das últimas 12 pastas/abas para acelerar Voltar/Avançar e reapresentar pastas recentes imediatamente.
+- Filtragem e ordenação do snapshot passam a rodar em `Dispatchers.Default`, fora da thread principal.
+- Data, hora e tamanho exibidos em lista/grade passam a ser pré-formatados durante a captura dos metadados em `Dispatchers.IO`, removendo trabalho repetitivo do scroll.
+- Validação de diretório ao navegar passa para `Dispatchers.IO`; caminhos usados pela UI deixam de resolver `canonicalPath` durante composição.
+- Checagens de existência/tipo usadas por abrir e compartilhar também saem da thread principal; seleção/cópia deixa de varrer `File.exists()` item a item antes de iniciar a operação.
+- Descoberta de volumes é cacheada durante a sessão e `StatFs` só é atualizado quando o cartão de armazenamento da página inicial realmente é necessário.
+- Removida a animação `animateItem` dos arquivos/pastas e removida uma camada duplicada de `combinedClickable`, reduzindo custo de gesto e reposicionamento durante rolagem.
+- `FileItem` ganhou metadados imutáveis de oculto e textos prontos de apresentação, além de chave de caminho sem nova consulta ao filesystem.
+- Primeira suíte de testes JVM adicionada para busca, ocultos, `Pastas primeiro` e ordenação por tamanho.
+- Workflow passa a executar `testDebugUnitTest` e `lintDebug` antes da compilação.
+- APK publicado passa de `assembleDebug` para um build instalável `performance`, baseado em Release, com R8 e `shrinkResources`; `release` também habilita minificação/redução.
+- Versão sincronizada para `0.1.0-alpha.15` / `versionCode 15`.
+
 ## 0.1.0-alpha.14
 
 - Copiar, mover e excluir agora exibem uma janela de progresso dedicada (ícone da ação, nome do item atual, barra animada e contagem "X de Y itens • Z%"), em vez de deixar a interface sem retorno durante a operação.

@@ -24,16 +24,19 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Gerar APK debug
-        run: gradle :app:assembleDebug --stacktrace
+      - name: Testar e analisar
+        run: gradle :app:testDebugUnitTest :app:lintDebug --stacktrace
+
+      - name: Gerar APK otimizado de desempenho
+        run: gradle :app:assemblePerformance --stacktrace
 
       - name: Preparar APK
         shell: bash
         run: |
           APP_VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
           test -n "$APP_VERSION"
-          APK_NAME="Explorador-XP-${APP_VERSION}.apk"
-          cp app/build/outputs/apk/debug/app-debug.apk "$APK_NAME"
+          APK_NAME="Explorador-XP-${APP_VERSION}-performance.apk"
+          cp app/build/outputs/apk/performance/app-performance.apk "$APK_NAME"
           echo "APK_NAME=$APK_NAME" >> "$GITHUB_ENV"
           echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
 
@@ -51,5 +54,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view explorador-xp-dev >/dev/null 2>&1 || \
-            gh release create explorador-xp-dev --title "Explorador XP - Desenvolvimento" --prerelease --notes "Build de desenvolvimento atual."
+            gh release create explorador-xp-dev --title "Explorador XP - Desenvolvimento" --prerelease --notes "Build de desenvolvimento otimizada para teste de desempenho."
           gh release upload explorador-xp-dev "$APK_NAME" --clobber

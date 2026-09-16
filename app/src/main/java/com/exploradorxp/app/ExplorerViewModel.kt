@@ -38,68 +38,159 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     val events: SharedFlow<ExplorerEvent> = _events.asSharedFlow()
 
     private var refreshJob: Job? = null
-    private var searchJob: Job? = null
+    private var projectionJob: Job? = null
     private var transferJob: Job? = null
+    private var navigationJob: Job? = null
+    private var storageJob: Job? = null
+
+    private var currentSnapshotKey: String? = null
+    private var currentSnapshot: List<FileItem> = emptyList()
+
+    /** Pequeno LRU das últimas pastas para Voltar/Avançar aparecerem imediatamente. */
+    private val snapshotCache = object : LinkedHashMap<String, List<FileItem>>(12, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<FileItem>>?): Boolean = size > 12
+    }
 
     init {
         // Na primeira abertura sem permissão, não faz varredura inútil do armazenamento.
-        if (hasFileAccess(application)) startRefresh()
+        if (hasFileAccess(application)) startRefresh(useCache = true)
     }
 
     fun refresh() {
-        searchJob?.cancel()
-        startRefresh()
+        projectionJob?.cancel()
+        snapshotCache.remove(snapshotKey(_uiState.value))
+        startRefresh(useCache = false)
     }
 
-    private fun startRefresh() {
+    /**
+     * Recarrega o snapshot do armazenamento. Se houver uma cópia recente no LRU,
+     * ela é exibida imediatamente enquanto a leitura real é refeita em background.
+     */
+    private fun startRefresh(useCache: Boolean) {
         if (!hasFileAccess(getApplication())) {
             refreshJob?.cancel()
+            projectionJob?.cancel()
             _uiState.update { it.copy(loading = false, items = emptyList()) }
             return
         }
 
         refreshJob?.cancel()
-        refreshJob = viewModelScope.launch {
-            _uiState.update { it.copy(loading = true) }
-            val state = _uiState.value
+        projectionJob?.cancel()
 
-            val items = runCatching {
-                when (state.tab) {
+        val stateAtStart = _uiState.value
+        val key = snapshotKey(stateAtStart)
+        val cached = if (useCache) snapshotCache[key] else null
+
+        if (cached != null) {
+            currentSnapshotKey = key
+            currentSnapshot = cached
+            _uiState.update { current ->
+                if (snapshotKey(current) == key) current.copy(loading = true) else current
+            }
+            projectSnapshot(cached, key, stateAtStart, debounceMs = 0L, finishLoading = true)
+        } else {
+            _uiState.update { current ->
+                if (snapshotKey(current) == key) current.copy(loading = true) else current
+            }
+        }
+
+        ensureStorageMetadata(stateAtStart)
+
+        refreshJob = viewModelScope.launch {
+            val snapshot = try {
+                when (stateAtStart.tab) {
                     ExplorerTab.FILES,
-                    ExplorerTab.DOWNLOADS -> repository.listDirectory(
-                        state.currentDir,
-                        state.query,
-                        state.sortMode,
-                        state.showHidden,
-                        state.foldersFirst,
-                    )
-                    ExplorerTab.FAVORITES -> repository.favoriteItems(
-                        state.query,
-                        state.sortMode,
-                        state.showHidden,
-                        state.foldersFirst,
-                    )
+                    ExplorerTab.DOWNLOADS -> repository.directorySnapshot(stateAtStart.currentDir)
+                    ExplorerTab.FAVORITES -> repository.favoriteSnapshot()
                 }
-            }.getOrElse {
-                _events.tryEmit(ExplorerEvent.ShowMessage(it.message ?: "Não foi possível listar os arquivos."))
-                emptyList()
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                if (snapshotKey(_uiState.value) == key) {
+                    _events.tryEmit(ExplorerEvent.ShowMessage(error.message ?: "Não foi possível listar os arquivos."))
+                    _uiState.update { current -> if (snapshotKey(current) == key) current.copy(loading = false) else current }
+                }
+                return@launch
             }
 
-            val storageInfo = withContext(Dispatchers.IO) { repository.storageInfo(state.currentDir) }
-            val storageLocations = if (state.storageLocations.isEmpty()) {
+            if (snapshotKey(_uiState.value) != key) return@launch
+
+            snapshotCache[key] = snapshot
+            currentSnapshotKey = key
+            currentSnapshot = snapshot
+            projectSnapshot(snapshot, key, _uiState.value, debounceMs = 0L, finishLoading = true)
+            _uiState.update { current ->
+                if (snapshotKey(current) == key) {
+                    current.copy(
+                        canGoBack = historyIndex > 0,
+                        canGoForward = historyIndex < history.lastIndex,
+                    )
+                } else current
+            }
+        }
+    }
+
+    /** Projeta filtro/busca/ordenação em CPU, sem reler o sistema de arquivos. */
+    private fun projectSnapshot(
+        snapshot: List<FileItem> = currentSnapshot,
+        key: String? = currentSnapshotKey,
+        state: ExplorerUiState = _uiState.value,
+        debounceMs: Long,
+        finishLoading: Boolean = false,
+    ) {
+        val resolvedKey = key ?: return
+        projectionJob?.cancel()
+        val query = state.query
+        val sortMode = state.sortMode
+        val showHidden = state.showHidden
+        val foldersFirst = state.foldersFirst
+
+        projectionJob = viewModelScope.launch {
+            if (debounceMs > 0) delay(debounceMs)
+            val projected = withContext(Dispatchers.Default) {
+                ExplorerItemTransforms.apply(
+                    snapshot = snapshot,
+                    query = query,
+                    sortMode = sortMode,
+                    showHidden = showHidden,
+                    foldersFirst = foldersFirst,
+                )
+            }
+            _uiState.update { current ->
+                val stillSameProjection = snapshotKey(current) == resolvedKey &&
+                    current.query == query &&
+                    current.sortMode == sortMode &&
+                    current.showHidden == showHidden &&
+                    current.foldersFirst == foldersFirst
+                if (stillSameProjection) current.copy(items = projected, loading = if (finishLoading) false else current.loading) else current
+            }
+        }
+    }
+
+    /**
+     * Descoberta de volumes ocorre uma vez por sessão. O StatFs só é consultado na página
+     * inicial do armazenamento interno, onde o cartão de capacidade realmente é exibido.
+     */
+    private fun ensureStorageMetadata(state: ExplorerUiState) {
+        storageJob?.cancel()
+        storageJob = viewModelScope.launch {
+            val locations = if (state.storageLocations.isEmpty()) {
                 withContext(Dispatchers.IO) { repository.storageLocations() }
             } else {
                 state.storageLocations
             }
 
+            val internalRoot = locations.firstOrNull { !it.removable }?.root ?: repository.root
+            val shouldLoadInfo = state.tab == ExplorerTab.FILES && sameAbsolutePath(state.currentDir, internalRoot)
+            val storageInfo = if (shouldLoadInfo) {
+                withContext(Dispatchers.IO) { repository.storageInfo(internalRoot) }
+            } else {
+                null
+            }
+
             _uiState.update { current ->
                 current.copy(
-                    items = items,
-                    loading = false,
-                    storageInfo = storageInfo,
-                    storageLocations = storageLocations,
-                    canGoBack = historyIndex > 0,
-                    canGoForward = historyIndex < history.lastIndex,
+                    storageLocations = if (current.storageLocations.isEmpty()) locations else current.storageLocations,
+                    storageInfo = storageInfo ?: current.storageInfo,
                 )
             }
         }
@@ -114,7 +205,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         if (item.isDirectory) {
             navigateTo(item.file)
         } else {
-            repository.addRecent(item.file)
+            viewModelScope.launch(Dispatchers.IO) { repository.addRecent(item.file) }
             _events.tryEmit(ExplorerEvent.OpenFile(item.file))
         }
     }
@@ -136,79 +227,107 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun navigateTo(directory: File, recordHistory: Boolean = true) {
-        if (!directory.exists() || !directory.isDirectory) {
-            _events.tryEmit(ExplorerEvent.ShowMessage("A pasta não está mais disponível."))
-            return
-        }
-        if (recordHistory) {
-            while (history.lastIndex > historyIndex) history.removeLast()
-            if (history.getOrNull(historyIndex)?.absolutePath != directory.absolutePath) {
-                history.add(directory)
-                historyIndex = history.lastIndex
+        navigationJob?.cancel()
+        navigationJob = viewModelScope.launch {
+            val valid = withContext(Dispatchers.IO) { directory.exists() && directory.isDirectory }
+            if (!valid) {
+                _events.tryEmit(ExplorerEvent.ShowMessage("A pasta não está mais disponível."))
+                return@launch
             }
+            if (recordHistory) {
+                while (history.lastIndex > historyIndex) history.removeLast()
+                if (history.getOrNull(historyIndex)?.absolutePath != directory.absolutePath) {
+                    history.add(directory)
+                    historyIndex = history.lastIndex
+                }
+            }
+            commitNavigation(directory)
         }
+    }
+
+    private fun commitNavigation(directory: File) {
         _uiState.update {
             it.copy(
                 currentDir = directory,
                 tab = browsingTabFor(directory),
                 selectedPaths = emptySet(),
                 query = "",
+                canGoBack = historyIndex > 0,
+                canGoForward = historyIndex < history.lastIndex,
             )
         }
-        refresh()
+        startRefresh(useCache = true)
     }
 
-    fun goBack() {
-        if (historyIndex <= 0) return
-        historyIndex--
-        navigateTo(history[historyIndex], recordHistory = false)
+    private fun navigateHistory(targetIndex: Int) {
+        if (targetIndex !in history.indices) return
+        val target = history[targetIndex]
+        navigationJob?.cancel()
+        navigationJob = viewModelScope.launch {
+            val valid = withContext(Dispatchers.IO) { target.exists() && target.isDirectory }
+            if (!valid) {
+                _events.tryEmit(ExplorerEvent.ShowMessage("A pasta não está mais disponível."))
+                return@launch
+            }
+            historyIndex = targetIndex
+            commitNavigation(target)
+        }
     }
 
-    fun goForward() {
-        if (historyIndex >= history.lastIndex) return
-        historyIndex++
-        navigateTo(history[historyIndex], recordHistory = false)
-    }
+    fun goBack() = navigateHistory(historyIndex - 1)
+
+    fun goForward() = navigateHistory(historyIndex + 1)
 
     fun goHome() = navigateTo(repository.root)
 
     fun goUp() {
-        val current = _uiState.value.currentDir
-        val boundary = repository.storageRootFor(current)
+        val state = _uiState.value
+        val current = state.currentDir
         val parent = current.parentFile ?: return
-        val parentPath = runCatching { parent.canonicalPath }.getOrDefault(parent.absolutePath)
-        val boundaryPath = runCatching { boundary.canonicalPath }.getOrDefault(boundary.absolutePath)
-        if (parentPath == boundaryPath || parentPath.startsWith(boundaryPath + File.separator)) {
-            navigateTo(parent)
+        val locations = state.storageLocations.ifEmpty {
+            listOf(StorageLocation("Armazenamento interno", repository.root, removable = false))
         }
+        val boundary = locations
+            .map { it.root }
+            .filter { isInsideOrSame(current, it) }
+            .maxByOrNull { normalizedAbsolutePath(it).length }
+            ?: repository.root
+
+        if (isInsideOrSame(parent, boundary)) navigateTo(parent)
     }
 
     fun setTab(tab: ExplorerTab) {
         when (tab) {
             ExplorerTab.FILES -> navigateTo(repository.root)
             ExplorerTab.DOWNLOADS -> {
-                repository.downloads.mkdirs()
-                navigateTo(repository.downloads)
+                viewModelScope.launch {
+                    withContext(Dispatchers.IO) { repository.downloads.mkdirs() }
+                    navigateTo(repository.downloads)
+                }
             }
             ExplorerTab.FAVORITES -> {
-                _uiState.update { it.copy(tab = ExplorerTab.FAVORITES, selectedPaths = emptySet(), query = "") }
-                refresh()
+                _uiState.update {
+                    it.copy(
+                        tab = ExplorerTab.FAVORITES,
+                        selectedPaths = emptySet(),
+                        query = "",
+                        canGoBack = historyIndex > 0,
+                        canGoForward = historyIndex < history.lastIndex,
+                    )
+                }
+                startRefresh(useCache = true)
             }
         }
     }
 
     fun setQuery(query: String) {
         _uiState.update { it.copy(query = query) }
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
-            delay(180)
-            startRefresh()
-        }
+        projectSnapshot(state = _uiState.value, debounceMs = 120L)
     }
 
     fun setSearchVisible(visible: Boolean) {
         _uiState.update { it.copy(searchVisible = visible, query = if (visible) it.query else "") }
-        if (!visible) refresh()
+        if (!visible) projectSnapshot(state = _uiState.value, debounceMs = 0L)
     }
 
     fun toggleViewMode() {
@@ -219,19 +338,19 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun setSortMode(sortMode: SortMode) {
         _uiState.update { it.copy(sortMode = sortMode) }
-        refresh()
+        projectSnapshot(state = _uiState.value, debounceMs = 0L)
     }
 
     fun setFoldersFirst(enabled: Boolean) {
         prefs.setFoldersFirst(enabled)
         _uiState.update { it.copy(foldersFirst = enabled) }
-        refresh()
+        projectSnapshot(state = _uiState.value, debounceMs = 0L)
     }
 
     fun setShowHidden(show: Boolean) {
         repository.setShowHidden(show)
         _uiState.update { it.copy(showHidden = show) }
-        refresh()
+        projectSnapshot(state = _uiState.value, debounceMs = 0L)
     }
 
     fun copySelected() = setClipboard(selectedFiles(), ClipboardMode.COPY)
@@ -241,13 +360,12 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     fun cutFile(file: File) = setClipboard(listOf(file), ClipboardMode.CUT)
 
     private fun setClipboard(files: List<File>, mode: ClipboardMode) {
-        val existing = files.filter(File::exists)
-        if (existing.isEmpty()) return
-        _uiState.update { it.copy(clipboard = ClipboardState(existing, mode), selectedPaths = emptySet()) }
+        if (files.isEmpty()) return
+        _uiState.update { it.copy(clipboard = ClipboardState(files, mode), selectedPaths = emptySet()) }
         _events.tryEmit(
             ExplorerEvent.ShowMessage(
-                if (mode == ClipboardMode.COPY) "${existing.size} item(ns) pronto(s) para copiar."
-                else "${existing.size} item(ns) pronto(s) para mover."
+                if (mode == ClipboardMode.COPY) "${files.size} item(ns) pronto(s) para copiar."
+                else "${files.size} item(ns) pronto(s) para mover."
             )
         )
     }
@@ -271,7 +389,6 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun deleteFile(file: File) {
-        if (!file.exists()) return
         runTransfer(
             kind = TransferKind.DELETE,
             successMessage = "Item excluído.",
@@ -280,21 +397,28 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun shareFile(file: File) {
-        if (file.exists() && file.isFile) _events.tryEmit(ExplorerEvent.ShareFiles(listOf(file)))
+        viewModelScope.launch {
+            val shareable = withContext(Dispatchers.IO) { file.exists() && file.isFile }
+            if (shareable) _events.tryEmit(ExplorerEvent.ShareFiles(listOf(file)))
+        }
     }
 
     fun openFileOrFolder(file: File) {
-        if (!file.exists()) return
-        if (file.isDirectory) {
-            navigateTo(file)
-        } else {
-            repository.addRecent(file)
-            _events.tryEmit(ExplorerEvent.OpenFile(file))
+        viewModelScope.launch {
+            val status = withContext(Dispatchers.IO) { file.exists() to file.isDirectory }
+            if (!status.first) {
+                _events.tryEmit(ExplorerEvent.ShowMessage("O item não está mais disponível."))
+            } else if (status.second) {
+                navigateTo(file)
+            } else {
+                withContext(Dispatchers.IO) { repository.addRecent(file) }
+                _events.tryEmit(ExplorerEvent.OpenFile(file))
+            }
         }
     }
 
     fun selectAllVisible() {
-        val paths = _uiState.value.items.map { it.file.absolutePath }.toSet()
+        val paths = _uiState.value.items.map { it.path }.toSet()
         _uiState.update { it.copy(selectedPaths = paths) }
     }
 
@@ -313,8 +437,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             repository.createFolder(_uiState.value.currentDir, name)
                 .onSuccess {
+                    invalidateAllSnapshots()
                     _events.emit(ExplorerEvent.ShowMessage("Pasta criada."))
-                    refresh()
+                    startRefresh(useCache = false)
                 }
                 .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao criar pasta.")) }
         }
@@ -324,28 +449,50 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             repository.rename(file, newName)
                 .onSuccess {
+                    invalidateAllSnapshots()
                     clearSelection()
                     _events.emit(ExplorerEvent.ShowMessage("Item renomeado."))
-                    refresh()
+                    startRefresh(useCache = false)
                 }
                 .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao renomear.")) }
         }
     }
 
     fun toggleFavorite(file: File) {
-        val added = repository.toggleFavorite(file)
-        _events.tryEmit(ExplorerEvent.ShowMessage(if (added) "Adicionado aos favoritos." else "Removido dos favoritos."))
-        refresh()
+        viewModelScope.launch {
+            val added = withContext(Dispatchers.IO) { repository.toggleFavorite(file) }
+            val path = file.absolutePath
+
+            snapshotCache.keys.toList().forEach { key ->
+                val snapshot = snapshotCache[key].orEmpty()
+                snapshotCache[key] = when {
+                    key == FAVORITES_SNAPSHOT_KEY && !added -> snapshot.filterNot { it.path == path }
+                    else -> snapshot.map { item -> if (item.path == path) item.copy(isFavorite = added) else item }
+                }
+            }
+            snapshotCache.remove(FAVORITES_SNAPSHOT_KEY)
+
+            if (_uiState.value.tab == ExplorerTab.FAVORITES && !added) {
+                currentSnapshot = currentSnapshot.filterNot { it.path == path }
+            } else {
+                currentSnapshot = currentSnapshot.map { item -> if (item.path == path) item.copy(isFavorite = added) else item }
+            }
+            currentSnapshotKey?.let { key -> projectSnapshot(currentSnapshot, key, _uiState.value, debounceMs = 0L) }
+            _events.tryEmit(ExplorerEvent.ShowMessage(if (added) "Adicionado aos favoritos." else "Removido dos favoritos."))
+        }
     }
 
     fun shareSelected() {
-        val files = selectedFiles().filter(File::isFile)
-        if (files.isNotEmpty()) _events.tryEmit(ExplorerEvent.ShareFiles(files))
+        val selected = selectedFiles()
+        viewModelScope.launch {
+            val files = withContext(Dispatchers.IO) { selected.filter { it.exists() && it.isFile } }
+            if (files.isNotEmpty()) _events.tryEmit(ExplorerEvent.ShareFiles(files))
+        }
     }
 
-    fun selectedFiles(): List<File> = _uiState.value.selectedPaths.map(::File).filter(File::exists)
+    fun selectedFiles(): List<File> = _uiState.value.selectedPaths.map(::File)
 
-    fun fileByPath(path: String): File? = File(path).takeIf(File::exists)
+    fun fileByPath(path: String): File? = File(path)
 
     /** Cancela a cópia/mover/exclusão em andamento, se houver. */
     fun cancelTransfer() {
@@ -374,9 +521,10 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(transfer = null) }
             result
                 .onSuccess {
+                    invalidateAllSnapshots()
                     clearSelection()
                     _events.tryEmit(ExplorerEvent.ShowMessage(successMessage))
-                    refresh()
+                    startRefresh(useCache = false)
                 }
                 .onFailure { error ->
                     val message = if (error is CancellationException) {
@@ -384,19 +532,46 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     } else {
                         error.message ?: failureFallback
                     }
+                    invalidateAllSnapshots()
                     _events.tryEmit(ExplorerEvent.ShowMessage(message))
-                    refresh()
+                    startRefresh(useCache = false)
                 }
         }
     }
 
+    private fun invalidateAllSnapshots() {
+        snapshotCache.clear()
+        currentSnapshotKey = null
+        currentSnapshot = emptyList()
+    }
+
+    private fun snapshotKey(state: ExplorerUiState): String = when (state.tab) {
+        ExplorerTab.FAVORITES -> FAVORITES_SNAPSHOT_KEY
+        ExplorerTab.FILES,
+        ExplorerTab.DOWNLOADS -> "${state.tab.name}|${normalizedAbsolutePath(state.currentDir)}"
+    }
+
     private fun browsingTabFor(directory: File): ExplorerTab {
-        val dirPath = runCatching { directory.canonicalPath }.getOrDefault(directory.absolutePath)
-        val downloadsPath = runCatching { repository.downloads.canonicalPath }.getOrDefault(repository.downloads.absolutePath)
+        val dirPath = normalizedAbsolutePath(directory)
+        val downloadsPath = normalizedAbsolutePath(repository.downloads)
         return if (dirPath == downloadsPath || dirPath.startsWith(downloadsPath + File.separator)) {
             ExplorerTab.DOWNLOADS
         } else {
             ExplorerTab.FILES
         }
+    }
+
+    private fun normalizedAbsolutePath(file: File): String = file.absolutePath.let { path -> if (path.length > 1) path.trimEnd(File.separatorChar) else path }
+
+    private fun sameAbsolutePath(a: File, b: File): Boolean = normalizedAbsolutePath(a) == normalizedAbsolutePath(b)
+
+    private fun isInsideOrSame(file: File, root: File): Boolean {
+        val filePath = normalizedAbsolutePath(file)
+        val rootPath = normalizedAbsolutePath(root)
+        return filePath == rootPath || filePath.startsWith(rootPath + File.separator)
+    }
+
+    companion object {
+        private const val FAVORITES_SNAPSHOT_KEY = "FAVORITES"
     }
 }

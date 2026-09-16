@@ -1,7 +1,7 @@
 {
   "projectName": "Explorador XP",
-  "versionName": "0.1.0-alpha.14",
-  "versionCode": 14,
+  "versionName": "0.1.0-alpha.15",
+  "versionCode": 15,
   "applicationId": "com.exploradorxp.app",
   "namespace": "com.exploradorxp.app",
   "language": "Kotlin",

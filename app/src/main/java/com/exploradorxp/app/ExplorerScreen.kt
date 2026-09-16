@@ -208,7 +208,6 @@ fun ExplorerScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .combinedClickable(onClick = {}, onLongClick = { if (!state.loading) showFolderContext = true })
         ) {
             if (state.loading) {
                 CircularProgressIndicator(
@@ -720,7 +719,7 @@ private fun XpHeader(
 }
 
 private fun canonicalPathOf(file: File): String =
-    runCatching { file.canonicalPath }.getOrDefault(file.absolutePath)
+    file.absolutePath.let { path -> if (path.length > 1) path.trimEnd(File.separatorChar) else path }
 
 private fun samePath(a: File, b: File): Boolean = canonicalPathOf(a) == canonicalPathOf(b)
 
@@ -1295,14 +1294,13 @@ private fun FileList(
             .border(1.dp, XpBorder, RoundedCornerShape(5.dp))
             .combinedClickable(onClick = {}, onLongClick = onBlankLongPress)
     ) {
-        items(items, key = { it.file.absolutePath }) { item ->
+        items(items, key = { it.path }) { item ->
             FileListRow(
                 item = item,
-                selected = item.file.absolutePath in selectedPaths,
+                selected = item.path in selectedPaths,
                 onClick = { onItemClick(item) },
                 onLongSelect = { onLongSelect(item) },
                 onMenuAction = { action -> onMenuAction(item, action) },
-                modifier = Modifier.animateItem(placementSpec = tween(220)),
             )
             HorizontalDivider(color = Color(0xFFD8E1ED), thickness = 1.dp)
         }
@@ -1353,15 +1351,14 @@ private fun FileListRow(
                 }
             }
             Text(
-                if (item.isDirectory) "${formatDate(item.createdAt)}  •  ${formatTime(item.createdAt)}  •  Pasta de arquivos"
-                else "${formatDate(item.createdAt)}  •  ${formatTime(item.createdAt)}  •  ${formatBytes(item.size)}",
+                item.listDetailText,
                 color = XpTextSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        var menuExpanded by remember(item.file.absolutePath) { mutableStateOf(false) }
+        var menuExpanded by remember(item.path) { mutableStateOf(false) }
         Box {
             XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 24, buttonSize = 36)
             XpFileDropdownMenu(
@@ -1397,14 +1394,13 @@ private fun FileGrid(
             .padding(8.dp)
             .combinedClickable(onClick = {}, onLongClick = onBlankLongPress),
     ) {
-        items(items, key = { it.file.absolutePath }) { item ->
-            var menuExpanded by remember(item.file.absolutePath) { mutableStateOf(false) }
+        items(items, key = { it.path }) { item ->
+            var menuExpanded by remember(item.path) { mutableStateOf(false) }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .animateItem(placementSpec = tween(220))
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (item.file.absolutePath in selectedPaths) XpSelection else Color.White)
+                    .background(if (item.path in selectedPaths) XpSelection else Color.White)
                     .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
                     .combinedClickable(onClick = { onItemClick(item) }, onLongClick = { onLongSelect(item) })
                     .padding(7.dp)
@@ -1425,7 +1421,7 @@ private fun FileGrid(
                 )
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "${formatDate(item.createdAt)} • ${formatTime(item.createdAt)}",
+                    item.gridDetailText,
                     fontSize = 11.sp,
                     color = XpTextSecondary,
                     maxLines = 1,
@@ -1459,12 +1455,13 @@ private fun ExplorerStatusBar(
     // Recalcula apenas quando a lista de itens ou a seleção realmente mudam,
     // em vez de refiltrar/resomar a cada recomposição do restante da tela.
     val (hasSelection, sizeBytes, shownCount) = remember(items, selectedPaths) {
-        val selectedItems = items.filter { it.file.absolutePath in selectedPaths }
+        val selectedItems = items.filter { it.path in selectedPaths }
         val selected = selectedItems.isNotEmpty()
         val shownItems = if (selected) selectedItems else items
         val size = shownItems.asSequence().filterNot { it.isDirectory }.sumOf { it.size }
         Triple(selected, size, shownItems.size)
     }
+    val formattedSize = remember(sizeBytes) { formatBytes(sizeBytes) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1495,7 +1492,7 @@ private fun ExplorerStatusBar(
         )
 
         Text(
-            text = formatBytes(sizeBytes),
+            text = formattedSize,
             color = Color(0xFF303030),
             fontSize = 11.sp,
             maxLines = 1,
@@ -1690,17 +1687,17 @@ private fun SortDialog(current: SortMode, onDismiss: () -> Unit, onSelect: (Sort
 
 private fun formatDate(time: Long): String {
     if (time <= 0L) return "Data desconhecida"
-    return DateFormat.getDateInstance(DateFormat.MEDIUM, Locale("pt", "BR")).format(Date(time))
+    return DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.forLanguageTag("pt-BR")).format(Date(time))
 }
 
 private fun formatTime(time: Long): String {
     if (time <= 0L) return "--:--"
-    return DateFormat.getTimeInstance(DateFormat.SHORT, Locale("pt", "BR")).format(Date(time))
+    return DateFormat.getTimeInstance(DateFormat.SHORT, Locale.forLanguageTag("pt-BR")).format(Date(time))
 }
 
 private fun formatDateTime(time: Long): String {
     if (time <= 0L) return "Data desconhecida"
-    return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale("pt", "BR")).format(Date(time))
+    return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.forLanguageTag("pt-BR")).format(Date(time))
 }
 
 private fun fileCreationTime(file: File): Long {
@@ -1722,6 +1719,6 @@ private fun formatBytes(bytes: Long): String {
         value /= 1024.0
         index++
     }
-    return if (value >= 100) String.format(Locale("pt", "BR"), "%.0f %s", value, units[index])
-    else String.format(Locale("pt", "BR"), "%.1f %s", value, units[index])
+    return if (value >= 100) String.format(Locale.forLanguageTag("pt-BR"), "%.0f %s", value, units[index])
+    else String.format(Locale.forLanguageTag("pt-BR"), "%.1f %s", value, units[index])
 }

@@ -18,39 +18,28 @@ class FileRepository(
     val root: File = Environment.getExternalStorageDirectory()
     val downloads: File = File(root, Environment.DIRECTORY_DOWNLOADS)
 
-    suspend fun listDirectory(
-        directory: File,
-        query: String,
-        sortMode: SortMode,
-        showHidden: Boolean,
-        foldersFirst: Boolean,
-    ): List<FileItem> = withContext(Dispatchers.IO) {
+    @Volatile
+    private var cachedStorageLocations: List<StorageLocation>? = null
+
+    /**
+     * Lê o diretório apenas uma vez e captura todos os metadados necessários para a UI.
+     * Busca, filtro e ordenação são aplicados depois sobre esse snapshot em memória.
+     */
+    suspend fun directorySnapshot(directory: File): List<FileItem> = withContext(Dispatchers.IO) {
+        require(directory.exists() && directory.isDirectory) { "A pasta não está mais disponível." }
         val favorites = prefs.favorites()
-        val filtered = directory.listFiles()
+        directory.listFiles()
             .orEmpty()
-            .asSequence()
-            .filter { showHidden || !isHidden(it) }
-            .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
-            .map { toFileItem(it, it.absolutePath in favorites) }
-            .toList()
-        sort(filtered, sortMode, foldersFirst)
+            .map { file -> toFileItem(file, file.absolutePath in favorites) }
     }
 
-    suspend fun favoriteItems(
-        query: String,
-        sortMode: SortMode,
-        showHidden: Boolean,
-        foldersFirst: Boolean,
-    ): List<FileItem> = withContext(Dispatchers.IO) {
-        val favorites = prefs.favorites()
-        val items = favorites.asSequence()
+    /** Snapshot dos favoritos ainda existentes. Também captura metadados fora da UI. */
+    suspend fun favoriteSnapshot(): List<FileItem> = withContext(Dispatchers.IO) {
+        prefs.favorites().asSequence()
             .map(::File)
             .filter(File::exists)
-            .filter { showHidden || !isHidden(it) }
-            .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
-            .map { toFileItem(it, true) }
+            .map { file -> toFileItem(file, true) }
             .toList()
-        sort(items, sortMode, foldersFirst)
     }
 
     suspend fun recentItems(query: String, sortMode: SortMode): List<FileItem> = withContext(Dispatchers.IO) {
@@ -58,10 +47,15 @@ class FileRepository(
         val items = prefs.recents().asSequence()
             .map(::File)
             .filter(File::exists)
-            .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
             .map { toFileItem(it, it.absolutePath in favoritePaths) }
             .toList()
-        if (sortMode == SortMode.DATE) items.sortedByDescending { it.createdAt } else items
+        ExplorerItemTransforms.apply(
+            snapshot = items,
+            query = query,
+            sortMode = sortMode,
+            showHidden = true,
+            foldersFirst = false,
+        )
     }
 
     fun showHidden(): Boolean = prefs.showHidden()
@@ -118,12 +112,12 @@ class FileRepository(
             clipboard.files.forEach { source ->
                 coroutineContext.ensureActive()
                 require(source.exists()) { "${source.name} não existe mais." }
-                if (clipboard.mode == ClipboardMode.CUT && source.parentFile?.canonicalPath == destination.canonicalPath) {
+                if (clipboard.mode == ClipboardMode.CUT && sameAbsolutePath(source.parentFile, destination)) {
                     return@forEach
                 }
                 if (source.isDirectory) {
-                    val sourcePath = source.canonicalPath + File.separator
-                    val destinationPath = destination.canonicalPath + File.separator
+                    val sourcePath = normalizedAbsolutePath(source) + File.separator
+                    val destinationPath = normalizedAbsolutePath(destination) + File.separator
                     require(!destinationPath.startsWith(sourcePath)) { "Não é possível copiar uma pasta para dentro dela mesma." }
                 }
                 val target = uniqueTarget(destination, source.name)
@@ -149,36 +143,44 @@ class FileRepository(
     fun toggleFavorite(file: File): Boolean = prefs.toggleFavorite(file)
     fun addRecent(file: File) = prefs.addRecent(file)
 
+    /**
+     * Localizações de armazenamento são estáveis durante a sessão. Fazemos a descoberta
+     * uma única vez para evitar canonicalPath/exists/isDirectory repetidos a cada pasta.
+     */
     fun storageLocations(): List<StorageLocation> {
-        val locations = mutableListOf(StorageLocation("Armazenamento interno", root, removable = false))
-        val seen = mutableSetOf(canonicalOrAbsolute(root))
+        cachedStorageLocations?.let { return it }
+        return synchronized(this) {
+            cachedStorageLocations?.let { return@synchronized it }
+            val locations = mutableListOf(StorageLocation("Armazenamento interno", root, removable = false))
+            val seen = mutableSetOf(normalizedAbsolutePath(root))
 
-        context.getExternalFilesDirs(null)
-            .filterNotNull()
-            .mapNotNull(::volumeRootFromAppExternalDir)
-            .forEach { candidate ->
-                val canonical = canonicalOrAbsolute(candidate)
-                if (canonical !in seen && candidate.exists() && candidate.isDirectory) {
-                    seen += canonical
-                    val index = locations.count { it.removable } + 1
-                    locations += StorageLocation(
-                        label = if (index == 1) "Cartão SD" else "Cartão SD $index",
-                        root = candidate,
-                        removable = true,
-                    )
+            context.getExternalFilesDirs(null)
+                .filterNotNull()
+                .mapNotNull(::volumeRootFromAppExternalDir)
+                .forEach { candidate ->
+                    val normalized = normalizedAbsolutePath(candidate)
+                    if (normalized !in seen && candidate.exists() && candidate.isDirectory) {
+                        seen += normalized
+                        val index = locations.count { it.removable } + 1
+                        locations += StorageLocation(
+                            label = if (index == 1) "Cartão SD" else "Cartão SD $index",
+                            root = candidate,
+                            removable = true,
+                        )
+                    }
                 }
-            }
 
-        return locations
+            locations.toList().also { cachedStorageLocations = it }
+        }
     }
 
     fun storageRootFor(directory: File): File {
-        val directoryPath = canonicalOrAbsolute(directory)
+        val directoryPath = normalizedAbsolutePath(directory)
         return storageLocations()
             .map { it.root }
-            .sortedByDescending { canonicalOrAbsolute(it).length }
+            .sortedByDescending { normalizedAbsolutePath(it).length }
             .firstOrNull { candidate ->
-                val rootPath = canonicalOrAbsolute(candidate)
+                val rootPath = normalizedAbsolutePath(candidate)
                 directoryPath == rootPath || directoryPath.startsWith(rootPath + File.separator)
             }
             ?: root
@@ -198,43 +200,33 @@ class FileRepository(
         return File(normalized.substring(0, index))
     }
 
-    private fun canonicalOrAbsolute(file: File): String =
-        runCatching { file.canonicalPath }.getOrDefault(file.absolutePath)
+    private fun normalizedAbsolutePath(file: File): String =
+        file.absolutePath.let { path -> if (path.length > 1) path.trimEnd(File.separatorChar) else path }
+
+    private fun sameAbsolutePath(a: File?, b: File): Boolean =
+        a != null && normalizedAbsolutePath(a) == normalizedAbsolutePath(b)
 
     private fun toFileItem(file: File, favorite: Boolean): FileItem {
-        // Captura os metadados uma única vez durante a listagem. Isso evita chamadas
-        // repetidas ao sistema de arquivos a cada recomposição da interface.
+        // Toda leitura de metadados acontece aqui, em Dispatchers.IO, uma única vez.
         val isDirectory = file.isDirectory
         val name = file.name.ifBlank { file.absolutePath }
         val extension = if (isDirectory) "" else file.extension.lowercase()
         val size = if (isDirectory) 0L else file.length()
         val modifiedAt = file.lastModified()
+        val hidden = name.startsWith('.') || runCatching { file.isHidden }.getOrDefault(false)
         return FileItem(
             file = file,
             iconRes = FileIconMapper.iconFor(file, isDirectory),
             name = name,
             isDirectory = isDirectory,
+            isHidden = hidden,
             size = size,
             modifiedAt = modifiedAt,
             extension = extension,
+            listDetailText = FileDisplayFormatter.listDetail(modifiedAt, size, isDirectory),
+            gridDetailText = FileDisplayFormatter.gridDetail(modifiedAt),
             isFavorite = favorite,
         )
-    }
-
-    private fun isHidden(file: File): Boolean = file.name.startsWith('.') || runCatching { file.isHidden }.getOrDefault(false)
-
-    private fun sort(items: List<FileItem>, sortMode: SortMode, foldersFirst: Boolean): List<FileItem> {
-        val detailComparator = when (sortMode) {
-            SortMode.NAME -> compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.name }
-            SortMode.DATE -> compareByDescending<FileItem> { it.createdAt }
-            SortMode.SIZE -> compareByDescending<FileItem> { it.size }
-            SortMode.TYPE -> compareBy<FileItem> { it.extension }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
-        }
-        return if (foldersFirst) {
-            items.sortedWith(compareByDescending<FileItem> { it.isDirectory }.then(detailComparator))
-        } else {
-            items.sortedWith(detailComparator)
-        }
     }
 
     private fun uniqueTarget(parent: File, originalName: String): File {

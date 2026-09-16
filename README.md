@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.14` (`versionCode 14`)  
+**Versão atual:** `0.1.0-alpha.15` (`versionCode 15`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -10,7 +10,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 ## O que já está implementado
 
 - Interface principal baseada no Explorer clássico do Windows XP: barra de título azul, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, barra de ferramentas compacta, barra de endereço, indicador de armazenamento, lista/grade e barra de status inferior.
-- 151 recursos PNG no conjunto visual XP, integrados diretamente em `res/drawable-nodpi`.
+- 152 recursos PNG no conjunto visual XP, integrados diretamente em `res/drawable-nodpi`.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
 - Histórico de navegação com Voltar e Avançar, além da ação Subir.
@@ -41,11 +41,16 @@ app/src/main/java/com/exploradorxp/app/
   ExplorerViewModel.kt
   ExplorerModels.kt
   FileRepository.kt
+  ExplorerItemTransforms.kt
+  FileDisplayFormatter.kt
   FileIconMapper.kt
   PreferencesStore.kt
 
+app/src/test/java/com/exploradorxp/app/
+  ExplorerItemTransformsTest.kt
+
 app/src/main/res/drawable-nodpi/
-  151 PNGs do pacote visual XP
+  152 PNGs do pacote visual XP
 
 docs/
   mockup_explorador_android_xp.png
@@ -58,6 +63,16 @@ docs/
 O app usa acesso amplo ao armazenamento compartilhado porque sua função principal é gerenciamento de arquivos. Em Android 11+, o usuário precisa conceder manualmente **Acesso a todos os arquivos**. Em versões anteriores, o app solicita as permissões legadas necessárias.
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
+
+## Desempenho alpha.15
+
+Esta versão concentra a primeira otimização estrutural da navegação. A leitura do armazenamento agora gera um **snapshot bruto da pasta**; busca, ordenação, `Pastas primeiro` e mostrar/ocultar arquivos ocultos são projetados sobre esse snapshot em memória, em `Dispatchers.Default`, sem chamar `listFiles()` novamente a cada mudança. As últimas 12 pastas/abas ficam em um pequeno cache LRU para que Voltar/Avançar possam apresentar o conteúdo imediatamente enquanto a atualização real ocorre em segundo plano.
+
+Os textos de data, hora e tamanho mostrados em lista/grade são preparados junto com os metadados em `Dispatchers.IO`, eliminando criação de formatadores durante o scroll. A UI também deixou de usar `canonicalPath` durante composição/navegação visual, a camada duplicada de gesto da área externa foi removida e a animação `animateItem` foi retirada dos itens da lista/grade para priorizar fluidez.
+
+A descoberta de volumes passou a ser cacheada por sessão e `StatFs` só é consultado quando o cartão de armazenamento realmente pode aparecer na página inicial. A validação de pasta ao navegar também sai da thread principal.
+
+O pipeline agora executa testes JVM e lint antes do APK e publica um build **`performance`** instalável, baseado em Release, com **R8 + `shrinkResources`**, assinado com a chave debug apenas enquanto o projeto está em alpha. O bloco `release` também passou a usar minificação e redução de recursos. Foram adicionados os primeiros testes automatizados para busca, arquivos ocultos, ordenação e prioridade de pastas.
 
 ## Interface alpha.14
 
@@ -89,7 +104,7 @@ Na alpha.11, o ícone do aplicativo foi substituído pelo novo desenho grafite/d
 
 ## Build
 
-Abra o projeto no Android Studio e sincronize o Gradle. O workflow `.github/workflows/gerar-apk.yml` também pode gerar um APK debug e publicá-lo diretamente como asset da prerelease `explorador-xp-dev` — sem empacotar o APK em ZIP de artifact.
+Abra o projeto no Android Studio e sincronize o Gradle. O workflow `.github/workflows/gerar-apk.yml` executa testes JVM e lint e, em seguida, gera um APK `performance` instalável (Release otimizado com R8/`shrinkResources`, assinado com chave debug enquanto o projeto está em alpha) e o publica diretamente como asset da prerelease `explorador-xp-dev` — sem empacotar o APK em ZIP de artifact.
 
 ## Observação
 

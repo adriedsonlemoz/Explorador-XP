@@ -30,12 +30,18 @@ data class FileItem(
     val iconRes: Int,
     val name: String,
     val isDirectory: Boolean,
+    val isHidden: Boolean,
     val size: Long,
     val modifiedAt: Long,
     val extension: String,
+    val listDetailText: String,
+    val gridDetailText: String,
     val isFavorite: Boolean = false,
 ) {
-    // Mantido com o mesmo nome usado pela interface para evitar leituras extras do sistema de arquivos.
+    // Caminho absoluto não consulta o sistema de arquivos e serve como chave estável da UI.
+    val path: String get() = file.absolutePath
+
+    // Mantido com o mesmo nome usado por telas secundárias.
     val createdAt: Long get() = modifiedAt
 }
 

@@ -12,7 +12,10 @@
 - Ações em lote com progresso e cancelamento.
 - Lixeira opcional do próprio app antes da exclusão permanente.
 
+## Qualidade e desempenho em andamento
+- Testes JVM iniciais adicionados na alpha.15 para projeção da listagem em memória.
+- Próximo: testes instrumentados de navegação/operações de arquivo e Macrobenchmark/Baseline Profile para medir scroll, abertura de pasta e inicialização no aparelho.
+
 ## Depois
 - Suporte a SMB/rede local como módulo independente.
 - Temas XP adicionais sem descaracterizar o layout aprovado.
-- Testes instrumentados e suíte de testes de operações de arquivo.
