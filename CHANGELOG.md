@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.1.0-alpha.20
+
+- Analisado o log `Gerar APK 19`: `testDebugUnitTest` e `lintDebug` passaram; o job avançou até a compilação do módulo `:baselineprofile`.
+- Corrigidos os erros `Unresolved reference 'filters'` e `Unresolved reference 'LargeTest'` em `BaselineProfileGenerator.kt` e `ExplorerMacrobenchmark.kt`.
+- Adicionadas dependências explícitas `androidx.test:runner:1.7.0` e `androidx.test:rules:1.7.0` ao módulo de performance, sem depender de dependências transitivas.
+- Mantidos Macrobenchmark 1.5.0, ProfileInstaller 1.4.1, R8, `shrinkResources`, testes JVM e lint obrigatório.
+- Versão sincronizada para `0.1.0-alpha.20` / `versionCode 20`.
+
 ## 0.1.0-alpha.19
 
 - Analisado o log `Gerar APK 18`: `testDebugUnitTest` passou e o build parou em um único erro de `lintDebug` (`ProduceStateDoesNotAssignValue`) em `PropertiesDialog`.

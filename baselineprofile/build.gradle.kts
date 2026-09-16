@@ -44,5 +44,9 @@ baselineProfile {
 dependencies {
     implementation("androidx.benchmark:benchmark-macro-junit4:1.5.0")
     implementation("androidx.test.ext:junit:1.3.0")
+    // @LargeTest / filtros de instrumentação vivem no conjunto AndroidX Test runner/rules.
+    // Declarar explicitamente evita depender de transitividade acidental do módulo benchmark.
+    implementation("androidx.test:runner:1.7.0")
+    implementation("androidx.test:rules:1.7.0")
     implementation("androidx.test.uiautomator:uiautomator:2.4.0")
 }

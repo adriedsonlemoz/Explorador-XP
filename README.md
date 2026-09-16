@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.19` (`versionCode 19`)  
+**Versão atual:** `0.1.0-alpha.20` (`versionCode 20`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -69,6 +69,14 @@ O app usa acesso amplo ao armazenamento compartilhado porque sua função princi
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
 
+
+## Correção de build alpha.20
+
+- O log **Gerar APK 19** confirmou que `testDebugUnitTest` e `lintDebug` passam integralmente. A integração de desempenho avançou até `:baselineprofile:compileNonMinifiedReleaseKotlin`.
+- Corrigida a compilação do módulo `:baselineprofile`: `@LargeTest` (`androidx.test.filters.LargeTest`) era usado pelos geradores/benchmarks sem uma dependência explícita do AndroidX Test runner/rules.
+- Adicionados `androidx.test:runner:1.7.0` e `androidx.test:rules:1.7.0` ao módulo produtor, mantendo `androidx.test.ext:junit:1.3.0`, Macrobenchmark 1.5.0 e UI Automator 2.4.0.
+- A correção não altera o app nem o visual; atua somente na infraestrutura de Baseline Profile/Macrobenchmark.
+- O próximo gate do CI passa a ser a execução real do Managed Virtual Device para gerar o perfil e, em seguida, `assemblePerformance`.
 
 ## Correção de build alpha.19
 

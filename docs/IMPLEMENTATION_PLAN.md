@@ -17,7 +17,8 @@
 - Macrobenchmark mede inicialização e rolagem com `StartupTimingMetric` e `FrameTimingMetric`, comparando sem compilação antecipada x Baseline Profile.
 - O CI de APK passa a gerar o perfil antes do `assemblePerformance`; workflow separado publica JSON/traces para consulta.
 - Alpha.19 corrige o último bloqueio conhecido do `lintDebug` sem suprimir regras, mantendo o I/O de Propriedades em `Dispatchers.IO`.
-- Próximo: validar a alpha.19 no GitHub até `generateBaselineProfile` + `assemblePerformance`; depois executar os Macrobenchmarks em aparelho físico para estabelecer a linha de base real de TTID/TTFD e jank.
+- Alpha.20 corrige a compilação do módulo `:baselineprofile` após o build 19 confirmar testes + lint verdes; `@LargeTest` agora tem runner/rules AndroidX Test declarados explicitamente.
+- Próximo: validar a alpha.20 no GitHub até a execução do Managed Virtual Device, geração do Baseline Profile e `assemblePerformance`; depois executar os Macrobenchmarks em aparelho físico para estabelecer a linha de base real de TTID/TTFD e jank.
 - Após a linha de base: otimizar decodificação/uso dos PNGs e atualizar Compose/AndroidX de forma controlada, comparando métricas antes/depois.
 
 ## Depois

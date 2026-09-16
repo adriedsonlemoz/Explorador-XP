@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.19",
-  "version_code_build": 19,
-  "manager_version": "0.1.0-alpha.19",
-  "manager_code": 19,
+  "version_build": "0.1.0-alpha.20",
+  "version_code_build": 20,
+  "manager_version": "0.1.0-alpha.20",
+  "manager_code": 20,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
@@ -69,7 +69,8 @@
     "profileable_manifest",
     "ci_generate_baseline_before_performance_apk",
     "performance_reports_workflow",
-    "properties_launchedeffect_lint_fix"
+    "properties_launchedeffect_lint_fix",
+    "baselineprofile_explicit_androidx_test_runner_rules"
   ],
   "unit_test_files": 1,
   "performance_build": "performance",
@@ -88,8 +89,9 @@
     "uploaded_ci_log_16": "analyzed_and_fixed_in_alpha_17",
     "baselineprofile_android_execution": "pending_ci_managed_device",
     "macrobenchmark_physical_device": "pending_after_ci_structure_validation",
-    "baselineprofile_source_compilecheck_with_stubs": "ok",
-    "uploaded_ci_log_18": "analyzed_and_fixed_in_alpha_19"
+    "baselineprofile_source_compilecheck_with_stubs": "ok_with_explicit_androidx_test_runner_rules",
+    "uploaded_ci_log_18": "analyzed_and_fixed_in_alpha_19",
+    "uploaded_ci_log_19": "analyzed_and_fixed_in_alpha_20"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
@@ -111,7 +113,9 @@
     "producer_module": ":baselineprofile",
     "managed_device": "Pixel 6 API 33 aosp",
     "merge_into_main": true,
-    "seed_profile": "app/src/main/baseline-prof.txt"
+    "seed_profile": "app/src/main/baseline-prof.txt",
+    "androidx_test_runner": "1.7.0",
+    "androidx_test_rules": "1.7.0"
   },
   "macrobenchmark": {
     "library": "androidx.benchmark:benchmark-macro-junit4:1.5.0",
@@ -132,5 +136,16 @@
     "lint_reported_totals": "1 error, 51 warnings",
     "assemblePerformance": "not_reached",
     "baselineProfileGeneration": "not_reached"
+  },
+  "ci_build_19_result": {
+    "testDebugUnitTest": "passed",
+    "lintDebug": "passed",
+    "baselineProfileGeneration": "reached_compile_stage",
+    "baselineprofile_compile": "failed_before_fix",
+    "compile_errors": [
+      "Unresolved reference 'filters'",
+      "Unresolved reference 'LargeTest'"
+    ],
+    "assemblePerformance": "not_reached"
   }
 }

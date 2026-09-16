@@ -49,3 +49,8 @@ O emulador é adequado para gerar o Baseline Profile e detectar regressões gros
 ## APK performance
 
 O workflow `Gerar APK` executa a geração do Baseline Profile antes do `assemblePerformance`. O build final continua com R8 e `shrinkResources`.
+
+
+## Dependências de instrumentação do módulo produtor
+
+Desde a alpha.20, `:baselineprofile` declara explicitamente `androidx.test:runner:1.7.0` e `androidx.test:rules:1.7.0`. Isso é necessário porque os testes de geração/benchmark usam `androidx.test.filters.LargeTest`; não devemos depender de esse pacote chegar de forma transitiva por outra biblioteca.
