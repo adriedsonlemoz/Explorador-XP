@@ -38,7 +38,7 @@ class PreferencesStore(context: Context) {
         val items = recents().toMutableList()
         items.remove(file.absolutePath)
         items.add(0, file.absolutePath)
-        while (items.size > 50) items.removeLast()
+        while (items.size > 50) items.removeAt(items.lastIndex)
         val array = JSONArray()
         items.forEach(array::put)
         prefs.edit().putString(KEY_RECENTS, array.toString()).apply()

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.1.0-alpha.17
+
+- Corrigido erro `NewApi` apontado pelo build 16 em `ExplorerViewModel.kt`: `removeLast()` foi substituído por `removeAt(lastIndex)` para manter compatibilidade com Android API 26–34.
+- Aplicada a mesma correção preventiva em `PreferencesStore.kt`, onde a lista de arquivos recentes também usava `removeLast()`.
+- Confirmado pelo build 16 que `testDebugUnitTest` passa e que o erro `ProduceStateDoesNotAssignValue` corrigido na alpha.16 não voltou a aparecer.
+- Workflow dividido em etapas explícitas de testes e lint; em caso de falha, o relatório completo `lint-results-debug.txt` passa a ser impresso no log, permitindo identificar todos os erros de uma única execução.
+- Mantidos R8, `shrinkResources`, APK `performance` e bloqueio do APK por testes/lint.
+- Versão sincronizada para `0.1.0-alpha.17` / `versionCode 17`.
+
 ## 0.1.0-alpha.16
 
 - Corrigido erro de `lintDebug` em `ExplorerScreen.kt` (`ProduceStateDoesNotAssignValue`) no diálogo de Propriedades.

@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.16` (`versionCode 16`)  
+**Versão atual:** `0.1.0-alpha.17` (`versionCode 17`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -63,6 +63,13 @@ docs/
 O app usa acesso amplo ao armazenamento compartilhado porque sua função principal é gerenciamento de arquivos. Em Android 11+, o usuário precisa conceder manualmente **Acesso a todos os arquivos**. Em versões anteriores, o app solicita as permissões legadas necessárias.
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
+
+## Correção de build alpha.17
+
+- Corrigidas chamadas `removeLast()` que o Android Lint resolvia como `java.util.List.removeLast()`, disponível apenas a partir da API 35. O histórico de navegação e a lista de recentes agora usam `removeAt(lastIndex)`, mantendo compatibilidade com o Min SDK 26.
+- O log do build 16 confirmou que os testes JVM continuam passando e que a correção do `produceState` da alpha.16 foi aceita; a nova falha ocorreu somente no `lintDebug`.
+- O workflow agora separa testes e lint. Se o lint falhar, o relatório textual completo é impresso no próprio log antes de o job encerrar, evitando que erros adicionais fiquem escondidos atrás do primeiro `First failure`.
+- Mantidos testes + lint como portas obrigatórias antes do APK `performance`; nenhuma regra foi suprimida e nenhum baseline de lint foi criado.
 
 ## Correção de build alpha.16
 

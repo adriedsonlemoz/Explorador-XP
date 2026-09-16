@@ -24,8 +24,26 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Testar e analisar
-        run: gradle :app:testDebugUnitTest :app:lintDebug --stacktrace
+      - name: Testar
+        run: gradle :app:testDebugUnitTest --stacktrace
+
+      - name: Analisar lint
+        shell: bash
+        run: |
+          set +e
+          gradle :app:lintDebug --stacktrace
+          LINT_STATUS=$?
+          if [ "$LINT_STATUS" -ne 0 ]; then
+            echo "::group::Relatório completo do Android Lint"
+            LINT_REPORT=$(find app/build -type f -name 'lint-results-debug.txt' -print -quit)
+            if [ -n "$LINT_REPORT" ] && [ -f "$LINT_REPORT" ]; then
+              cat "$LINT_REPORT"
+            else
+              echo "Relatório textual do lint não encontrado."
+            fi
+            echo "::endgroup::"
+            exit "$LINT_STATUS"
+          fi
 
       - name: Gerar APK otimizado de desempenho
         run: gradle :app:assemblePerformance --stacktrace

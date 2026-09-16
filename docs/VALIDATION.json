@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.16",
-  "version_code_build": 16,
-  "manager_version": "0.1.0-alpha.16",
-  "manager_code": 16,
+  "version_build": "0.1.0-alpha.17",
+  "version_code_build": 17,
+  "manager_version": "0.1.0-alpha.17",
+  "manager_code": 17,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
@@ -57,7 +57,9 @@
     "ci_test_and_lint",
     "performance_apk_r8_shrink_resources",
     "properties_producestate_lint_fix",
-    "ci_actions_node24_generation"
+    "ci_actions_node24_generation",
+    "api26_safe_mutable_list_trim",
+    "ci_full_lint_report_on_failure"
   ],
   "unit_test_files": 1,
   "performance_build": "performance",
@@ -72,12 +74,21 @@
     "viewmodel_compilecheck_with_stubs": "ok",
     "unit_test_source_compilecheck_with_junit_stub": "ok",
     "full_android_gradle_build": "pending_ci_android_sdk_not_available_in_local_environment",
-    "uploaded_ci_log_15": "analyzed_and_fixed_in_alpha_16"
+    "uploaded_ci_log_15": "analyzed_and_fixed_in_alpha_16",
+    "uploaded_ci_log_16": "analyzed_and_fixed_in_alpha_17"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
     "lintDebug": "failed_before_fix",
     "lint_error": "ProduceStateDoesNotAssignValue at ExplorerScreen.kt PropertiesDialog",
+    "assemblePerformance": "not_reached"
+  },
+  "ci_build_16_result": {
+    "testDebugUnitTest": "passed",
+    "lintDebug": "failed_before_fix",
+    "lint_error_first": "NewApi List.removeLast requires API 35 at ExplorerViewModel.kt:238",
+    "lint_reported_totals": "3 errors, 51 warnings",
+    "produceState_error_from_build_15": "not_reproduced",
     "assemblePerformance": "not_reached"
   }
 }

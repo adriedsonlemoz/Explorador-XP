@@ -235,7 +235,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                 return@launch
             }
             if (recordHistory) {
-                while (history.lastIndex > historyIndex) history.removeLast()
+                while (history.lastIndex > historyIndex) history.removeAt(history.lastIndex)
                 if (history.getOrNull(historyIndex)?.absolutePath != directory.absolutePath) {
                     history.add(directory)
                     historyIndex = history.lastIndex
