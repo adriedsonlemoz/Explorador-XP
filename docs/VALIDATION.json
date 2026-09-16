@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.18",
-  "version_code_build": 18,
-  "manager_version": "0.1.0-alpha.18",
-  "manager_code": 18,
+  "version_build": "0.1.0-alpha.19",
+  "version_code_build": 19,
+  "manager_version": "0.1.0-alpha.19",
+  "manager_code": 19,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
@@ -68,7 +68,8 @@
     "report_drawn_when_ready",
     "profileable_manifest",
     "ci_generate_baseline_before_performance_apk",
-    "performance_reports_workflow"
+    "performance_reports_workflow",
+    "properties_launchedeffect_lint_fix"
   ],
   "unit_test_files": 1,
   "performance_build": "performance",
@@ -87,7 +88,8 @@
     "uploaded_ci_log_16": "analyzed_and_fixed_in_alpha_17",
     "baselineprofile_android_execution": "pending_ci_managed_device",
     "macrobenchmark_physical_device": "pending_after_ci_structure_validation",
-    "baselineprofile_source_compilecheck_with_stubs": "ok"
+    "baselineprofile_source_compilecheck_with_stubs": "ok",
+    "uploaded_ci_log_18": "analyzed_and_fixed_in_alpha_19"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
@@ -122,5 +124,13 @@
       "CompilationMode.Partial(BaselineProfileMode.Require)"
     ],
     "dataset": "600 files + 40 directories in isolated benchmark folder"
+  },
+  "ci_build_18_result": {
+    "testDebugUnitTest": "passed",
+    "lintDebug": "failed_before_fix",
+    "lint_error": "ProduceStateDoesNotAssignValue at ExplorerScreen.kt PropertiesDialog",
+    "lint_reported_totals": "1 error, 51 warnings",
+    "assemblePerformance": "not_reached",
+    "baselineProfileGeneration": "not_reached"
   }
 }

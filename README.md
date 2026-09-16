@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.18` (`versionCode 18`)  
+**Versão atual:** `0.1.0-alpha.19` (`versionCode 19`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -68,6 +68,14 @@ docs/
 O app usa acesso amplo ao armazenamento compartilhado porque sua função principal é gerenciamento de arquivos. Em Android 11+, o usuário precisa conceder manualmente **Acesso a todos os arquivos**. Em versões anteriores, o app solicita as permissões legadas necessárias.
 
 A primeira alpha prioriza o armazenamento compartilhado primário. O suporte dedicado a SD/USB por SAF (`ACTION_OPEN_DOCUMENT_TREE`) está planejado para a próxima etapa, para cobrir volumes que não podem ser tratados diretamente por `java.io.File`.
+
+
+## Correção de build alpha.19
+
+- O log **Gerar APK 18** confirmou novamente que `testDebugUnitTest` passa; o job parou somente em `lintDebug`.
+- O detector `ProduceStateDoesNotAssignValue` continuou acusando `PropertiesDialog` apesar da atribuição explícita dentro de `produceState`. Para remover a ambiguidade sem suprimir o lint, o carregamento assíncrono foi migrado para `remember + LaunchedEffect`.
+- As consultas de propriedades continuam executando em `Dispatchers.IO`, portanto a correção não reintroduz I/O do sistema de arquivos na thread principal.
+- Baseline Profile, Macrobenchmark, R8, `shrinkResources`, testes e lint continuam habilitados exatamente como na alpha.18.
 
 ## Desempenho alpha.18
 

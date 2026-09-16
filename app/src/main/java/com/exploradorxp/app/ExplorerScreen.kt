@@ -44,9 +44,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -1608,8 +1608,11 @@ private data class FilePropertiesInfo(
 private fun PropertiesDialog(file: File, onDismiss: () -> Unit) {
     // As consultas ao sistema de arquivos (tamanho, datas, permissões) saem da
     // thread de composição e rodam em Dispatchers.IO, evitando travar a UI ao abrir o diálogo.
-    val info by produceState<FilePropertiesInfo?>(initialValue = null, file.absolutePath) {
-        val loadedInfo = withContext(Dispatchers.IO) {
+    // LaunchedEffect mantém a coleta assíncrona explícita e evita o falso positivo do lint
+    // ProduceStateDoesNotAssignValue observado no CI com produceState + withContext.
+    var info by remember(file.absolutePath) { mutableStateOf<FilePropertiesInfo?>(null) }
+    LaunchedEffect(file.absolutePath) {
+        info = withContext(Dispatchers.IO) {
             FilePropertiesInfo(
                 isDirectory = file.isDirectory,
                 extension = file.extension,
@@ -1620,7 +1623,6 @@ private fun PropertiesDialog(file: File, onDismiss: () -> Unit) {
                 canWrite = file.canWrite(),
             )
         }
-        value = loadedInfo
     }
 
     AlertDialog(

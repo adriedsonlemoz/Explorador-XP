@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.1.0-alpha.19
+
+- Analisado o log `Gerar APK 18`: `testDebugUnitTest` passou e o build parou em um único erro de `lintDebug` (`ProduceStateDoesNotAssignValue`) em `PropertiesDialog`.
+- Substituído `produceState + withContext` por `remember + LaunchedEffect + withContext(Dispatchers.IO)`, mantendo a leitura de propriedades fora da thread principal e eliminando o falso positivo sem baseline/supressão de lint.
+- Mantidos Baseline Profile, Startup Profile, Macrobenchmark, R8, `shrinkResources`, testes JVM e lint obrigatório.
+- Versão sincronizada para `0.1.0-alpha.19` / `versionCode 19`.
+
 ## 0.1.0-alpha.18
 
 - Implementado Baseline Profile no app com plugin `androidx.baselineprofile` 1.5.0 e `ProfileInstaller` 1.4.1.

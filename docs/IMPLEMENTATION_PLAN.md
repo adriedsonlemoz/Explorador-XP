@@ -16,7 +16,8 @@
 - Alpha.18 adiciona `:baselineprofile`, ProfileInstaller, perfil inicial embarcado e geração automática por jornada real.
 - Macrobenchmark mede inicialização e rolagem com `StartupTimingMetric` e `FrameTimingMetric`, comparando sem compilação antecipada x Baseline Profile.
 - O CI de APK passa a gerar o perfil antes do `assemblePerformance`; workflow separado publica JSON/traces para consulta.
-- Próximo: validar a alpha.18 no GitHub e, depois, executar os Macrobenchmarks em aparelho físico para estabelecer a linha de base real de TTID/TTFD e jank.
+- Alpha.19 corrige o último bloqueio conhecido do `lintDebug` sem suprimir regras, mantendo o I/O de Propriedades em `Dispatchers.IO`.
+- Próximo: validar a alpha.19 no GitHub até `generateBaselineProfile` + `assemblePerformance`; depois executar os Macrobenchmarks em aparelho físico para estabelecer a linha de base real de TTID/TTFD e jank.
 - Após a linha de base: otimizar decodificação/uso dos PNGs e atualizar Compose/AndroidX de forma controlada, comparando métricas antes/depois.
 
 ## Depois
