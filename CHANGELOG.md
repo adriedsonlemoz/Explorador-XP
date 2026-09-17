@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## 0.1.0-alpha.34
+
+- Player interno de vídeo migrado de `VideoView`/`MediaController` para **AndroidX Media3/ExoPlayer 1.11.1**, sem alterar o player de áudio nem os demais visualizadores.
+- Adicionados play/pause próprios, barra de progresso, tempo atual/duração, voltar 10 s, avançar 10 s e reiniciar.
+- Controle de velocidade com `0.5x`, `0.75x`, `1x`, `1.25x`, `1.5x` e `2x`.
+- Modo **Tela cheia** oculta temporariamente o chrome do visualizador e as barras do Android, restaurando-as ao sair/fechar; o botão Voltar sai primeiro da tela cheia.
+- Rotação preserva o arquivo aberto e os principais estados do player; a posição é salva periodicamente e ao fechar para permitir retomada quando o arquivo continua sendo o mesmo.
+- Modos **Ajustar** e **Preencher** adicionados; Ajustar permanece como padrão para mostrar o vídeo inteiro sem corte.
+- Controles ficam sobrepostos somente quando necessários, desaparecem automaticamente durante a reprodução e reaparecem ao toque.
+- Painel de informações mostra nome, tipo, tamanho, resolução, duração e caminho quando disponíveis.
+- Erros de codec, contêiner, corrupção, arquivo ausente e falta de permissão agora usam mensagens legíveis e mantêm **Abrir com outro aplicativo** como fallback.
+- Ao fechar o visualizador, o ExoPlayer remove listeners, salva a posição e libera os recursos; ao o app ir para segundo plano, a reprodução é pausada.
+- Nenhuma imagem, mockup ou Material Icon novo foi criado/adicionado; os controles reutilizam recursos XP existentes e símbolos de texto.
+- Versão e metadados sincronizados para `0.1.0-alpha.34` / `versionCode 34`.
+
+## 0.1.0-alpha.33
+
+- Revisado o sistema de janelas: diálogos comuns agora usam largura responsiva, limite de altura, conteúdo interno rolável quando necessário e `safeDrawingPadding` para respeitar status/navigation bars.
+- Ajuda, Lixeira, Armazenamento, Sobre e progresso ganharam contêineres seguros para impedir conteúdo visualmente fora da janela em telas menores.
+- Diálogo de exclusão reorganizado com **Mover para a Lixeira**, **Apagar permanentemente** e **Cancelar**, usando os ícones XP existentes; em telas largas as três ações ficam lado a lado e em telas estreitas se adaptam verticalmente.
+- **Apagar permanentemente** recebeu borda/fundo destrutivos, mantendo diferença visual clara em relação às ações reversíveis.
+- Tela **Sobre o Explorador XP** refeita em blocos para informações do app, `versionCode`, desenvolvedor, PIX com copiar chave, novidades da versão e atalhos para Ajuda/Informações técnicas.
+- Análise de armazenamento passou a alinhar usados/livres e **% usado/% livre** e deixa explícito que a barra principal representa o armazenamento total do Android.
+- Percentuais por categoria agora são rotulados como percentuais **dos arquivos acessíveis analisados**, evitando confusão com o armazenamento total e mantendo o aviso sobre áreas protegidas do Android.
+- Lixeira recebeu linhas mais compactas, hierarquia de nome/tipo-data/caminho original, ação Restaurar direta e exclusão permanente mantida no menu secundário.
+- Lista/grade de arquivos receberam pequenos ajustes de densidade, tipografia, ícones, espaçamento e seleção sem aumentar cards.
+- Barra de seleção permanece em **Copiar / Mover / Excluir / Mais**; o menu Mais usa os nomes **Compartilhar** e **Propriedades** para maior consistência.
+- Informações do dispositivo preserva o visual moderno atual, mas melhora encaixe de textos longos, proporção dos rótulos, espaço inferior e organização responsiva dos botões Copiar/Salvar PNG/Compartilhar.
+- Nenhuma imagem, mockup ou novo pacote de ícones foi criado; os recursos visuais existentes foram reutilizados.
+- Pipeline de APK mantido sem alteração funcional e metadados sincronizados para `0.1.0-alpha.33` / `versionCode 33`.
+
 ## 0.1.0-alpha.32
 
 - Corrigido o vazamento de artefatos de Lixeira na navegação e na análise: `.ExploradorXP_Lixeira`, `.$recycle_bin$`, `$recycle.bin`, `.trashed-*` e `.trash-*` deixam de aparecer como arquivos/pastas comuns. Artefatos do sistema são apenas ocultados, não apagados pelo app.

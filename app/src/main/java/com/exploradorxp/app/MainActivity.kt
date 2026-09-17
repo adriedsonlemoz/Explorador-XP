@@ -13,7 +13,6 @@ import android.provider.Settings
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -35,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -91,7 +91,7 @@ private fun ExplorerApp(
     val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var accessGranted by remember { mutableStateOf(hasFileAccess(context)) }
-    var viewerFile by remember { mutableStateOf<File?>(null) }
+    var viewerFilePath by rememberSaveable { mutableStateOf<String?>(null) }
     var initialDirectoryHandled by remember(initialDirectoryPath) { mutableStateOf(false) }
 
     val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -128,7 +128,7 @@ private fun ExplorerApp(
         viewModel.events.collectLatest { event ->
             when (event) {
                 is ExplorerEvent.OpenFile -> {
-                    if (supportsInternalViewer(event.file)) viewerFile = event.file
+                    if (supportsInternalViewer(event.file)) viewerFilePath = event.file.absolutePath
                     else openFile(context, event.file)
                 }
                 is ExplorerEvent.ShareFiles -> shareFiles(context, event.files)
@@ -166,12 +166,11 @@ private fun ExplorerApp(
         return
     }
 
-    val activeViewer = viewerFile
+    val activeViewer = viewerFilePath?.let(::File)
     if (activeViewer != null) {
-        BackHandler { viewerFile = null }
         InternalViewerScreen(
             file = activeViewer,
-            onClose = { viewerFile = null },
+            onClose = { viewerFilePath = null },
             onOpenExternal = { openFile(context, activeViewer) },
         )
         return

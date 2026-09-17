@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.32` (`versionCode 32`)  
+**Versão atual:** `0.1.0-alpha.34` (`versionCode 34`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -15,6 +15,8 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
 - A alpha.30 integra uma **Lixeira real** ao fluxo de exclusão: cada remoção oferece mover para a Lixeira ou apagar permanentemente; itens podem ser restaurados, apagados individualmente ou removidos de uma vez com **Esvaziar Lixeira**.
 - A alpha.31 continua o refinamento visual: menus superiores mais legíveis e roláveis em telas estreitas, barra de seleção com ações sem compressão, listagem com tipo/tamanho e data separados, janelas com botão Fechar no padrão XP e armazenamento com leitura visual mais clara.
+- A alpha.34 moderniza exclusivamente o player interno de vídeo com **Media3/ExoPlayer 1.11.1**: play/pause, progresso/tempo, ±10 s, velocidades de 0.5x a 2x, reiniciar, tela cheia, rotação estável, Ajustar/Preencher, retomada de posição, informações do arquivo, controles auto-ocultáveis e fallback claro para abertura externa.
+- A alpha.33 padroniza janelas e rolagens com áreas seguras do Android, reorganiza a exclusão com botões responsivos e ícones XP, refina percentuais de armazenamento, moderniza a tela Sobre sem abandonar a identidade XP e melhora densidade/alinhamento de Lixeira, lista, grade, seleção e Informações do dispositivo.
 - A alpha.32 corrige vazamentos visuais da Lixeira, reforça o esvaziamento físico da pasta gerenciada, simplifica a seleção para **Copiar/Mover/Excluir/Mais**, compacta Lixeira/Favoritos/progresso, trata `Android/data`/`obb` como áreas restritas e melhora Propriedades, análise de armazenamento, grade e barra inferior.
 - O card de armazenamento abre uma análise detalhada sob demanda, com total/usado/livre, categorias de arquivo, pastas que mais ocupam espaço e maiores arquivos; a varredura roda fora da thread principal, pode ser cancelada e não pesa na abertura do app.
 - Arquivos e pastas ganharam identificação textual consistente de tipo em lista, grade, status, Lixeira e visualizadores (por exemplo, **Imagem JPEG**, **Documento PDF** e **Aplicativo Android (APK)**).
@@ -30,7 +32,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Toque longo entra diretamente no modo de seleção; a barra de ferramentas troca temporariamente para ações de seleção e volta ao normal ao concluir/cancelar.
 - Copiar, recortar/mover e colar, incluindo pastas recursivas; quando há conteúdo na área de transferência, **Downloads** vira temporariamente **Colar** na barra de ferramentas. Cópia, mover e exclusão exibem uma janela de progresso com o item atual, contagem e barra animada, com opção de **Cancelar** a qualquer momento.
 - Criar pasta, renomear e excluir.
-- Visualizador interno para imagens, textos/código editáveis, HTML, PDF, ZIP, áudio/vídeo e informações de APK; formatos não suportados continuam disponíveis via `Abrir com...`.
+- Visualizador interno para imagens, textos/código editáveis, HTML, PDF, ZIP, áudio, vídeo e informações de APK; o vídeo usa Media3/ExoPlayer com controles próprios e formatos/codec não suportados continuam disponíveis via `Abrir com...`.
 - Abertura externa por aplicativo compatível via `FileProvider` quando necessário.
 - Compartilhar arquivos.
 - Favoritos persistentes.
@@ -44,7 +46,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Launcher legado/adaptativo atualizado com nova arte da pasta dourada e órbita azul, agora com margem de segurança maior, sem borda aparente e com transparência correta para evitar cortes na máscara adaptativa do Android.
 - Ícones PNG usados na navegação foram otimizados para densidade Android: o conjunto comum saiu de 256×256 `nodpi` para 192×192 em `drawable-xxxhdpi`, permitindo que o sistema decodifique tamanhos menores em telas de densidade inferior.
 - Ícones dos itens da lista/grade são decodificados em background e reutilizados por um cache LRU de 6 MiB, evitando a primeira decodificação pesada no frame da rolagem; os primeiros tipos visíveis são aquecidos de forma assíncrona.
-- Barras de status e navegação do Android permanecem visíveis; o modo imersivo/tela inteira foi removido.
+- Barras de status e navegação do Android permanecem visíveis no app; somente o modo **Tela cheia** do player de vídeo pode ocultá-las temporariamente, com restauração ao sair/fechar.
 
 ## Estrutura
 
@@ -61,6 +63,7 @@ app/src/main/java/com/exploradorxp/app/
   FileIconMapper.kt
   FileThumbnail.kt
   InternalViewer.kt
+  VideoPlayerViewer.kt
   PreferencesStore.kt
   DeviceInfo.kt
   DeviceInfoScreen.kt

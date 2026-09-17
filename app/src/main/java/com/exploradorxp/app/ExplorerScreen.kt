@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -18,7 +19,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -368,7 +371,11 @@ fun ExplorerScreen(
     }
 
     if (showManual) HelpManualDialog(onDismiss = { showManual = false })
-    if (showAbout) AboutDialog(onDismiss = { showAbout = false })
+    if (showAbout) AboutDialog(
+        onDismiss = { showAbout = false },
+        onOpenHelp = { showAbout = false; showManual = true },
+        onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
+    )
     if (showDeviceInfo) DeviceInfoDialog(onDismiss = { showDeviceInfo = false })
     if (showTrash) {
         TrashDialog(
@@ -535,7 +542,7 @@ private fun XpHeader(
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable(onClick = onClearSelection).padding(horizontal = 8.dp, vertical = 6.dp)
+                    modifier = Modifier.clickable(onClick = onClearSelection).padding(horizontal = 8.dp, vertical = 5.dp)
                 )
             } else if (searchMode) {
                 Text(
@@ -659,7 +666,7 @@ private fun XpHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(if (selectionCount > 0) 58.dp else 52.dp)
+                    .height(if (selectionCount > 0) 56.dp else 52.dp)
                     .background(XpChrome)
                     .border(1.dp, XpChromeBorder)
                     .padding(horizontal = 2.dp)
@@ -681,11 +688,11 @@ private fun XpHeader(
                                 selectionMoreMenu = false
                                 onRenameSelection()
                             }
-                            XpMenuItem("Enviar", R.drawable.share) {
+                            XpMenuItem("Compartilhar", R.drawable.share) {
                                 selectionMoreMenu = false
                                 onShareSelection()
                             }
-                            XpMenuItem("Detalhes", R.drawable.properties, enabled = selectionCount == 1) {
+                            XpMenuItem("Propriedades", R.drawable.properties, enabled = selectionCount == 1) {
                                 selectionMoreMenu = false
                                 onPropertiesSelection()
                             }
@@ -1050,6 +1057,7 @@ private fun StorageCard(info: StorageInfo, onClick: () -> Unit) {
     val used = formatBytes(info.usedBytes)
     val free = formatBytes(info.freeBytes)
     val percent = (info.usedFraction * 100f).toInt().coerceIn(0, 100)
+    val freePercent = 100 - percent
     val animatedUsedFraction by animateFloatAsState(
         targetValue = info.usedFraction,
         animationSpec = tween(320),
@@ -1081,6 +1089,13 @@ private fun StorageCard(info: StorageInfo, onClick: () -> Unit) {
                 Text(
                     "$used usados • $free livres",
                     fontSize = 10.5.sp,
+                    color = Color(0xFF303030),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    "$percent% usado • $freePercent% livre",
+                    fontSize = 10.sp,
                     color = XpTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1145,7 +1160,7 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
         "Armazenamento" to "Toque no cartão de armazenamento para analisar espaço total, usado e livre. As porcentagens por categoria usam somente os arquivos acessíveis analisados; áreas protegidas do Android podem não entrar na soma. A Lixeira aparece separadamente.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
         "Favoritos" to "Adicione arquivos ou pastas aos Favoritos pelo menu de opções. A lista fica disponível no menu Favoritos do cabeçalho.",
-        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. Se um formato falhar ou não for suportado, use Abrir com outro aplicativo.",
+        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. O player de vídeo oferece progresso, ±10 s, velocidade, tela cheia, Ajustar/Preencher e retomada de posição. Se um formato falhar ou não for suportado, use Abrir com outro aplicativo.",
         "Arquivos ocultos" to "No menu Exibir é possível mostrar ou ocultar arquivos ocultos. A pasta interna usada pela Lixeira continua protegida e não aparece na navegação comum.",
     )
 
@@ -1153,14 +1168,21 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, XpBorder)
+                .background(Color(0x99000000))
+                .safeDrawingPadding()
+                .padding(10.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            XpDialogTitle("Ajuda", onDismiss)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F8F2))
+                    .border(1.dp, XpBorder)
+            ) {
+                XpDialogTitle("Ajuda", onDismiss)
             Text(
                 "Escolha um assunto para ver somente a explicação necessária.",
                 fontSize = 12.sp,
@@ -1182,6 +1204,7 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
                         onClick = { expandedTopic = if (expandedTopic == title) "" else title },
                     )
                     Spacer(Modifier.height(6.dp))
+                }
                 }
             }
         }
@@ -1216,54 +1239,133 @@ private fun HelpTopic(
 }
 
 @Composable
-private fun AboutDialog(onDismiss: () -> Unit) {
+private fun AboutDialog(
+    onDismiss: () -> Unit,
+    onOpenHelp: () -> Unit,
+    onOpenDeviceInfo: () -> Unit,
+) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        BoxWithConstraints(
             modifier = Modifier
-                .widthIn(min = 300.dp, max = 380.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, XpBorder)
+                .fillMaxSize()
+                .background(Color(0x99000000))
+                .safeDrawingPadding()
+                .padding(12.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            XpDialogTitle("Sobre o Explorador XP", onDismiss)
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp)) {
-                Text("Explorador XP", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
-                Spacer(Modifier.height(4.dp))
-                Text("Gerenciador de arquivos com identidade inspirada no Windows XP.", fontSize = 12.sp, color = Color(0xFF303030))
-                Spacer(Modifier.height(10.dp))
-                PropertyLine("Versão", BuildConfig.VERSION_NAME)
-                PropertyLine("Desenvolvedor", "Adriedson Lemos")
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 430.dp)
+                    .heightIn(max = maxHeight)
+                    .background(Color(0xFFF8F8F2))
+                    .border(1.dp, XpBorder)
+            ) {
+                XpDialogTitle("Sobre o Explorador XP", onDismiss)
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.foundation.Image(
+                            painter = painterResource(R.drawable.info),
+                            contentDescription = null,
+                            modifier = Modifier.size(42.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Explorador XP", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                            Text(
+                                "Gerenciador de arquivos Android com identidade inspirada no Windows XP.",
+                                fontSize = 12.sp,
+                                color = Color(0xFF303030),
+                                lineHeight = 16.sp,
+                            )
+                        }
+                    }
 
-                Spacer(Modifier.height(10.dp))
-                HorizontalDivider(color = Color(0xFFD2DCE8))
-                Spacer(Modifier.height(12.dp))
-                Text("Apoiar o projeto", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
-                Spacer(Modifier.height(5.dp))
-                Text("PIX", fontSize = 11.sp, color = XpTextSecondary)
-                Text("adriedson@outlook.com", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF202020))
-                Spacer(Modifier.height(8.dp))
-                XpDialogButton(if (copied) "Chave copiada" else "Copiar chave") {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("PIX Explorador XP", "adriedson@outlook.com"))
-                    copied = true
-                }
+                    Spacer(Modifier.height(12.dp))
+                    AboutSectionCard("Informações", R.drawable.info) {
+                        PropertyLine("Versão", BuildConfig.VERSION_NAME)
+                        PropertyLine("versionCode", BuildConfig.VERSION_CODE.toString())
+                        PropertyLine("Desenvolvedor", "Adriedson Lemos")
+                    }
 
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = Color(0xFFD2DCE8))
-                Spacer(Modifier.height(12.dp))
-                Text("Novidades desta versão", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
-                Spacer(Modifier.height(6.dp))
-                listOf(
-                    "Lixeira protegida da navegação e limpeza física reforçada.",
-                    "Seleção simplificada com ações principais e menu Mais.",
-                    "Armazenamento com percentuais dos arquivos acessíveis e Lixeira separada.",
-                    "Favoritos, propriedades, progresso, grade e estados restritos refinados.",
-                ).forEach { change ->
-                    Text("• $change", fontSize = 12.sp, color = Color(0xFF303030), modifier = Modifier.padding(bottom = 4.dp))
+                    Spacer(Modifier.height(10.dp))
+                    AboutSectionCard("Apoiar o projeto", R.drawable.favorites) {
+                        Text("PIX", fontSize = 10.5.sp, color = XpTextSecondary)
+                        Text(
+                            "adriedson@outlook.com",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF202020),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        XpDialogButton(
+                            label = if (copied) "Chave copiada" else "Copiar chave",
+                            iconRes = if (copied) R.drawable.check else R.drawable.copy,
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("PIX Explorador XP", "adriedson@outlook.com"))
+                                copied = true
+                            },
+                        )
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+                    AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
+                        listOf(
+                            "Player interno de vídeo migrado para Media3/ExoPlayer, mantendo o restante dos visualizadores intacto.",
+                            "Novos controles: progresso e duração, ±10 s, velocidades de 0.5x a 2x, reiniciar, Ajustar/Preencher e tela cheia.",
+                            "Controles somem durante a reprodução, a posição pode ser retomada e erros oferecem abertura externa com mensagem clara.",
+                            "Rotação e fechamento preservam melhor o estado e liberam corretamente os recursos do player.",
+                        ).forEach { change ->
+                            Text("• $change", fontSize = 11.5.sp, color = Color(0xFF303030), lineHeight = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+                    AboutSectionCard("Atalhos úteis", R.drawable.help) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                            XpDialogButton("Ajuda", modifier = Modifier.weight(1f), iconRes = R.drawable.help, onClick = onOpenHelp)
+                            XpDialogButton("Informações técnicas", modifier = Modifier.weight(1f), iconRes = R.drawable.device_mobile, onClick = onOpenDeviceInfo)
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AboutSectionCard(
+    title: String,
+    icon: Int,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .border(1.dp, Color(0xFFCAD8E8))
+            .padding(10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(painterResource(icon), null, modifier = Modifier.size(21.dp))
+            Spacer(Modifier.width(7.dp))
+            Text(title, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+        }
+        Spacer(Modifier.height(7.dp))
+        content()
     }
 }
 
@@ -1286,14 +1388,23 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
     }
     Dialog(
         onDismissRequest = onCancel,
-        properties = DialogProperties(dismissOnClickOutside = false),
+        properties = DialogProperties(dismissOnClickOutside = false, usePlatformDefaultWidth = false),
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .widthIn(min = 270.dp, max = 320.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, XpBorder)
+                .fillMaxSize()
+                .background(Color(0x66000000))
+                .safeDrawingPadding()
+                .padding(12.dp),
+            contentAlignment = Alignment.Center,
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(min = 270.dp, max = 320.dp)
+                    .background(Color(0xFFF8F8F2))
+                    .border(1.dp, XpBorder)
+            ) {
             XpDialogTitle(title, onCancel)
             Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1330,10 +1441,11 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    XpDialogButton("Cancelar", onClick = onCancel)
+                    XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
                 }
             }
         }
+    }
     }
 }
 
@@ -1369,15 +1481,36 @@ internal fun XpDialogFrame(
     maxWidth: Int = 340,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        BoxWithConstraints(
             modifier = Modifier
-                .widthIn(min = 270.dp, max = maxWidth.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, Color(0xFF275B9A))
+                .fillMaxSize()
+                .background(Color(0x66000000))
+                .safeDrawingPadding()
+                .padding(12.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            XpDialogTitle(title, onDismiss)
-            Column(modifier = Modifier.padding(16.dp), content = content)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(min = 270.dp, max = maxWidth.dp)
+                    .heightIn(max = maxHeight)
+                    .background(Color(0xFFF8F8F2))
+                    .border(1.dp, Color(0xFF275B9A))
+            ) {
+                XpDialogTitle(title, onDismiss)
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    content = content,
+                )
+            }
         }
     }
 }
@@ -1385,43 +1518,68 @@ internal fun XpDialogFrame(
 @Composable
 internal fun XpDialogButton(
     label: String,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     danger: Boolean = false,
+    iconRes: Int? = null,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .height(32.dp)
+        modifier = modifier
+            .heightIn(min = 32.dp)
             .widthIn(min = 78.dp)
             .background(
                 when {
                     !enabled -> Color(0xFFE5E5E5)
+                    danger && pressed -> Color(0xFFFFDAD5)
+                    danger -> Color(0xFFFFF0EE)
                     pressed -> Color(0xFFD5E7FA)
                     else -> Color(0xFFF7F7F2)
                 }
             )
-            .border(1.dp, if (enabled) Color(0xFF7D8FA6) else Color(0xFFB8B8B8))
+            .border(1.dp, when {
+                !enabled -> Color(0xFFB8B8B8)
+                danger -> Color(0xFFC34B40)
+                else -> Color(0xFF7D8FA6)
+            })
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
-        Text(
-            label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = when {
-                !enabled -> Color(0xFF999999)
-                danger -> Color(0xFF9C1B12)
-                else -> Color(0xFF202020)
-            },
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            iconRes?.let {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(it),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Spacer(Modifier.width(5.dp))
+            }
+            Text(
+                label,
+                fontSize = 11.5.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                color = when {
+                    !enabled -> Color(0xFF999999)
+                    danger -> Color(0xFF9C1B12)
+                    else -> Color(0xFF202020)
+                },
+            )
+        }
     }
 }
 
@@ -1439,7 +1597,7 @@ private fun XpConfirmDialog(
             androidx.compose.foundation.Image(
                 painter = painterResource(if (danger) R.drawable.warning else R.drawable.info),
                 contentDescription = null,
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(30.dp),
                 contentScale = ContentScale.Fit,
             )
             Spacer(Modifier.width(10.dp))
@@ -1447,9 +1605,9 @@ private fun XpConfirmDialog(
         }
         Spacer(Modifier.height(18.dp))
         Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-            XpDialogButton("Cancelar", onClick = onDismiss)
+            XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onDismiss)
             Spacer(Modifier.width(8.dp))
-            XpDialogButton(confirmText, danger = danger, onClick = onConfirm)
+            XpDialogButton(confirmText, danger = danger, iconRes = if (danger) R.drawable.delete else R.drawable.check, onClick = onConfirm)
         }
     }
 }
@@ -1462,7 +1620,7 @@ private fun DeleteChoiceDialog(
     onMoveToTrash: () -> Unit,
     onDeletePermanently: () -> Unit,
 ) {
-    XpDialogFrame(title = title, onDismiss = onDismiss, maxWidth = 380) {
+    XpDialogFrame(title = title, onDismiss = onDismiss, maxWidth = 650) {
         Row(verticalAlignment = Alignment.Top) {
             androidx.compose.foundation.Image(
                 painter = painterResource(R.drawable.trash_full),
@@ -1477,11 +1635,21 @@ private fun DeleteChoiceDialog(
                 Text("Mover para a Lixeira permite restaurar depois.", fontSize = 11.sp, color = XpTextSecondary)
             }
         }
-        Spacer(Modifier.height(18.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
-            XpDialogButton("Mover para a Lixeira", onClick = onMoveToTrash)
-            XpDialogButton("Apagar permanentemente", danger = true, onClick = onDeletePermanently)
-            XpDialogButton("Cancelar", onClick = onDismiss)
+        Spacer(Modifier.height(16.dp))
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            if (maxWidth >= 540.dp) {
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                    XpDialogButton("Mover para a Lixeira", modifier = Modifier.weight(1f), iconRes = R.drawable.trash_full, onClick = onMoveToTrash)
+                    XpDialogButton("Apagar permanentemente", modifier = Modifier.weight(1f), danger = true, iconRes = R.drawable.delete, onClick = onDeletePermanently)
+                    XpDialogButton("Cancelar", modifier = Modifier.weight(1f), iconRes = R.drawable.close, onClick = onDismiss)
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                    XpDialogButton("Mover para a Lixeira", modifier = Modifier.fillMaxWidth(), iconRes = R.drawable.trash_full, onClick = onMoveToTrash)
+                    XpDialogButton("Apagar permanentemente", modifier = Modifier.fillMaxWidth(), danger = true, iconRes = R.drawable.delete, onClick = onDeletePermanently)
+                    XpDialogButton("Cancelar", modifier = Modifier.fillMaxWidth(), iconRes = R.drawable.close, onClick = onDismiss)
+                }
+            }
         }
     }
 }
@@ -1503,14 +1671,21 @@ private fun TrashDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, XpBorder)
+                .background(Color(0x99000000))
+                .safeDrawingPadding()
+                .padding(8.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            XpDialogTitle("Lixeira", onDismiss)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F8F2))
+                    .border(1.dp, XpBorder)
+            ) {
+                XpDialogTitle("Lixeira", onDismiss)
             Column(modifier = Modifier.fillMaxWidth().background(XpChrome)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1532,9 +1707,9 @@ private fun TrashDialog(
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 7.dp),
                 ) {
-                    XpDialogButton("Atualizar", enabled = !loading, onClick = onRefresh)
+                    XpDialogButton("Atualizar", enabled = !loading, iconRes = R.drawable.refresh, onClick = onRefresh)
                     Spacer(Modifier.width(6.dp))
-                    XpDialogButton("Esvaziar Lixeira", enabled = items.isNotEmpty() && !loading, danger = true) { confirmEmpty = true }
+                    XpDialogButton("Esvaziar Lixeira", enabled = items.isNotEmpty() && !loading, danger = true, iconRes = R.drawable.delete) { confirmEmpty = true }
                 }
             }
             HorizontalDivider(color = XpChromeBorder)
@@ -1563,6 +1738,7 @@ private fun TrashDialog(
                 }
             }
         }
+    }
     }
 
     deleteCandidate?.let { item ->
@@ -1602,38 +1778,38 @@ private fun TrashItemRow(
     var menuExpanded by remember(item.id) { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 4.dp),
     ) {
         androidx.compose.foundation.Image(
             painter = painterResource(item.iconRes),
             contentDescription = null,
-            modifier = Modifier.size(34.dp),
+            modifier = Modifier.size(30.dp),
             contentScale = ContentScale.Fit,
         )
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(item.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(item.name, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 buildString {
                     append(item.typeLabel)
                     if (!item.isDirectory || item.size > 0L) append(" • ${formatBytes(item.size)}")
                     append(" • ${formatTrashDate(item.deletedAt)}")
                 },
-                fontSize = 10.5.sp,
+                fontSize = 10.sp,
                 color = XpTextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 compactOriginalPath(item.originalPath),
-                fontSize = 10.sp,
+                fontSize = 9.5.sp,
                 color = Color(0xFF66788F),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         Spacer(Modifier.width(6.dp))
-        XpDialogButton("Restaurar", onClick = onRestore)
+        XpDialogButton("Restaurar", iconRes = R.drawable.move, onClick = onRestore)
         Spacer(Modifier.width(3.dp))
         Box {
             XpIconButton(R.drawable.more, "Mais ações", onClick = { menuExpanded = true }, iconSize = 20, buttonSize = 30)
@@ -1664,14 +1840,21 @@ private fun StorageDetailsDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, XpBorder)
+                .background(Color(0x99000000))
+                .safeDrawingPadding()
+                .padding(8.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            XpDialogTitle("Armazenamento", onDismiss)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F8F2))
+                    .border(1.dp, XpBorder)
+            ) {
+                XpDialogTitle("Armazenamento", onDismiss)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().background(XpChrome).padding(horizontal = 10.dp, vertical = 7.dp),
@@ -1681,13 +1864,18 @@ private fun StorageDetailsDialog(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Armazenamento interno", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
                     Text(
-                        "${formatBytes(info.usedBytes)} usados • ${formatBytes(info.freeBytes)} livres • ${formatBytes(info.totalBytes)} total",
+                        "${formatBytes(info.usedBytes)} usados • ${formatBytes(info.freeBytes)} livres",
                         fontSize = 11.sp,
                         color = XpTextSecondary,
                     )
+                    Text(
+                        "${storageUsedPercent(info)}% usado • ${100 - storageUsedPercent(info)}% livre • ${formatBytes(info.totalBytes)} total",
+                        fontSize = 10.5.sp,
+                        color = Color(0xFF66788F),
+                    )
                 }
-                if (state.analyzing) XpDialogButton("Cancelar", onClick = onCancel)
-                else XpDialogButton(if (analysis == null) "Analisar" else "Atualizar análise", onClick = onRefresh)
+                if (state.analyzing) XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
+                else XpDialogButton(if (analysis == null) "Analisar" else "Atualizar análise", iconRes = R.drawable.drive_storage, onClick = onRefresh)
             }
             HorizontalDivider(color = XpChromeBorder)
 
@@ -1723,7 +1911,7 @@ private fun StorageDetailsDialog(
                 ) {
                     StorageSummaryCard(info)
                     Spacer(Modifier.height(14.dp))
-                    StorageSectionHeader("Por tipo de arquivo", "${formatBytes(analysis.scannedBytes)} acessíveis analisados")
+                    StorageSectionHeader("Por tipo de arquivo", "${formatBytes(analysis.scannedBytes)} acessíveis")
                     Text(
                         "As porcentagens abaixo consideram apenas os arquivos que o Android permitiu ao Explorador XP analisar.",
                         fontSize = 10.5.sp,
@@ -1784,26 +1972,51 @@ private fun StorageDetailsDialog(
                     Text("Toque em Analisar para localizar pastas e arquivos que mais ocupam espaço.", fontSize = 13.sp, color = XpTextSecondary, textAlign = TextAlign.Center, modifier = Modifier.padding(20.dp))
                 }
             }
+            }
         }
     }
 }
-
 @Composable
 private fun StorageSummaryCard(info: StorageInfo) {
+    val usedPercent = storageUsedPercent(info)
+    val freePercent = 100 - usedPercent
     Column(
         modifier = Modifier.fillMaxWidth().background(Color.White).border(1.dp, Color(0xFFCAD8E8)).padding(11.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column { Text("Total", fontSize = 11.sp, color = XpTextSecondary); Text(formatBytes(info.totalBytes), fontSize = 15.sp, fontWeight = FontWeight.Bold) }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("Usado", fontSize = 11.sp, color = XpTextSecondary); Text(formatBytes(info.usedBytes), fontSize = 15.sp, fontWeight = FontWeight.Bold) }
-            Column(horizontalAlignment = Alignment.End) { Text("Livre", fontSize = 11.sp, color = XpTextSecondary); Text(formatBytes(info.freeBytes), fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(1f)) {
+                Text("Espaço total", fontSize = 10.5.sp, color = XpTextSecondary)
+                Text(formatBytes(info.totalBytes), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
+            }
+            Text("$usedPercent% usado", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
         }
-        Spacer(Modifier.height(9.dp))
+        Spacer(Modifier.height(7.dp))
+        Text(
+            "${formatBytes(info.usedBytes)} usados • ${formatBytes(info.freeBytes)} livres",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF303030),
+        )
+        Text(
+            "$usedPercent% usado • $freePercent% livre",
+            fontSize = 11.sp,
+            color = XpTextSecondary,
+        )
+        Spacer(Modifier.height(8.dp))
         Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xFFE1ECF8)).border(1.dp, XpChromeBorder)) {
             Box(Modifier.fillMaxWidth(info.usedFraction.coerceIn(0f, 1f)).fillMaxHeight().background(Color(0xFF39B54A)))
         }
+        Spacer(Modifier.height(5.dp))
+        Text(
+            "Esta barra representa o armazenamento total informado pelo Android.",
+            fontSize = 9.5.sp,
+            color = Color(0xFF66788F),
+        )
     }
 }
+
+private fun storageUsedPercent(info: StorageInfo): Int =
+    (info.usedFraction.coerceIn(0f, 1f) * 100f).toInt().coerceIn(0, 100)
 
 @Composable
 private fun StorageSectionHeader(title: String, hint: String) {
@@ -1820,7 +2033,7 @@ private fun StorageCategoryRow(category: StorageCategorySummary, totalBytes: Lon
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(category.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text("$percent% • ${category.fileCount} • ${formatBytes(category.bytes)}", fontSize = 11.sp, color = XpTextSecondary)
+            Text("$percent% dos acessíveis • ${category.fileCount} • ${formatBytes(category.bytes)}", fontSize = 10.5.sp, color = XpTextSecondary)
         }
         Spacer(Modifier.height(3.dp))
         Box(Modifier.fillMaxWidth().height(7.dp).background(Color(0xFFE3EAF2))) {
@@ -2093,8 +2306,8 @@ private fun FileListRow(
             .combinedClickable(onClick = onClick, onLongClick = onLongSelect)
             .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
-            FileVisual(item = item, size = 40.dp)
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(42.dp)) {
+            FileVisual(item = item, size = 38.dp)
             if (selected) {
                 androidx.compose.foundation.Image(
                     painter = painterResource(R.drawable.check),
@@ -2126,7 +2339,7 @@ private fun FileListRow(
             Text(
                 text = if (item.isDirectory) item.typeLabel else "${item.typeLabel} • ${formatBytes(item.size)}",
                 color = Color(0xFF4E6077),
-                fontSize = 11.5.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -2134,14 +2347,14 @@ private fun FileListRow(
             Text(
                 text = "${FileDisplayFormatter.date(item.modifiedAt)} • ${FileDisplayFormatter.time(item.modifiedAt)}",
                 color = XpTextSecondary,
-                fontSize = 10.5.sp,
+                fontSize = 10.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         var menuExpanded by remember(item.path) { mutableStateOf(false) }
         Box {
-            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 22, buttonSize = 32)
+            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 22, buttonSize = 30)
             XpFileDropdownMenu(
                 item = item,
                 expanded = menuExpanded,
@@ -2169,7 +2382,7 @@ private fun FileGrid(
     val gridState = remember(scrollKey) { LazyGridState() }
     LazyVerticalGrid(
         state = gridState,
-        columns = GridCells.Adaptive(minSize = 112.dp),
+        columns = GridCells.Adaptive(minSize = 110.dp),
         horizontalArrangement = Arrangement.spacedBy(7.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp),
         modifier = Modifier
@@ -2190,7 +2403,7 @@ private fun FileGrid(
                         RoundedCornerShape(3.dp),
                     )
                     .combinedClickable(onClick = { onItemClick(item) }, onLongClick = { onLongSelect(item) })
-                    .padding(horizontal = 7.dp, vertical = 8.dp)
+                    .padding(horizontal = 7.dp, vertical = 7.dp)
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -2200,7 +2413,7 @@ private fun FileGrid(
                     Spacer(Modifier.height(7.dp))
                     Text(
                         item.name,
-                        fontSize = 13.sp,
+                        fontSize = 12.5.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -2210,7 +2423,7 @@ private fun FileGrid(
                     Spacer(Modifier.height(3.dp))
                     Text(
                         item.gridDetailText,
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         color = XpTextSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,

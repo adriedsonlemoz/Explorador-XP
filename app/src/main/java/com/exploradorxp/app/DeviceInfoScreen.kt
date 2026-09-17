@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -213,7 +213,6 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
                             modifier = Modifier
                                 .weight(1f)
                                 .verticalScroll(rememberScrollState())
-                                .navigationBarsPadding()
                                 .padding(horizontal = 12.dp, vertical = 12.dp),
                         ) {
                             DeviceHero(info)
@@ -317,7 +316,7 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
                                 onExport = { exportLauncher.launch(deviceInfoExportFileName()) },
                             )
 
-                            Spacer(Modifier.height(72.dp))
+                            Spacer(Modifier.height(8.dp))
                         }
                     }
                 }
@@ -440,7 +439,8 @@ private fun DeviceHero(info: DeviceInfoSnapshot) {
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = DeviceText,
-                    maxLines = 1,
+                    maxLines = 2,
+                    lineHeight = 24.sp,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(2.dp))
@@ -641,13 +641,20 @@ private fun DeviceSection(
 @Composable
 private fun InfoRow(label: String, value: String) {
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
-        Text(label, color = DeviceMuted, fontSize = 11.5.sp, modifier = Modifier.weight(.46f))
+        Text(
+            label,
+            color = DeviceMuted,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            modifier = Modifier.weight(.42f).padding(end = 8.dp),
+        )
         Text(
             value,
             color = DeviceText,
             fontSize = 11.5.sp,
+            lineHeight = 15.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(.54f),
+            modifier = Modifier.weight(.58f),
         )
     }
 }
@@ -850,45 +857,77 @@ private fun ShareDeviceCard(
             Column(Modifier.weight(1f)) {
                 Text("Compartilhar informações", fontWeight = FontWeight.Bold, color = DeviceNavy, fontSize = 14.sp)
                 Text(
-                    "Resumo simples para copiar ou uma imagem pronta para enviar em qualquer aplicativo.",
+                    "Copie um resumo, salve a ficha em PNG ou compartilhe diretamente.",
                     color = DeviceMuted,
                     fontSize = 10.sp,
                     lineHeight = 13.sp,
                 )
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = onCopy,
-                enabled = enabled,
-                shape = RoundedCornerShape(11.dp),
-                modifier = Modifier.weight(1f).height(42.dp),
-            ) {
-                Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(5.dp))
-                Text("Copiar", fontSize = 11.sp)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            if (maxWidth >= 420.dp) {
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onCopy, enabled = enabled, shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).height(42.dp),
+                    ) {
+                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Copiar", fontSize = 10.5.sp)
+                    }
+                    OutlinedButton(
+                        onClick = onSaveImage, enabled = enabled, shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).height(42.dp),
+                    ) {
+                        Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Salvar PNG", fontSize = 10.5.sp)
+                    }
+                    Button(
+                        onClick = onShareImage, enabled = enabled,
+                        colors = ButtonDefaults.buttonColors(containerColor = DevicePurple),
+                        shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f).height(42.dp),
+                    ) {
+                        Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Compartilhar", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onCopy,
+                        enabled = enabled,
+                        shape = RoundedCornerShape(11.dp),
+                        modifier = Modifier.weight(1f).height(42.dp),
+                    ) {
+                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Copiar", fontSize = 11.sp)
+                    }
+                    OutlinedButton(
+                        onClick = onSaveImage,
+                        enabled = enabled,
+                        shape = RoundedCornerShape(11.dp),
+                        modifier = Modifier.weight(1f).height(42.dp),
+                    ) {
+                        Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Salvar PNG", fontSize = 11.sp)
+                    }
+                }
+                Button(
+                    onClick = onShareImage,
+                    enabled = enabled,
+                    colors = ButtonDefaults.buttonColors(containerColor = DevicePurple),
+                    shape = RoundedCornerShape(11.dp),
+                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                ) {
+                    Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Compartilhar", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                }
             }
-            OutlinedButton(
-                onClick = onSaveImage,
-                enabled = enabled,
-                shape = RoundedCornerShape(11.dp),
-                modifier = Modifier.weight(1f).height(42.dp),
-            ) {
-                Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(5.dp))
-                Text("Salvar PNG", fontSize = 11.sp)
-            }
-        }
-        Button(
-            onClick = onShareImage,
-            enabled = enabled,
-            colors = ButtonDefaults.buttonColors(containerColor = DevicePurple),
-            shape = RoundedCornerShape(11.dp),
-            modifier = Modifier.fillMaxWidth().height(44.dp),
-        ) {
-            Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(17.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("Compartilhar imagem", fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
         }
     }
 }

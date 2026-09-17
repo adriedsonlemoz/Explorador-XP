@@ -1,21 +1,22 @@
 {
-  "version_build": "0.1.0-alpha.32",
-  "version_code": 32,
-  "manager_version": "0.1.0-alpha.32",
-  "manager_code": 32,
-  "validated_at_utc": "2026-09-17T17:07:17.887510+00:00",
+  "version_build": "0.1.0-alpha.34",
+  "version_code": 34,
+  "manager_version": "0.1.0-alpha.34",
+  "manager_code": 34,
   "checks": {
     "version_sync": {
-      "ok": true
+      "ok": true,
+      "version": "0.1.0-alpha.34",
+      "code": 34
     },
     "json_parse": {
       "ok": true,
-      "files": 3,
+      "files": 2,
       "errors": []
     },
     "xml_parse": {
       "ok": true,
-      "files": 12,
+      "files": 11,
       "errors": []
     },
     "yaml_parse": {
@@ -26,76 +27,83 @@
     },
     "drawable_references": {
       "ok": true,
-      "references": 123,
+      "references": 214,
       "resource_names": 157,
       "missing": []
     },
+    "kotlin_lexical_balance": {
+      "ok": true,
+      "files": 23,
+      "errors": []
+    },
     "kotlin_parser": {
       "ok": true,
-      "note": "kotlinc não encontrou marcadores de erro de parser/sintaxe no ExplorerScreen alterado; resolução Android/Compose completa exige SDK/Gradle."
+      "exit_code": 1,
+      "syntax_markers": [],
+      "note": "Exit code diferente de zero é esperado sem Android/Compose/Media3 no classpath local; a checagem considera apenas marcadores de sintaxe."
     },
-    "classifier_executable": {
-      "ok": true,
-      "note": "rótulos de arquivo sem extensão, PDF e extensão desconhecida validados por execução."
-    },
-    "repository_semantic_stub_compile": {
-      "ok": true,
-      "note": "FileRepository + modelos/classificador/formatter compilados com stubs mínimos Android e coroutines."
-    },
-    "repository_behavior_test": {
-      "ok": true,
-      "note": "teste executável confirmou ocultação de artefatos, Lixeira separada na análise e remoção física da Lixeira gerenciada ao esvaziar, preservando .trashed-* do sistema."
-    },
-    "alpha32_feature_markers": {
+    "alpha34_video_feature_markers": {
       "ok": true,
       "items": {
-        "trash_artifacts_hidden": true,
-        "empty_trash_removes_managed_root": true,
-        "android_restricted_empty_state": true,
-        "extensionless_label": true,
-        "selection_more_menu": true,
-        "compact_trash_rows": true,
-        "favorites_forced_list": true,
-        "accessible_storage_percentages": true,
-        "trash_separate_storage_block": true,
-        "compact_transfer_dialog": true,
-        "copy_name_and_path": true,
-        "grid_less_rounded": true,
-        "status_hides_zero_bytes": true,
-        "compact_storage_card": true
+        "media3_exoplayer_1_11_1": true,
+        "media3_ui_1_11_1": true,
+        "play_pause": true,
+        "progress_and_time": true,
+        "seek_back_forward_10s": true,
+        "speeds_0_5_to_2": true,
+        "fullscreen_system_bars": true,
+        "rotation_saved_viewer": true,
+        "fit_default_fill_option": true,
+        "resume_position": true,
+        "restart": true,
+        "open_external": true,
+        "file_info": true,
+        "friendly_unsupported_errors": true,
+        "auto_hide_controls": true,
+        "pause_on_background": true,
+        "release_on_close": true,
+        "back_exits_fullscreen_first": true,
+        "no_material_icons_added": true
       }
+    },
+    "image_resources_unchanged": {
+      "ok": true,
+      "current": 165,
+      "original": 165,
+      "added": [],
+      "removed": [],
+      "changed": []
+    },
+    "apk_pipeline_unchanged": {
+      "ok": true,
+      "workflow": ".github/workflows/gerar-apk.yml"
+    },
+    "media3_reference_verification": {
+      "ok": true,
+      "version": "1.11.1",
+      "stable_release_date": "2026-09-10",
+      "note": "Versão estável confirmada na documentação Android Developers; módulos ExoPlayer e UI mantidos na mesma versão."
     },
     "full_gradle_android_build": {
       "ok": false,
       "executed": false,
-      "reason": "Projeto sem gradlew e ambiente sem Gradle/Android SDK completos; a validação integral continua no workflow Android do repositório."
-    },
-    "image_resources_unchanged_from_alpha31": {
-      "ok": true,
-      "current": 172,
-      "original": 172,
-      "added": [],
-      "removed": [],
-      "changed": []
+      "reason": "O ZIP não inclui gradlew e este ambiente não possui Gradle/Android SDK configurados. O workflow GitHub Gerar APK permanece intacto para testes, lint e assemblePerformance."
     }
   },
-  "source_diff_against_alpha31": {
+  "validated_at_utc": "2026-09-17T20:59:27.035752+00:00",
+  "source_diff_against_alpha33": {
     "added": [
-      "app/src/test/java/com/exploradorxp/app/FileTypeClassifierTest.kt",
-      "docs/ALPHA32_REFINEMENT_FIXES_NOTES.md"
+      "app/src/main/java/com/exploradorxp/app/VideoPlayerViewer.kt",
+      "docs/ALPHA34_VIDEO_PLAYER_NOTES.md"
     ],
     "removed": [],
     "changed": [
       "CHANGELOG.md",
       "README.md",
       "app/build.gradle.kts",
-      "app/src/main/java/com/exploradorxp/app/ExplorerModels.kt",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
-      "app/src/main/java/com/exploradorxp/app/ExplorerViewModel.kt",
-      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
-      "app/src/main/java/com/exploradorxp/app/FileTypeClassifier.kt",
       "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
-      "docs/VALIDATION.json",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
       "github-manager.json"
     ]
   }

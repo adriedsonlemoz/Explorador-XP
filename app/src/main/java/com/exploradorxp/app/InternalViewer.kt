@@ -52,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.activity.compose.BackHandler
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -110,18 +112,33 @@ fun InternalViewerScreen(
     onClose: () -> Unit,
     onOpenExternal: () -> Unit,
 ) {
+    val isVideo = file.extension.lowercase() in videoExtensions
+    var videoFullScreen by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
+
+    BackHandler {
+        if (isVideo && videoFullScreen) videoFullScreen = false else onClose()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF6F2E8))
+            .background(if (isVideo) Color.Black else Color(0xFFF6F2E8))
     ) {
-        ViewerTitleBar(file, onClose)
-        ViewerToolbar(file, onOpenExternal)
-        HorizontalDivider(color = Color(0xFFB8C7DA))
+        if (!videoFullScreen) {
+            ViewerTitleBar(file, onClose)
+            ViewerToolbar(file, onOpenExternal)
+            HorizontalDivider(color = Color(0xFFB8C7DA))
+        }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (file.extension.lowercase()) {
                 in imageExtensions -> ImageViewer(file, onOpenExternal)
-                in videoExtensions, in audioExtensions -> MediaViewer(file)
+                in videoExtensions -> VideoPlayerViewer(
+                    file = file,
+                    fullScreen = videoFullScreen,
+                    onFullScreenChange = { videoFullScreen = it },
+                    onOpenExternal = onOpenExternal,
+                )
+                in audioExtensions -> MediaViewer(file)
                 "html", "htm" -> HtmlViewer(file)
                 "pdf" -> PdfViewer(file)
                 "zip" -> ZipViewer(file)
@@ -130,7 +147,7 @@ fun InternalViewerScreen(
                 else -> UnsupportedViewer(onOpenExternal)
             }
         }
-        ViewerStatusBar(file)
+        if (!videoFullScreen) ViewerStatusBar(file)
     }
 }
 
