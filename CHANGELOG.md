@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.1.0-alpha.35
+
+- Visualizador de texto/código substituído por um editor interno leve e dedicado em `TextCodeEditorViewer.kt`, sem alterar vídeo, áudio, PDF, ZIP ou demais visualizadores.
+- Edição habilitada para TXT, HTML/HTM, CSS, JavaScript, JSON, XML, Markdown, YAML, CSV, LOG, INI, properties, Kotlin, Java e diversos outros formatos textuais conhecidos.
+- Adicionados **Salvar**, **Salvar como** (na mesma pasta), desfazer/refazer, selecionar tudo, copiar, recortar, colar, localizar, localizar/substituir e ir para linha.
+- Barra de estado mostra linha, coluna, quantidade de linhas, estado não salvo e codificação detectada.
+- Leitura reconhece UTF-8, UTF-8 com BOM, UTF-16 LE/BE com BOM e texto Windows-1252 quando seguro; conteúdo com aparência binária é recusado pelo editor e mantém abertura externa.
+- Salvamento passou a usar arquivo temporário, `fsync`, releitura/validação e substituição atômica quando disponível; fallback cria backup temporário para preservar o original se a troca falhar.
+- Saída/fechamento com alterações pendentes exige escolher entre salvar, descartar ou cancelar.
+- Editor monoespaçado ganhou números de linha, Tab com quatro espaços, manutenção básica de indentação ao pressionar Enter e realce leve para HTML, CSS, JavaScript, JSON e XML.
+- HTML/HTM ganhou modo **Código / Visualizar** com `WebView`; recursos CSS/JS relativos da mesma pasta são resolvidos pelo diretório do arquivo. CSS e JS também têm preview simples para inspeção rápida.
+- Preview pode ser atualizado manualmente, é renovado após salvamento e possui modo de tela cheia dentro da área segura do aplicativo com retorno rápido ao código.
+- Arquivos acima do limite de edição são carregados parcialmente e apenas para leitura, com aviso claro, evitando colocar conteúdo muito grande inteiro na memória.
+- Ao fechar um visualizador, a pasta atual é atualizada para refletir edições e arquivos criados por **Salvar como**.
+- Nenhuma imagem ou mockup foi criado/adicionado; identidade visual XP e pacote de recursos existentes foram preservados.
+- Versão e metadados sincronizados para `0.1.0-alpha.35` / `versionCode 35`.
+
 ## 0.1.0-alpha.34
 
 - Player interno de vídeo migrado de `VideoView`/`MediaController` para **AndroidX Media3/ExoPlayer 1.11.1**, sem alterar o player de áudio nem os demais visualizadores.

@@ -4,20 +4,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Typeface
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
-import android.text.Editable
-import android.text.InputType
-import android.text.TextWatcher
-import android.text.method.ScrollingMovementMethod
-import android.view.Gravity
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.widget.EditText
 import android.widget.MediaController
-import android.widget.TextView
 import android.widget.VideoView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -81,14 +71,18 @@ import java.util.zip.ZipFile
 private val imageExtensions = setOf("jpg", "jpeg", "png", "bmp", "webp", "gif")
 private val videoExtensions = setOf("mp4", "m4v", "3gp", "webm", "mkv", "avi", "mov")
 private val audioExtensions = setOf("mp3", "wav", "m4a", "aac", "ogg", "flac", "opus")
-private val textExtensions = setOf(
+internal val textExtensions = setOf(
     "txt", "log", "ini", "cfg", "conf", "properties", "json", "xml", "csv", "sql",
-    "css", "js", "ts", "kt", "kts", "java", "py", "sh", "bat", "yml", "yaml",
-    "md", "markdown", "mds", "gradle", "toml", "env"
+    "css", "js", "mjs", "cjs", "ts", "tsx", "jsx", "kt", "kts", "java", "py", "sh", "bash",
+    "bat", "cmd", "ps1", "yml", "yaml", "md", "markdown", "mds", "gradle", "toml", "env",
+    "php", "rb", "go", "rs", "swift", "dart", "c", "h", "hpp", "cpp", "cc", "vue", "svelte",
+    "tex", "properties", "gitignore", "gitattributes", "editorconfig"
 )
 
-private const val TEXT_PREVIEW_MAX_CHARS = 350_000
-private const val TEXT_EDIT_MAX_BYTES = 750_000L
+private val textFileNames = setOf(
+    "makefile", "dockerfile", "readme", "license", ".gitignore", ".gitattributes", ".editorconfig"
+)
+
 private const val ZIP_PREVIEW_MAX_ENTRIES = 3_000
 
 private sealed interface ViewerLoadState<out T> {
@@ -97,26 +91,40 @@ private sealed interface ViewerLoadState<out T> {
     data class Error(val message: String) : ViewerLoadState<Nothing>
 }
 
-private data class TextPreview(val text: String, val truncated: Boolean)
 private data class ZipPreview(val entries: List<ZipEntryInfo>, val truncated: Boolean)
 
 fun supportsInternalViewer(file: File): Boolean {
     val ext = file.extension.lowercase()
     return ext in imageExtensions || ext in videoExtensions || ext in audioExtensions ||
-        ext in textExtensions || ext in setOf("html", "htm", "pdf", "zip", "apk")
+        ext in textExtensions || ext in setOf("html", "htm", "pdf", "zip", "apk") ||
+        file.name.lowercase() in textFileNames
 }
 
 @Composable
 fun InternalViewerScreen(
     file: File,
     onClose: () -> Unit,
-    onOpenExternal: () -> Unit,
+    onOpenExternal: (File) -> Unit,
 ) {
-    val isVideo = file.extension.lowercase() in videoExtensions
-    var videoFullScreen by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
+    var activeFilePath by rememberSaveable(file.absolutePath) { mutableStateOf(file.absolutePath) }
+    val activeFile = remember(activeFilePath) { File(activeFilePath) }
+    val extension = activeFile.extension.lowercase()
+    val isVideo = extension in videoExtensions
+    val isTextDocument = extension in textExtensions || extension in setOf("html", "htm") ||
+        activeFile.name.lowercase() in textFileNames
+    var contentFullScreen by rememberSaveable(activeFilePath) { mutableStateOf(false) }
+    var guardedCloseRequest by remember(activeFilePath) { mutableStateOf<(() -> Unit)?>(null) }
 
     BackHandler {
-        if (isVideo && videoFullScreen) videoFullScreen = false else onClose()
+        when {
+            contentFullScreen -> contentFullScreen = false
+            isTextDocument && guardedCloseRequest != null -> guardedCloseRequest?.invoke()
+            else -> onClose()
+        }
+    }
+
+    val requestClose = {
+        if (isTextDocument && guardedCloseRequest != null) guardedCloseRequest?.invoke() else onClose()
     }
 
     Column(
@@ -124,30 +132,58 @@ fun InternalViewerScreen(
             .fillMaxSize()
             .background(if (isVideo) Color.Black else Color(0xFFF6F2E8))
     ) {
-        if (!videoFullScreen) {
-            ViewerTitleBar(file, onClose)
-            ViewerToolbar(file, onOpenExternal)
+        if (!contentFullScreen) {
+            ViewerTitleBar(activeFile, requestClose)
+            ViewerToolbar(activeFile) { onOpenExternal(activeFile) }
             HorizontalDivider(color = Color(0xFFB8C7DA))
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (file.extension.lowercase()) {
-                in imageExtensions -> ImageViewer(file, onOpenExternal)
+            when (extension) {
+                in imageExtensions -> ImageViewer(activeFile) { onOpenExternal(activeFile) }
                 in videoExtensions -> VideoPlayerViewer(
-                    file = file,
-                    fullScreen = videoFullScreen,
-                    onFullScreenChange = { videoFullScreen = it },
-                    onOpenExternal = onOpenExternal,
+                    file = activeFile,
+                    fullScreen = contentFullScreen,
+                    onFullScreenChange = { contentFullScreen = it },
+                    onOpenExternal = { onOpenExternal(activeFile) },
                 )
-                in audioExtensions -> MediaViewer(file)
-                "html", "htm" -> HtmlViewer(file)
-                "pdf" -> PdfViewer(file)
-                "zip" -> ZipViewer(file)
-                "apk" -> ApkViewer(file, onOpenExternal)
-                in textExtensions -> TextEditorViewer(file)
-                else -> UnsupportedViewer(onOpenExternal)
+                in audioExtensions -> MediaViewer(activeFile)
+                "html", "htm" -> TextCodeEditorViewer(
+                    file = activeFile,
+                    fullScreen = contentFullScreen,
+                    onFullScreenChange = { contentFullScreen = it },
+                    onClose = onClose,
+                    onCloseHandlerChanged = { guardedCloseRequest = it },
+                    onOpenExternal = { onOpenExternal(activeFile) },
+                    onFileChanged = { activeFilePath = it.absolutePath },
+                )
+                "pdf" -> PdfViewer(activeFile)
+                "zip" -> ZipViewer(activeFile)
+                "apk" -> ApkViewer(activeFile) { onOpenExternal(activeFile) }
+                in textExtensions -> TextCodeEditorViewer(
+                    file = activeFile,
+                    fullScreen = contentFullScreen,
+                    onFullScreenChange = { contentFullScreen = it },
+                    onClose = onClose,
+                    onCloseHandlerChanged = { guardedCloseRequest = it },
+                    onOpenExternal = { onOpenExternal(activeFile) },
+                    onFileChanged = { activeFilePath = it.absolutePath },
+                )
+                else -> if (activeFile.name.lowercase() in textFileNames) {
+                    TextCodeEditorViewer(
+                        file = activeFile,
+                        fullScreen = contentFullScreen,
+                        onFullScreenChange = { contentFullScreen = it },
+                        onClose = onClose,
+                        onCloseHandlerChanged = { guardedCloseRequest = it },
+                        onOpenExternal = { onOpenExternal(activeFile) },
+                        onFileChanged = { activeFilePath = it.absolutePath },
+                    )
+                } else {
+                    UnsupportedViewer { onOpenExternal(activeFile) }
+                }
             }
         }
-        if (!videoFullScreen) ViewerStatusBar(file)
+        if (!contentFullScreen) ViewerStatusBar(activeFile)
     }
 }
 
@@ -326,276 +362,6 @@ private fun MediaViewer(file: File) {
         },
         update = { /* O VideoView mantém o estado sem reiniciar em recomposições. */ }
     )
-}
-
-@Composable
-private fun HtmlViewer(file: File) {
-    var sourceMode by remember(file.absolutePath) { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().height(38.dp).background(XpPanel).padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            ViewerActionButton(if (sourceMode) "Visualizar página" else "Ver código-fonte") {
-                sourceMode = !sourceMode
-            }
-        }
-        if (sourceMode) {
-            TextEditorViewer(file, Modifier.weight(1f))
-        } else {
-            AndroidView(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                factory = { context ->
-                    WebView(context).apply {
-                        webViewClient = WebViewClient()
-                        settings.javaScriptEnabled = false
-                        settings.allowFileAccess = true
-                        settings.allowContentAccess = false
-                        settings.loadsImagesAutomatically = true
-                        loadUrl(Uri.fromFile(file).toString())
-                    }
-                },
-                update = { view ->
-                    val wanted = Uri.fromFile(file).toString()
-                    if (view.url != wanted) view.loadUrl(wanted)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun TextEditorViewer(file: File, modifier: Modifier = Modifier) {
-    val key = "${file.absolutePath}:${file.lastModified()}"
-    val scope = rememberCoroutineScope()
-    var loadState by remember(key) { mutableStateOf<ViewerLoadState<TextPreview>>(ViewerLoadState.Loading) }
-    var editing by remember(file.absolutePath) { mutableStateOf(false) }
-    var status by remember(file.absolutePath) { mutableStateOf("") }
-    var editView by remember(file.absolutePath) { mutableStateOf<EditText?>(null) }
-    var workingText by remember(file.absolutePath) { mutableStateOf("") }
-    var cursorPosition by remember(file.absolutePath) { mutableIntStateOf(0) }
-    val editableBySize = file.length() <= TEXT_EDIT_MAX_BYTES
-
-    LaunchedEffect(key) {
-        editing = false
-        loadState = ViewerLoadState.Loading
-        loadState = withContext(Dispatchers.IO) {
-            runCatching { readTextPreview(file, TEXT_PREVIEW_MAX_CHARS) }
-                .fold(
-                    onSuccess = { ViewerLoadState.Success(it) },
-                    onFailure = { ViewerLoadState.Error("Não foi possível ler este arquivo.\n${it.message.orEmpty()}") },
-                )
-        }
-        val loaded = (loadState as? ViewerLoadState.Success<TextPreview>)?.value?.text.orEmpty()
-        workingText = loaded
-        cursorPosition = loaded.length
-    }
-
-    Column(modifier.fillMaxSize().background(Color.White)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().height(38.dp).background(XpPanel).padding(horizontal = 8.dp)
-        ) {
-            val currentPreview = (loadState as? ViewerLoadState.Success<TextPreview>)?.value
-            val canEdit = editableBySize && currentPreview?.truncated == false
-            val dirty = editing && currentPreview != null && workingText != currentPreview.text
-            Text(
-                when {
-                    editing && dirty -> "Editando • alterações não salvas"
-                    editing -> "Modo de edição"
-                    else -> "Somente leitura"
-                },
-                fontSize = 12.sp,
-                color = if (dirty) Color(0xFF9A5B00) else XpTextSecondary,
-                fontWeight = if (dirty) FontWeight.SemiBold else FontWeight.Normal,
-                modifier = Modifier.weight(1f)
-            )
-            ViewerActionButton(
-                label = if (editing) "Salvar" else "Editar",
-                enabled = canEdit,
-                onClick = {
-                    if (!editing) {
-                        workingText = currentPreview?.text.orEmpty()
-                        cursorPosition = workingText.length
-                        editing = true
-                        status = ""
-                    } else {
-                        val newText = editView?.text?.toString() ?: workingText
-                        scope.launch {
-                            status = "Salvando..."
-                            val result = withContext(Dispatchers.IO) { runCatching { file.writeText(newText) } }
-                            if (result.isSuccess) {
-                                loadState = ViewerLoadState.Success(TextPreview(newText, false))
-                                workingText = newText
-                                status = "Salvo"
-                                editing = false
-                            } else {
-                                status = result.exceptionOrNull()?.message ?: "Falha ao salvar"
-                            }
-                        }
-                    }
-                }
-            )
-            if (editing) {
-                Spacer(Modifier.width(6.dp))
-                ViewerActionButton("Cancelar") {
-                    workingText = currentPreview?.text.orEmpty()
-                    cursorPosition = workingText.length
-                    editing = false
-                    editView = null
-                    status = ""
-                }
-            }
-        }
-
-        val preview = (loadState as? ViewerLoadState.Success<TextPreview>)?.value
-        val infoText = when {
-            status.isNotBlank() -> status
-            preview?.truncated == true -> "Arquivo grande: mostrando os primeiros ${TEXT_PREVIEW_MAX_CHARS / 1000} mil caracteres."
-            !editableBySize -> "Arquivo grande: edição desativada para manter o visualizador responsivo."
-            else -> ""
-        }
-        if (infoText.isNotBlank()) {
-            Text(
-                infoText,
-                fontSize = 11.sp,
-                color = XpTextSecondary,
-                modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF8D9)).padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-        }
-
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (val state = loadState) {
-                ViewerLoadState.Loading -> LoadingPanel("Carregando texto...")
-                is ViewerLoadState.Error -> UnsupportedMessage(state.message)
-                is ViewerLoadState.Success -> {
-                    if (editing) {
-                        EditableTextView(
-                            initialText = state.value.text,
-                            onViewReady = { editView = it },
-                            onEditorStateChange = { text, cursor ->
-                                workingText = text
-                                cursorPosition = cursor
-                            },
-                        )
-                    } else {
-                        ReadOnlyTextView(state.value.text)
-                    }
-                }
-            }
-        }
-
-        val displayedText = if (editing) workingText else preview?.text.orEmpty()
-        val lineCount = remember(displayedText) { displayedText.count { it == '\n' } + 1 }
-        val charCount = displayedText.length
-        val (cursorLine, cursorColumn) = remember(displayedText, cursorPosition) {
-            cursorLineColumn(displayedText, cursorPosition)
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().height(27.dp).background(XpChrome).border(1.dp, XpChromeBorder).padding(horizontal = 8.dp),
-        ) {
-            Text(
-                buildString {
-                    if (editing) append("Linha $cursorLine, Coluna $cursorColumn  •  ")
-                    append("$lineCount ${if (lineCount == 1) "linha" else "linhas"}  •  $charCount caracteres")
-                },
-                fontSize = 10.sp,
-                color = Color(0xFF303030),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Text("UTF-8", fontSize = 10.sp, color = XpTextSecondary)
-        }
-    }
-}
-
-@Composable
-private fun ReadOnlyTextView(text: String) {
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            val padding = (10 * context.resources.displayMetrics.density).toInt()
-            TextView(context).apply {
-                setBackgroundColor(android.graphics.Color.WHITE)
-                setTextColor(android.graphics.Color.rgb(32, 32, 32))
-                typeface = Typeface.MONOSPACE
-                textSize = 13f
-                gravity = Gravity.TOP or Gravity.START
-                setPadding(padding, padding, padding, padding)
-                setTextIsSelectable(true)
-                movementMethod = ScrollingMovementMethod.getInstance()
-                isVerticalScrollBarEnabled = true
-                this.text = text
-                tag = text
-            }
-        },
-        update = { view ->
-            if (view.tag !== text) {
-                view.text = text
-                view.tag = text
-            }
-        }
-    )
-}
-
-@Composable
-private fun EditableTextView(
-    initialText: String,
-    onViewReady: (EditText) -> Unit,
-    onEditorStateChange: (String, Int) -> Unit,
-) {
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            val padding = (10 * context.resources.displayMetrics.density).toInt()
-            TrackingEditText(context).apply {
-                setBackgroundColor(android.graphics.Color.WHITE)
-                setTextColor(android.graphics.Color.rgb(32, 32, 32))
-                typeface = Typeface.MONOSPACE
-                textSize = 13f
-                gravity = Gravity.TOP or Gravity.START
-                setPadding(padding, padding, padding, padding)
-                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                setHorizontallyScrolling(false)
-                isVerticalScrollBarEnabled = true
-                onSelectionStateChanged = { cursor -> onEditorStateChange(text?.toString().orEmpty(), cursor) }
-                addTextChangedListener(object : TextWatcher {
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-                    override fun afterTextChanged(s: Editable?) {
-                        onEditorStateChange(s?.toString().orEmpty(), selectionStart.coerceAtLeast(0))
-                    }
-                })
-                setText(initialText)
-                setSelection(text.length)
-                onViewReady(this)
-                onEditorStateChange(text.toString(), selectionStart)
-            }
-        },
-        update = { view ->
-            onViewReady(view)
-        },
-    )
-}
-
-private class TrackingEditText(context: Context) : EditText(context) {
-    var onSelectionStateChanged: ((Int) -> Unit)? = null
-
-    override fun onSelectionChanged(selStart: Int, selEnd: Int) {
-        super.onSelectionChanged(selStart, selEnd)
-        onSelectionStateChanged?.invoke(selStart.coerceAtLeast(0))
-    }
-}
-
-private fun cursorLineColumn(text: String, cursor: Int): Pair<Int, Int> {
-    val safeCursor = cursor.coerceIn(0, text.length)
-    val line = text.take(safeCursor).count { it == '\n' } + 1
-    val lastBreak = text.lastIndexOf('\n', startIndex = (safeCursor - 1).coerceAtLeast(0))
-    val column = if (lastBreak < 0 || safeCursor == 0) safeCursor + 1 else safeCursor - lastBreak
-    return line to column
 }
 
 @Composable
@@ -979,20 +745,6 @@ private fun decodeSampledBitmap(file: File, reqWidth: Int, reqHeight: Int): Bitm
             }
         )
     }.getOrNull()
-}
-
-private fun readTextPreview(file: File, maxChars: Int): TextPreview {
-    file.bufferedReader().use { reader ->
-        val buffer = CharArray(8192)
-        val out = StringBuilder(minOf(maxChars, 64 * 1024))
-        while (out.length < maxChars) {
-            val count = reader.read(buffer, 0, minOf(buffer.size, maxChars - out.length))
-            if (count <= 0) break
-            out.append(buffer, 0, count)
-        }
-        val truncated = reader.read() >= 0
-        return TextPreview(out.toString(), truncated)
-    }
 }
 
 private fun readZipPreview(file: File): ZipPreview {

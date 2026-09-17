@@ -170,8 +170,11 @@ private fun ExplorerApp(
     if (activeViewer != null) {
         InternalViewerScreen(
             file = activeViewer,
-            onClose = { viewerFilePath = null },
-            onOpenExternal = { openFile(context, activeViewer) },
+            onClose = {
+                viewerFilePath = null
+                viewModel.refresh()
+            },
+            onOpenExternal = { target -> openFile(context, target) },
         )
         return
     }
