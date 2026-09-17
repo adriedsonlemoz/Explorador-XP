@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.28` (`versionCode 28`)  
+**Versão atual:** `0.1.0-alpha.29` (`versionCode 29`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -12,6 +12,9 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Interface principal baseada no Explorer clássico do Windows XP: barra de título azul, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, barra de ferramentas compacta, barra de endereço, indicador de armazenamento, lista/grade e barra de status inferior.
 - Pacote visual XP com ícones PNG otimizados por densidade Android; os 150 ícones comuns usados na navegação ficam em `drawable-xxxhdpi`, com variantes grandes apenas onde necessário.
 - A experiência vetorial da alpha.27 foi revertida na alpha.28 por preferência visual e ausência de ganho perceptível no aparelho; o app voltou ao pipeline PNG otimizado com decodificação assíncrona/cache.
+- A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
+- Imagens e vídeos agora podem mostrar miniaturas assíncronas em lista/grade com cache LRU limitado; os ícones XP originais continuam sendo o fallback e permanecem inalterados para os demais tipos.
+- ZIP ganhou listagem no estilo Explorer, TXT/código recebeu status de linha/coluna e edição mais clara, e APK mostra nome/ícone/metadados reais quando o Android consegue ler o pacote.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
 - Histórico de navegação com Voltar e Avançar, além da ação Subir.
@@ -49,6 +52,8 @@ app/src/main/java/com/exploradorxp/app/
   ExplorerItemTransforms.kt
   FileDisplayFormatter.kt
   FileIconMapper.kt
+  FileThumbnail.kt
+  InternalViewer.kt
   PreferencesStore.kt
   DeviceInfo.kt
   DeviceInfoScreen.kt
@@ -62,8 +67,11 @@ baselineprofile/src/main/java/com/exploradorxp/benchmark/
   ExplorerMacrobenchmark.kt
   BenchmarkFixtures.kt
 
+app/src/main/res/drawable-xxxhdpi/
+  150 PNGs do pacote visual XP
+
 app/src/main/res/drawable-nodpi/
-  152 PNGs do pacote visual XP
+  5 variantes grandes/launcher
 
 docs/
   mockup_explorador_android_xp.png

@@ -1,17 +1,35 @@
 {
-  "version_build": "0.1.0-alpha.28",
-  "version_code_build": 28,
-  "manager_version": "0.1.0-alpha.28",
-  "manager_code": 28,
+  "version_build": "0.1.0-alpha.29",
+  "version_code_build": 29,
+  "manager_version": "0.1.0-alpha.29",
+  "manager_code": 29,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
-  "kotlin_files": 19,
+  "kotlin_files": 20,
   "xp_png_icons": 165,
   "drawable_references": 119,
-  "xml_files": 10,
+  "xml_files": 12,
   "static_validation_ok": true,
   "ui_changes": [
+    "alpha29_video_driven_visual_polish",
+    "xp_classic_dialogs_unified",
+    "focused_search_mode",
+    "selection_context_toolbar",
+    "clickable_breadcrumb_address",
+    "adaptive_grid_min_112dp",
+    "grid_overlay_options_button",
+    "stronger_selection_state",
+    "media_thumbnail_async_lru_cache",
+    "favorites_empty_state_guidance",
+    "status_bar_items_selection_size",
+    "viewer_xp_scaffold_unified",
+    "zip_explorer_style_preview",
+    "text_editor_line_column_status",
+    "apk_real_icon_name_metadata",
+    "mov_internal_viewer",
+    "device_info_xp_frame_header",
+    "classic_pressed_touch_feedback",
     "cached_resource_icon_restored",
     "xp_png_icon_pipeline_restored",
     "alpha27_vector_icon_experiment_reverted",
@@ -128,7 +146,10 @@
     "alpha21_full_android_gradle_build": "pending_ci",
     "alpha23_json_xml_yaml_static_validation": "passed",
     "alpha23_full_android_gradle_build": "pending_ci",
-    "alpha25_full_android_gradle_build": "pending_ci"
+    "alpha25_full_android_gradle_build": "pending_ci",
+    "alpha29_json_xml_yaml_static_validation": "passed",
+    "alpha29_kotlin_parser_syntax_check": "passed_without_android_classpath; unresolved platform symbols expected",
+    "alpha29_full_android_gradle_build": "not_run_locally; source archive has no Gradle wrapper and execution environment has no Gradle binary; pending CI"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
@@ -244,7 +265,7 @@
       "png_save_via_SAF",
       "png_share_via_FileProvider"
     ],
-    "ai_report_schema_version": 2
+    "ai_report_schema_version": 3
   },
   "drawable_xxxhdpi_png_icons": 150,
   "icon_runtime_cache": "6 MiB LRU; max 2 concurrent background decodes",
@@ -256,5 +277,6 @@
       "search_large"
     ],
     "launcher_assets_excluded_from_resize": true
-  }
+  },
+  "thumbnail_runtime_cache": "18 MiB LRU; max 2 concurrent background decodes; images/video only; XP resource icons remain fallback"
 }

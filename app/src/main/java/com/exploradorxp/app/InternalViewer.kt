@@ -2,11 +2,15 @@ package com.exploradorxp.app
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.text.method.ScrollingMovementMethod
 import android.view.Gravity
 import android.webkit.WebView
@@ -17,6 +21,9 @@ import android.widget.TextView
 import android.widget.VideoView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,15 +36,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,13 +59,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -67,7 +77,7 @@ import java.io.FileOutputStream
 import java.util.zip.ZipFile
 
 private val imageExtensions = setOf("jpg", "jpeg", "png", "bmp", "webp", "gif")
-private val videoExtensions = setOf("mp4", "m4v", "3gp", "webm", "mkv", "avi")
+private val videoExtensions = setOf("mp4", "m4v", "3gp", "webm", "mkv", "avi", "mov")
 private val audioExtensions = setOf("mp3", "wav", "m4a", "aac", "ogg", "flac", "opus")
 private val textExtensions = setOf(
     "txt", "log", "ini", "cfg", "conf", "properties", "json", "xml", "csv", "sql",
@@ -105,8 +115,8 @@ fun InternalViewerScreen(
             .fillMaxSize()
             .background(Color(0xFFF6F2E8))
     ) {
-        ViewerTitleBar(file.name, onClose)
-        ViewerToolbar(onOpenExternal)
+        ViewerTitleBar(file, onClose)
+        ViewerToolbar(file, onOpenExternal)
         HorizontalDivider(color = Color(0xFFB8C7DA))
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (file.extension.lowercase()) {
@@ -125,58 +135,103 @@ fun InternalViewerScreen(
 }
 
 @Composable
-private fun ViewerTitleBar(title: String, onClose: () -> Unit) {
+private fun ViewerTitleBar(file: File, onClose: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(38.dp)
+            .height(36.dp)
             .background(Brush.verticalGradient(listOf(Color(0xFF2F92F6), XpBlue, XpBlueDark)))
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = 7.dp)
     ) {
-        Image(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.folder_open),
+        CachedResourceIcon(
+            resId = FileIconMapper.iconFor(file),
             contentDescription = null,
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(25.dp),
             contentScale = ContentScale.Fit,
         )
         Spacer(Modifier.width(7.dp))
         Text(
-            text = title,
+            text = file.name,
             color = Color.White,
-            fontSize = 16.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onClose) {
-            Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(25.dp)
+                .background(Brush.verticalGradient(listOf(Color(0xFFF36B58), Color(0xFFB92318))))
+                .border(1.dp, Color.White)
+                .clickable(onClick = onClose),
+        ) {
+            Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
     }
 }
 
 @Composable
-private fun ViewerToolbar(onOpenExternal: () -> Unit) {
+private fun ViewerToolbar(file: File, onOpenExternal: () -> Unit) {
+    val typeLabel = remember(file.absolutePath) { file.extension.uppercase().ifBlank { "ARQUIVO" } }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(42.dp)
+            .height(39.dp)
             .background(XpChrome)
             .border(1.dp, XpChromeBorder)
             .padding(horizontal = 8.dp)
     ) {
         Text(
-            text = "Visualizador",
+            text = "Visualizador interno  •  $typeLabel",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF303030),
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onOpenExternal) {
-            Text("Abrir com...", color = XpBlueDark, fontSize = 12.sp)
-        }
+        ViewerActionButton("Abrir com...", onClick = onOpenExternal)
+    }
+}
+
+@Composable
+private fun ViewerActionButton(
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .height(28.dp)
+            .widthIn(min = 74.dp)
+            .background(
+                when {
+                    !enabled -> Color(0xFFE6E6E6)
+                    pressed -> Color(0xFFD8E8F8)
+                    else -> Color(0xFFF8F8F2)
+                }
+            )
+            .border(1.dp, if (enabled) Color(0xFF7D8FA6) else Color(0xFFB9B9B9))
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 10.dp),
+    ) {
+        Text(
+            label,
+            color = if (enabled) Color(0xFF202020) else Color(0xFF999999),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
     }
 }
 
@@ -244,11 +299,12 @@ private fun HtmlViewer(file: File) {
     var sourceMode by remember(file.absolutePath) { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().background(XpPanel).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().height(38.dp).background(XpPanel).padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            TextButton(onClick = { sourceMode = !sourceMode }) {
-                Text(if (sourceMode) "Visualizar página" else "Ver código-fonte", fontSize = 12.sp)
+            ViewerActionButton(if (sourceMode) "Visualizar página" else "Ver código-fonte") {
+                sourceMode = !sourceMode
             }
         }
         if (sourceMode) {
@@ -283,6 +339,8 @@ private fun TextEditorViewer(file: File, modifier: Modifier = Modifier) {
     var editing by remember(file.absolutePath) { mutableStateOf(false) }
     var status by remember(file.absolutePath) { mutableStateOf("") }
     var editView by remember(file.absolutePath) { mutableStateOf<EditText?>(null) }
+    var workingText by remember(file.absolutePath) { mutableStateOf("") }
+    var cursorPosition by remember(file.absolutePath) { mutableIntStateOf(0) }
     val editableBySize = file.length() <= TEXT_EDIT_MAX_BYTES
 
     LaunchedEffect(key) {
@@ -295,36 +353,47 @@ private fun TextEditorViewer(file: File, modifier: Modifier = Modifier) {
                     onFailure = { ViewerLoadState.Error("Não foi possível ler este arquivo.\n${it.message.orEmpty()}") },
                 )
         }
+        val loaded = (loadState as? ViewerLoadState.Success<TextPreview>)?.value?.text.orEmpty()
+        workingText = loaded
+        cursorPosition = loaded.length
     }
 
     Column(modifier.fillMaxSize().background(Color.White)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().background(XpPanel).padding(horizontal = 8.dp)
+            modifier = Modifier.fillMaxWidth().height(38.dp).background(XpPanel).padding(horizontal = 8.dp)
         ) {
-            Text(
-                if (editing) "Modo de edição" else "Somente leitura",
-                fontSize = 12.sp,
-                color = XpTextSecondary,
-                modifier = Modifier.weight(1f)
-            )
             val currentPreview = (loadState as? ViewerLoadState.Success<TextPreview>)?.value
             val canEdit = editableBySize && currentPreview?.truncated == false
-            TextButton(
+            val dirty = editing && currentPreview != null && workingText != currentPreview.text
+            Text(
+                when {
+                    editing && dirty -> "Editando • alterações não salvas"
+                    editing -> "Modo de edição"
+                    else -> "Somente leitura"
+                },
+                fontSize = 12.sp,
+                color = if (dirty) Color(0xFF9A5B00) else XpTextSecondary,
+                fontWeight = if (dirty) FontWeight.SemiBold else FontWeight.Normal,
+                modifier = Modifier.weight(1f)
+            )
+            ViewerActionButton(
+                label = if (editing) "Salvar" else "Editar",
                 enabled = canEdit,
                 onClick = {
                     if (!editing) {
+                        workingText = currentPreview?.text.orEmpty()
+                        cursorPosition = workingText.length
                         editing = true
                         status = ""
                     } else {
-                        val newText = editView?.text?.toString()
-                            ?: (loadState as? ViewerLoadState.Success<TextPreview>)?.value?.text
-                            ?: ""
+                        val newText = editView?.text?.toString() ?: workingText
                         scope.launch {
                             status = "Salvando..."
                             val result = withContext(Dispatchers.IO) { runCatching { file.writeText(newText) } }
                             if (result.isSuccess) {
                                 loadState = ViewerLoadState.Success(TextPreview(newText, false))
+                                workingText = newText
                                 status = "Salvo"
                                 editing = false
                             } else {
@@ -333,13 +402,16 @@ private fun TextEditorViewer(file: File, modifier: Modifier = Modifier) {
                         }
                     }
                 }
-            ) { Text(if (editing) "Salvar" else "Editar", fontSize = 12.sp) }
+            )
             if (editing) {
-                TextButton(onClick = {
+                Spacer(Modifier.width(6.dp))
+                ViewerActionButton("Cancelar") {
+                    workingText = currentPreview?.text.orEmpty()
+                    cursorPosition = workingText.length
                     editing = false
                     editView = null
                     status = ""
-                }) { Text("Cancelar", fontSize = 12.sp) }
+                }
             }
         }
 
@@ -353,9 +425,9 @@ private fun TextEditorViewer(file: File, modifier: Modifier = Modifier) {
         if (infoText.isNotBlank()) {
             Text(
                 infoText,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = XpTextSecondary,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF8D9)).padding(horizontal = 10.dp, vertical = 4.dp)
             )
         }
 
@@ -368,12 +440,40 @@ private fun TextEditorViewer(file: File, modifier: Modifier = Modifier) {
                         EditableTextView(
                             initialText = state.value.text,
                             onViewReady = { editView = it },
+                            onEditorStateChange = { text, cursor ->
+                                workingText = text
+                                cursorPosition = cursor
+                            },
                         )
                     } else {
                         ReadOnlyTextView(state.value.text)
                     }
                 }
             }
+        }
+
+        val displayedText = if (editing) workingText else preview?.text.orEmpty()
+        val lineCount = remember(displayedText) { displayedText.count { it == '\n' } + 1 }
+        val charCount = displayedText.length
+        val (cursorLine, cursorColumn) = remember(displayedText, cursorPosition) {
+            cursorLineColumn(displayedText, cursorPosition)
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().height(27.dp).background(XpChrome).border(1.dp, XpChromeBorder).padding(horizontal = 8.dp),
+        ) {
+            Text(
+                buildString {
+                    if (editing) append("Linha $cursorLine, Coluna $cursorColumn  •  ")
+                    append("$lineCount ${if (lineCount == 1) "linha" else "linhas"}  •  $charCount caracteres")
+                },
+                fontSize = 10.sp,
+                color = Color(0xFF303030),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text("UTF-8", fontSize = 10.sp, color = XpTextSecondary)
         }
     }
 }
@@ -408,12 +508,16 @@ private fun ReadOnlyTextView(text: String) {
 }
 
 @Composable
-private fun EditableTextView(initialText: String, onViewReady: (EditText) -> Unit) {
+private fun EditableTextView(
+    initialText: String,
+    onViewReady: (EditText) -> Unit,
+    onEditorStateChange: (String, Int) -> Unit,
+) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
             val padding = (10 * context.resources.displayMetrics.density).toInt()
-            EditText(context).apply {
+            TrackingEditText(context).apply {
                 setBackgroundColor(android.graphics.Color.WHITE)
                 setTextColor(android.graphics.Color.rgb(32, 32, 32))
                 typeface = Typeface.MONOSPACE
@@ -423,13 +527,41 @@ private fun EditableTextView(initialText: String, onViewReady: (EditText) -> Uni
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                 setHorizontallyScrolling(false)
                 isVerticalScrollBarEnabled = true
+                onSelectionStateChanged = { cursor -> onEditorStateChange(text?.toString().orEmpty(), cursor) }
+                addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+                    override fun afterTextChanged(s: Editable?) {
+                        onEditorStateChange(s?.toString().orEmpty(), selectionStart.coerceAtLeast(0))
+                    }
+                })
                 setText(initialText)
                 setSelection(text.length)
                 onViewReady(this)
+                onEditorStateChange(text.toString(), selectionStart)
             }
         },
-        update = { view -> onViewReady(view) },
+        update = { view ->
+            onViewReady(view)
+        },
     )
+}
+
+private class TrackingEditText(context: Context) : EditText(context) {
+    var onSelectionStateChanged: ((Int) -> Unit)? = null
+
+    override fun onSelectionChanged(selStart: Int, selEnd: Int) {
+        super.onSelectionChanged(selStart, selEnd)
+        onSelectionStateChanged?.invoke(selStart.coerceAtLeast(0))
+    }
+}
+
+private fun cursorLineColumn(text: String, cursor: Int): Pair<Int, Int> {
+    val safeCursor = cursor.coerceIn(0, text.length)
+    val line = text.take(safeCursor).count { it == '\n' } + 1
+    val lastBreak = text.lastIndexOf('\n', startIndex = (safeCursor - 1).coerceAtLeast(0))
+    val column = if (lastBreak < 0 || safeCursor == 0) safeCursor + 1 else safeCursor - lastBreak
+    return line to column
 }
 
 @Composable
@@ -462,15 +594,17 @@ private fun PdfViewer(file: File) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth().background(XpPanel).padding(4.dp)
+            modifier = Modifier.fillMaxWidth().height(40.dp).background(XpPanel).padding(horizontal = 6.dp)
         ) {
-            TextButton(enabled = pageIndex > 0, onClick = { pageIndex-- }) { Text("◀ Anterior") }
+            ViewerActionButton("◀ Anterior", enabled = pageIndex > 0) { pageIndex-- }
             Text(
                 if (pageCount > 0) "Página ${pageIndex + 1} de $pageCount" else "Abrindo PDF...",
                 fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 10.dp)
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
             )
-            TextButton(enabled = pageCount > 0 && pageIndex < pageCount - 1, onClick = { pageIndex++ }) { Text("Próxima ▶") }
+            ViewerActionButton("Próxima ▶", enabled = pageCount > 0 && pageIndex < pageCount - 1) { pageIndex++ }
         }
         Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
             when (val state = pageState) {
@@ -508,7 +642,7 @@ private fun ZipViewer(file: File) {
         val preview = (loadState as? ViewerLoadState.Success<ZipPreview>)?.value
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().background(XpPanel).padding(horizontal = 8.dp)
+            modifier = Modifier.fillMaxWidth().height(40.dp).background(XpPanel).padding(horizontal = 8.dp)
         ) {
             Text(
                 when {
@@ -517,9 +651,11 @@ private fun ZipViewer(file: File) {
                     else -> "${preview.entries.size} item(ns) no arquivo"
                 },
                 fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(
+            ViewerActionButton(
+                label = "Extrair",
                 enabled = loadState is ViewerLoadState.Success,
                 onClick = {
                     scope.launch {
@@ -531,10 +667,22 @@ private fun ZipViewer(file: File) {
                         )
                     }
                 }
-            ) { Text("Extrair", fontSize = 12.sp) }
+            )
         }
         if (status.isNotBlank()) {
-            Text(status, fontSize = 12.sp, color = XpTextSecondary, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+            Text(
+                status,
+                fontSize = 11.sp,
+                color = XpTextSecondary,
+                modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF8D9)).padding(horizontal = 10.dp, vertical = 5.dp),
+            )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().height(28.dp).background(Color(0xFFEAF2FB)).border(1.dp, Color(0xFFC9D8E8)).padding(horizontal = 10.dp),
+        ) {
+            Text("Nome", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("Tamanho", fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(78.dp))
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (val state = loadState) {
@@ -542,18 +690,35 @@ private fun ZipViewer(file: File) {
                 is ViewerLoadState.Error -> UnsupportedMessage(state.message)
                 is ViewerLoadState.Success -> LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(state.value.entries) { entry ->
+                        val cleanPath = entry.name.trimEnd('/')
+                        val displayName = cleanPath.substringAfterLast('/').ifBlank { entry.name }
+                        val parentPath = cleanPath.substringBeforeLast('/', "")
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp)
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Text(if (entry.directory) "📁" else "📄", fontSize = 16.sp)
+                            CachedResourceIcon(
+                                resId = FileIconMapper.iconFor(File(cleanPath), entry.directory),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                contentScale = ContentScale.Fit,
+                            )
                             Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(entry.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                if (!entry.directory) Text(formatViewerBytes(entry.size), fontSize = 12.sp, color = XpTextSecondary)
+                                Text(displayName, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (parentPath.isNotBlank()) {
+                                    Text(parentPath, fontSize = 10.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
                             }
+                            Text(
+                                if (entry.directory) "Pasta" else formatViewerBytes(entry.size),
+                                fontSize = 11.sp,
+                                color = XpTextSecondary,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.width(78.dp),
+                            )
                         }
-                        HorizontalDivider(color = Color(0xFFE0E0E0))
+                        HorizontalDivider(color = Color(0xFFE0E6EE))
                     }
                 }
             }
@@ -565,19 +730,33 @@ private fun ZipViewer(file: File) {
 private fun ApkViewer(file: File, onInstall: () -> Unit) {
     val context = LocalContext.current
     val key = "${file.absolutePath}:${file.lastModified()}"
-    var loadState by remember(key) { mutableStateOf<ViewerLoadState<ApkInfo?>>(ViewerLoadState.Loading) }
+    var loadState by remember(key) { mutableStateOf<ViewerLoadState<ApkInfo>>(ViewerLoadState.Loading) }
 
     LaunchedEffect(key) {
         loadState = withContext(Dispatchers.IO) {
             runCatching {
-                val packageInfo = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
-                packageInfo?.let {
-                    ApkInfo(
-                        packageName = it.packageName ?: "Desconhecido",
-                        versionName = it.versionName ?: "Desconhecida",
-                        versionCode = if (android.os.Build.VERSION.SDK_INT >= 28) it.longVersionCode.toString() else it.versionCode.toString(),
-                    )
+                val pm = context.packageManager
+                val info = pm.getPackageArchiveInfo(file.absolutePath, PackageManager.GET_META_DATA)
+                    ?: error("O Android não conseguiu ler os metadados deste APK.")
+                val appInfo = info.applicationInfo?.also {
+                    it.sourceDir = file.absolutePath
+                    it.publicSourceDir = file.absolutePath
                 }
+                val packageName = info.packageName
+                val installedInfo = runCatching { pm.getPackageInfo(packageName, 0) }.getOrNull()
+                val iconBitmap = runCatching {
+                    appInfo?.loadIcon(pm)?.toBitmap(width = 144, height = 144, config = Bitmap.Config.ARGB_8888)
+                }.getOrNull()
+                ApkInfo(
+                    appName = runCatching { appInfo?.loadLabel(pm)?.toString() }.getOrNull().orEmpty().ifBlank { file.nameWithoutExtension },
+                    packageName = packageName,
+                    versionName = info.versionName ?: "Desconhecida",
+                    versionCode = if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode.toString() else info.versionCode.toString(),
+                    minSdk = appInfo?.minSdkVersion,
+                    targetSdk = appInfo?.targetSdkVersion,
+                    installedVersion = installedInfo?.versionName,
+                    iconBitmap = iconBitmap,
+                )
             }.fold(
                 onSuccess = { ViewerLoadState.Success(it) },
                 onFailure = { ViewerLoadState.Error(it.message ?: "Não foi possível analisar o APK.") },
@@ -587,37 +766,85 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp)
     ) {
-        Image(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk_large),
-            contentDescription = null,
-            modifier = Modifier.size(86.dp),
-        )
-        Spacer(Modifier.height(14.dp))
-        Text(file.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Spacer(Modifier.height(18.dp))
         when (val state = loadState) {
-            ViewerLoadState.Loading -> CircularProgressIndicator(color = XpBlue)
-            is ViewerLoadState.Error -> Text(state.message, color = XpTextSecondary)
+            ViewerLoadState.Loading -> {
+                CircularProgressIndicator(color = XpBlue)
+                Spacer(Modifier.height(10.dp))
+                Text("Lendo informações do APK...", color = XpTextSecondary, fontSize = 12.sp)
+            }
+            is ViewerLoadState.Error -> {
+                Image(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk_large),
+                    contentDescription = null,
+                    modifier = Modifier.size(82.dp),
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(file.name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(state.message, color = XpTextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center)
+            }
             is ViewerLoadState.Success -> {
                 val info = state.value
-                InfoLine("Pacote", info?.packageName ?: "Não identificado")
-                InfoLine("Versão", info?.versionName ?: "Não identificada")
-                InfoLine("Código", info?.versionCode ?: "-")
+                if (info.iconBitmap != null) {
+                    Image(
+                        bitmap = info.iconBitmap.asImageBitmap(),
+                        contentDescription = info.appName,
+                        modifier = Modifier.size(92.dp).clip(RoundedCornerShape(18.dp)),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    Image(
+                        painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk_large),
+                        contentDescription = null,
+                        modifier = Modifier.size(86.dp),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(info.appName, fontWeight = FontWeight.Bold, fontSize = 20.sp, textAlign = TextAlign.Center)
+                Text(file.name, color = XpTextSecondary, fontSize = 11.sp, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .background(if (info.installedVersion != null) Color(0xFFE2F4E4) else Color(0xFFEAF2FB))
+                        .border(1.dp, if (info.installedVersion != null) Color(0xFF78A87B) else Color(0xFFA9BED5))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        if (info.installedVersion != null) "Instalado • versão ${info.installedVersion}" else "Não instalado",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF30475F),
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(XpPanel)
+                        .border(1.dp, XpChromeBorder)
+                        .padding(12.dp),
+                ) {
+                    InfoLine("Pacote", info.packageName)
+                    InfoLine("Versão", info.versionName)
+                    InfoLine("Código", info.versionCode)
+                    InfoLine("Android mín.", info.minSdk?.let { "API $it" } ?: "-")
+                    InfoLine("Android alvo", info.targetSdk?.let { "API $it" } ?: "-")
+                    InfoLine("Tamanho", formatViewerBytes(file.length()))
+                }
             }
         }
-        InfoLine("Tamanho", formatViewerBytes(file.length()))
-        Spacer(Modifier.height(20.dp))
-        Button(onClick = onInstall) { Text("Instalar / Abrir com sistema") }
+        Spacer(Modifier.height(18.dp))
+        ViewerActionButton("Instalar / Abrir com sistema", onClick = onInstall)
     }
 }
 
 @Composable
 private fun InfoLine(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text("$label:", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.width(86.dp))
-        Text(value, fontSize = 12.sp, modifier = Modifier.weight(1f))
+        Text("$label:", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.width(92.dp))
+        Text(value, fontSize = 12.sp, color = Color(0xFF303030), modifier = Modifier.weight(1f))
     }
 }
 
@@ -639,7 +866,7 @@ private fun UnsupportedViewer(onOpenExternal: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize()) {
         Text("Este formato ainda não possui visualização interna.")
         Spacer(Modifier.height(12.dp))
-        Button(onClick = onOpenExternal) { Text("Abrir com outro aplicativo") }
+        ViewerActionButton("Abrir com outro aplicativo", onClick = onOpenExternal)
     }
 }
 
@@ -654,18 +881,36 @@ private fun UnsupportedMessage(message: String) {
 private fun ViewerStatusBar(file: File) {
     val extension = remember(file.absolutePath) { file.extension.uppercase().ifBlank { "ARQUIVO" } }
     val size = remember(file.absolutePath, file.lastModified()) { file.length() }
+    val parent = remember(file.absolutePath) { file.parentFile?.name.orEmpty() }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().height(26.dp).background(XpChrome).border(1.dp, XpChromeBorder).padding(horizontal = 8.dp)
+        modifier = Modifier.fillMaxWidth().height(28.dp).background(XpChrome).border(1.dp, XpChromeBorder).padding(horizontal = 8.dp)
     ) {
-        Text(extension, fontSize = 11.sp, modifier = Modifier.weight(1f))
-        Text(formatViewerBytes(size), fontSize = 11.sp)
+        Text(
+            text = if (parent.isBlank()) extension else "$parent  •  $extension",
+            fontSize = 11.sp,
+            color = Color(0xFF303030),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Box(Modifier.height(18.dp).width(1.dp).background(XpChromeBorder))
+        Text(formatViewerBytes(size), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
     }
 }
 
 private data class PdfPageData(val bitmap: Bitmap, val pageCount: Int)
 private data class ZipEntryInfo(val name: String, val directory: Boolean, val size: Long)
-private data class ApkInfo(val packageName: String, val versionName: String, val versionCode: String)
+private data class ApkInfo(
+    val appName: String,
+    val packageName: String,
+    val versionName: String,
+    val versionCode: String,
+    val minSdk: Int?,
+    val targetSdk: Int?,
+    val installedVersion: String?,
+    val iconBitmap: Bitmap?,
+)
 
 private fun renderPdfPage(file: File, pageIndex: Int): PdfPageData {
     ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->

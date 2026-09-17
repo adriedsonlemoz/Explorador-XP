@@ -64,7 +64,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -187,9 +186,9 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(4.dp))
                     .background(DeviceSurface)
-                    .border(1.dp, Color(0xFF8AB8EE), RoundedCornerShape(20.dp)),
+                    .border(1.dp, XpBorder, RoundedCornerShape(4.dp)),
             ) {
                 DeviceInfoHeader(
                     loading = loading,
@@ -339,17 +338,17 @@ private fun DeviceInfoHeader(
             .fillMaxWidth()
             .background(
                 Brush.horizontalGradient(
-                    listOf(Color(0xFF2388F0), DeviceBlue, DeviceBlueDark),
+                    listOf(Color(0xFF2F92F6), XpBlue, XpBlueDark),
                 ),
             )
-            .padding(start = 14.dp, end = 8.dp, top = 11.dp, bottom = 11.dp),
+            .padding(start = 10.dp, end = 6.dp, top = 7.dp, bottom = 7.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(38.dp)
-                .background(Color.White.copy(alpha = .18f), CircleShape)
-                .border(1.dp, Color.White.copy(alpha = .26f), CircleShape),
+                .size(34.dp)
+                .background(Color.White.copy(alpha = .16f), RoundedCornerShape(4.dp))
+                .border(1.dp, Color.White.copy(alpha = .34f), RoundedCornerShape(4.dp)),
         ) {
             Icon(
                 imageVector = Icons.Rounded.Info,
@@ -376,19 +375,27 @@ private fun DeviceInfoHeader(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconButton(onClick = onRefresh, enabled = !loading) {
+        IconButton(onClick = onRefresh, enabled = !loading, modifier = Modifier.size(36.dp)) {
             if (loading) {
                 CircularProgressIndicator(
                     color = Color.White,
                     strokeWidth = 2.dp,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(18.dp),
                 )
             } else {
-                Icon(Icons.Rounded.Refresh, contentDescription = "Atualizar", tint = Color.White)
+                Icon(Icons.Rounded.Refresh, contentDescription = "Atualizar", tint = Color.White, modifier = Modifier.size(21.dp))
             }
         }
-        TextButton(onClick = onDismiss, modifier = Modifier.height(40.dp)) {
-            Text("Fechar", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .height(28.dp)
+                .width(58.dp)
+                .background(Color(0xFFE8F1FB), RoundedCornerShape(2.dp))
+                .border(1.dp, Color.White.copy(alpha = .9f), RoundedCornerShape(2.dp))
+                .clickable(onClick = onDismiss),
+        ) {
+            Text("Fechar", color = XpBlueDark, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         }
     }
 }

@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## 0.1.0-alpha.29
+
+- Aplicado um pacote amplo de polimento visual baseado no vídeo de uso real da alpha.28, preservando o pacote de ícones XP restaurado e todas as funções existentes.
+- Barra superior reorganizada para ocupar menos espaço: menus clássicos mais compactos, barra contextual exclusiva durante seleção e modo de pesquisa focado quando o teclado está em uso.
+- Barra de endereço transformada em breadcrumb navegável, permitindo voltar diretamente para cada pasta do caminho; seletor de armazenamento permanece disponível no final da barra.
+- Grade aumentada de 96 dp para 112 dp adaptativos, com bordas mais discretas, nomes centralizados, seleção reforçada e botão de opções sobreposto no canto para liberar espaço.
+- Lista e grade agora usam miniaturas reais de imagens e vídeos quando disponíveis, carregadas em `Dispatchers.IO`, com no máximo duas decodificações simultâneas e cache LRU de 18 MiB; os PNGs XP continuam como fallback.
+- Estados vazios ganharam hierarquia visual e instruções contextuais, especialmente em Favoritos e resultados de pesquisa.
+- Barra de status inferior ficou mais legível e passa a mostrar quantidade de itens, quantidade selecionada e tamanho total/selecionado.
+- Substituídos os diálogos Material de criar pasta, renomear, excluir, propriedades e permissão inicial por janelas no padrão visual XP, com botões clássicos e menor arredondamento.
+- Menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda receberam linhas compactas, feedback de toque e submenus mais próximos do comportamento clássico do Windows.
+- Visualizadores internos foram padronizados com barra de título XP, toolbar e status inferior comuns.
+- Visualizador ZIP agora exibe nome, caminho, ícone XP, tamanho/tipo e ação de extração em layout semelhante ao Explorer.
+- Editor de texto/código mantém fonte monoespaçada, diferencia leitura/edição, sinaliza alterações não salvas e mostra linha, coluna, quantidade de linhas/caracteres e UTF-8.
+- Visualizador APK passa a tentar ler o nome e o ícone reais do aplicativo, pacote, versão, versionCode, minSdk, targetSdk, tamanho e se o pacote já está instalado.
+- Adicionado suporte de visualização interna para vídeos `.mov`, mantendo abertura externa como alternativa.
+- Tela Informações do dispositivo preserva seus cards modernos, sensores e relatórios, mas agora usa moldura menos arredondada e cabeçalho com gradiente XP para ficar mais integrada ao restante do aplicativo.
+- Adicionados estados pressionados discretos aos principais botões clássicos para melhorar o feedback de toque sem introduzir animações pesadas.
+- Versão sincronizada para `0.1.0-alpha.29` / `versionCode 29`.
+
 ## 0.1.0-alpha.28
 
 - Revertida integralmente a experiência de ícones vetoriais da alpha.27 após teste no aparelho não mostrar ganho perceptível de desempenho e o visual anterior ser preferido.
