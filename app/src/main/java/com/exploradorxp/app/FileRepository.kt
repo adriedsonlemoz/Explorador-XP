@@ -216,7 +216,7 @@ class FileRepository(
         val hidden = name.startsWith('.') || runCatching { file.isHidden }.getOrDefault(false)
         return FileItem(
             file = file,
-            iconRes = FileIconMapper.iconFor(file, isDirectory),
+            icon = FileIconMapper.iconFor(file, isDirectory),
             name = name,
             isDirectory = isDirectory,
             isHidden = hidden,

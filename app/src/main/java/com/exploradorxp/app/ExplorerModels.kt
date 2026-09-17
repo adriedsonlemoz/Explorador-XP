@@ -27,7 +27,7 @@ data class TransferState(
 
 data class FileItem(
     val file: File,
-    val iconRes: Int,
+    val icon: FileVisual,
     val name: String,
     val isDirectory: Boolean,
     val isHidden: Boolean,

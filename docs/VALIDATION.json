@@ -1,17 +1,22 @@
 {
-  "version_build": "0.1.0-alpha.26",
-  "version_code_build": 26,
-  "manager_version": "0.1.0-alpha.26",
-  "manager_code": 26,
+  "version_build": "0.1.0-alpha.27",
+  "version_code_build": 27,
+  "manager_version": "0.1.0-alpha.27",
+  "manager_code": 27,
   "readme_has_version": true,
   "xml_errors": [],
   "missing_drawables": [],
-  "kotlin_files": 19,
-  "xp_png_icons": 165,
-  "drawable_references": 119,
+  "kotlin_files": 17,
+  "xp_png_icons": 12,
+  "drawable_references": 8,
   "xml_files": 10,
   "static_validation_ok": true,
   "ui_changes": [
+    "vector_file_category_icons",
+    "dynamic_extension_badges",
+    "material_vector_toolbar_and_actions",
+    "apk_real_icon_background_cache",
+    "legacy_file_action_png_pack_removed",
     "device_connectivity_panel",
     "device_sections_collapsible",
     "sensor_grid_three_columns_compact",
@@ -26,10 +31,6 @@
     "device_info_alpha24_compose_redesign",
     "device_info_no_fake_device_image",
     "device_info_material_vector_icons",
-    "large_icon_variants",
-    "file_icon_lru_cache",
-    "file_icon_background_decode",
-    "file_icon_density_optimized",
     "launcher_alpha22_orbit_icon",
     "launcher_transparent_adaptive_bg",
     "launcher_double_mask_removed",
@@ -99,11 +100,11 @@
     "normal_ci_reuses_embedded_baseline_profile",
     "baseline_generation_moved_to_performance_workflow_only"
   ],
-  "unit_test_files": 2,
+  "unit_test_files": 3,
   "performance_build": "performance",
   "r8_enabled_release": true,
   "shrink_resources_release": true,
-  "drawable_nodpi_png_icons": 5,
+  "drawable_nodpi_png_icons": 2,
   "validation_environment": {
     "xml_parse": "ok",
     "workflow_yaml_parse": "ok",
@@ -125,7 +126,9 @@
     "alpha21_full_android_gradle_build": "pending_ci",
     "alpha23_json_xml_yaml_static_validation": "passed",
     "alpha23_full_android_gradle_build": "pending_ci",
-    "alpha25_full_android_gradle_build": "pending_ci"
+    "alpha25_full_android_gradle_build": "pending_ci",
+    "alpha27_pure_file_icon_mapper_compile": "passed",
+    "alpha27_full_android_gradle_build": "pending_ci"
   },
   "ci_build_15_result": {
     "testDebugUnitTest": "executed",
@@ -241,17 +244,16 @@
       "png_save_via_SAF",
       "png_share_via_FileProvider"
     ],
-    "ai_report_schema_version": 2
+    "ai_report_schema_version": 3
   },
   "drawable_xxxhdpi_png_icons": 150,
-  "icon_runtime_cache": "6 MiB LRU; max 2 concurrent background decodes",
+  "icon_runtime_cache": "APK artwork only: 4 MiB LRU; max 1 concurrent background package-icon load",
   "icon_asset_validation": {
-    "common_icons_192_xxxhdpi": true,
-    "large_variants": [
-      "file_apk_large",
-      "folder_open_large",
-      "search_large"
-    ],
-    "launcher_assets_excluded_from_resize": true
+    "legacy_drawable_xxxhdpi_removed": true,
+    "file_icons_vectorized": true,
+    "action_icons_vectorized": true,
+    "launcher_png_assets_preserved": true,
+    "app_res_raw_bytes_before_alpha27": 3967249,
+    "app_res_raw_bytes_alpha27_static": 852639
   }
 }

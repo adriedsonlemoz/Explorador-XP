@@ -64,3 +64,11 @@ Os ícones de arquivos/pastas usados no caminho de rolagem deixaram de depender 
 Os 150 PNGs comuns também foram convertidos de 256×256 `nodpi` para 192×192 em `drawable-xxxhdpi`. Assim, o Android pode aplicar density scaling durante a decodificação em aparelhos mdpi/hdpi/xhdpi/xxhdpi, em vez de manter sempre o bitmap bruto de 256×256. Variantes grandes separadas são usadas nas poucas telas que precisam de 72–86 dp.
 
 A validação recomendada é comparar o `FrameTimingMetric` da alpha.23 com a linha anterior usando a mesma pasta de benchmark e confirmar em aparelho físico se desaparecem os engasgos quando novos tipos de arquivo entram na viewport.
+
+## Vetorização do caminho de ícones — alpha.27
+
+A lista/grade deixou de usar `CachedResourceIcon` e os 150 PNGs por extensão/ação foram removidos do módulo `app`. `FileIconMapper` agora classifica o arquivo em uma família visual (documento, PDF, planilha, imagem, áudio, vídeo, compactado, código, banco, APK etc.) e a UI desenha um `ImageVector` com uma etiqueta curta de extensão.
+
+Isso elimina a decodificação de bitmap para arquivos comuns durante a rolagem e também reduz recursos empacotados. APKs são a exceção útil: o `PackageManager` tenta obter o ícone real do arquivo APK em `Dispatchers.IO`, limitado a uma leitura por vez e cache LRU de 4 MiB; até o resultado chegar, aparece o vetor Android.
+
+Comparação estática dos recursos de `app/src/main/res` antes do build: alpha.26 ≈ 3,97 MB brutos / 175 arquivos; alpha.27 ≈ 0,85 MB brutos / 22 arquivos. O ganho final no APK deve ser confirmado pelo CI/R8 e pelo Macrobenchmark.

@@ -75,7 +75,7 @@ class ExplorerItemTransformsTest {
         extension: String = "txt",
     ): FileItem = FileItem(
         file = File("/tmp/$name"),
-        iconRes = 0,
+        icon = FileVisual(FileIconKind.UNKNOWN, "TXT"),
         name = name,
         isDirectory = isDirectory,
         isHidden = isHidden,

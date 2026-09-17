@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.27
+
+- Substituído o pacote de 150 PNGs de tipos de arquivo e ações por um pipeline vetorial no caminho principal do Explorer.
+- `FileIconMapper` agora classifica arquivos por categoria e fornece etiqueta dinâmica de extensão (`PDF`, `DOCX`, `ZIP`, `MP3`, `JSON` etc.), evitando um bitmap diferente para cada formato.
+- Lista, grade, menus de contexto, propriedades, toolbar, armazenamento e estados vazios usam `ImageVector`/Material Icons, eliminando a decodificação dos antigos PNGs durante a rolagem.
+- Arquivos APK tentam exibir o ícone real do aplicativo via `PackageManager`; a leitura acontece em `Dispatchers.IO`, limitada a uma por vez e com cache LRU de 4 MiB.
+- Removido `CachedResourceIcon.kt` e o cache de bitmaps de recursos, que deixaram de ser necessários.
+- Removido `drawable-xxxhdpi` com os 150 PNGs antigos e as variantes grandes `file_apk_large`, `folder_open_large` e `search_large`; somente o launcher mantém PNG dedicado.
+- Recursos brutos em `app/src/main/res` caíram de aproximadamente 3,97 MB / 175 arquivos para 0,85 MB / 22 arquivos antes da otimização final do APK.
+- Adicionados testes unitários para o novo mapeamento de categorias e etiquetas de extensão.
+- Versão sincronizada para `0.1.0-alpha.27` / `versionCode 27`.
+
 ## 0.1.0-alpha.26
 
 - Adicionada a seção **Conectividade** em Informações do dispositivo, usando dados reais expostos pelo Android.

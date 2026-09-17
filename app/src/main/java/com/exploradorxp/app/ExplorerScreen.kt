@@ -32,6 +32,36 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Icon
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,8 +84,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -199,7 +228,7 @@ fun ExplorerScreen(
         if (isHomePage) {
             StorageCard(state.storageInfo)
         } else if (state.tab == ExplorerTab.FAVORITES) {
-            SectionTitle(title = "Favoritos", icon = R.drawable.favorites)
+            SectionTitle(title = "Favoritos", icon = Icons.Filled.Star)
         }
 
         if (!accessGranted && state.tab != ExplorerTab.FAVORITES) {
@@ -445,11 +474,11 @@ private fun XpHeader(
                 .background(Brush.verticalGradient(listOf(Color(0xFF2F92F6), Color(0xFF0A67D8), Color(0xFF0752B8))))
                 .padding(horizontal = 7.dp)
         ) {
-            androidx.compose.foundation.Image(
-                painter = painterResource(R.drawable.folder),
+            Icon(
+                imageVector = Icons.Filled.Folder,
                 contentDescription = null,
+                tint = Color(0xFFFFC107),
                 modifier = Modifier.size(27.dp),
-                contentScale = ContentScale.Fit,
             )
             Spacer(Modifier.width(7.dp))
             Text(
@@ -606,26 +635,26 @@ private fun XpHeader(
                 .padding(horizontal = 2.dp)
         ) {
             if (selectionCount > 0) {
-                XpClassicToolButton(R.drawable.copy, "Copiar", true, onCopySelection, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.move, "Mover", true, onCutSelection, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.delete, "Excluir", true, onDeleteSelection, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.rename, "Renomear", selectionCount == 1, onRenameSelection, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.share, "Compart.", true, onShareSelection, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.properties, "Propried.", selectionCount == 1, onPropertiesSelection, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.select_all, "Todos", true, onSelectAll, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.ContentCopy, "Copiar", true, onCopySelection, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.DriveFileMove, "Mover", true, onCutSelection, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.Delete, "Excluir", true, onDeleteSelection, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.Edit, "Renomear", selectionCount == 1, onRenameSelection, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.Share, "Compart.", true, onShareSelection, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.Info, "Propried.", selectionCount == 1, onPropertiesSelection, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.SelectAll, "Todos", true, onSelectAll, Modifier.weight(1f))
             } else {
-                XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.home, "Início", true, onHome, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.up, "Subir", true, onUp, Modifier.weight(1f))
-                XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.ArrowBack, "Voltar", canBack, onBack, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.ArrowForward, "Avançar", canForward, onForward, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.Home, "Início", true, onHome, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.ArrowUpward, "Subir", true, onUp, Modifier.weight(1f))
+                XpClassicToolButton(Icons.Filled.Search, "Pesquisar", true, onToggleSearch, Modifier.weight(1f))
                 if (canPaste) {
-                    XpClassicToolButton(R.drawable.paste, "Colar", true, onPaste, Modifier.weight(1f))
+                    XpClassicToolButton(Icons.Filled.ContentPaste, "Colar", true, onPaste, Modifier.weight(1f))
                 } else {
-                    XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads, Modifier.weight(1f))
+                    XpClassicToolButton(Icons.Filled.Download, "Downloads", true, onOpenDownloads, Modifier.weight(1f))
                 }
                 XpClassicToolButton(
-                    if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
+                    if (viewMode == ViewMode.LIST) Icons.Filled.GridView else Icons.Filled.ViewList,
                     "Exibir",
                     true,
                     onToggleView,
@@ -654,11 +683,11 @@ private fun XpHeader(
                     .border(1.dp, Color(0xFF8EA6C7))
                     .padding(horizontal = 5.dp)
             ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(if (currentLocation.removable) R.drawable.drive_sd else R.drawable.drive_hdd),
+                Icon(
+                    imageVector = if (currentLocation.removable) Icons.Filled.SdStorage else Icons.Filled.Storage,
                     contentDescription = null,
+                    tint = XpBlueDark,
                     modifier = Modifier.size(20.dp),
-                    contentScale = ContentScale.Fit,
                 )
                 Spacer(Modifier.width(5.dp))
                 if (searchVisible && selectionCount == 0) {
@@ -694,11 +723,11 @@ private fun XpHeader(
                         effectiveLocations.forEach { location ->
                             DropdownMenuItem(
                                 leadingIcon = {
-                                    androidx.compose.foundation.Image(
-                                        painter = painterResource(if (location.removable) R.drawable.drive_sd else R.drawable.drive_hdd),
+                                    Icon(
+                                        imageVector = if (location.removable) Icons.Filled.SdStorage else Icons.Filled.Storage,
                                         contentDescription = null,
+                                        tint = XpBlueDark,
                                         modifier = Modifier.size(24.dp),
-                                        contentScale = ContentScale.Fit,
                                     )
                                 },
                                 text = { Text(location.label, fontSize = 12.sp) },
@@ -710,9 +739,10 @@ private fun XpHeader(
                             pathEntries.dropLast(1).forEach { (label, file) ->
                                 DropdownMenuItem(
                                     leadingIcon = {
-                                        androidx.compose.foundation.Image(
-                                            painter = painterResource(R.drawable.folder),
+                                        Icon(
+                                            imageVector = Icons.Filled.Folder,
                                             contentDescription = null,
+                                            tint = Color(0xFFF2A900),
                                             modifier = Modifier.size(22.dp),
                                         )
                                     },
@@ -755,7 +785,7 @@ private fun XpMenuLabel(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun XpClassicToolButton(
-    icon: Int,
+    icon: ImageVector,
     label: String,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -769,12 +799,11 @@ private fun XpClassicToolButton(
             .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 2.dp, horizontal = 1.dp)
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(icon),
+        Icon(
+            imageVector = icon,
             contentDescription = label,
+            tint = if (enabled) XpBlueDark else Color(0xFFAAAAAA),
             modifier = Modifier.size(30.dp),
-            contentScale = ContentScale.Fit,
-            alpha = if (enabled) 1f else .30f,
         )
         Text(
             text = label,
@@ -814,7 +843,7 @@ private fun SelectionHeader(
             .background(Brush.verticalGradient(listOf(XpBlueLight, XpBlueDark)))
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        XpIconButton(R.drawable.close, "Fechar seleção", onClose)
+        XpIconButton(Icons.Filled.Close, "Fechar seleção", onClose, tint = Color.White)
         Text(
             "$count selecionado(s)",
             color = Color.White,
@@ -822,10 +851,10 @@ private fun SelectionHeader(
             fontSize = 18.sp,
             modifier = Modifier.weight(1f)
         )
-        XpIconButton(R.drawable.copy, "Copiar", onCopy)
-        XpIconButton(R.drawable.cut, "Recortar", onCut)
-        XpIconButton(R.drawable.share, "Compartilhar", onShare)
-        XpIconButton(R.drawable.delete, "Excluir", onDelete)
+        XpIconButton(Icons.Filled.ContentCopy, "Copiar", onCopy, tint = Color.White)
+        XpIconButton(Icons.Filled.ContentCut, "Recortar", onCut, tint = Color.White)
+        XpIconButton(Icons.Filled.Share, "Compartilhar", onShare, tint = Color.White)
+        XpIconButton(Icons.Filled.Delete, "Excluir", onDelete, tint = Color.White)
     }
 }
 
@@ -851,11 +880,11 @@ private fun StorageCard(info: StorageInfo) {
             .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
             .padding(horizontal = 9.dp, vertical = 8.dp)
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(R.drawable.drive_hdd),
+        Icon(
+            imageVector = Icons.Filled.Storage,
             contentDescription = "Armazenamento interno",
+            tint = XpBlue,
             modifier = Modifier.size(38.dp),
-            contentScale = ContentScale.Fit,
         )
         Spacer(Modifier.width(9.dp))
 
@@ -922,9 +951,10 @@ private fun PermissionBanner(onRequestAccess: () -> Unit) {
             .background(Color(0xFFFFF5CC))
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(R.drawable.warning),
+        Icon(
+            imageVector = Icons.Filled.Warning,
             contentDescription = null,
+            tint = Color(0xFFF0A000),
             modifier = Modifier.size(30.dp)
         )
         Spacer(Modifier.width(8.dp))
@@ -939,12 +969,12 @@ private fun PermissionBanner(onRequestAccess: () -> Unit) {
 }
 
 @Composable
-private fun SectionTitle(title: String, icon: Int) {
+private fun SectionTitle(title: String, icon: ImageVector) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(12.dp)
     ) {
-        androidx.compose.foundation.Image(painterResource(icon), null, modifier = Modifier.size(34.dp))
+        Icon(icon, contentDescription = null, tint = XpBlue, modifier = Modifier.size(34.dp))
         Spacer(Modifier.width(10.dp))
         Text(title, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = Color(0xFF16325B))
     }
@@ -1038,9 +1068,9 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
         TransferKind.DELETE -> "Excluindo arquivos"
     }
     val icon = when (transfer.kind) {
-        TransferKind.COPY -> R.drawable.copy
-        TransferKind.MOVE -> R.drawable.cut
-        TransferKind.DELETE -> R.drawable.delete
+        TransferKind.COPY -> Icons.Filled.ContentCopy
+        TransferKind.MOVE -> Icons.Filled.ContentCut
+        TransferKind.DELETE -> Icons.Filled.Delete
     }
     Dialog(
         onDismissRequest = onCancel,
@@ -1055,9 +1085,10 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
             XpDialogTitle(title, onCancel)
             Column(Modifier.padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.Image(
-                        painter = painterResource(icon),
+                    Icon(
+                        imageVector = icon,
                         contentDescription = null,
+                        tint = XpBlue,
                         modifier = Modifier.size(34.dp),
                     )
                     Spacer(Modifier.width(10.dp))
@@ -1143,22 +1174,22 @@ private fun FileContextDialog(
                 .border(1.dp, Color(0xFF7D8FA6))
                 .padding(vertical = 3.dp)
         ) {
-            ContextActionRow(item.iconRes, "Abrir", onOpen)
+            ContextActionRow(item, "Abrir", onOpen)
             HorizontalDivider(color = Color(0xFFD2D2C8))
-            ContextActionRow(R.drawable.copy, "Copiar", onCopy)
-            ContextActionRow(R.drawable.move, "Mover", onMove)
-            ContextActionRow(R.drawable.rename, "Renomear", onRename)
-            ContextActionRow(R.drawable.delete, "Excluir", onDelete)
-            if (!item.isDirectory) ContextActionRow(R.drawable.share, "Compartilhar", onShare)
+            ContextActionRow(Icons.Filled.ContentCopy, "Copiar", onCopy)
+            ContextActionRow(Icons.Filled.DriveFileMove, "Mover", onMove)
+            ContextActionRow(Icons.Filled.Edit, "Renomear", onRename)
+            ContextActionRow(Icons.Filled.Delete, "Excluir", onDelete)
+            if (!item.isDirectory) ContextActionRow(Icons.Filled.Share, "Compartilhar", onShare)
             HorizontalDivider(color = Color(0xFFD2D2C8))
             ContextActionRow(
-                if (item.isFavorite) R.drawable.favorites else R.drawable.folder_favorite,
+                if (item.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
                 if (item.isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
                 onFavorite,
             )
-            ContextActionRow(R.drawable.properties, "Propriedades", onProperties)
+            ContextActionRow(Icons.Filled.Info, "Propriedades", onProperties)
             HorizontalDivider(color = Color(0xFFD2D2C8))
-            ContextActionRow(R.drawable.select_all, "Selecionar", onSelect)
+            ContextActionRow(Icons.Filled.SelectAll, "Selecionar", onSelect)
         }
     }
 }
@@ -1182,12 +1213,12 @@ private fun FolderContextDialog(
                 .border(1.dp, Color(0xFF7D8FA6))
                 .padding(vertical = 3.dp)
         ) {
-            if (canPaste) ContextActionRow(R.drawable.paste, "Colar aqui", onPaste)
-            ContextActionRow(R.drawable.folder_new, "Nova pasta", onNewFolder)
-            if (canSelectAll) ContextActionRow(R.drawable.select_all, "Selecionar tudo", onSelectAll)
+            if (canPaste) ContextActionRow(Icons.Filled.ContentPaste, "Colar aqui", onPaste)
+            ContextActionRow(Icons.Filled.CreateNewFolder, "Nova pasta", onNewFolder)
+            if (canSelectAll) ContextActionRow(Icons.Filled.SelectAll, "Selecionar tudo", onSelectAll)
             HorizontalDivider(color = Color(0xFFD2D2C8))
-            ContextActionRow(R.drawable.refresh, "Atualizar", onRefresh)
-            ContextActionRow(R.drawable.properties, "Propriedades", onProperties)
+            ContextActionRow(Icons.Filled.Refresh, "Atualizar", onRefresh)
+            ContextActionRow(Icons.Filled.Info, "Propriedades", onProperties)
         }
     }
 }
@@ -1204,79 +1235,63 @@ private fun XpFileDropdownMenu(
         onDismissRequest = onDismiss,
         modifier = Modifier.background(Color(0xFFF8F8F2)).border(1.dp, Color(0xFF7D8FA6)),
     ) {
-        XpContextMenuItem(item.iconRes, "Abrir") { onAction(FileMenuAction.OPEN) }
+        XpContextMenuItem(item, "Abrir") { onAction(FileMenuAction.OPEN) }
         HorizontalDivider(color = Color(0xFFD2D2C8))
-        XpContextMenuItem(R.drawable.copy, "Copiar") { onAction(FileMenuAction.COPY) }
-        XpContextMenuItem(R.drawable.move, "Mover") { onAction(FileMenuAction.MOVE) }
-        XpContextMenuItem(R.drawable.rename, "Renomear") { onAction(FileMenuAction.RENAME) }
-        XpContextMenuItem(R.drawable.delete, "Excluir") { onAction(FileMenuAction.DELETE) }
-        if (!item.isDirectory) XpContextMenuItem(R.drawable.share, "Compartilhar") { onAction(FileMenuAction.SHARE) }
+        XpContextMenuItem(Icons.Filled.ContentCopy, "Copiar") { onAction(FileMenuAction.COPY) }
+        XpContextMenuItem(Icons.Filled.DriveFileMove, "Mover") { onAction(FileMenuAction.MOVE) }
+        XpContextMenuItem(Icons.Filled.Edit, "Renomear") { onAction(FileMenuAction.RENAME) }
+        XpContextMenuItem(Icons.Filled.Delete, "Excluir") { onAction(FileMenuAction.DELETE) }
+        if (!item.isDirectory) XpContextMenuItem(Icons.Filled.Share, "Compartilhar") { onAction(FileMenuAction.SHARE) }
         HorizontalDivider(color = Color(0xFFD2D2C8))
         XpContextMenuItem(
-            if (item.isFavorite) R.drawable.favorites else R.drawable.folder_favorite,
+            if (item.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
             if (item.isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
         ) { onAction(FileMenuAction.FAVORITE) }
-        XpContextMenuItem(R.drawable.properties, "Propriedades") { onAction(FileMenuAction.PROPERTIES) }
+        XpContextMenuItem(Icons.Filled.Info, "Propriedades") { onAction(FileMenuAction.PROPERTIES) }
         HorizontalDivider(color = Color(0xFFD2D2C8))
-        XpContextMenuItem(R.drawable.select_all, "Selecionar") { onAction(FileMenuAction.SELECT) }
+        XpContextMenuItem(Icons.Filled.SelectAll, "Selecionar") { onAction(FileMenuAction.SELECT) }
     }
 }
 
 @Composable
-private fun XpContextMenuItem(icon: Int, label: String, onClick: () -> Unit) {
+private fun XpContextMenuItem(icon: ImageVector, label: String, onClick: () -> Unit) {
     DropdownMenuItem(
-        leadingIcon = {
-            androidx.compose.foundation.Image(
-                painter = painterResource(icon),
-                contentDescription = null,
-                modifier = Modifier.size(21.dp),
-                contentScale = ContentScale.Fit,
-            )
-        },
+        leadingIcon = { Icon(icon, contentDescription = null, tint = XpBlueDark, modifier = Modifier.size(21.dp)) },
         text = { Text(label, fontSize = 12.sp, color = Color(0xFF202020)) },
         onClick = onClick,
     )
 }
 
 @Composable
-private fun ContextActionRow(icon: Int, label: String, onClick: () -> Unit) {
+private fun XpContextMenuItem(item: FileItem, label: String, onClick: () -> Unit) {
+    DropdownMenuItem(
+        leadingIcon = { FileVisualIcon(item = item, size = 22.dp) },
+        text = { Text(label, fontSize = 12.sp, color = Color(0xFF202020)) },
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun ContextActionRow(icon: ImageVector, label: String, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        androidx.compose.foundation.Image(painterResource(icon), null, modifier = Modifier.size(25.dp), contentScale = ContentScale.Fit)
+        Icon(icon, contentDescription = null, tint = XpBlueDark, modifier = Modifier.size(25.dp))
         Spacer(Modifier.width(10.dp))
         Text(label, color = Color(0xFF202020), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-private fun ContextActionCell(
-    icon: Int,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    danger: Boolean = false,
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = modifier
-            .clickable(onClick = onClick)
-            .padding(horizontal = 2.dp, vertical = 8.dp)
+private fun ContextActionRow(item: FileItem, label: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        androidx.compose.foundation.Image(painterResource(icon), null, modifier = Modifier.size(27.dp), contentScale = ContentScale.Fit)
-        Spacer(Modifier.height(3.dp))
-        Text(
-            text = label,
-            color = if (danger) Color(0xFF9C1B12) else Color(0xFF202020),
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        FileVisualIcon(item = item, size = 26.dp)
+        Spacer(Modifier.width(10.dp))
+        Text(label, color = Color(0xFF202020), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -1291,9 +1306,6 @@ private fun FileList(
     onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
-    val iconsToWarm = remember(items) { items.asSequence().take(32).map { it.iconRes }.distinct().toList() }
-    PreloadResourceIcons(iconsToWarm)
-
     // Estado de rolagem próprio por pasta/aba: reinicia no topo ao navegar,
     // em vez de manter a posição da listagem anterior.
     val listState = remember(scrollKey) { LazyListState() }
@@ -1338,12 +1350,7 @@ private fun FileListRow(
             .combinedClickable(onClick = onClick, onLongClick = onLongSelect)
             .padding(horizontal = 9.dp, vertical = 5.dp)
     ) {
-        CachedResourceIcon(
-            resId = item.iconRes,
-            contentDescription = null,
-            modifier = Modifier.size(36.dp),
-            contentScale = ContentScale.Fit,
-        )
+        FileVisualIcon(item = item, size = 36.dp)
         Spacer(Modifier.width(9.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1356,10 +1363,11 @@ private fun FileListRow(
                     modifier = Modifier.weight(1f)
                 )
                 if (item.isFavorite) {
-                    androidx.compose.foundation.Image(
-                        painterResource(R.drawable.folder_favorite),
-                        null,
-                        modifier = Modifier.size(20.dp)
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Favorito",
+                        tint = Color(0xFFFFB300),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -1373,7 +1381,7 @@ private fun FileListRow(
         }
         var menuExpanded by remember(item.path) { mutableStateOf(false) }
         Box {
-            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 24, buttonSize = 36)
+            XpIconButton(Icons.Filled.MoreVert, "Opções", onClick = { menuExpanded = true }, iconSize = 24, buttonSize = 36)
             XpFileDropdownMenu(
                 item = item,
                 expanded = menuExpanded,
@@ -1395,9 +1403,6 @@ private fun FileGrid(
     onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
-    val iconsToWarm = remember(items) { items.asSequence().take(32).map { it.iconRes }.distinct().toList() }
-    PreloadResourceIcons(iconsToWarm)
-
     // Mesma lógica da lista: reinicia a rolagem ao trocar de pasta/aba.
     val gridState = remember(scrollKey) { LazyGridState() }
     LazyVerticalGrid(
@@ -1421,12 +1426,7 @@ private fun FileGrid(
                     .combinedClickable(onClick = { onItemClick(item) }, onLongClick = { onLongSelect(item) })
                     .padding(7.dp)
             ) {
-                CachedResourceIcon(
-                    resId = item.iconRes,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                FileVisualIcon(item = item, size = 48.dp)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     item.name,
@@ -1445,7 +1445,7 @@ private fun FileGrid(
                 )
                 Box {
                     XpIconButton(
-                        R.drawable.more,
+                        Icons.Filled.MoreVert,
                         "Opções",
                         onClick = { menuExpanded = true },
                         iconSize = 24,
@@ -1519,7 +1519,7 @@ private fun ExplorerStatusBar(
 
 @Composable
 private fun XpToolbarButton(
-    icon: Int,
+    icon: ImageVector,
     label: String,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -1535,14 +1535,14 @@ private fun XpToolbarButton(
             .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 9.dp, horizontal = 8.dp)
     ) {
-        androidx.compose.foundation.Image(painterResource(icon), null, modifier = Modifier.size(34.dp), alpha = if (enabled) 1f else .35f)
+        Icon(icon, contentDescription = null, tint = if (enabled) XpBlueDark else Color.Gray, modifier = Modifier.size(34.dp))
         Spacer(Modifier.width(8.dp))
         Text(label, color = if (enabled) Color(0xFF183363) else Color.Gray, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
     }
 }
 
 @Composable
-private fun XpIconButton(icon: Int, contentDescription: String, onClick: () -> Unit, iconSize: Int = 30, buttonSize: Int = 44) {
+private fun XpIconButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit, iconSize: Int = 30, buttonSize: Int = 44, tint: Color = XpBlueDark) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -1550,11 +1550,11 @@ private fun XpIconButton(icon: Int, contentDescription: String, onClick: () -> U
             .clip(RoundedCornerShape(9.dp))
             .clickable(onClick = onClick)
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(icon),
+        Icon(
+            imageVector = icon,
             contentDescription = contentDescription,
+            tint = tint,
             modifier = Modifier.size(iconSize.dp),
-            contentScale = ContentScale.Fit,
         )
     }
 }
@@ -1566,9 +1566,10 @@ private fun EmptyState(tab: ExplorerTab, query: String) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize().padding(24.dp)
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(if (query.isNotBlank()) R.drawable.search_large else R.drawable.folder_open_large),
+        Icon(
+            imageVector = if (query.isNotBlank()) Icons.Filled.Search else Icons.Filled.FolderOpen,
             contentDescription = null,
+            tint = XpBlue,
             modifier = Modifier.size(72.dp)
         )
         Spacer(Modifier.height(12.dp))
@@ -1650,10 +1651,9 @@ private fun PropertiesDialog(file: File, onDismiss: () -> Unit) {
                 modifier = Modifier.animateContentSize(tween(150)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.Image(
-                        painterResource(FileIconMapper.iconFor(file)),
-                        null,
-                        modifier = Modifier.size(50.dp)
+                    FileVisualIcon(
+                        visual = FileIconMapper.iconFor(file),
+                        size = 50.dp,
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(file.name, fontWeight = FontWeight.Bold)
