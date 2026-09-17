@@ -82,8 +82,8 @@ class DeviceInfoReportTest {
             esimSupported = true,
             esimEnabled = true,
             esimMepSupported = true,
-            appVersionName = "0.1.0-alpha.27",
-            appVersionCode = 27,
+            appVersionName = "0.1.0-alpha.28",
+            appVersionCode = 26,
         )
 
         val report = snapshot.toAiReport()

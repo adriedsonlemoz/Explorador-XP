@@ -65,10 +65,7 @@ Os 150 PNGs comuns também foram convertidos de 256×256 `nodpi` para 192×192 e
 
 A validação recomendada é comparar o `FrameTimingMetric` da alpha.23 com a linha anterior usando a mesma pasta de benchmark e confirmar em aparelho físico se desaparecem os engasgos quando novos tipos de arquivo entram na viewport.
 
-## Vetorização do caminho de ícones — alpha.27
 
-A lista/grade deixou de usar `CachedResourceIcon` e os 150 PNGs por extensão/ação foram removidos do módulo `app`. `FileIconMapper` agora classifica o arquivo em uma família visual (documento, PDF, planilha, imagem, áudio, vídeo, compactado, código, banco, APK etc.) e a UI desenha um `ImageVector` com uma etiqueta curta de extensão.
+## Rollback de ícones — alpha.28
 
-Isso elimina a decodificação de bitmap para arquivos comuns durante a rolagem e também reduz recursos empacotados. APKs são a exceção útil: o `PackageManager` tenta obter o ícone real do arquivo APK em `Dispatchers.IO`, limitado a uma leitura por vez e cache LRU de 4 MiB; até o resultado chegar, aparece o vetor Android.
-
-Comparação estática dos recursos de `app/src/main/res` antes do build: alpha.26 ≈ 3,97 MB brutos / 175 arquivos; alpha.27 ≈ 0,85 MB brutos / 22 arquivos. O ganho final no APK deve ser confirmado pelo CI/R8 e pelo Macrobenchmark.
+A alpha.27 testou substituir os ícones XP por vetores/categorias genéricas. No teste real em aparelho não houve melhora perceptível de fluidez e o visual anterior foi preferido. A alpha.28 restaura o pipeline da alpha.23/26: PNGs 192×192 em `drawable-xxxhdpi`, `CachedResourceIcon`, decodificação em `Dispatchers.IO`, limite de concorrência e cache LRU. A otimização de ícones volta a priorizar fidelidade visual sem executar decodificação pesada na thread principal.

@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.1.0-alpha.28
+
+- Revertida integralmente a experiência de ícones vetoriais da alpha.27 após teste no aparelho não mostrar ganho perceptível de desempenho e o visual anterior ser preferido.
+- Restaurado o pacote visual da alpha.26/alpha.23: ícones PNG XP otimizados em `drawable-xxxhdpi`, variantes grandes apenas onde necessário e `CachedResourceIcon` para decodificação em background.
+- Restaurados `FileIconMapper`, lista, grade, menus, toolbar e estados visuais para o comportamento anterior à alpha.27.
+- Removidos do estado atual os ícones genéricos por categoria/etiqueta dinâmica e a tentativa de usar ícone real de APK introduzidos na alpha.27.
+- Mantidas todas as funções da alpha.26: Conectividade, sensores, CPU ampliada, seções expansíveis, relatório para IA schema 3, copiar/salvar/compartilhar ficha do dispositivo e demais otimizações de desempenho anteriores.
+- Nenhuma alteração de dados do usuário ou formato de armazenamento foi feita; a reversão é apenas visual/recursos de ícones e código associado.
+- Versão sincronizada para `0.1.0-alpha.28` / `versionCode 28`.
+
 ## 0.1.0-alpha.27
 
 - Substituído o pacote de 150 PNGs de tipos de arquivo e ações por um pipeline vetorial no caminho principal do Explorer.

@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.27` (`versionCode 27`)  
+**Versão atual:** `0.1.0-alpha.28` (`versionCode 28`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -10,7 +10,8 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 ## O que já está implementado
 
 - Interface principal baseada no Explorer clássico do Windows XP: barra de título azul, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, barra de ferramentas compacta, barra de endereço, indicador de armazenamento, lista/grade e barra de status inferior.
-- Pipeline visual híbrido e leve: ações da interface e tipos de arquivo usam vetores Material; extensões são desenhadas dinamicamente sobre ícones por categoria, sem um PNG separado para cada formato.
+- Pacote visual XP com ícones PNG otimizados por densidade Android; os 150 ícones comuns usados na navegação ficam em `drawable-xxxhdpi`, com variantes grandes apenas onde necessário.
+- A experiência vetorial da alpha.27 foi revertida na alpha.28 por preferência visual e ausência de ganho perceptível no aparelho; o app voltou ao pipeline PNG otimizado com decodificação assíncrona/cache.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
 - Histórico de navegação com Voltar e Avançar, além da ação Subir.
@@ -32,7 +33,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - **Informações do dispositivo** ganhou painel visual moderno feito integralmente em Compose: resumo do aparelho, indicadores de RAM/armazenamento/bateria, sistema, conectividade, recursos, sensores e exportação para IA, sem foto fake nem banco fixo de especificações.
 - O painel também detecta sensores reais via `SensorManager` e oferece **Copiar resumo**, **Salvar PNG** e **Compartilhar imagem**, mantendo identificadores sensíveis fora das saídas rápidas.
 - Launcher legado/adaptativo atualizado com nova arte da pasta dourada e órbita azul, agora com margem de segurança maior, sem borda aparente e com transparência correta para evitar cortes na máscara adaptativa do Android.
-- A navegação não decodifica mais o pacote de 150 PNGs de arquivo/ações: lista, grade, menus e barra usam vetores. APKs tentam mostrar o ícone real do aplicativo em background, com cache limitado.
+- Ícones PNG usados na navegação foram otimizados para densidade Android: o conjunto comum saiu de 256×256 `nodpi` para 192×192 em `drawable-xxxhdpi`, permitindo que o sistema decodifique tamanhos menores em telas de densidade inferior.
 - Ícones dos itens da lista/grade são decodificados em background e reutilizados por um cache LRU de 6 MiB, evitando a primeira decodificação pesada no frame da rolagem; os primeiros tipos visíveis são aquecidos de forma assíncrona.
 - Barras de status e navegação do Android permanecem visíveis; o modo imersivo/tela inteira foi removido.
 
@@ -62,7 +63,7 @@ baselineprofile/src/main/java/com/exploradorxp/benchmark/
   BenchmarkFixtures.kt
 
 app/src/main/res/drawable-nodpi/
-  vetores leves para ações e categorias de arquivo; PNG mantido apenas para o launcher
+  152 PNGs do pacote visual XP
 
 docs/
   mockup_explorador_android_xp.png
@@ -166,7 +167,7 @@ O ícone do launcher foi corrigido estruturalmente para o padrão Adaptive Icon 
 
 A interface segue o Explorer do Windows XP adaptado a telas Android. O cabeçalho possui menu clássico, barra de ferramentas compacta e campo Endereço. O Endereço também permite alternar entre armazenamento interno e cartão SD quando detectado. O cartão de capacidade fica restrito à página inicial, deixando as pastas com mais área útil.
 
-Os ícones principais de pastas, navegação e dispositivos mantêm a identidade do Explorer, mas a navegação atual usa vetores leves e etiquetas dinâmicas de extensão para reduzir memória, decodificação e tamanho do pacote.
+Os ícones principais de pastas, navegação e dispositivos foram atualizados para uma aparência mais próxima do Windows XP, mantendo os recursos já existentes para tipos de arquivo.
 
 Na alpha.7, a barra de ferramentas foi compactada para caber inteira sem rolagem horizontal. O toque longo em arquivo/pasta abre as ações no centro da tela; o toque longo em área vazia oferece Colar, Nova pasta, Selecionar tudo, Atualizar e Propriedades.
 

@@ -33,10 +33,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Android
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -138,11 +134,11 @@ private fun ViewerTitleBar(title: String, onClose: () -> Unit) {
             .background(Brush.verticalGradient(listOf(Color(0xFF2F92F6), XpBlue, XpBlueDark)))
             .padding(horizontal = 8.dp)
     ) {
-        Icon(
-            imageVector = Icons.Filled.FolderOpen,
+        Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.folder_open),
             contentDescription = null,
-            tint = Color.White,
             modifier = Modifier.size(26.dp),
+            contentScale = ContentScale.Fit,
         )
         Spacer(Modifier.width(7.dp))
         Text(
@@ -593,10 +589,9 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
     ) {
-        Icon(
-            imageVector = Icons.Filled.Android,
+        Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk_large),
             contentDescription = null,
-            tint = Color(0xFF20A84A),
             modifier = Modifier.size(86.dp),
         )
         Spacer(Modifier.height(14.dp))
