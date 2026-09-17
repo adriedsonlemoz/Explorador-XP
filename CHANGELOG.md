@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.1.0-alpha.26
+
+- Adicionada a seção **Conectividade** em Informações do dispositivo, usando dados reais expostos pelo Android.
+- A tela agora identifica conexão atual (Wi‑Fi, rede móvel, Ethernet, VPN ou offline), validação de internet e VPN ativa.
+- Quando disponível, o Wi‑Fi mostra banda (2,4/5/6/60 GHz), padrão conectado (Wi‑Fi 4/5/6/7) e velocidade do link, sem coletar SSID, BSSID ou endereço MAC.
+- Rede móvel passa a mostrar 2G/3G/4G-LTE/5G quando o Android libera a informação, além da operadora quando disponível.
+- Adicionada leitura básica de quantidade de slots SIM, SIMs prontos e suporte a eSIM e suporte a múltiplos perfis eUICC, sem coletar número de telefone, IMEI, IMSI ou ICCID.
+- O processador ganhou arquitetura principal, frequências máximas expostas por núcleo/grupo e identificador de hardware, além de fabricante/modelo do SoC e número de núcleos.
+- As setas de Sistema, Conectividade, Bateria, Recursos e Sensores agora são funcionais: tocar no cabeçalho expande ou recolhe a seção.
+- A grade de sensores passou para **3 colunas**, reduzindo bastante a altura da seção sem esconder sensores; nomes maiores podem ocupar duas linhas.
+- O relatório para IA foi atualizado para `schema_version=3` com blocos de conectividade e CPU ampliados; o resumo e a ficha PNG também incluem as informações principais.
+- Adicionadas apenas permissões normais de estado de rede/Wi‑Fi e estado básico do telefone; nenhuma permissão de localização ou leitura de identificadores pessoais foi introduzida.
+- Versão sincronizada para `0.1.0-alpha.26` / `versionCode 26`.
+
 ## 0.1.0-alpha.25
 
 - Corrigido o rodapé da tela **Informações do dispositivo** para respeitar a barra de navegação do Android e permitir rolar o botão **Exportar relatório para IA** completamente acima dos controles do sistema.

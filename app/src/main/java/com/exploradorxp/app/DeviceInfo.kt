@@ -1,17 +1,25 @@
 package com.exploradorxp.app
 
+import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
-import android.hardware.Sensor
-import android.hardware.SensorManager
 import android.provider.Settings
+import android.telephony.TelephonyManager
+import android.telephony.euicc.EuiccManager
+import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -38,6 +46,7 @@ data class DeviceInfoSnapshot(
     val socModel: String?,
     val hardware: String,
     val cpuCores: Int,
+    val cpuMaxFrequenciesMhz: List<Int>,
     val supportedAbis: List<String>,
     val is64Bit: Boolean,
     val ramTotalBytes: Long,
@@ -77,6 +86,24 @@ data class DeviceInfoSnapshot(
     val sensorCount: Int,
     val sensorInventory: List<String>,
     val hasRemovableStorage: Boolean,
+    val networkTransport: String,
+    val networkValidated: Boolean,
+    val networkMetered: Boolean,
+    val vpnActive: Boolean,
+    val ethernetActive: Boolean,
+    val wifiActive: Boolean,
+    val wifiBand: String,
+    val wifiStandard: String,
+    val wifiFrequencyMhz: Int?,
+    val wifiLinkSpeedMbps: Int?,
+    val cellularActive: Boolean,
+    val mobileNetworkType: String,
+    val carrierName: String,
+    val simSlotCount: Int,
+    val simReadyCount: Int,
+    val esimSupported: Boolean,
+    val esimEnabled: Boolean,
+    val esimMepSupported: Boolean,
     val appVersionName: String,
     val appVersionCode: Int,
 ) {
@@ -85,6 +112,7 @@ data class DeviceInfoSnapshot(
 }
 
 object DeviceInfoCollector {
+    @SuppressLint("MissingPermission")
     fun collect(context: Context): DeviceInfoSnapshot {
         val appContext = context.applicationContext
         val packageManager = appContext.packageManager
@@ -158,6 +186,87 @@ object DeviceInfoCollector {
         val socManufacturer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MANUFACTURER else null
         val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL else null
         val abis = Build.SUPPORTED_ABIS?.toList().orEmpty()
+        val cpuCores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+        val cpuFrequencies = readCpuMaxFrequenciesMhz(cpuCores)
+
+        val connectivityManager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork = runCatching { connectivityManager.activeNetwork }.getOrNull()
+        val capabilities = activeNetwork?.let { network ->
+            runCatching { connectivityManager.getNetworkCapabilities(network) }.getOrNull()
+        }
+        val vpnActive = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        val otherCapabilities = if (vpnActive) {
+            runCatching { connectivityManager.allNetworks.toList() }.getOrDefault(emptyList())
+                .filter { it != activeNetwork }
+                .mapNotNull { network -> runCatching { connectivityManager.getNetworkCapabilities(network) }.getOrNull() }
+        } else emptyList()
+        val wifiActive = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true ||
+            (vpnActive && otherCapabilities.any { it.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) })
+        val cellularActive = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true ||
+            (vpnActive && otherCapabilities.any { it.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) })
+        val ethernetActive = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true ||
+            (vpnActive && otherCapabilities.any { it.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) })
+        val networkValidated = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+        val networkMetered = runCatching { connectivityManager.isActiveNetworkMetered }.getOrDefault(false)
+        val networkTransport = when {
+            vpnActive && wifiActive -> "VPN sobre Wi-Fi"
+            vpnActive && cellularActive -> "VPN sobre rede móvel"
+            vpnActive && ethernetActive -> "VPN sobre Ethernet"
+            wifiActive -> "Wi-Fi"
+            cellularActive -> "Rede móvel"
+            ethernetActive -> "Ethernet"
+            vpnActive -> "VPN"
+            activeNetwork != null -> "Outra conexão"
+            else -> "Sem conexão"
+        }
+
+        val wifiManager = appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        @Suppress("DEPRECATION")
+        val wifiInfo = if (wifiActive) runCatching { wifiManager?.connectionInfo }.getOrNull() else null
+        val wifiFrequency = wifiInfo?.frequency?.takeIf { it > 0 }
+        val wifiBand = wifiFrequency?.let(::wifiBandLabel) ?: "Não disponível"
+        val wifiStandard = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && wifiInfo != null) {
+            wifiStandardLabel(wifiInfo.wifiStandard)
+        } else {
+            "Não disponível"
+        }
+        val wifiLinkSpeed = wifiInfo?.linkSpeed?.takeIf { it > 0 }
+
+        val telephonyManager = appContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+        val hasTelephony = packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
+        val simSlotCount = if (hasTelephony && telephonyManager != null) {
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) telephonyManager.activeModemCount
+                else {
+                    @Suppress("DEPRECATION")
+                    telephonyManager.phoneCount
+                }
+            }.getOrDefault(0).coerceAtLeast(0)
+        } else 0
+        val simReadyCount = if (telephonyManager != null && simSlotCount > 0) {
+            (0 until simSlotCount).count { slot ->
+                runCatching { telephonyManager.getSimState(slot) == TelephonyManager.SIM_STATE_READY }.getOrDefault(false)
+            }
+        } else 0
+        val carrierName = runCatching {
+            telephonyManager?.networkOperatorName.orEmpty().trim()
+                .ifBlank { telephonyManager?.simOperatorName.orEmpty().trim() }
+        }.getOrDefault("").ifBlank { "Não disponível" }
+        val mobileNetworkType = if (hasTelephony && telephonyManager != null) {
+            runCatching { networkTypeLabel(telephonyManager.dataNetworkType) }.getOrDefault("Não disponível")
+        } else {
+            "Não disponível"
+        }
+
+        val esimManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            appContext.getSystemService(Context.EUICC_SERVICE) as? EuiccManager
+        } else null
+        val esimFeature = packageManager.hasSystemFeature("android.hardware.telephony.euicc")
+        val esimMepSupported = packageManager.hasSystemFeature("android.hardware.telephony.euicc.mep")
+        val esimEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            runCatching { esimManager?.isEnabled == true }.getOrDefault(false)
+        } else false
+        val esimSupported = esimFeature || esimEnabled
 
         val timestamp = DateTimeFormatter.ISO_OFFSET_DATE_TIME
             .withZone(ZoneId.systemDefault())
@@ -179,7 +288,8 @@ object DeviceInfoCollector {
             socManufacturer = socManufacturer?.takeUnless(String::isBlank),
             socModel = socModel?.takeUnless(String::isBlank),
             hardware = Build.HARDWARE.orEmpty().ifBlank { "Não disponível" },
-            cpuCores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1),
+            cpuCores = cpuCores,
+            cpuMaxFrequenciesMhz = cpuFrequencies,
             supportedAbis = abis,
             is64Bit = abis.any { it.contains("64") },
             ramTotalBytes = memoryInfo.totalMem,
@@ -219,15 +329,84 @@ object DeviceInfoCollector {
             sensorCount = sensorCount,
             sensorInventory = sensorInventory,
             hasRemovableStorage = removable,
+            networkTransport = networkTransport,
+            networkValidated = networkValidated,
+            networkMetered = networkMetered,
+            vpnActive = vpnActive,
+            ethernetActive = ethernetActive,
+            wifiActive = wifiActive,
+            wifiBand = wifiBand,
+            wifiStandard = wifiStandard,
+            wifiFrequencyMhz = wifiFrequency,
+            wifiLinkSpeedMbps = wifiLinkSpeed,
+            cellularActive = cellularActive,
+            mobileNetworkType = mobileNetworkType,
+            carrierName = carrierName,
+            simSlotCount = simSlotCount,
+            simReadyCount = simReadyCount,
+            esimSupported = esimSupported,
+            esimEnabled = esimEnabled,
+            esimMepSupported = esimMepSupported,
             appVersionName = BuildConfig.VERSION_NAME,
             appVersionCode = BuildConfig.VERSION_CODE,
         )
+    }
+
+    private fun readCpuMaxFrequenciesMhz(coreCount: Int): List<Int> = (0 until coreCount).mapNotNull { core ->
+        val candidates = listOf(
+            "/sys/devices/system/cpu/cpu$core/cpufreq/cpuinfo_max_freq",
+            "/sys/devices/system/cpu/cpu$core/cpufreq/scaling_max_freq",
+        )
+        candidates.firstNotNullOfOrNull { path ->
+            runCatching { File(path).readText().trim().toLongOrNull() }.getOrNull()?.let(::normalizeFrequencyMhz)
+        }
+    }.filter { it in 100..10_000 }
+
+    private fun normalizeFrequencyMhz(raw: Long): Int = when {
+        raw >= 100_000_000L -> (raw / 1_000_000L).toInt() // Hz
+        raw >= 100_000L -> (raw / 1_000L).toInt() // kHz (padrão sysfs)
+        else -> raw.toInt() // já em MHz
+    }
+
+    private fun wifiBandLabel(frequencyMhz: Int): String = when (frequencyMhz) {
+        in 2400..2500 -> "2,4 GHz"
+        in 4900..5900 -> "5 GHz"
+        in 5925..7125 -> "6 GHz"
+        in 57_000..71_000 -> "60 GHz"
+        else -> "${frequencyMhz} MHz"
+    }
+
+    private fun wifiStandardLabel(standard: Int): String = when (standard) {
+        1 -> "Wi-Fi legado"
+        4 -> "Wi-Fi 4 (802.11n)"
+        5 -> "Wi-Fi 5 (802.11ac)"
+        6 -> "Wi-Fi 6 (802.11ax)"
+        7 -> "WiGig (802.11ad)"
+        8 -> "Wi-Fi 7 (802.11be)"
+        else -> "Não disponível"
+    }
+
+    private fun networkTypeLabel(type: Int): String = when (type) {
+        TelephonyManager.NETWORK_TYPE_GPRS, TelephonyManager.NETWORK_TYPE_EDGE,
+        TelephonyManager.NETWORK_TYPE_CDMA, TelephonyManager.NETWORK_TYPE_1xRTT,
+        TelephonyManager.NETWORK_TYPE_IDEN, TelephonyManager.NETWORK_TYPE_GSM -> "2G"
+
+        TelephonyManager.NETWORK_TYPE_UMTS, TelephonyManager.NETWORK_TYPE_EVDO_0,
+        TelephonyManager.NETWORK_TYPE_EVDO_A, TelephonyManager.NETWORK_TYPE_HSDPA,
+        TelephonyManager.NETWORK_TYPE_HSUPA, TelephonyManager.NETWORK_TYPE_HSPA,
+        TelephonyManager.NETWORK_TYPE_EVDO_B, TelephonyManager.NETWORK_TYPE_EHRPD,
+        TelephonyManager.NETWORK_TYPE_HSPAP, TelephonyManager.NETWORK_TYPE_TD_SCDMA -> "3G"
+
+        TelephonyManager.NETWORK_TYPE_LTE -> "4G / LTE"
+        TelephonyManager.NETWORK_TYPE_NR -> "5G"
+        TelephonyManager.NETWORK_TYPE_IWLAN -> "Wi-Fi Calling"
+        else -> "Não disponível"
     }
 }
 
 fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("EXPLORADOR XP - RELATORIO DO DISPOSITIVO")
-    appendLine("schema_version=2")
+    appendLine("schema_version=3")
     appendLine("generated_at=$collectedAt")
     appendLine("purpose=diagnostico_tecnico_e_analise_por_ia")
     appendLine()
@@ -238,8 +417,11 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("contains_android_id=false")
     appendLine("contains_mac_address=false")
     appendLine("contains_location=false")
+    appendLine("contains_ssid=false")
+    appendLine("contains_bssid=false")
+    appendLine("contains_phone_number=false")
     appendLine("contains_user_files=false")
-    appendLine("note=O relatorio contem apenas informacoes de hardware, sistema e estado geral expostas pelo Android.")
+    appendLine("note=O relatorio contem apenas informacoes de hardware, sistema, conectividade e estado geral expostas pelo Android.")
     appendLine()
     appendLine("[device]")
     appendLine("name=${reportValue(deviceName)}")
@@ -262,7 +444,10 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("hardware=${reportValue(hardware)}")
     appendLine("cpu_cores=$cpuCores")
     appendLine("is_64_bit=$is64Bit")
+    appendLine("primary_abi=${reportValue(supportedAbis.firstOrNull() ?: "Nao disponivel")}")
     appendLine("supported_abis=${supportedAbis.joinToString(",")}")
+    appendLine("cpu_max_frequencies_mhz=${cpuMaxFrequenciesMhz.joinToString(",")}")
+    appendLine("cpu_frequency_summary=${reportValue(cpuFrequencySummary(this@toAiReport))}")
     appendLine()
     appendLine("[memory]")
     appendLine("ram_total_bytes=$ramTotalBytes")
@@ -294,6 +479,26 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("temperature_c=${batteryTemperatureC?.let(::formatOneDecimal) ?: "Nao disponivel"}")
     appendLine("voltage_mv=${batteryVoltageMv ?: "Nao disponivel"}")
     appendLine()
+    appendLine("[connectivity]")
+    appendLine("active_transport=${reportValue(networkTransport)}")
+    appendLine("internet_validated=$networkValidated")
+    appendLine("metered=$networkMetered")
+    appendLine("vpn_active=$vpnActive")
+    appendLine("ethernet_active=$ethernetActive")
+    appendLine("wifi_active=$wifiActive")
+    appendLine("wifi_band=${reportValue(wifiBand)}")
+    appendLine("wifi_standard=${reportValue(wifiStandard)}")
+    appendLine("wifi_frequency_mhz=${wifiFrequencyMhz ?: "Nao disponivel"}")
+    appendLine("wifi_link_speed_mbps=${wifiLinkSpeedMbps ?: "Nao disponivel"}")
+    appendLine("cellular_active=$cellularActive")
+    appendLine("mobile_network_type=${reportValue(mobileNetworkType)}")
+    appendLine("carrier=${reportValue(carrierName)}")
+    appendLine("sim_slot_count=$simSlotCount")
+    appendLine("sim_ready_count=$simReadyCount")
+    appendLine("esim_supported=$esimSupported")
+    appendLine("euicc_manager_enabled=$esimEnabled")
+    appendLine("esim_multiple_enabled_profiles_supported=$esimMepSupported")
+    appendLine()
     appendLine("[capabilities]")
     appendLine("nfc=$hasNfc")
     appendLine("bluetooth=$hasBluetooth")
@@ -320,11 +525,7 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("relative_humidity=$hasRelativeHumidity")
     appendLine()
     appendLine("[sensor_inventory]")
-    if (sensorInventory.isEmpty()) {
-        appendLine("none=true")
-    } else {
-        sensorInventory.forEach { appendLine(it) }
-    }
+    if (sensorInventory.isEmpty()) appendLine("none=true") else sensorInventory.forEach { appendLine(it) }
     appendLine()
     appendLine("[explorador_xp]")
     appendLine("version_name=${reportValue(appVersionName)}")
@@ -333,6 +534,7 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("[ai_guidance]")
     appendLine("Preferir os campos numericos *_bytes para calculos e os campos *_human para explicacoes ao usuario.")
     appendLine("Nao inferir capacidade inexistente quando um campo estiver como Nao disponivel.")
+    appendLine("SSID, BSSID, numero de telefone, IMEI, IMSI, ICCID e localizacao nao sao coletados.")
     appendLine("Os valores representam o estado informado pelo Android no momento generated_at.")
 }
 
@@ -341,11 +543,14 @@ fun DeviceInfoSnapshot.toShareSummary(): String = buildString {
     appendLine("${deviceName} • ${manufacturer.smartReportTitle()} ${model}")
     appendLine("Android ${androidVersion} • API ${apiLevel} • Patch ${securityPatch}")
     appendLine("Processador: ${listOfNotNull(socManufacturer, socModel).joinToString(" ").ifBlank { hardware }}")
-    appendLine("CPU: ${cpuCores} núcleos • ${if (is64Bit) "64 bits" else "32 bits"}")
+    appendLine("CPU: ${cpuCores} núcleos • ${if (is64Bit) "64 bits" else "32 bits"} • ${supportedAbis.firstOrNull() ?: "ABI N/D"}")
+    if (cpuMaxFrequenciesMhz.isNotEmpty()) appendLine("Clock: ${cpuFrequencySummary(this@toShareSummary)}")
     appendLine("RAM: ${humanBytes(ramTotalBytes)} • ${humanBytes(ramAvailableBytes)} livre")
     appendLine("Armazenamento: ${humanBytes(storageTotalBytes)} • ${humanBytes(storageAvailableBytes)} livre")
     appendLine("Tela: ${displayWidthPx} × ${displayHeightPx}px${if (refreshRateHz > 0f) " • ${refreshRateHz.toInt()} Hz" else ""}")
     appendLine("Bateria: ${batteryPercent?.let { "$it%" } ?: "N/D"} • $batteryStatus")
+    appendLine("Conexão: ${connectivitySummary(this@toShareSummary)}")
+    appendLine("SIM: $simReadyCount pronto(s) de $simSlotCount • eSIM ${if (esimSupported) "suportado" else "não detectado"}")
     appendLine("Sensores detectados: $sensorCount")
     appendLine("Gerado pelo Explorador XP ${appVersionName}")
 }
@@ -382,6 +587,34 @@ fun humanBytes(bytes: Long): String {
         value >= 100 -> String.format(Locale.forLanguageTag("pt-BR"), "%.0f %s", value, units[unit])
         else -> String.format(Locale.forLanguageTag("pt-BR"), "%.1f %s", value, units[unit])
     }
+}
+
+fun cpuFrequencySummary(info: DeviceInfoSnapshot): String {
+    if (info.cpuMaxFrequenciesMhz.isEmpty()) return "Não disponível"
+    val grouped = info.cpuMaxFrequenciesMhz.groupingBy { ((it + 5) / 10) * 10 }.eachCount().toSortedMap()
+    return grouped.entries.joinToString(" + ") { (mhz, count) ->
+        val ghz = String.format(Locale.forLanguageTag("pt-BR"), "%.2f", mhz / 1000.0)
+            .trimEnd('0').trimEnd(',')
+        "${count}×${ghz} GHz"
+    }
+}
+
+fun connectivitySummary(info: DeviceInfoSnapshot): String = when {
+    info.wifiActive -> buildString {
+        append("Wi-Fi")
+        if (info.wifiBand != "Não disponível") append(" • ${info.wifiBand}")
+        if (info.wifiStandard != "Não disponível") append(" • ${info.wifiStandard}")
+        info.wifiLinkSpeedMbps?.let { append(" • ${it} Mbps") }
+        if (info.vpnActive) append(" • VPN")
+    }
+    info.cellularActive -> buildString {
+        append(info.mobileNetworkType.takeUnless { it == "Não disponível" } ?: "Rede móvel")
+        if (info.carrierName != "Não disponível") append(" • ${info.carrierName}")
+        if (info.vpnActive) append(" • VPN")
+    }
+    info.ethernetActive -> "Ethernet"
+    info.vpnActive -> "VPN"
+    else -> info.networkTransport
 }
 
 private fun reportValue(value: String): String = value

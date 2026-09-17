@@ -20,7 +20,7 @@ import java.io.FileOutputStream
 object DeviceInfoShare {
     fun renderBitmap(info: DeviceInfoSnapshot): Bitmap {
         val width = 1080
-        val height = 2048
+        val height = 2300
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.rgb(246, 250, 255))
@@ -51,6 +51,8 @@ object DeviceInfoShare {
                 "Patch de segurança" to info.securityPatch,
                 "Processador" to processorForShare(info),
                 "CPU" to "${info.cpuCores} núcleos • ${if (info.is64Bit) "64 bits" else "32 bits"}",
+                "Arquitetura" to (info.supportedAbis.firstOrNull() ?: "Não disponível"),
+                "Frequência" to cpuFrequencySummary(info),
                 "Tela" to "${info.displayWidthPx} × ${info.displayHeightPx}px${if (info.refreshRateHz > 0f) " • ${info.refreshRateHz.toInt()} Hz" else ""}",
             ),
         )
@@ -61,6 +63,8 @@ object DeviceInfoShare {
                 "RAM livre" to humanBytes(info.ramAvailableBytes),
                 "Armazenamento livre" to humanBytes(info.storageAvailableBytes),
                 "Bateria" to (info.batteryPercent?.let { "$it% • ${info.batteryStatus}" } ?: info.batteryStatus),
+                "Conexão" to connectivitySummary(info),
+                "SIM / eSIM" to "${info.simReadyCount}/${info.simSlotCount} pronto(s) • eSIM ${if (info.esimSupported) "sim" else "não"}",
                 "Sensores detectados" to info.sensorCount.toString(),
             ),
         )

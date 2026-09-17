@@ -44,3 +44,12 @@
 - [x] Gerar PNG local com ficha do dispositivo.
 - [x] Compartilhar PNG via `FileProvider`.
 - [x] Expandir relatório técnico para IA com seção `[sensors]`.
+
+### Alpha 26 — Conectividade e CPU
+
+- [x] Adicionar painel de conectividade real (Wi‑Fi/rede móvel/SIM/eSIM/Bluetooth/VPN).
+- [x] Exibir banda e padrão do Wi‑Fi quando o Android disponibilizar.
+- [x] Ampliar informações de CPU com ABI, clock máximo por grupo e hardware.
+- [x] Transformar setas de seção em controles reais de expandir/recolher.
+- [x] Compactar sensores em três colunas com nomes de até duas linhas.
+- [x] Expandir relatório para IA sem coletar identificadores pessoais.

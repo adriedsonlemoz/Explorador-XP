@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Fingerprint
@@ -52,6 +54,7 @@ import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.SdCard
 import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -230,7 +233,43 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
                                 SectionDivider()
                                 InfoRow("CPU", "${info.cpuCores} núcleos • ${if (info.is64Bit) "64 bits" else "32 bits"}")
                                 SectionDivider()
+                                InfoRow("Arquitetura", info.supportedAbis.firstOrNull() ?: "Não disponível")
+                                SectionDivider()
+                                InfoRow("Frequência", cpuFrequencySummary(info))
+                                SectionDivider()
+                                InfoRow("Hardware", info.hardware)
+                                SectionDivider()
                                 InfoRow("Tela", displayLabel(info))
+                            }
+
+                            DeviceSection(
+                                title = "Conectividade",
+                                icon = Icons.Rounded.Wifi,
+                                iconTint = DevicePurple,
+                            ) {
+                                InfoRow("Conexão atual", connectivitySummary(info))
+                                SectionDivider()
+                                InfoRow("Internet", if (info.networkValidated) "Conectada" else if (info.networkTransport == "Sem conexão") "Sem conexão" else "Sem validação")
+                                SectionDivider()
+                                InfoRow("Wi-Fi", wifiDetailsLabel(info))
+                                SectionDivider()
+                                InfoRow("Rede móvel", mobileDetailsLabel(info))
+                                SectionDivider()
+                                InfoRow("SIM", simDetailsLabel(info))
+                                SectionDivider()
+                                InfoRow("eSIM", if (info.esimSupported) buildString {
+                                    append("Suportado")
+                                    if (info.esimMepSupported) append(" • múltiplos perfis")
+                                    else if (info.esimEnabled) append(" • gerenciador ativo")
+                                } else "Não detectado")
+                                SectionDivider()
+                                InfoRow("Bluetooth", when {
+                                    info.hasBluetoothLe -> "Clássico + BLE"
+                                    info.hasBluetooth -> "Clássico"
+                                    else -> "Não disponível"
+                                })
+                                SectionDivider()
+                                InfoRow("VPN", if (info.vpnActive) "Ativa" else "Não ativa")
                             }
 
                             DeviceSection(
@@ -548,16 +587,25 @@ private fun DeviceSection(
     title: String,
     icon: ImageVector,
     iconTint: Color,
+    initiallyExpanded: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    var expanded by remember(title) { mutableStateOf(initiallyExpanded) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White, RoundedCornerShape(15.dp))
             .border(1.dp, DeviceBorder, RoundedCornerShape(15.dp))
-            .padding(horizontal = 12.dp, vertical = 11.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { expanded = !expanded }
+                .padding(vertical = 3.dp),
+        ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -568,10 +616,18 @@ private fun DeviceSection(
             }
             Spacer(Modifier.width(8.dp))
             Text(title, fontWeight = FontWeight.Bold, color = DeviceText, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = Color(0xFF8394AA), modifier = Modifier.size(20.dp))
+            Icon(
+                if (expanded) Icons.Rounded.ExpandMore else Icons.Rounded.ChevronRight,
+                contentDescription = if (expanded) "Recolher $title" else "Expandir $title",
+                tint = Color(0xFF8394AA),
+                modifier = Modifier.size(20.dp),
+            )
         }
-        Spacer(Modifier.height(7.dp))
-        content()
+        if (expanded) {
+            Spacer(Modifier.height(7.dp))
+            content()
+            Spacer(Modifier.height(3.dp))
+        }
     }
 }
 
@@ -668,7 +724,7 @@ private fun SensorGrid(info: DeviceInfoSnapshot) {
         CapabilityUi("Umidade", info.hasRelativeHumidity, Icons.Rounded.Sensors),
     )
 
-    sensors.chunked(2).forEach { rowItems ->
+    sensors.chunked(3).forEach { rowItems ->
         Row(
             horizontalArrangement = Arrangement.spacedBy(7.dp),
             modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
@@ -676,7 +732,7 @@ private fun SensorGrid(info: DeviceInfoSnapshot) {
             rowItems.forEach { sensor ->
                 CapabilityTile(sensor, Modifier.weight(1f))
             }
-            if (rowItems.size == 1) Spacer(Modifier.weight(1f))
+            repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
         }
     }
 }
@@ -705,9 +761,10 @@ private fun CapabilityTile(capability: CapabilityUi, modifier: Modifier = Modifi
             Text(
                 capability.name,
                 color = DeviceText,
-                fontSize = 9.5.sp,
+                fontSize = 9.2.sp,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                maxLines = 2,
+                lineHeight = 10.5.sp,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -874,6 +931,30 @@ private fun AiReportCard(enabled: Boolean, onExport: () -> Unit) {
             Icon(Icons.Rounded.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
         }
     }
+}
+
+private fun wifiDetailsLabel(info: DeviceInfoSnapshot): String {
+    if (!info.wifiActive) return "Não conectado"
+    return buildString {
+        if (info.wifiStandard != "Não disponível") append(info.wifiStandard) else append("Wi-Fi")
+        if (info.wifiBand != "Não disponível") append(" • ${info.wifiBand}")
+        info.wifiLinkSpeedMbps?.let { append(" • ${it} Mbps") }
+    }
+}
+
+private fun mobileDetailsLabel(info: DeviceInfoSnapshot): String = buildString {
+    when {
+        info.mobileNetworkType != "Não disponível" -> append(info.mobileNetworkType)
+        info.cellularActive -> append("Rede móvel")
+        else -> append("Não ativa")
+    }
+    if (info.carrierName != "Não disponível") append(" • ${info.carrierName}")
+    if (!info.cellularActive && info.mobileNetworkType != "Não disponível") append(" • em espera")
+}
+
+private fun simDetailsLabel(info: DeviceInfoSnapshot): String = when {
+    info.simSlotCount <= 0 -> "Não detectado"
+    else -> "${info.simSlotCount} slot(s) • ${info.simReadyCount} pronto(s)"
 }
 
 private fun processorLabel(info: DeviceInfoSnapshot): String {
