@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.35` (`versionCode 35`)  
+**Versão atual:** `0.1.0-alpha.36` (`versionCode 36`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -15,8 +15,9 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
 - A alpha.30 integra uma **Lixeira real** ao fluxo de exclusão: cada remoção oferece mover para a Lixeira ou apagar permanentemente; itens podem ser restaurados, apagados individualmente ou removidos de uma vez com **Esvaziar Lixeira**.
 - A alpha.31 continua o refinamento visual: menus superiores mais legíveis e roláveis em telas estreitas, barra de seleção com ações sem compressão, listagem com tipo/tamanho e data separados, janelas com botão Fechar no padrão XP e armazenamento com leitura visual mais clara.
+- A alpha.36 corrige o build do GitHub após o Media3 1.11.1 exigir API 36: o player mantém as mesmas funções, mas passa a usar **Media3/ExoPlayer 1.9.4**, compatível com o `compileSdk 35` e a toolchain atual do projeto.
 - A alpha.35 transforma o visualizador de texto/código em um **editor interno leve**: Salvar/Salvar como, desfazer/refazer, localizar/substituir, ir para linha, linha/coluna, números de linha, codificação detectada, aviso de alterações não salvas, gravação temporária validada e preview web para HTML/CSS/JS. Arquivos grandes entram em leitura parcial para evitar travamentos.
-- A alpha.34 moderniza exclusivamente o player interno de vídeo com **Media3/ExoPlayer 1.11.1**: play/pause, progresso/tempo, ±10 s, velocidades de 0.5x a 2x, reiniciar, tela cheia, rotação estável, Ajustar/Preencher, retomada de posição, informações do arquivo, controles auto-ocultáveis e fallback claro para abertura externa.
+- A alpha.34 modernizou o player interno de vídeo com **Media3/ExoPlayer**; desde a alpha.36 a dependência está fixada em **1.9.4** para compatibilidade com `compileSdk 35`: play/pause, progresso/tempo, ±10 s, velocidades de 0.5x a 2x, reiniciar, tela cheia, rotação estável, Ajustar/Preencher, retomada de posição, informações do arquivo, controles auto-ocultáveis e fallback claro para abertura externa.
 - A alpha.33 padroniza janelas e rolagens com áreas seguras do Android, reorganiza a exclusão com botões responsivos e ícones XP, refina percentuais de armazenamento, moderniza a tela Sobre sem abandonar a identidade XP e melhora densidade/alinhamento de Lixeira, lista, grade, seleção e Informações do dispositivo.
 - A alpha.32 corrige vazamentos visuais da Lixeira, reforça o esvaziamento físico da pasta gerenciada, simplifica a seleção para **Copiar/Mover/Excluir/Mais**, compacta Lixeira/Favoritos/progresso, trata `Android/data`/`obb` como áreas restritas e melhora Propriedades, análise de armazenamento, grade e barra inferior.
 - O card de armazenamento abre uma análise detalhada sob demanda, com total/usado/livre, categorias de arquivo, pastas que mais ocupam espaço e maiores arquivos; a varredura roda fora da thread principal, pode ser cancelada e não pesa na abertura do app.

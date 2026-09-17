@@ -29,3 +29,7 @@ O visualizador interno tratava vídeo e áudio pelo mesmo `VideoView` com `Media
 ## Dependência
 
 A versão usada é Media3 1.11.1, estável em 10/09/2026. Os módulos `media3-exoplayer` e `media3-ui` usam exatamente a mesma versão.
+## Correção de compatibilidade posterior — alpha.36
+
+O build de CI mostrou que Media3 1.11.1 exige `compileSdk 36`, enquanto o projeto permanece em `compileSdk 35` com AGP 8.7.3. Na alpha.36, `media3-exoplayer` e `media3-ui` foram fixados em **1.9.4**, preservando o código e as funcionalidades do player e evitando uma migração ampla da toolchain apenas para resolver essa incompatibilidade de metadados AAR.
+

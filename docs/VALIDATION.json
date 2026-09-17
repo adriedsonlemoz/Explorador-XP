@@ -1,13 +1,20 @@
 {
-  "version_build": "0.1.0-alpha.35",
-  "version_code": 35,
-  "manager_version": "0.1.0-alpha.35",
-  "manager_code": 35,
+  "version_build": "0.1.0-alpha.36",
+  "version_code": 36,
+  "manager_version": "0.1.0-alpha.36",
+  "manager_code": 36,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.35",
-      "code": 35
+      "version": "0.1.0-alpha.36",
+      "code": 36
+    },
+    "media3_compile_sdk_compatibility_fix": {
+      "ok": true,
+      "media3": "1.9.4",
+      "compileSdk": 35,
+      "agp": "8.7.3",
+      "workflow_gradle": "8.9"
     },
     "json_parse": {
       "ok": true,
@@ -16,7 +23,7 @@
     },
     "xml_parse": {
       "ok": true,
-      "files": 10,
+      "files": 12,
       "errors": []
     },
     "yaml_parse": {
@@ -27,78 +34,54 @@
     },
     "drawable_references": {
       "ok": true,
-      "references": 214,
+      "references": 125,
       "resource_names": 157,
       "missing": []
     },
-    "kotlin_lexical_balance": {
-      "ok": true,
-      "files": 24,
-      "errors": []
-    },
     "kotlin_parser": {
       "ok": true,
-      "exit_code": 1,
       "syntax_markers": [],
-      "note": "Exit code diferente de zero é esperado sem Android/Compose/Media3 no classpath local; a checagem considera somente marcadores de sintaxe."
-    },
-    "alpha35_editor_feature_markers": {
-      "ok": true,
-      "items": {
-        "text_extensions_routed": true,
-        "save_and_save_as": true,
-        "undo_redo": true,
-        "select_copy_cut_paste": true,
-        "find_replace": true,
-        "go_to_line": true,
-        "line_column_count": true,
-        "unsaved_guard": true,
-        "encoding_detection": true,
-        "utf8_support": true,
-        "safe_temp_write_fsync_validate": true,
-        "fallback_backup_restore": true,
-        "large_file_read_only": true,
-        "line_numbers": true,
-        "basic_indentation": true,
-        "syntax_highlight_html_css_js_json_xml": true,
-        "web_preview": true,
-        "relative_same_folder_base_url": true,
-        "preview_fullscreen": true,
-        "refresh_after_close": true
-      }
+      "note": "kotlinc local foi executado sem Android/Compose/Media3 no classpath; erros de referências são esperados. Não houve marcador de erro de sintaxe do parser."
     },
     "image_resources_unchanged": {
       "ok": true,
       "current": 172,
-      "original": 172,
+      "alpha35": 172,
       "added": [],
       "removed": [],
       "changed": []
     },
-    "apk_pipeline_unchanged": {
+    "apk_workflows_unchanged": {
       "ok": true,
-      "workflow": ".github/workflows/gerar-apk.yml"
+      "workflows": [
+        {
+          "file": ".github/workflows/desempenho.yml",
+          "unchanged": true
+        },
+        {
+          "file": ".github/workflows/gerar-apk.yml",
+          "unchanged": true
+        }
+      ]
     },
     "full_gradle_android_build": {
       "ok": false,
       "executed": false,
-      "reason": "O ZIP não inclui gradlew e este ambiente não possui Gradle/Android SDK configurados. O workflow GitHub Gerar APK permanece intacto para testes, lint e assemblePerformance."
+      "reason": "O ambiente local não possui Android SDK/Gradle configurados e o projeto não inclui gradlew. A incompatibilidade AAR registrada no CI foi removida ao usar Media3 1.9.4 com compileSdk 35."
     }
   },
-  "validated_at_utc": "2026-09-17T21:22:52.780116+00:00",
-  "source_diff_against_alpha34": {
+  "validated_at_utc": "2026-09-17T22:43:33.522803+00:00",
+  "source_diff_against_alpha35": {
     "added": [
-      "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
-      "docs/ALPHA35_TEXT_CODE_EDITOR_NOTES.md"
+      "docs/ALPHA36_BUILD_FIX_NOTES.md",
+      "docs/VALIDATION.json (updated validation record)"
     ],
     "removed": [],
     "changed": [
       "CHANGELOG.md",
       "README.md",
       "app/build.gradle.kts",
-      "app/src/main/java/com/exploradorxp/app/FileTypeClassifier.kt",
-      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
-      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "docs/ALPHA34_VIDEO_PLAYER_NOTES.md",
       "github-manager.json"
     ]
   }

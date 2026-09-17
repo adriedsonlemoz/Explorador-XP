@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.1.0-alpha.36
+
+- Corrigida a falha do workflow `Gerar APK` em `:app:checkDebugAarMetadata`.
+- Causa confirmada nos logs: Media3 1.11.1 exige `compileSdk 36`, enquanto o projeto usa `compileSdk 35` com Android Gradle Plugin 8.7.3.
+- `media3-exoplayer` e `media3-ui` foram ajustados de 1.11.1 para **1.9.4**, linha compatível com `compileSdk 35`, sem alterar as funcionalidades implementadas no player.
+- Mantidos `compileSdk 35`, `targetSdk 35`, AGP 8.7.3 e Gradle 8.9 do workflow para evitar uma atualização ampla e desnecessária da toolchain nesta correção.
+- Editor de texto/código da alpha.35 e demais funções do Explorador XP permanecem inalterados.
+- README, documentação de validação e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.36` / `versionCode 36`.
+
 ## 0.1.0-alpha.35
 
 - Visualizador de texto/código substituído por um editor interno leve e dedicado em `TextCodeEditorViewer.kt`, sem alterar vídeo, áudio, PDF, ZIP ou demais visualizadores.
