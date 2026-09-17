@@ -926,7 +926,7 @@ private fun WebPreview(
                 webViewClient = object : WebViewClient() {
                     override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                         if (request?.isForMainFrame == true) {
-                            onError("Falha ao carregar o preview: ${error.description ?: "recurso indisponível"}")
+                            onError("Falha ao carregar o preview: ${error?.description ?: "recurso indisponível"}")
                         }
                     }
                 }

@@ -1,15 +1,26 @@
 {
-  "version_build": "0.1.0-alpha.36",
-  "version_code": 36,
-  "manager_version": "0.1.0-alpha.36",
-  "manager_code": 36,
+  "version_build": "0.1.0-alpha.37",
+  "version_code": 37,
+  "manager_version": "0.1.0-alpha.37",
+  "manager_code": 37,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.36",
-      "code": 36
+      "version": "0.1.0-alpha.37",
+      "code": 37
     },
-    "media3_compile_sdk_compatibility_fix": {
+    "ci_log_root_cause": {
+      "ok": true,
+      "source": "Gerar-APK-35-logs.zip",
+      "previous_media3_metadata_error_resolved": true,
+      "compile_stage_reached": ":app:compileDebugKotlin",
+      "reported_errors": [
+        "InternalViewer.kt: callback requestClose inferido como () -> Unit? onde () -> Unit era exigido",
+        "TextCodeEditorViewer.kt: acesso direto a WebResourceError? nullable no preview WebView"
+      ],
+      "both_patched": true
+    },
+    "media3_compile_sdk_compatibility": {
       "ok": true,
       "media3": "1.9.4",
       "compileSdk": 35,
@@ -18,7 +29,7 @@
     },
     "json_parse": {
       "ok": true,
-      "files": 2,
+      "files": 3,
       "errors": []
     },
     "xml_parse": {
@@ -34,19 +45,20 @@
     },
     "drawable_references": {
       "ok": true,
-      "references": 125,
+      "references": 222,
       "resource_names": 157,
       "missing": []
     },
-    "kotlin_parser": {
+    "kotlin_static_parser": {
       "ok": true,
       "syntax_markers": [],
-      "note": "kotlinc local foi executado sem Android/Compose/Media3 no classpath; erros de referências são esperados. Não houve marcador de erro de sintaxe do parser."
+      "prior_ci_diagnostics_absent_after_patch": true,
+      "note": "kotlinc local foi executado sem Android/Compose/Media3 no classpath; referências Android ficam irresolvidas, mas não houve erro de parser nem reapareceram os dois diagnósticos reportados pelo CI."
     },
     "image_resources_unchanged": {
       "ok": true,
       "current": 172,
-      "alpha35": 172,
+      "alpha36": 172,
       "added": [],
       "removed": [],
       "changed": []
@@ -67,13 +79,13 @@
     "full_gradle_android_build": {
       "ok": false,
       "executed": false,
-      "reason": "O ambiente local não possui Android SDK/Gradle configurados e o projeto não inclui gradlew. A incompatibilidade AAR registrada no CI foi removida ao usar Media3 1.9.4 com compileSdk 35."
+      "reason": "O ambiente local não possui Gradle/Android SDK configurados e o projeto não inclui gradlew. A correção foi guiada pelos erros exatos do CI e validada estruturalmente."
     }
   },
-  "validated_at_utc": "2026-09-17T22:43:33.522803+00:00",
-  "source_diff_against_alpha35": {
+  "validated_at_utc": "2026-09-17T23:02:09.671925+00:00",
+  "source_diff_against_alpha36": {
     "added": [
-      "docs/ALPHA36_BUILD_FIX_NOTES.md",
+      "docs/ALPHA37_BUILD_FIX_NOTES.md",
       "docs/VALIDATION.json (updated validation record)"
     ],
     "removed": [],
@@ -81,7 +93,8 @@
       "CHANGELOG.md",
       "README.md",
       "app/build.gradle.kts",
-      "docs/ALPHA34_VIDEO_PLAYER_NOTES.md",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
       "github-manager.json"
     ]
   }

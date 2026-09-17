@@ -123,8 +123,13 @@ fun InternalViewerScreen(
         }
     }
 
-    val requestClose = {
-        if (isTextDocument && guardedCloseRequest != null) guardedCloseRequest?.invoke() else onClose()
+    val requestClose: () -> Unit = {
+        if (isTextDocument && guardedCloseRequest != null) {
+            guardedCloseRequest?.invoke()
+            Unit
+        } else {
+            onClose()
+        }
     }
 
     Column(

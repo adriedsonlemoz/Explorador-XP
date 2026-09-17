@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.1.0-alpha.37
+
+- Corrigidos os dois erros de compilação Kotlin restantes encontrados no workflow `Gerar APK` após a alpha.36 avançar além de `checkDebugAarMetadata`.
+- `InternalViewer.kt`: callback `requestClose` agora possui tipo `() -> Unit` explícito e não propaga `Unit?` ao `ViewerTitleBar`.
+- `TextCodeEditorViewer.kt`: `WebResourceError` recebido pelo `WebViewClient` agora é tratado com acesso nulo seguro ao montar a mensagem de falha do preview.
+- Nenhuma funcionalidade do player, editor, Lixeira, armazenamento ou demais visualizadores foi removida/alterada nesta correção.
+- Media3 permanece em 1.9.4, mantendo compatibilidade com `compileSdk 35`.
+- README, documentação de validação e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.37` / `versionCode 37`.
+
 ## 0.1.0-alpha.36
 
 - Corrigida a falha do workflow `Gerar APK` em `:app:checkDebugAarMetadata`.
