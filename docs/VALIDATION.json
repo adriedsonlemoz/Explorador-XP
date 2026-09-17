@@ -1,21 +1,21 @@
 {
-  "version_build": "0.1.0-alpha.30",
-  "version_code": 30,
-  "manager_version": "0.1.0-alpha.30",
-  "manager_code": 30,
-  "validated_at_utc": "2026-09-17T12:50:43.314990+00:00",
+  "version_build": "0.1.0-alpha.31",
+  "version_code": 31,
+  "manager_version": "0.1.0-alpha.31",
+  "manager_code": 31,
+  "validated_at_utc": "2026-09-17T14:12:19.160467+00:00",
   "checks": {
     "version_sync": {
       "ok": true
     },
     "json_parse": {
       "ok": true,
-      "files": 2,
+      "files": 3,
       "errors": []
     },
     "xml_parse": {
       "ok": true,
-      "files": 10,
+      "files": 12,
       "errors": []
     },
     "yaml_parse": {
@@ -27,12 +27,12 @@
     "drawable_references": {
       "ok": true,
       "references": 122,
-      "resource_names": 159,
+      "resource_names": 157,
       "missing": []
     },
     "kotlin_parser": {
       "ok": true,
-      "note": "kotlinc encontrou 0 erros de parser; resolução Android/Compose completa exige SDK/Gradle."
+      "note": "kotlinc não encontrou marcadores de erro de parser/sintaxe nos arquivos de UI alterados; resolução Android/Compose completa exige SDK/Gradle."
     },
     "pure_classifier_formatter": {
       "ok": true,
@@ -45,14 +45,6 @@
     "viewmodel_semantic_stub_compile": {
       "ok": true,
       "note": "ExplorerViewModel + FileRepository compilados com stubs mínimos Android/Lifecycle."
-    },
-    "image_resources_unchanged_from_alpha29": {
-      "ok": true,
-      "current": 172,
-      "original": 172,
-      "added": [],
-      "removed": [],
-      "changed": []
     },
     "feature_markers": {
       "ok": true,
@@ -72,27 +64,42 @@
     "full_gradle_android_build": {
       "ok": false,
       "executed": false,
-      "reason": "Ambiente sem Gradle instalado, sem gradlew no projeto e sem Android SDK; o workflow do repositório continua sendo a validação completa."
+      "reason": "Projeto sem gradlew e ambiente sem Gradle/Android SDK completos; a validação integral continua no workflow Android do repositório."
+    },
+    "image_resources_unchanged_from_alpha30": {
+      "ok": true,
+      "current": 172,
+      "original": 172,
+      "added": [],
+      "removed": [],
+      "changed": []
+    },
+    "alpha31_visual_markers": {
+      "ok": true,
+      "items": {
+        "scrollable_top_menus": true,
+        "scrollable_selection_toolbar": true,
+        "storage_card_non_clipping_layout": true,
+        "file_metadata_split_lines": true,
+        "xp_red_dialog_close_button": true,
+        "trash_header_reflow": true,
+        "storage_real_category_percentages": true,
+        "viewer_type_size_toolbar": true
+      }
     }
   },
-  "source_diff_against_alpha29": {
+  "source_diff_against_alpha30": {
     "added": [
-      "app/src/main/java/com/exploradorxp/app/FileTypeClassifier.kt",
-      "docs/ALPHA30_TRASH_STORAGE_NOTES.md"
+      "docs/ALPHA31_VISUAL_REFINEMENT_NOTES.md"
     ],
     "removed": [],
     "changed": [
       "CHANGELOG.md",
       "README.md",
       "app/build.gradle.kts",
-      "app/src/main/java/com/exploradorxp/app/ExplorerModels.kt",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
-      "app/src/main/java/com/exploradorxp/app/ExplorerViewModel.kt",
-      "app/src/main/java/com/exploradorxp/app/FileDisplayFormatter.kt",
-      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
       "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
-      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
-      "app/src/test/java/com/exploradorxp/app/ExplorerItemTransformsTest.kt",
+      "docs/VALIDATION.json",
       "github-manager.json"
     ]
   }

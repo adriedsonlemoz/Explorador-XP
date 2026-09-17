@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.30` (`versionCode 30`)  
+**Versão atual:** `0.1.0-alpha.31` (`versionCode 31`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -14,6 +14,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - A experiência vetorial da alpha.27 foi revertida na alpha.28 por preferência visual e ausência de ganho perceptível no aparelho; o app voltou ao pipeline PNG otimizado com decodificação assíncrona/cache.
 - A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
 - A alpha.30 integra uma **Lixeira real** ao fluxo de exclusão: cada remoção oferece mover para a Lixeira ou apagar permanentemente; itens podem ser restaurados, apagados individualmente ou removidos de uma vez com **Esvaziar Lixeira**.
+- A alpha.31 continua o refinamento visual: menus superiores mais legíveis e roláveis em telas estreitas, barra de seleção com ações sem compressão, listagem com tipo/tamanho e data separados, janelas com botão Fechar no padrão XP e armazenamento com leitura visual mais clara.
 - O card de armazenamento abre uma análise detalhada sob demanda, com total/usado/livre, categorias de arquivo, pastas que mais ocupam espaço e maiores arquivos; a varredura roda fora da thread principal, pode ser cancelada e não pesa na abertura do app.
 - Arquivos e pastas ganharam identificação textual consistente de tipo em lista, grade, status, Lixeira e visualizadores (por exemplo, **Imagem JPEG**, **Documento PDF** e **Aplicativo Android (APK)**).
 - A toolbar ganhou acesso direto à Lixeira no lugar da ação duplicada **Exibir**; Ajuda foi reorganizada em tópicos expansíveis e Sobre reúne versão, desenvolvedor, PIX copiável e novidades da versão.

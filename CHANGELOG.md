@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.1.0-alpha.31
+
+- Continuado o polimento visual sem trocar o pacote de ícones XP e sem adicionar imagens ou mockups.
+- A barra de menus superior ganhou texto ligeiramente maior e rolagem horizontal em telas estreitas, evitando compressão de Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda.
+- O modo de seleção deixou de espremer sete ações na largura da tela: a toolbar contextual agora usa botões com largura estável e rolagem horizontal, melhorando leitura e toque.
+- O card de armazenamento foi redesenhado para nunca esconder os rótulos quando o volume está muito vazio ou muito cheio; agora mostra usado/total/livre, porcentagem e uma barra separada com acesso claro a **Analisar**.
+- A listagem passou a separar **tipo + tamanho** da **data + hora**, aumentando a identificação visual do arquivo sem depender apenas da extensão ou do ícone.
+- A barra inferior agora informa também quantas pastas e arquivos existem no diretório atual.
+- Janelas XP receberam botão Fechar vermelho no padrão das janelas clássicas, com título protegido contra corte.
+- A Lixeira teve o cabeçalho reorganizado para não apertar informações e ações em telas estreitas; **Atualizar** e **Esvaziar Lixeira** ficam em uma faixa própria.
+- A análise de armazenamento agora usa percentuais reais dentro do total categorizado em vez de barras relativas apenas à maior categoria, tornando a comparação mais intuitiva.
+- O visualizador interno passou a mostrar diretamente **tipo do arquivo + tamanho** na toolbar, removendo o texto redundante “Visualizador interno”.
+- Versão sincronizada para `0.1.0-alpha.31` / `versionCode 31`.
+
 ## 0.1.0-alpha.30
 
 - Implementada **Lixeira real** integrada ao fluxo de exclusão: ao apagar arquivo ou pasta, o usuário escolhe entre **Mover para a Lixeira**, **Apagar permanentemente** ou cancelar.

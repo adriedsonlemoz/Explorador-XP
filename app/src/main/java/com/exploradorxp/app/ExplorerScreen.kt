@@ -547,9 +547,10 @@ private fun XpHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(26.dp)
+                    .height(29.dp)
                     .background(XpChrome)
                     .border(1.dp, XpChromeBorder)
+                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 3.dp)
             ) {
                 Box {
@@ -648,23 +649,25 @@ private fun XpHeader(
         }
 
         if (!searchMode) {
+            val selectionToolbarScroll = rememberScrollState()
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(if (selectionCount > 0) 54.dp else 52.dp)
+                    .height(if (selectionCount > 0) 58.dp else 52.dp)
                     .background(XpChrome)
                     .border(1.dp, XpChromeBorder)
+                    .then(if (selectionCount > 0) Modifier.horizontalScroll(selectionToolbarScroll) else Modifier)
                     .padding(horizontal = 2.dp)
             ) {
                 if (selectionCount > 0) {
-                    XpClassicToolButton(R.drawable.copy, "Copiar", true, onCopySelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.move, "Mover", true, onCutSelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.delete, "Excluir", true, onDeleteSelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.rename, "Renomear", selectionCount == 1, onRenameSelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.share, "Enviar", true, onShareSelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.properties, "Detalhes", selectionCount == 1, onPropertiesSelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.select_all, "Todos", true, onSelectAll, Modifier.weight(1f))
+                    XpClassicToolButton(R.drawable.copy, "Copiar", true, onCopySelection, Modifier.width(68.dp))
+                    XpClassicToolButton(R.drawable.move, "Mover", true, onCutSelection, Modifier.width(68.dp))
+                    XpClassicToolButton(R.drawable.delete, "Excluir", true, onDeleteSelection, Modifier.width(68.dp))
+                    XpClassicToolButton(R.drawable.rename, "Renomear", selectionCount == 1, onRenameSelection, Modifier.width(76.dp))
+                    XpClassicToolButton(R.drawable.share, "Enviar", true, onShareSelection, Modifier.width(68.dp))
+                    XpClassicToolButton(R.drawable.properties, "Detalhes", selectionCount == 1, onPropertiesSelection, Modifier.width(72.dp))
+                    XpClassicToolButton(R.drawable.select_all, "Todos", true, onSelectAll, Modifier.width(64.dp))
                 } else {
                     XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack, Modifier.weight(1f))
                     XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward, Modifier.weight(1f))
@@ -839,12 +842,12 @@ private fun XpMenuLabel(label: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         text = label,
         color = Color(0xFF202020),
-        fontSize = 11.sp,
+        fontSize = 12.sp,
         fontWeight = FontWeight.Medium,
         modifier = Modifier
             .background(if (selected || pressed) Color(0xFFDCE9F8) else Color.Transparent)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 5.dp)
+            .padding(horizontal = 7.dp, vertical = 5.dp)
     )
 }
 
@@ -964,7 +967,7 @@ private fun XpClassicToolButton(
         Text(
             text = label,
             color = if (enabled) Color(0xFF202020) else Color(0xFF999999),
-            fontSize = 10.5.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1019,90 +1022,73 @@ private fun StorageCard(info: StorageInfo, onClick: () -> Unit) {
     val used = formatBytes(info.usedBytes)
     val free = formatBytes(info.freeBytes)
     val total = formatBytes(info.totalBytes)
-    // Anima a transição da barra ao trocar de volume (interno/SD) em vez de saltar direto ao novo valor.
+    val percent = (info.usedFraction * 100f).toInt().coerceIn(0, 100)
     val animatedUsedFraction by animateFloatAsState(
         targetValue = info.usedFraction,
         animationSpec = tween(320),
         label = "storageUsedFraction",
     )
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
         modifier = Modifier
-            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
             .background(XpPanel)
-            .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
+            .border(1.dp, XpBorder)
             .clickable(onClick = onClick)
-            .padding(horizontal = 9.dp, vertical = 8.dp)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(R.drawable.drive_hdd),
-            contentDescription = "Armazenamento interno",
-            modifier = Modifier.size(38.dp),
-            contentScale = ContentScale.Fit,
-        )
-        Spacer(Modifier.width(9.dp))
-
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .height(30.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, XpBorder, RoundedCornerShape(8.dp))
-        ) {
-            Box(
-                contentAlignment = Alignment.CenterStart,
-                modifier = Modifier
-                    .weight(animatedUsedFraction.coerceAtLeast(0.001f))
-                    .fillMaxHeight()
-                    .background(Brush.verticalGradient(listOf(Color(0xFF61E65E), Color(0xFF13A92E))))
-            ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(R.drawable.drive_hdd),
+                contentDescription = "Armazenamento interno",
+                modifier = Modifier.size(36.dp),
+                contentScale = ContentScale.Fit,
+            )
+            Spacer(Modifier.width(9.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "$used usados",
-                    color = Color.White,
+                    "Armazenamento interno",
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
+                    color = Color(0xFF202020),
+                )
+                Text(
+                    "$used usados de $total  •  $free livres",
+                    fontSize = 11.sp,
+                    color = XpTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .weight((1f - animatedUsedFraction).coerceAtLeast(0.001f))
-                    .fillMaxHeight()
-                    .background(Color(0xFFE1ECF8))
-            ) {
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "Livre: $free",
+                    "$percent%",
                     color = XpBlueDark,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 6.dp)
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                )
+                Text(
+                    "Analisar ›",
+                    color = XpBlue,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.5.sp,
                 )
             }
         }
-
-        Spacer(Modifier.width(9.dp))
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = "Total: $total",
-                color = XpBlueDark,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp,
-                maxLines = 1,
-            )
-            Text(
-                text = "Detalhes ›",
-                color = XpBlue,
-                fontWeight = FontWeight.Bold,
-                fontSize = 10.sp,
-                maxLines = 1,
+        Spacer(Modifier.height(7.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(11.dp)
+                .background(Color(0xFFE1ECF8))
+                .border(1.dp, XpChromeBorder)
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(animatedUsedFraction.coerceIn(0f, 1f))
+                    .fillMaxHeight()
+                    .background(Brush.verticalGradient(listOf(Color(0xFF61E65E), Color(0xFF13A92E))))
             )
         }
     }
@@ -1359,8 +1345,17 @@ private fun XpDialogTitle(title: String, onDismiss: () -> Unit) {
             .background(Brush.verticalGradient(listOf(XpBlueLight, XpBlueDark)))
             .padding(horizontal = 10.dp)
     ) {
-        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp, modifier = Modifier.clickable(onClick = onDismiss).padding(6.dp))
+        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(24.dp)
+                .background(Brush.verticalGradient(listOf(Color(0xFFF36B58), Color(0xFFB92318))))
+                .border(1.dp, Color.White)
+                .clickable(onClick = onDismiss),
+        ) {
+            Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        }
     }
 }
 
@@ -1514,23 +1509,30 @@ private fun TrashDialog(
                 .border(1.dp, XpBorder)
         ) {
             XpDialogTitle("Lixeira", onDismiss)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().background(XpChrome).padding(horizontal = 10.dp, vertical = 7.dp)
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(if (items.isEmpty()) R.drawable.trash_empty else R.drawable.trash_full),
-                    contentDescription = null,
-                    modifier = Modifier.size(30.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("${items.size} ${if (items.size == 1) "item" else "itens"}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    Text("Itens ficam aqui até você restaurar ou apagar de vez.", fontSize = 11.sp, color = XpTextSecondary)
+            Column(modifier = Modifier.fillMaxWidth().background(XpChrome)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp)
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(if (items.isEmpty()) R.drawable.trash_empty else R.drawable.trash_full),
+                        contentDescription = null,
+                        modifier = Modifier.size(30.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("${items.size} ${if (items.size == 1) "item" else "itens"}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("Restaure quando precisar ou apague de forma definitiva.", fontSize = 11.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
-                XpDialogButton("Atualizar", enabled = !loading, onClick = onRefresh)
-                Spacer(Modifier.width(6.dp))
-                XpDialogButton("Esvaziar", enabled = items.isNotEmpty() && !loading, danger = true) { confirmEmpty = true }
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 7.dp),
+                ) {
+                    XpDialogButton("Atualizar", enabled = !loading, onClick = onRefresh)
+                    Spacer(Modifier.width(6.dp))
+                    XpDialogButton("Esvaziar Lixeira", enabled = items.isNotEmpty() && !loading, danger = true) { confirmEmpty = true }
+                }
             }
             HorizontalDivider(color = XpChromeBorder)
 
@@ -1714,9 +1716,9 @@ private fun StorageDetailsDialog(
                     StorageSummaryCard(info)
                     Spacer(Modifier.height(14.dp))
                     StorageSectionHeader("Por tipo de arquivo", "${analysis.scannedFiles} arquivos analisados")
-                    val maxCategory = analysis.categories.maxOfOrNull { it.bytes }?.coerceAtLeast(1L) ?: 1L
+                    val categorizedBytes = analysis.categories.sumOf { it.bytes }.coerceAtLeast(1L)
                     analysis.categories.forEach { category ->
-                        StorageCategoryRow(category, maxCategory)
+                        StorageCategoryRow(category, categorizedBytes)
                     }
 
                     Spacer(Modifier.height(16.dp))
@@ -1794,12 +1796,13 @@ private fun StorageSectionHeader(title: String, hint: String) {
 }
 
 @Composable
-private fun StorageCategoryRow(category: StorageCategorySummary, maxBytes: Long) {
-    val fraction = (category.bytes.toDouble() / maxBytes.toDouble()).toFloat().coerceIn(0f, 1f)
+private fun StorageCategoryRow(category: StorageCategorySummary, totalBytes: Long) {
+    val fraction = (category.bytes.toDouble() / totalBytes.toDouble()).toFloat().coerceIn(0f, 1f)
+    val percent = (fraction * 100f).toInt().coerceIn(0, 100)
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(category.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text("${category.fileCount} • ${formatBytes(category.bytes)}", fontSize = 11.sp, color = XpTextSecondary)
+            Text("$percent% • ${category.fileCount} • ${formatBytes(category.bytes)}", fontSize = 11.sp, color = XpTextSecondary)
         }
         Spacer(Modifier.height(3.dp))
         Box(Modifier.fillMaxWidth().height(7.dp).background(Color(0xFFE3EAF2))) {
@@ -2070,10 +2073,10 @@ private fun FileListRow(
             .background(if (selected) Color(0xFFDCEBFC) else Color.Transparent)
             .border(if (selected) 1.dp else 0.dp, if (selected) XpBlue else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongSelect)
-            .padding(horizontal = 8.dp, vertical = 5.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(42.dp)) {
-            FileVisual(item = item, size = 38.dp)
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
+            FileVisual(item = item, size = 40.dp)
             if (selected) {
                 androidx.compose.foundation.Image(
                     painter = painterResource(R.drawable.check),
@@ -2103,9 +2106,17 @@ private fun FileListRow(
                 }
             }
             Text(
-                item.listDetailText,
+                text = if (item.isDirectory) item.typeLabel else "${item.typeLabel} • ${formatBytes(item.size)}",
+                color = Color(0xFF4E6077),
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${FileDisplayFormatter.date(item.modifiedAt)} • ${FileDisplayFormatter.time(item.modifiedAt)}",
                 color = XpTextSecondary,
-                fontSize = 12.sp,
+                fontSize = 10.5.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -2231,6 +2242,8 @@ private fun ExplorerStatusBar(
     }
     val formattedSize = remember(sizeBytes) { formatBytes(sizeBytes) }
     val itemCount = items.size
+    val folderCount = remember(items) { items.count { it.isDirectory } }
+    val fileCount = itemCount - folderCount
     val single = selectedItems.singleOrNull()
 
     Row(
@@ -2246,7 +2259,7 @@ private fun ExplorerStatusBar(
             text = when {
                 single != null -> "1 selecionado • ${single.typeLabel}"
                 selectedItems.isNotEmpty() -> "${selectedItems.size} selecionados • $formattedSize"
-                else -> "$itemCount ${if (itemCount == 1) "item" else "itens"}"
+                else -> "$itemCount ${if (itemCount == 1) "item" else "itens"} • $folderCount ${if (folderCount == 1) "pasta" else "pastas"} • $fileCount arquivos"
             },
             color = Color(0xFF303030),
             fontSize = 12.sp,

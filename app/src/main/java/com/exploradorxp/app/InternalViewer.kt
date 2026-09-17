@@ -186,10 +186,12 @@ private fun ViewerToolbar(file: File, onOpenExternal: () -> Unit) {
             .padding(horizontal = 8.dp)
     ) {
         Text(
-            text = "Visualizador interno  •  $typeLabel",
+            text = "$typeLabel  •  ${formatViewerBytes(file.length())}",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF303030),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         ViewerActionButton("Abrir com...", onClick = onOpenExternal)
