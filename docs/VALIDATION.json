@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.31",
-  "version_code": 31,
-  "manager_version": "0.1.0-alpha.31",
-  "manager_code": 31,
-  "validated_at_utc": "2026-09-17T14:12:19.160467+00:00",
+  "version_build": "0.1.0-alpha.32",
+  "version_code": 32,
+  "manager_version": "0.1.0-alpha.32",
+  "manager_code": 32,
+  "validated_at_utc": "2026-09-17T17:07:17.887510+00:00",
   "checks": {
     "version_sync": {
       "ok": true
@@ -26,39 +26,43 @@
     },
     "drawable_references": {
       "ok": true,
-      "references": 122,
+      "references": 123,
       "resource_names": 157,
       "missing": []
     },
     "kotlin_parser": {
       "ok": true,
-      "note": "kotlinc não encontrou marcadores de erro de parser/sintaxe nos arquivos de UI alterados; resolução Android/Compose completa exige SDK/Gradle."
+      "note": "kotlinc não encontrou marcadores de erro de parser/sintaxe no ExplorerScreen alterado; resolução Android/Compose completa exige SDK/Gradle."
     },
-    "pure_classifier_formatter": {
+    "classifier_executable": {
       "ok": true,
-      "note": "checagens executáveis de rótulos e formatação passaram."
+      "note": "rótulos de arquivo sem extensão, PDF e extensão desconhecida validados por execução."
     },
     "repository_semantic_stub_compile": {
       "ok": true,
       "note": "FileRepository + modelos/classificador/formatter compilados com stubs mínimos Android e coroutines."
     },
-    "viewmodel_semantic_stub_compile": {
+    "repository_behavior_test": {
       "ok": true,
-      "note": "ExplorerViewModel + FileRepository compilados com stubs mínimos Android/Lifecycle."
+      "note": "teste executável confirmou ocultação de artefatos, Lixeira separada na análise e remoção física da Lixeira gerenciada ao esvaziar, preservando .trashed-* do sistema."
     },
-    "feature_markers": {
+    "alpha32_feature_markers": {
       "ok": true,
       "items": {
-        "delete_choice_move_to_trash": true,
-        "delete_choice_permanent": true,
-        "trash_snapshot_restore_empty": true,
-        "trash_hidden_from_navigation": true,
-        "storage_analysis_on_demand": true,
-        "storage_scan_cancel": true,
-        "file_type_classifier": true,
-        "about_pix_copy": true,
-        "help_expandable_topics": true,
-        "image_viewer_external_fallback": true
+        "trash_artifacts_hidden": true,
+        "empty_trash_removes_managed_root": true,
+        "android_restricted_empty_state": true,
+        "extensionless_label": true,
+        "selection_more_menu": true,
+        "compact_trash_rows": true,
+        "favorites_forced_list": true,
+        "accessible_storage_percentages": true,
+        "trash_separate_storage_block": true,
+        "compact_transfer_dialog": true,
+        "copy_name_and_path": true,
+        "grid_less_rounded": true,
+        "status_hides_zero_bytes": true,
+        "compact_storage_card": true
       }
     },
     "full_gradle_android_build": {
@@ -66,38 +70,30 @@
       "executed": false,
       "reason": "Projeto sem gradlew e ambiente sem Gradle/Android SDK completos; a validação integral continua no workflow Android do repositório."
     },
-    "image_resources_unchanged_from_alpha30": {
+    "image_resources_unchanged_from_alpha31": {
       "ok": true,
       "current": 172,
       "original": 172,
       "added": [],
       "removed": [],
       "changed": []
-    },
-    "alpha31_visual_markers": {
-      "ok": true,
-      "items": {
-        "scrollable_top_menus": true,
-        "scrollable_selection_toolbar": true,
-        "storage_card_non_clipping_layout": true,
-        "file_metadata_split_lines": true,
-        "xp_red_dialog_close_button": true,
-        "trash_header_reflow": true,
-        "storage_real_category_percentages": true,
-        "viewer_type_size_toolbar": true
-      }
     }
   },
-  "source_diff_against_alpha30": {
+  "source_diff_against_alpha31": {
     "added": [
-      "docs/ALPHA31_VISUAL_REFINEMENT_NOTES.md"
+      "app/src/test/java/com/exploradorxp/app/FileTypeClassifierTest.kt",
+      "docs/ALPHA32_REFINEMENT_FIXES_NOTES.md"
     ],
     "removed": [],
     "changed": [
       "CHANGELOG.md",
       "README.md",
       "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ExplorerModels.kt",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerViewModel.kt",
+      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
+      "app/src/main/java/com/exploradorxp/app/FileTypeClassifier.kt",
       "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
       "docs/VALIDATION.json",
       "github-manager.json"

@@ -369,8 +369,11 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(clipboard = ClipboardState(files, mode), selectedPaths = emptySet()) }
         _events.tryEmit(
             ExplorerEvent.ShowMessage(
-                if (mode == ClipboardMode.COPY) "${files.size} item(ns) pronto(s) para copiar."
-                else "${files.size} item(ns) pronto(s) para mover."
+                if (mode == ClipboardMode.COPY) {
+                    if (files.size == 1) "1 item pronto para copiar." else "${files.size} itens prontos para copiar."
+                } else {
+                    if (files.size == 1) "1 item pronto para mover." else "${files.size} itens prontos para mover."
+                }
             )
         )
     }
@@ -443,7 +446,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         val count = files.size
         runTransfer(
             kind = TransferKind.DELETE,
-            successMessage = "$count item(ns) apagado(s) permanentemente.",
+            successMessage = if (count == 1) "1 item apagado permanentemente." else "$count itens apagados permanentemente.",
             failureFallback = "Falha ao apagar permanentemente.",
         ) { onProgress -> repository.delete(files, onProgress) }
     }
@@ -454,7 +457,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         val count = files.size
         runTransfer(
             kind = TransferKind.MOVE,
-            successMessage = "$count item(ns) movido(s) para a Lixeira.",
+            successMessage = if (count == 1) "1 item movido para a Lixeira." else "$count itens movidos para a Lixeira.",
             failureFallback = "Falha ao mover para a Lixeira.",
             refreshTrash = true,
         ) { onProgress -> repository.moveToTrash(files, onProgress) }

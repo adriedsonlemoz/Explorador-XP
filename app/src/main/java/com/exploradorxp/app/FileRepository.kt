@@ -34,7 +34,7 @@ class FileRepository(
         val favorites = prefs.favorites()
         directory.listFiles()
             .orEmpty()
-            .filterNot(::isManagedTrashDirectory)
+            .filterNot(::isInternalTrashArtifact)
             .map { file -> toFileItem(file, file.absolutePath in favorites) }
     }
 
@@ -43,7 +43,7 @@ class FileRepository(
         prefs.favorites().asSequence()
             .map(::File)
             .filter(File::exists)
-            .filterNot { isInsideManagedTrash(it) }
+            .filterNot { isInsideManagedTrash(it) || isInternalTrashArtifact(it) }
             .map { file -> toFileItem(file, true) }
             .toList()
     }
@@ -53,7 +53,7 @@ class FileRepository(
         val items = prefs.recents().asSequence()
             .map(::File)
             .filter(File::exists)
-            .filterNot { isInsideManagedTrash(it) }
+            .filterNot { isInsideManagedTrash(it) || isInternalTrashArtifact(it) }
             .map { toFileItem(it, it.absolutePath in favoritePaths) }
             .toList()
         ExplorerItemTransforms.apply(
@@ -193,6 +193,7 @@ class FileRepository(
                 }
                 item.trashedFile.parentFile?.let { deleteRecursively(it) }
             }
+            pruneEmptyManagedTrashRoots()
             ticker.reportFinal(done, "")
         }
     }
@@ -210,13 +211,30 @@ class FileRepository(
                 }) { "Não foi possível apagar ${item.name}." }
                 item.trashedFile.parentFile?.let { deleteRecursively(it) }
             }
+            pruneEmptyManagedTrashRoots()
             ticker.reportFinal(done, "")
         }
     }
 
-    suspend fun emptyTrash(onProgress: (TransferProgress) -> Unit = {}): Result<Unit> {
-        val items = trashSnapshot()
-        return permanentlyDeleteTrash(items, onProgress)
+    suspend fun emptyTrash(onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val roots = storageLocations().map { managedTrashRoot(it.root) }.filter(File::exists)
+            val entries = roots.flatMap { it.listFiles().orEmpty().toList() }
+            val total = entries.sumOf(::countEntries).coerceAtLeast(1)
+            var done = 0
+            val ticker = ProgressTicker(total, onProgress)
+            entries.forEach { entry ->
+                coroutineContext.ensureActive()
+                check(deleteRecursively(entry) { name ->
+                    done++
+                    ticker.report(done, name)
+                }) { "Não foi possível remover ${entry.name} da Lixeira." }
+            }
+            // Remove também a pasta gerenciada vazia para garantir que nenhum resíduo físico
+            // do Explorador XP permaneça após “Esvaziar Lixeira”. Ela será recriada quando necessário.
+            roots.forEach { root -> if (root.exists() && root.listFiles().orEmpty().isEmpty()) root.delete() }
+            ticker.reportFinal(done.coerceAtLeast(if (entries.isEmpty()) 1 else done), "")
+        }
     }
 
     suspend fun paste(
@@ -322,7 +340,7 @@ class FileRepository(
             val largest = PriorityQueue<StorageFileSummary>(compareBy { it.bytes })
             val queue = ArrayDeque<ScanNode>()
             storageRoot.listFiles().orEmpty().forEach { child ->
-                if (!isManagedTrashDirectory(child)) {
+                if (!isInternalTrashArtifact(child)) {
                     queue.add(ScanNode(child, if (child.isDirectory) child else null))
                 }
             }
@@ -335,7 +353,7 @@ class FileRepository(
                 val file = node.file
                 if (file.isDirectory) {
                     file.listFiles().orEmpty().forEach { child ->
-                        if (!isManagedTrashDirectory(child)) queue.add(ScanNode(child, node.topFolder ?: file))
+                        if (!isInternalTrashArtifact(child)) queue.add(ScanNode(child, node.topFolder ?: file))
                     }
                     continue
                 }
@@ -367,6 +385,10 @@ class FileRepository(
             }
             onProgress(scannedFiles)
 
+            val managedTrash = managedTrashRoot(storageRoot)
+            val trashItems = managedTrash.listFiles().orEmpty().filter(File::isDirectory)
+            val trashBytes = trashItems.sumOf { directorySizeBytes(it) }
+
             StorageAnalysis(
                 root = storageRoot,
                 storageInfo = info,
@@ -380,6 +402,8 @@ class FileRepository(
                 largeFiles = largest.toList().sortedByDescending { it.bytes },
                 scannedFiles = scannedFiles,
                 scannedBytes = scannedBytes,
+                trashBytes = trashBytes,
+                trashItemCount = trashItems.size,
                 completedAt = System.currentTimeMillis(),
             )
         }
@@ -403,6 +427,21 @@ class FileRepository(
 
     private fun isManagedTrashDirectory(file: File): Boolean = file.isDirectory && file.name == TRASH_DIR_NAME
 
+    /**
+     * Artefatos de lixeira não devem vazar para o Explorer nem para a análise de armazenamento.
+     * Além da pasta gerenciada pelo app, alguns provedores/MediaStore expõem nomes internos
+     * como .$recycle_bin$ e .trashed-*. Eles são apenas ocultados; o app não os apaga.
+     */
+    private fun isInternalTrashArtifact(file: File): Boolean {
+        if (isManagedTrashDirectory(file)) return true
+        val name = file.name.lowercase()
+        return name == ".\$recycle_bin\$" ||
+            name == ".recycle_bin\$" ||
+            name == "\$recycle.bin" ||
+            name.startsWith(".trashed-") ||
+            name.startsWith(".trash-")
+    }
+
     private fun isInsideManagedTrash(file: File): Boolean {
         val path = normalizedAbsolutePath(file)
         return storageLocations().any { location ->
@@ -425,7 +464,8 @@ class FileRepository(
             trashedFile = trashedFile,
             originalPath = originalPath,
             deletedAt = metadata.optLong("deletedAt", container.lastModified()),
-            size = metadata.optLong("size", if (trashedFile.isFile) trashedFile.length() else 0L),
+            size = metadata.optLong("size", 0L).takeIf { it > 0L }
+                ?: directorySizeBytes(trashedFile),
             isDirectory = isDirectory,
             typeLabel = FileTypeClassifier.labelFor(File(originalPath), isDirectory),
             iconRes = FileIconMapper.iconFor(File(originalPath), isDirectory),
@@ -483,6 +523,18 @@ class FileRepository(
             index++
         }
         return candidate
+    }
+
+    private fun pruneEmptyManagedTrashRoots() {
+        storageLocations().map { managedTrashRoot(it.root) }.forEach { trashRoot ->
+            if (trashRoot.exists() && trashRoot.listFiles().orEmpty().isEmpty()) trashRoot.delete()
+        }
+    }
+
+    private fun directorySizeBytes(file: File): Long {
+        if (!file.exists()) return 0L
+        if (file.isFile) return runCatching { file.length() }.getOrDefault(0L).coerceAtLeast(0L)
+        return file.listFiles().orEmpty().sumOf(::directorySizeBytes)
     }
 
     private suspend fun copyRecursively(source: File, target: File, onEntry: (String) -> Unit) {

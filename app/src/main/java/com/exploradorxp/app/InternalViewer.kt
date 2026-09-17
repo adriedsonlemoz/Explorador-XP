@@ -665,7 +665,7 @@ private fun ZipViewer(file: File) {
                 when {
                     preview == null -> "Conteúdo do arquivo"
                     preview.truncated -> "${preview.entries.size}+ itens no arquivo"
-                    else -> "${preview.entries.size} item(ns) no arquivo"
+                    else -> if (preview.entries.size == 1) "1 item no arquivo" else "${preview.entries.size} itens no arquivo"
                 },
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,

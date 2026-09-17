@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 0.1.0-alpha.32
+
+- Corrigido o vazamento de artefatos de Lixeira na navegação e na análise: `.ExploradorXP_Lixeira`, `.$recycle_bin$`, `$recycle.bin`, `.trashed-*` e `.trash-*` deixam de aparecer como arquivos/pastas comuns. Artefatos do sistema são apenas ocultados, não apagados pelo app.
+- **Esvaziar Lixeira** agora remove diretamente todas as entradas físicas e órfãs da pasta gerenciada pelo Explorador XP e apaga a própria raiz quando fica vazia.
+- `Android/data` e `Android/obb` vazios por restrição do sistema passam a mostrar **Acesso limitado pelo Android** em vez de afirmar que a pasta está vazia.
+- Arquivos sem extensão passam a ser identificados como **Arquivo sem extensão**; Propriedades reutiliza o classificador central e ganhou **Copiar nome** e **Copiar caminho**.
+- Corrigidas pluralizações do Explorer (`1 selecionado`, `2 selecionados`, `1 item`, `2 itens`) e removidos textos `item(ns)`/`selecionado(s)` dos fluxos principais.
+- Toolbar de seleção simplificada para quatro ações visíveis: **Copiar**, **Mover**, **Excluir** e **Mais**; Renomear, Enviar, Detalhes e Selecionar todos ficam no menu Mais.
+- Lixeira ficou mais compacta: cabeçalho mostra quantidade/tamanho, linhas ocupam menos altura, Restaurar fica direto e exclusão permanente migrou para o menu de ações do item.
+- Favoritos passa a abrir sempre em lista compacta, com cabeçalho menor, evitando cards exagerados para nomes longos.
+- A análise de armazenamento deixa explícito que percentuais por categoria consideram somente os arquivos acessíveis analisados.
+- A Lixeira aparece como bloco próprio na análise de armazenamento, com quantidade e tamanho, e não entra nos rankings normais de pastas/arquivos.
+- Diálogo de progresso foi compactado, usa o ícone correto de **Mover**, mostra contagem pluralizada e força 100% quando a operação já atingiu o total.
+- Grade aproximada do visual XP com cantos menos arredondados; barra inferior deixa de exibir `0 B` quando não há tamanho útil.
+- Card de armazenamento da tela inicial ficou mais baixo e direto, liberando mais área para a lista sem perder porcentagem, usados/livres e acesso a Analisar.
+- Mantido o conjunto de imagens/ícones da alpha.31 sem criar, gerar ou substituir recursos visuais.
+- Versão sincronizada para `0.1.0-alpha.32` / `versionCode 32`.
+
 ## 0.1.0-alpha.31
 
 - Continuado o polimento visual sem trocar o pacote de ícones XP e sem adicionar imagens ou mockups.

@@ -107,6 +107,8 @@ data class StorageAnalysis(
     val largeFiles: List<StorageFileSummary>,
     val scannedFiles: Int,
     val scannedBytes: Long,
+    val trashBytes: Long = 0L,
+    val trashItemCount: Int = 0,
     val completedAt: Long,
 )
 
