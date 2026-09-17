@@ -1,282 +1,99 @@
 {
-  "version_build": "0.1.0-alpha.29",
-  "version_code_build": 29,
-  "manager_version": "0.1.0-alpha.29",
-  "manager_code": 29,
-  "readme_has_version": true,
-  "xml_errors": [],
-  "missing_drawables": [],
-  "kotlin_files": 20,
-  "xp_png_icons": 165,
-  "drawable_references": 119,
-  "xml_files": 12,
-  "static_validation_ok": true,
-  "ui_changes": [
-    "alpha29_video_driven_visual_polish",
-    "xp_classic_dialogs_unified",
-    "focused_search_mode",
-    "selection_context_toolbar",
-    "clickable_breadcrumb_address",
-    "adaptive_grid_min_112dp",
-    "grid_overlay_options_button",
-    "stronger_selection_state",
-    "media_thumbnail_async_lru_cache",
-    "favorites_empty_state_guidance",
-    "status_bar_items_selection_size",
-    "viewer_xp_scaffold_unified",
-    "zip_explorer_style_preview",
-    "text_editor_line_column_status",
-    "apk_real_icon_name_metadata",
-    "mov_internal_viewer",
-    "device_info_xp_frame_header",
-    "classic_pressed_touch_feedback",
-    "cached_resource_icon_restored",
-    "xp_png_icon_pipeline_restored",
-    "alpha27_vector_icon_experiment_reverted",
-    "device_connectivity_panel",
-    "device_sections_collapsible",
-    "sensor_grid_three_columns_compact",
-    "processor_details_extended",
-    "device_info_ai_report_schema_v3_connectivity",
-    "device_info_share_png_fileprovider",
-    "device_info_save_png",
-    "device_info_copy_summary",
-    "device_info_extended_sensor_grid",
-    "device_info_sensor_manager_detection",
-    "device_info_navigation_bar_bottom_space",
-    "device_info_alpha24_compose_redesign",
-    "device_info_no_fake_device_image",
-    "device_info_material_vector_icons",
-    "large_icon_variants",
-    "file_icon_lru_cache",
-    "file_icon_background_decode",
-    "file_icon_density_optimized",
-    "launcher_alpha22_orbit_icon",
-    "launcher_transparent_adaptive_bg",
-    "launcher_double_mask_removed",
-    "android13_monochrome_icon",
-    "launcher_art_scaled_up",
-    "launcher_foreground_folder_only",
-    "adaptive_icon_layers_separated",
-    "launcher_graphite_gold_adaptive_round",
-    "launcher_no_white_border",
-    "permission_dialog_first_flow",
-    "no_storage_scan_before_permission",
-    "async_image_decode",
-    "native_text_viewer",
-    "native_text_editor",
-    "large_text_preview_limit",
-    "async_pdf_render",
-    "async_zip_index",
-    "async_apk_inspection",
-    "cached_fileitem_metadata",
-    "debounced_search",
-    "cancel_previous_refresh",
-    "storage_info_off_main_thread",
-    "system_bars_visible",
-    "icon_pack_v2_applied",
-    "properties_async_io",
-    "per_folder_scroll_state",
-    "storage_bar_animated_transition",
-    "properties_dialog_animate_content_size",
-    "status_bar_memoized_totals",
-    "transfer_progress_dialog",
-    "cancellable_copy_move_delete",
-    "transfer_progress_throttled_updates",
-    "directory_snapshot_memory_projection",
-    "directory_lru_cache_12",
-    "search_sort_hidden_without_disk_reload",
-    "projection_on_dispatchers_default",
-    "preformatted_list_grid_metadata",
-    "navigation_validation_off_main_thread",
-    "storage_locations_session_cache",
-    "statfs_only_on_home",
-    "no_canonical_path_in_ui_composition",
-    "list_grid_item_animation_removed_for_scroll",
-    "duplicate_blank_area_gesture_layer_removed",
-    "unit_tests_added",
-    "ci_test_and_lint",
-    "performance_apk_r8_shrink_resources",
-    "properties_producestate_lint_fix",
-    "ci_actions_node24_generation",
-    "api26_safe_mutable_list_trim",
-    "ci_full_lint_report_on_failure",
-    "baseline_profile_seed_added",
-    "baseline_profile_generator_module",
-    "profileinstaller_added",
-    "macrobenchmark_startup_and_scroll",
-    "synthetic_benchmark_dataset",
-    "report_drawn_when_ready",
-    "profileable_manifest",
-    "ci_generate_baseline_before_performance_apk",
-    "performance_reports_workflow",
-    "properties_launchedeffect_lint_fix",
-    "baselineprofile_explicit_androidx_test_runner_rules",
-    "device_info_tools_panel",
-    "device_info_real_android_data",
-    "device_info_async_collection",
-    "device_info_ai_txt_export",
-    "device_info_privacy_excludes_unique_ids",
-    "normal_ci_reuses_embedded_baseline_profile",
-    "baseline_generation_moved_to_performance_workflow_only"
-  ],
-  "unit_test_files": 2,
-  "performance_build": "performance",
-  "r8_enabled_release": true,
-  "shrink_resources_release": true,
-  "drawable_nodpi_png_icons": 5,
-  "validation_environment": {
-    "xml_parse": "ok",
-    "workflow_yaml_parse": "ok",
-    "pure_kotlin_smoke": "ok",
-    "repository_compilecheck_with_stubs": "ok",
-    "viewmodel_compilecheck_with_stubs": "ok",
-    "unit_test_source_compilecheck_with_junit_stub": "ok",
-    "full_android_gradle_build": "build_20_success_before_alpha21_changes; alpha21_pending_ci",
-    "uploaded_ci_log_15": "analyzed_and_fixed_in_alpha_16",
-    "uploaded_ci_log_16": "analyzed_and_fixed_in_alpha_17",
-    "baselineprofile_android_execution": "build_20_success_8m38s",
-    "macrobenchmark_physical_device": "pending_after_ci_structure_validation",
-    "baselineprofile_source_compilecheck_with_stubs": "ok_with_explicit_androidx_test_runner_rules",
-    "uploaded_ci_log_18": "analyzed_and_fixed_in_alpha_19",
-    "uploaded_ci_log_19": "analyzed_and_fixed_in_alpha_20",
-    "uploaded_ci_log_20": "analyzed_successful_tests_lint_baseline_generation_and_assemblePerformance",
-    "alpha21_json_xml_yaml_static_validation": "passed",
-    "alpha21_kotlin_parser_syntax_check": "passed_without_android_classpath; unresolved platform symbols expected",
-    "alpha21_full_android_gradle_build": "pending_ci",
-    "alpha23_json_xml_yaml_static_validation": "passed",
-    "alpha23_full_android_gradle_build": "pending_ci",
-    "alpha25_full_android_gradle_build": "pending_ci",
-    "alpha29_json_xml_yaml_static_validation": "passed",
-    "alpha29_kotlin_parser_syntax_check": "passed_without_android_classpath; unresolved platform symbols expected",
-    "alpha29_full_android_gradle_build": "not_run_locally; source archive has no Gradle wrapper and execution environment has no Gradle binary; pending CI"
+  "version_build": "0.1.0-alpha.30",
+  "version_code": 30,
+  "manager_version": "0.1.0-alpha.30",
+  "manager_code": 30,
+  "validated_at_utc": "2026-09-17T12:50:43.314990+00:00",
+  "checks": {
+    "version_sync": {
+      "ok": true
+    },
+    "json_parse": {
+      "ok": true,
+      "files": 2,
+      "errors": []
+    },
+    "xml_parse": {
+      "ok": true,
+      "files": 10,
+      "errors": []
+    },
+    "yaml_parse": {
+      "ok": true,
+      "files": 2,
+      "errors": [],
+      "parser_available": true
+    },
+    "drawable_references": {
+      "ok": true,
+      "references": 122,
+      "resource_names": 159,
+      "missing": []
+    },
+    "kotlin_parser": {
+      "ok": true,
+      "note": "kotlinc encontrou 0 erros de parser; resolução Android/Compose completa exige SDK/Gradle."
+    },
+    "pure_classifier_formatter": {
+      "ok": true,
+      "note": "checagens executáveis de rótulos e formatação passaram."
+    },
+    "repository_semantic_stub_compile": {
+      "ok": true,
+      "note": "FileRepository + modelos/classificador/formatter compilados com stubs mínimos Android e coroutines."
+    },
+    "viewmodel_semantic_stub_compile": {
+      "ok": true,
+      "note": "ExplorerViewModel + FileRepository compilados com stubs mínimos Android/Lifecycle."
+    },
+    "image_resources_unchanged_from_alpha29": {
+      "ok": true,
+      "current": 172,
+      "original": 172,
+      "added": [],
+      "removed": [],
+      "changed": []
+    },
+    "feature_markers": {
+      "ok": true,
+      "items": {
+        "delete_choice_move_to_trash": true,
+        "delete_choice_permanent": true,
+        "trash_snapshot_restore_empty": true,
+        "trash_hidden_from_navigation": true,
+        "storage_analysis_on_demand": true,
+        "storage_scan_cancel": true,
+        "file_type_classifier": true,
+        "about_pix_copy": true,
+        "help_expandable_topics": true,
+        "image_viewer_external_fallback": true
+      }
+    },
+    "full_gradle_android_build": {
+      "ok": false,
+      "executed": false,
+      "reason": "Ambiente sem Gradle instalado, sem gradlew no projeto e sem Android SDK; o workflow do repositório continua sendo a validação completa."
+    }
   },
-  "ci_build_15_result": {
-    "testDebugUnitTest": "executed",
-    "lintDebug": "failed_before_fix",
-    "lint_error": "ProduceStateDoesNotAssignValue at ExplorerScreen.kt PropertiesDialog",
-    "assemblePerformance": "not_reached"
-  },
-  "ci_build_16_result": {
-    "testDebugUnitTest": "passed",
-    "lintDebug": "failed_before_fix",
-    "lint_error_first": "NewApi List.removeLast requires API 35 at ExplorerViewModel.kt:238",
-    "lint_reported_totals": "3 errors, 51 warnings",
-    "produceState_error_from_build_15": "not_reproduced",
-    "assemblePerformance": "not_reached"
-  },
-  "baseline_profile": {
-    "plugin": "androidx.baselineprofile:1.5.0",
-    "profileinstaller": "1.4.1",
-    "producer_module": ":baselineprofile",
-    "managed_device": "Pixel 6 API 33 aosp",
-    "merge_into_main": true,
-    "seed_profile": "app/src/main/baseline-prof.txt",
-    "androidx_test_runner": "1.7.0",
-    "androidx_test_rules": "1.7.0",
-    "normal_apk_workflow_regenerates_profile": false,
-    "performance_workflow_regenerates_profile": true
-  },
-  "macrobenchmark": {
-    "library": "androidx.benchmark:benchmark-macro-junit4:1.5.0",
-    "metrics": [
-      "StartupTimingMetric",
-      "FrameTimingMetric"
+  "source_diff_against_alpha29": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/FileTypeClassifier.kt",
+      "docs/ALPHA30_TRASH_STORAGE_NOTES.md"
     ],
-    "comparisons": [
-      "CompilationMode.None",
-      "CompilationMode.Partial(BaselineProfileMode.Require)"
-    ],
-    "dataset": "600 files + 40 directories in isolated benchmark folder"
-  },
-  "ci_build_18_result": {
-    "testDebugUnitTest": "passed",
-    "lintDebug": "failed_before_fix",
-    "lint_error": "ProduceStateDoesNotAssignValue at ExplorerScreen.kt PropertiesDialog",
-    "lint_reported_totals": "1 error, 51 warnings",
-    "assemblePerformance": "not_reached",
-    "baselineProfileGeneration": "not_reached"
-  },
-  "ci_build_19_result": {
-    "testDebugUnitTest": "passed",
-    "lintDebug": "passed",
-    "baselineProfileGeneration": "reached_compile_stage",
-    "baselineprofile_compile": "failed_before_fix",
-    "compile_errors": [
-      "Unresolved reference 'filters'",
-      "Unresolved reference 'LargeTest'"
-    ],
-    "assemblePerformance": "not_reached"
-  },
-  "ci_build_20_result": {
-    "testDebugUnitTest": "passed",
-    "lintDebug": "passed",
-    "baselineProfileGeneration": "passed",
-    "baselineProfileGenerationDuration": "8m38s",
-    "assemblePerformance": "passed",
-    "assemblePerformanceDuration": "1m38s",
-    "apkPublished": "passed"
-  },
-  "device_info": {
-    "entry_point": "Ferramentas > Informações do dispositivo",
-    "screen_fields": [
-      "device_name",
-      "manufacturer_model",
-      "android_api",
-      "security_patch",
-      "processor",
-      "cpu_cores_architecture",
-      "ram",
-      "internal_storage",
-      "display",
-      "battery",
-      "capabilities",
-      "app_version"
-    ],
-    "export_format": "text/plain structured for AI",
-    "collection_thread": "Dispatchers.IO",
-    "excluded_sensitive_fields": [
-      "IMEI",
-      "serial",
-      "Android ID",
-      "MAC address",
-      "location",
-      "accounts",
-      "user file listing/content"
-    ],
-    "sensor_source": "Android SensorManager getDefaultSensor / TYPE_ALL count",
-    "sensor_types": [
-      "accelerometer",
-      "gyroscope",
-      "magnetometer",
-      "light",
-      "proximity",
-      "pressure/barometer",
-      "step_counter",
-      "step_detector",
-      "gravity",
-      "linear_acceleration",
-      "rotation_vector",
-      "ambient_temperature",
-      "relative_humidity"
-    ],
-    "quick_share": [
-      "clipboard_summary",
-      "png_save_via_SAF",
-      "png_share_via_FileProvider"
-    ],
-    "ai_report_schema_version": 3
-  },
-  "drawable_xxxhdpi_png_icons": 150,
-  "icon_runtime_cache": "6 MiB LRU; max 2 concurrent background decodes",
-  "icon_asset_validation": {
-    "common_icons_192_xxxhdpi": true,
-    "large_variants": [
-      "file_apk_large",
-      "folder_open_large",
-      "search_large"
-    ],
-    "launcher_assets_excluded_from_resize": true
-  },
-  "thumbnail_runtime_cache": "18 MiB LRU; max 2 concurrent background decodes; images/video only; XP resource icons remain fallback"
+    "removed": [],
+    "changed": [
+      "CHANGELOG.md",
+      "README.md",
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ExplorerModels.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerViewModel.kt",
+      "app/src/main/java/com/exploradorxp/app/FileDisplayFormatter.kt",
+      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/test/java/com/exploradorxp/app/ExplorerItemTransformsTest.kt",
+      "github-manager.json"
+    ]
+  }
 }

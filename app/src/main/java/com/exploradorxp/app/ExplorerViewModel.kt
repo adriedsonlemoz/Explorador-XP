@@ -42,6 +42,8 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     private var transferJob: Job? = null
     private var navigationJob: Job? = null
     private var storageJob: Job? = null
+    private var storageAnalysisJob: Job? = null
+    private var trashJob: Job? = null
 
     private var currentSnapshotKey: String? = null
     private var currentSnapshot: List<FileItem> = emptyList()
@@ -53,7 +55,10 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     init {
         // Na primeira abertura sem permissão, não faz varredura inútil do armazenamento.
-        if (hasFileAccess(application)) startRefresh(useCache = true)
+        if (hasFileAccess(application)) {
+            startRefresh(useCache = true)
+            loadTrash()
+        }
     }
 
     fun refresh() {
@@ -388,12 +393,22 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         ) { onProgress -> repository.paste(clipboard, destination, onProgress) }
     }
 
+    /** Exclusão permanente, usada apenas após escolha explícita do usuário. */
     fun deleteFile(file: File) {
         runTransfer(
             kind = TransferKind.DELETE,
-            successMessage = "Item excluído.",
-            failureFallback = "Falha ao excluir.",
+            successMessage = "Item apagado permanentemente.",
+            failureFallback = "Falha ao apagar permanentemente.",
         ) { onProgress -> repository.delete(listOf(file), onProgress) }
+    }
+
+    fun moveFileToTrash(file: File) {
+        runTransfer(
+            kind = TransferKind.MOVE,
+            successMessage = "Item movido para a Lixeira.",
+            failureFallback = "Falha ao mover para a Lixeira.",
+            refreshTrash = true,
+        ) { onProgress -> repository.moveToTrash(listOf(file), onProgress) }
     }
 
     fun shareFile(file: File) {
@@ -428,9 +443,21 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         val count = files.size
         runTransfer(
             kind = TransferKind.DELETE,
-            successMessage = "$count item(ns) excluído(s).",
-            failureFallback = "Falha ao excluir.",
+            successMessage = "$count item(ns) apagado(s) permanentemente.",
+            failureFallback = "Falha ao apagar permanentemente.",
         ) { onProgress -> repository.delete(files, onProgress) }
+    }
+
+    fun moveSelectedToTrash() {
+        val files = selectedFiles()
+        if (files.isEmpty()) return
+        val count = files.size
+        runTransfer(
+            kind = TransferKind.MOVE,
+            successMessage = "$count item(ns) movido(s) para a Lixeira.",
+            failureFallback = "Falha ao mover para a Lixeira.",
+            refreshTrash = true,
+        ) { onProgress -> repository.moveToTrash(files, onProgress) }
     }
 
     fun createFolder(name: String) {
@@ -482,6 +509,78 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun loadTrash() {
+        if (!hasFileAccess(getApplication())) return
+        trashJob?.cancel()
+        trashJob = viewModelScope.launch {
+            _uiState.update { it.copy(trashLoading = true) }
+            val items = runCatching { repository.trashSnapshot() }
+                .onFailure { _events.tryEmit(ExplorerEvent.ShowMessage(it.message ?: "Não foi possível abrir a Lixeira.")) }
+                .getOrDefault(emptyList())
+            _uiState.update { it.copy(trashItems = items, trashLoading = false, trashHasItems = items.isNotEmpty()) }
+        }
+    }
+
+    fun restoreTrashItem(item: TrashItem) {
+        runTransfer(
+            kind = TransferKind.MOVE,
+            successMessage = "Item restaurado.",
+            failureFallback = "Falha ao restaurar o item.",
+            refreshTrash = true,
+        ) { onProgress -> repository.restoreTrash(listOf(item), onProgress) }
+    }
+
+    fun permanentlyDeleteTrashItem(item: TrashItem) {
+        runTransfer(
+            kind = TransferKind.DELETE,
+            successMessage = "Item apagado permanentemente.",
+            failureFallback = "Falha ao apagar o item da Lixeira.",
+            refreshTrash = true,
+        ) { onProgress -> repository.permanentlyDeleteTrash(listOf(item), onProgress) }
+    }
+
+    fun emptyTrash() {
+        if (_uiState.value.trashItems.isEmpty()) return
+        runTransfer(
+            kind = TransferKind.DELETE,
+            successMessage = "Lixeira esvaziada.",
+            failureFallback = "Falha ao esvaziar a Lixeira.",
+            refreshTrash = true,
+        ) { onProgress -> repository.emptyTrash(onProgress) }
+    }
+
+    fun analyzeStorage(force: Boolean = false) {
+        if (!hasFileAccess(getApplication())) return
+        val current = _uiState.value.storageScan
+        if (!force && current.analysis != null && !current.analyzing) return
+        storageAnalysisJob?.cancel()
+        val locations = _uiState.value.storageLocations
+        val target = locations.firstOrNull { !it.removable }?.root ?: repository.root
+        storageAnalysisJob = viewModelScope.launch {
+            _uiState.update { it.copy(storageScan = StorageScanState(analyzing = true)) }
+            val result = repository.analyzeStorage(target) { count ->
+                _uiState.update { state ->
+                    state.copy(storageScan = state.storageScan.copy(analyzing = true, scannedFiles = count, error = null))
+                }
+            }
+            result
+                .onSuccess { analysis ->
+                    _uiState.update { it.copy(storageScan = StorageScanState(analyzing = false, scannedFiles = analysis.scannedFiles, analysis = analysis)) }
+                }
+                .onFailure { error ->
+                    if (error is CancellationException) {
+                        _uiState.update { it.copy(storageScan = it.storageScan.copy(analyzing = false)) }
+                    } else {
+                        _uiState.update { it.copy(storageScan = StorageScanState(analyzing = false, error = error.message ?: "Falha ao analisar o armazenamento.")) }
+                    }
+                }
+        }
+    }
+
+    fun cancelStorageAnalysis() {
+        storageAnalysisJob?.cancel()
+    }
+
     fun shareSelected() {
         val selected = selectedFiles()
         viewModelScope.launch {
@@ -508,6 +607,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         kind: TransferKind,
         successMessage: String,
         failureFallback: String,
+        refreshTrash: Boolean = false,
         operation: suspend ((TransferProgress) -> Unit) -> Result<Unit>,
     ) {
         transferJob?.cancel()
@@ -525,6 +625,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     clearSelection()
                     _events.tryEmit(ExplorerEvent.ShowMessage(successMessage))
                     startRefresh(useCache = false)
+                    if (refreshTrash) loadTrash()
                 }
                 .onFailure { error ->
                     val message = if (error is CancellationException) {
@@ -535,6 +636,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     invalidateAllSnapshots()
                     _events.tryEmit(ExplorerEvent.ShowMessage(message))
                     startRefresh(useCache = false)
+                    if (refreshTrash) loadTrash()
                 }
         }
     }

@@ -120,7 +120,7 @@ fun InternalViewerScreen(
         HorizontalDivider(color = Color(0xFFB8C7DA))
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (file.extension.lowercase()) {
-                in imageExtensions -> ImageViewer(file)
+                in imageExtensions -> ImageViewer(file, onOpenExternal)
                 in videoExtensions, in audioExtensions -> MediaViewer(file)
                 "html", "htm" -> HtmlViewer(file)
                 "pdf" -> PdfViewer(file)
@@ -175,7 +175,7 @@ private fun ViewerTitleBar(file: File, onClose: () -> Unit) {
 
 @Composable
 private fun ViewerToolbar(file: File, onOpenExternal: () -> Unit) {
-    val typeLabel = remember(file.absolutePath) { file.extension.uppercase().ifBlank { "ARQUIVO" } }
+    val typeLabel = remember(file.absolutePath) { FileTypeClassifier.labelFor(file, false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -236,16 +236,23 @@ private fun ViewerActionButton(
 }
 
 @Composable
-private fun ImageViewer(file: File) {
+private fun ImageViewer(file: File, onOpenExternal: () -> Unit) {
     val key = "${file.absolutePath}:${file.lastModified()}"
     var loadState by remember(key) { mutableStateOf<ViewerLoadState<Bitmap>>(ViewerLoadState.Loading) }
 
     LaunchedEffect(key) {
         loadState = ViewerLoadState.Loading
         loadState = withContext(Dispatchers.IO) {
-            val bitmap = decodeSampledBitmap(file, 1800, 1800)
-            if (bitmap != null) ViewerLoadState.Success(bitmap)
-            else ViewerLoadState.Error("Não foi possível exibir a imagem.")
+            when {
+                !file.exists() -> ViewerLoadState.Error("O arquivo não existe mais.")
+                !file.canRead() -> ViewerLoadState.Error("O Explorador XP não conseguiu acessar esta imagem.")
+                file.length() <= 0L -> ViewerLoadState.Error("A imagem está vazia ou corrompida.")
+                else -> {
+                    val bitmap = decodeSampledBitmap(file, 1800, 1800)
+                    if (bitmap != null) ViewerLoadState.Success(bitmap)
+                    else ViewerLoadState.Error("O formato ou a codificação desta imagem não pôde ser exibido internamente.")
+                }
+            }
         }
     }
 
@@ -262,7 +269,15 @@ private fun ImageViewer(file: File) {
     ) {
         when (val state = loadState) {
             ViewerLoadState.Loading -> CircularProgressIndicator(color = Color.White)
-            is ViewerLoadState.Error -> Text(state.message, color = Color.White)
+            is ViewerLoadState.Error -> Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(20.dp),
+            ) {
+                Text(state.message, color = Color.White, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(12.dp))
+                ViewerActionButton("Abrir com outro aplicativo", onClick = onOpenExternal)
+            }
             is ViewerLoadState.Success -> Image(
                 bitmap = state.value.asImageBitmap(),
                 contentDescription = file.name,
@@ -879,7 +894,7 @@ private fun UnsupportedMessage(message: String) {
 
 @Composable
 private fun ViewerStatusBar(file: File) {
-    val extension = remember(file.absolutePath) { file.extension.uppercase().ifBlank { "ARQUIVO" } }
+    val extension = remember(file.absolutePath) { FileTypeClassifier.labelFor(file, false) }
     val size = remember(file.absolutePath, file.lastModified()) { file.length() }
     val parent = remember(file.absolutePath) { file.parentFile?.name.orEmpty() }
     Row(

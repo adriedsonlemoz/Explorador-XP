@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.1.0-alpha.30
+
+- Implementada **Lixeira real** integrada ao fluxo de exclusão: ao apagar arquivo ou pasta, o usuário escolhe entre **Mover para a Lixeira**, **Apagar permanentemente** ou cancelar.
+- A Lixeira usa os ícones XP já existentes `trash_empty`/`trash_full`, lista itens com tipo, tamanho, data da exclusão e caminho original, e permite **Restaurar**, apagar definitivamente, atualizar e **Esvaziar Lixeira**.
+- Restauração recria o diretório original quando necessário e evita sobrescrever arquivos existentes, criando um nome com sufixo `(restaurado)` em caso de conflito.
+- A toolbar principal foi reorganizada: a ação duplicada **Exibir** saiu da barra e deu lugar à **Lixeira**; Lista/Grade continuam disponíveis no menu Exibir. A Lixeira também pode ser aberta pelo menu Arquivo.
+- Identificação de arquivos foi centralizada em `FileTypeClassifier`, com descrições legíveis como **Imagem JPEG**, **Documento PDF**, **Vídeo MP4**, **Arquivo ZIP** e **Aplicativo Android (APK)**.
+- Lista, grade, barra de status, Lixeira e visualizadores internos agora reutilizam a mesma classificação de tipo; a grade mostra tipo + tamanho e a lista prioriza tipo, tamanho e data.
+- Barra de status foi refinada para mostrar quantidade/tamanho dos itens e, em seleção única, o tipo do arquivo selecionado.
+- O card de armazenamento passou a abrir uma tela detalhada com **espaço total, usado e livre**, distribuição por categorias, maiores pastas e arquivos grandes.
+- A análise de armazenamento é iniciada somente sob demanda, executada em `Dispatchers.IO`, atualiza a quantidade de arquivos verificados, pode ser cancelada e ignora a pasta interna gerenciada pela Lixeira.
+- Pastas e arquivos exibidos nos resultados da análise podem ser abertos no próprio Explorer, evitando criar outro navegador ou duplicar funções.
+- **Sobre o Explorador XP** agora reúne informações do app, versão, desenvolvedor, chave PIX com botão de copiar e resumo das novidades da versão; o diálogo separado de Doação foi removido.
+- **Ajuda** foi reorganizada em tópicos expansíveis para Navegação, Arquivos e pastas, Copiar e mover, Lixeira, Armazenamento, Pesquisa, Favoritos, Visualizadores e Arquivos ocultos.
+- Visualizador de imagens agora diferencia arquivo ausente/sem acesso, arquivo vazio ou corrompido e formato não decodificado pelo Android, oferecendo **Abrir com outro aplicativo** quando a leitura interna falhar.
+- Refinados tamanhos e alinhamentos: legenda da toolbar ligeiramente maior, textos das ações de seleção mais claros, detalhes da grade podem ocupar duas linhas e ações da Lixeira foram reorganizadas para não esmagar conteúdo em telas estreitas.
+- Nenhuma imagem ou mockup novo foi criado/adicionado; a atualização reutiliza exclusivamente os recursos visuais já presentes no projeto.
+- Versão sincronizada para `0.1.0-alpha.30` / `versionCode 30`.
+
 ## 0.1.0-alpha.29
 
 - Aplicado um pacote amplo de polimento visual baseado no vídeo de uso real da alpha.28, preservando o pacote de ícones XP restaurado e todas as funções existentes.

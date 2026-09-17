@@ -34,6 +34,7 @@ data class FileItem(
     val size: Long,
     val modifiedAt: Long,
     val extension: String,
+    val typeLabel: String,
     val listDetailText: String,
     val gridDetailText: String,
     val isFavorite: Boolean = false,
@@ -65,6 +66,57 @@ data class StorageInfo(
         get() = if (totalBytes <= 0L) 0f else (usedBytes.toDouble() / totalBytes.toDouble()).toFloat().coerceIn(0f, 1f)
 }
 
+/** Item mantido pela Lixeira. O arquivo físico fica em uma pasta oculta gerenciada pelo app. */
+data class TrashItem(
+    val id: String,
+    val trashedFile: File,
+    val originalPath: String,
+    val deletedAt: Long,
+    val size: Long,
+    val isDirectory: Boolean,
+    val typeLabel: String,
+    val iconRes: Int,
+) {
+    val name: String get() = File(originalPath).name.ifBlank { trashedFile.name }
+}
+
+data class StorageCategorySummary(
+    val key: String,
+    val label: String,
+    val bytes: Long,
+    val fileCount: Int,
+)
+
+data class StorageFolderSummary(
+    val folder: File,
+    val bytes: Long,
+    val fileCount: Int,
+)
+
+data class StorageFileSummary(
+    val file: File,
+    val bytes: Long,
+    val typeLabel: String,
+)
+
+data class StorageAnalysis(
+    val root: File,
+    val storageInfo: StorageInfo,
+    val categories: List<StorageCategorySummary>,
+    val topFolders: List<StorageFolderSummary>,
+    val largeFiles: List<StorageFileSummary>,
+    val scannedFiles: Int,
+    val scannedBytes: Long,
+    val completedAt: Long,
+)
+
+data class StorageScanState(
+    val analyzing: Boolean = false,
+    val scannedFiles: Int = 0,
+    val analysis: StorageAnalysis? = null,
+    val error: String? = null,
+)
+
 data class ExplorerUiState(
     val currentDir: File,
     val items: List<FileItem> = emptyList(),
@@ -83,6 +135,10 @@ data class ExplorerUiState(
     val showHidden: Boolean = false,
     val storageInfo: StorageInfo = StorageInfo(),
     val storageLocations: List<StorageLocation> = emptyList(),
+    val trashItems: List<TrashItem> = emptyList(),
+    val trashLoading: Boolean = false,
+    val trashHasItems: Boolean = false,
+    val storageScan: StorageScanState = StorageScanState(),
 )
 
 sealed interface ExplorerEvent {

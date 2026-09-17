@@ -47,6 +47,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -64,6 +65,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -113,6 +117,8 @@ fun ExplorerScreen(
     onClearClipboard: () -> Unit,
     onDelete: () -> Unit,
     onDeleteTarget: (File) -> Unit,
+    onMoveToTrash: () -> Unit,
+    onMoveTargetToTrash: (File) -> Unit,
     onShare: () -> Unit,
     onShareTarget: (File) -> Unit,
     onOpenTarget: (File) -> Unit,
@@ -123,6 +129,12 @@ fun ExplorerScreen(
     onToggleFavorite: (File) -> Unit,
     onCreateFolder: (String) -> Unit,
     onRename: (File, String) -> Unit,
+    onLoadTrash: () -> Unit,
+    onRestoreTrashItem: (TrashItem) -> Unit,
+    onDeleteTrashItem: (TrashItem) -> Unit,
+    onEmptyTrash: () -> Unit,
+    onAnalyzeStorage: (Boolean) -> Unit,
+    onCancelStorageAnalysis: () -> Unit,
     onCancelTransfer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -134,8 +146,9 @@ fun ExplorerScreen(
     var showFolderContext by remember { mutableStateOf(false) }
     var showManual by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
-    var showDonation by remember { mutableStateOf(false) }
     var showDeviceInfo by remember { mutableStateOf(false) }
+    var showTrash by remember { mutableStateOf(false) }
+    var showStorageDetails by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -188,8 +201,12 @@ fun ExplorerScreen(
             onClearSelection = onClearSelection,
             onShowManual = { showManual = true },
             onShowAbout = { showAbout = true },
-            onShowDonation = { showDonation = true },
             onShowDeviceInfo = { showDeviceInfo = true },
+            trashHasItems = state.trashHasItems,
+            onOpenTrash = {
+                showTrash = true
+                onLoadTrash()
+            },
         )
 
         val internalRoot = state.storageLocations.firstOrNull { !it.removable }?.root
@@ -197,7 +214,10 @@ fun ExplorerScreen(
         val isHomePage = state.tab == ExplorerTab.FILES && samePath(state.currentDir, internalRoot)
 
         if (isHomePage && !state.searchVisible && state.selectedPaths.isEmpty()) {
-            StorageCard(state.storageInfo)
+            StorageCard(state.storageInfo) {
+                showStorageDetails = true
+                onAnalyzeStorage(false)
+            }
         } else if (state.tab == ExplorerTab.FAVORITES && !state.searchVisible && state.selectedPaths.isEmpty()) {
             SectionTitle(title = "Favoritos", icon = R.drawable.favorites)
         }
@@ -302,13 +322,15 @@ fun ExplorerScreen(
     }
 
     if (showDeleteConfirm) {
-        XpConfirmDialog(
-            title = "Excluir item(ns)?",
-            message = "Essa ação remove os itens selecionados do armazenamento.",
-            confirmText = "Excluir",
-            danger = true,
+        DeleteChoiceDialog(
+            title = "Excluir itens?",
+            message = "Escolha o que fazer com os ${state.selectedPaths.size} item(ns) selecionado(s).",
             onDismiss = { showDeleteConfirm = false },
-            onConfirm = {
+            onMoveToTrash = {
+                showDeleteConfirm = false
+                onMoveToTrash()
+            },
+            onDeletePermanently = {
                 showDeleteConfirm = false
                 onDelete()
             },
@@ -316,13 +338,15 @@ fun ExplorerScreen(
     }
 
     deleteTarget?.let { target ->
-        XpConfirmDialog(
+        DeleteChoiceDialog(
             title = "Excluir item?",
-            message = "Deseja excluir ${target.name}?",
-            confirmText = "Excluir",
-            danger = true,
+            message = "Escolha o que fazer com \"${target.name}\".",
             onDismiss = { deleteTarget = null },
-            onConfirm = {
+            onMoveToTrash = {
+                deleteTarget = null
+                onMoveTargetToTrash(target)
+            },
+            onDeletePermanently = {
                 deleteTarget = null
                 onDeleteTarget(target)
             },
@@ -345,8 +369,38 @@ fun ExplorerScreen(
 
     if (showManual) HelpManualDialog(onDismiss = { showManual = false })
     if (showAbout) AboutDialog(onDismiss = { showAbout = false })
-    if (showDonation) DonationDialog(onDismiss = { showDonation = false })
     if (showDeviceInfo) DeviceInfoDialog(onDismiss = { showDeviceInfo = false })
+    if (showTrash) {
+        TrashDialog(
+            items = state.trashItems,
+            loading = state.trashLoading,
+            onDismiss = { showTrash = false },
+            onRefresh = onLoadTrash,
+            onRestore = onRestoreTrashItem,
+            onDeletePermanently = onDeleteTrashItem,
+            onEmpty = onEmptyTrash,
+        )
+    }
+    if (showStorageDetails) {
+        StorageDetailsDialog(
+            state = state.storageScan,
+            fallbackInfo = state.storageInfo,
+            onDismiss = {
+                if (state.storageScan.analyzing) onCancelStorageAnalysis()
+                showStorageDetails = false
+            },
+            onRefresh = { onAnalyzeStorage(true) },
+            onCancel = onCancelStorageAnalysis,
+            onOpenFolder = { folder ->
+                showStorageDetails = false
+                onNavigateTo(folder)
+            },
+            onOpenFile = { file ->
+                showStorageDetails = false
+                onOpenTarget(file)
+            },
+        )
+    }
 
     state.transfer?.let { transfer ->
         TransferProgressDialog(transfer = transfer, onCancel = onCancelTransfer)
@@ -395,8 +449,9 @@ private fun XpHeader(
     onClearSelection: () -> Unit,
     onShowManual: () -> Unit,
     onShowAbout: () -> Unit,
-    onShowDonation: () -> Unit,
     onShowDeviceInfo: () -> Unit,
+    trashHasItems: Boolean,
+    onOpenTrash: () -> Unit,
 ) {
     var fileMenu by remember { mutableStateOf(false) }
     var editMenu by remember { mutableStateOf(false) }
@@ -503,6 +558,7 @@ private fun XpHeader(
                         XpMenuItem("Nova pasta", R.drawable.folder_new) { fileMenu = false; onNewFolder() }
                         if (canPaste) XpMenuItem("Colar", R.drawable.paste) { fileMenu = false; onPaste() }
                         XpMenuDivider()
+                        XpMenuItem("Lixeira", if (trashHasItems) R.drawable.trash_full else R.drawable.trash_empty) { fileMenu = false; onOpenTrash() }
                         XpMenuItem("Atualizar", R.drawable.refresh) { fileMenu = false; onRefresh() }
                     }
                 }
@@ -516,7 +572,6 @@ private fun XpHeader(
                             XpMenuDivider()
                         }
                         XpMenuItem("Selecionar tudo", R.drawable.select_all) { editMenu = false; onSelectAll() }
-                        XpMenuItem("Atualizar", R.drawable.refresh) { editMenu = false; onRefresh() }
                     }
                 }
 
@@ -532,8 +587,6 @@ private fun XpHeader(
                             R.drawable.visible,
                             checked = showHidden,
                         ) { viewMenu = false; onShowHiddenChange(!showHidden) }
-                        XpMenuDivider()
-                        XpMenuItem("Atualizar", R.drawable.refresh) { viewMenu = false; onRefresh() }
                     }
                 }
 
@@ -580,18 +633,15 @@ private fun XpHeader(
                             toolsMenu = false
                             onShowDeviceInfo()
                         }
-                        XpMenuDivider()
-                        XpMenuItem("Atualizar", R.drawable.refresh) { toolsMenu = false; onRefresh() }
                     }
                 }
 
                 Box {
                     XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
                     XpPopupMenu(expanded = helpMenu, onDismiss = { helpMenu = false }) {
-                        XpMenuItem("Manual de Ajuda", R.drawable.help) { helpMenu = false; onShowManual() }
+                        XpMenuItem("Ajuda", R.drawable.help) { helpMenu = false; onShowManual() }
                         XpMenuDivider()
-                        XpMenuItem("Sobre", R.drawable.info) { helpMenu = false; onShowAbout() }
-                        XpMenuItem("Doação", R.drawable.favorites) { helpMenu = false; onShowDonation() }
+                        XpMenuItem("Sobre o Explorador XP", R.drawable.info) { helpMenu = false; onShowAbout() }
                     }
                 }
             }
@@ -612,8 +662,8 @@ private fun XpHeader(
                     XpClassicToolButton(R.drawable.move, "Mover", true, onCutSelection, Modifier.weight(1f))
                     XpClassicToolButton(R.drawable.delete, "Excluir", true, onDeleteSelection, Modifier.weight(1f))
                     XpClassicToolButton(R.drawable.rename, "Renomear", selectionCount == 1, onRenameSelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.share, "Compart.", true, onShareSelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.properties, "Propried.", selectionCount == 1, onPropertiesSelection, Modifier.weight(1f))
+                    XpClassicToolButton(R.drawable.share, "Enviar", true, onShareSelection, Modifier.weight(1f))
+                    XpClassicToolButton(R.drawable.properties, "Detalhes", selectionCount == 1, onPropertiesSelection, Modifier.weight(1f))
                     XpClassicToolButton(R.drawable.select_all, "Todos", true, onSelectAll, Modifier.weight(1f))
                 } else {
                     XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack, Modifier.weight(1f))
@@ -627,10 +677,10 @@ private fun XpHeader(
                         XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads, Modifier.weight(1f))
                     }
                     XpClassicToolButton(
-                        if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
-                        "Exibir",
+                        if (trashHasItems) R.drawable.trash_full else R.drawable.trash_empty,
+                        "Lixeira",
                         true,
-                        onToggleView,
+                        onOpenTrash,
                         Modifier.weight(1f),
                     )
                 }
@@ -914,7 +964,7 @@ private fun XpClassicToolButton(
         Text(
             text = label,
             color = if (enabled) Color(0xFF202020) else Color(0xFF999999),
-            fontSize = 10.sp,
+            fontSize = 10.5.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -965,7 +1015,7 @@ private fun SelectionHeader(
 }
 
 @Composable
-private fun StorageCard(info: StorageInfo) {
+private fun StorageCard(info: StorageInfo, onClick: () -> Unit) {
     val used = formatBytes(info.usedBytes)
     val free = formatBytes(info.freeBytes)
     val total = formatBytes(info.totalBytes)
@@ -984,6 +1034,7 @@ private fun StorageCard(info: StorageInfo) {
             .clip(RoundedCornerShape(10.dp))
             .background(XpPanel)
             .border(1.dp, XpBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
             .padding(horizontal = 9.dp, vertical = 8.dp)
     ) {
         androidx.compose.foundation.Image(
@@ -1038,13 +1089,22 @@ private fun StorageCard(info: StorageInfo) {
         }
 
         Spacer(Modifier.width(9.dp))
-        Text(
-            text = "Total: $total",
-            color = XpBlueDark,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 12.sp,
-            maxLines = 1,
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = "Total: $total",
+                color = XpBlueDark,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                maxLines = 1,
+            )
+            Text(
+                text = "Detalhes ›",
+                color = XpBlue,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                maxLines = 1,
+            )
+        }
     }
 }
 
@@ -1087,6 +1147,20 @@ private fun SectionTitle(title: String, icon: Int) {
 
 @Composable
 private fun HelpManualDialog(onDismiss: () -> Unit) {
+    var expandedTopic by remember { mutableStateOf("Começando") }
+    val topics = listOf(
+        "Começando" to "Use a barra superior para voltar, avançar, ir ao Início, subir uma pasta, pesquisar, abrir Downloads e acessar a Lixeira. Toque em um arquivo para abrir e segure para selecionar.",
+        "Navegação" to "O campo Endereço funciona como caminho navegável. Toque em uma parte do caminho para voltar diretamente até ela. A seta ao lado do endereço permite trocar entre armazenamentos detectados.",
+        "Arquivos e pastas" to "A lista e a grade mostram o tipo do arquivo, tamanho e outras informações úteis. O botão de opções abre ações como copiar, mover, renomear, excluir, compartilhar, favoritar e ver propriedades.",
+        "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Downloads é temporariamente substituído por Colar.",
+        "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. Na Lixeira você pode restaurar um item, apagá-lo de vez ou esvaziar tudo.",
+        "Armazenamento" to "Toque no cartão de armazenamento da tela inicial para analisar espaço total, usado e livre. A análise também mostra categorias, pastas maiores e arquivos grandes. Ela só roda quando você abre essa área.",
+        "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
+        "Favoritos" to "Adicione arquivos ou pastas aos Favoritos pelo menu de opções. A lista fica disponível no menu Favoritos do cabeçalho.",
+        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. Se um formato falhar ou não for suportado, use Abrir com outro aplicativo.",
+        "Arquivos ocultos" to "No menu Exibir é possível mostrar ou ocultar arquivos ocultos. A pasta interna usada pela Lixeira continua protegida e não aparece na navegação comum.",
+    )
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -1098,63 +1172,108 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
                 .background(Color(0xFFF8F8F2))
                 .border(1.dp, XpBorder)
         ) {
-            XpDialogTitle("Manual de Ajuda", onDismiss)
+            XpDialogTitle("Ajuda", onDismiss)
+            Text(
+                "Escolha um assunto para ver somente a explicação necessária.",
+                fontSize = 12.sp,
+                color = XpTextSecondary,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            )
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(14.dp)
+                    .padding(horizontal = 10.dp, vertical = 2.dp)
             ) {
-                HelpSection("Navegação", "Use Voltar e Avançar para percorrer o histórico, Início para retornar ao armazenamento principal e Subir para voltar uma pasta. O campo Endereço permite trocar entre os armazenamentos disponíveis.")
-                HelpSection("Arquivos e pastas", "Toque para abrir. Toque e segure para entrar no modo de seleção. O botão de opções do item abre o menu contextual clássico com ações rápidas.")
-                HelpSection("Copiar, mover e colar", "Selecione um ou mais itens e use Copiar ou Mover. Ao navegar até a pasta de destino, o botão Downloads é temporariamente substituído por Colar. Também é possível segurar uma área vazia e escolher Colar aqui.")
-                HelpSection("Downloads", "O botão Downloads abre diretamente a pasta Download do armazenamento interno.")
-                HelpSection("Favoritos", "Adicione arquivos ou pastas aos Favoritos pelo menu contextual. A lista de Favoritos fica disponível no menu Favoritos do cabeçalho.")
-                HelpSection("Armazenamento", "Na página inicial são exibidos espaço usado, livre e total. O campo Endereço mostra o armazenamento interno e cartões SD detectados.")
-                HelpSection("Visualizador interno", "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem ser abertos dentro do Explorador XP. Formatos ainda não suportados continuam disponíveis em Abrir com...")
-                HelpSection("Organização", "Em Ferramentas > Organizar escolha Nome, Data, Tamanho ou Tipo e ative ou desative Pastas primeiro.")
-                HelpSection("Arquivos ocultos", "Em Exibir é possível mostrar ou ocultar arquivos ocultos. A preferência fica salva.")
+                topics.forEach { (title, text) ->
+                    HelpTopic(
+                        title = title,
+                        text = text,
+                        expanded = expandedTopic == title,
+                        onClick = { expandedTopic = if (expandedTopic == title) "" else title },
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun HelpTopic(
+    title: String,
+    text: String,
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (expanded) Color(0xFFEAF3FF) else Color.White)
+            .border(1.dp, if (expanded) XpBorder else Color(0xFFCBD7E5))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 11.dp, vertical = 9.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(if (expanded) "▼" else "▶", color = XpBlueDark, fontSize = 11.sp)
+            Spacer(Modifier.width(7.dp))
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+        }
+        if (expanded) {
+            Spacer(Modifier.height(7.dp))
+            Text(text, fontSize = 12.sp, color = Color(0xFF303030), lineHeight = 17.sp)
         }
     }
 }
 
 @Composable
 private fun AboutDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var copied by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .widthIn(min = 270.dp, max = 330.dp)
+                .widthIn(min = 300.dp, max = 380.dp)
                 .background(Color(0xFFF8F8F2))
                 .border(1.dp, XpBorder)
         ) {
-            XpDialogTitle("Sobre", onDismiss)
-            Column(Modifier.padding(18.dp)) {
-                Text("Explorador XP", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
-                Spacer(Modifier.height(6.dp))
-                Text("Versão ${BuildConfig.VERSION_NAME}", fontSize = 12.sp, color = XpTextSecondary)
-                Spacer(Modifier.height(18.dp))
-                Text("Desenvolvido por Adriedson Lemos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-    }
-}
+            XpDialogTitle("Sobre o Explorador XP", onDismiss)
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp)) {
+                Text("Explorador XP", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                Spacer(Modifier.height(4.dp))
+                Text("Gerenciador de arquivos com identidade inspirada no Windows XP.", fontSize = 12.sp, color = Color(0xFF303030))
+                Spacer(Modifier.height(10.dp))
+                PropertyLine("Versão", BuildConfig.VERSION_NAME)
+                PropertyLine("Desenvolvedor", "Adriedson Lemos")
 
-@Composable
-private fun DonationDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .widthIn(min = 270.dp, max = 330.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, XpBorder)
-        ) {
-            XpDialogTitle("Doação", onDismiss)
-            Column(Modifier.padding(18.dp)) {
-                Text("Chave PIX", fontSize = 12.sp, color = XpTextSecondary)
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(color = Color(0xFFD2DCE8))
+                Spacer(Modifier.height(12.dp))
+                Text("Apoiar o projeto", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
                 Spacer(Modifier.height(5.dp))
-                Text("adriedson@outlook.com", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                Text("PIX", fontSize = 11.sp, color = XpTextSecondary)
+                Text("adriedson@outlook.com", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF202020))
+                Spacer(Modifier.height(8.dp))
+                XpDialogButton(if (copied) "Chave copiada" else "Copiar chave") {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("PIX Explorador XP", "adriedson@outlook.com"))
+                    copied = true
+                }
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = Color(0xFFD2DCE8))
+                Spacer(Modifier.height(12.dp))
+                Text("Novidades desta versão", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                Spacer(Modifier.height(6.dp))
+                listOf(
+                    "Lixeira com restaurar, exclusão permanente e esvaziar.",
+                    "Análise detalhada do armazenamento sob demanda.",
+                    "Identificação de tipos mais clara na lista, grade e barra de status.",
+                    "Ajuda reorganizada e Sobre unificado com doação e alterações.",
+                ).forEach { change ->
+                    Text("• $change", fontSize = 12.sp, color = Color(0xFF303030), modifier = Modifier.padding(bottom = 4.dp))
+                }
             }
         }
     }
@@ -1335,6 +1454,404 @@ private fun XpConfirmDialog(
             Spacer(Modifier.width(8.dp))
             XpDialogButton(confirmText, danger = danger, onClick = onConfirm)
         }
+    }
+}
+
+@Composable
+private fun DeleteChoiceDialog(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit,
+    onMoveToTrash: () -> Unit,
+    onDeletePermanently: () -> Unit,
+) {
+    XpDialogFrame(title = title, onDismiss = onDismiss, maxWidth = 380) {
+        Row(verticalAlignment = Alignment.Top) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(R.drawable.trash_full),
+                contentDescription = null,
+                modifier = Modifier.size(38.dp),
+                contentScale = ContentScale.Fit,
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(message, fontSize = 13.sp, color = Color(0xFF303030))
+                Spacer(Modifier.height(4.dp))
+                Text("Mover para a Lixeira permite restaurar depois.", fontSize = 11.sp, color = XpTextSecondary)
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+            XpDialogButton("Mover para a Lixeira", onClick = onMoveToTrash)
+            XpDialogButton("Apagar permanentemente", danger = true, onClick = onDeletePermanently)
+            XpDialogButton("Cancelar", onClick = onDismiss)
+        }
+    }
+}
+
+@Composable
+private fun TrashDialog(
+    items: List<TrashItem>,
+    loading: Boolean,
+    onDismiss: () -> Unit,
+    onRefresh: () -> Unit,
+    onRestore: (TrashItem) -> Unit,
+    onDeletePermanently: (TrashItem) -> Unit,
+    onEmpty: () -> Unit,
+) {
+    var deleteCandidate by remember { mutableStateOf<TrashItem?>(null) }
+    var confirmEmpty by remember { mutableStateOf(false) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp)
+                .background(Color(0xFFF8F8F2))
+                .border(1.dp, XpBorder)
+        ) {
+            XpDialogTitle("Lixeira", onDismiss)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().background(XpChrome).padding(horizontal = 10.dp, vertical = 7.dp)
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(if (items.isEmpty()) R.drawable.trash_empty else R.drawable.trash_full),
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("${items.size} ${if (items.size == 1) "item" else "itens"}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("Itens ficam aqui até você restaurar ou apagar de vez.", fontSize = 11.sp, color = XpTextSecondary)
+                }
+                XpDialogButton("Atualizar", enabled = !loading, onClick = onRefresh)
+                Spacer(Modifier.width(6.dp))
+                XpDialogButton("Esvaziar", enabled = items.isNotEmpty() && !loading, danger = true) { confirmEmpty = true }
+            }
+            HorizontalDivider(color = XpChromeBorder)
+
+            when {
+                loading -> LoadingPanelInline("Carregando Lixeira…")
+                items.isEmpty() -> Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) {
+                    androidx.compose.foundation.Image(painterResource(R.drawable.trash_empty), null, modifier = Modifier.size(64.dp))
+                    Spacer(Modifier.height(10.dp))
+                    Text("A Lixeira está vazia", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                    Text("Arquivos enviados para a Lixeira aparecerão aqui.", fontSize = 12.sp, color = XpTextSecondary)
+                }
+                else -> LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White)) {
+                    items(items, key = { it.id }) { item ->
+                        TrashItemRow(
+                            item = item,
+                            onRestore = { onRestore(item) },
+                            onDelete = { deleteCandidate = item },
+                        )
+                        HorizontalDivider(color = Color(0xFFD8E1ED))
+                    }
+                }
+            }
+        }
+    }
+
+    deleteCandidate?.let { item ->
+        XpConfirmDialog(
+            title = "Apagar permanentemente?",
+            message = "\"${item.name}\" será removido de forma definitiva e não poderá ser restaurado.",
+            confirmText = "Apagar",
+            danger = true,
+            onDismiss = { deleteCandidate = null },
+            onConfirm = {
+                deleteCandidate = null
+                onDeletePermanently(item)
+            },
+        )
+    }
+    if (confirmEmpty) {
+        XpConfirmDialog(
+            title = "Esvaziar Lixeira?",
+            message = "Todos os itens da Lixeira serão apagados permanentemente.",
+            confirmText = "Esvaziar",
+            danger = true,
+            onDismiss = { confirmEmpty = false },
+            onConfirm = {
+                confirmEmpty = false
+                onEmpty()
+            },
+        )
+    }
+}
+
+@Composable
+private fun TrashItemRow(
+    item: TrashItem,
+    onRestore: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(item.iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(38.dp),
+                contentScale = ContentScale.Fit,
+            )
+            Spacer(Modifier.width(9.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    buildString {
+                        append(item.typeLabel)
+                        if (!item.isDirectory) append(" • ${formatBytes(item.size)}")
+                        append(" • Excluído em ${formatDateTime(item.deletedAt)}")
+                    },
+                    fontSize = 11.sp,
+                    color = XpTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    "Original: ${item.originalPath}",
+                    fontSize = 10.sp,
+                    color = Color(0xFF66788F),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Spacer(Modifier.height(7.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            XpDialogButton("Restaurar", onClick = onRestore)
+            XpDialogButton("Apagar", danger = true, onClick = onDelete)
+        }
+    }
+}
+
+@Composable
+private fun StorageDetailsDialog(
+    state: StorageScanState,
+    fallbackInfo: StorageInfo,
+    onDismiss: () -> Unit,
+    onRefresh: () -> Unit,
+    onCancel: () -> Unit,
+    onOpenFolder: (File) -> Unit,
+    onOpenFile: (File) -> Unit,
+) {
+    val analysis = state.analysis
+    val info = analysis?.storageInfo ?: fallbackInfo
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp)
+                .background(Color(0xFFF8F8F2))
+                .border(1.dp, XpBorder)
+        ) {
+            XpDialogTitle("Armazenamento", onDismiss)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().background(XpChrome).padding(horizontal = 10.dp, vertical = 7.dp),
+            ) {
+                androidx.compose.foundation.Image(painterResource(R.drawable.drive_storage), null, modifier = Modifier.size(31.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Armazenamento interno", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
+                    Text(
+                        "${formatBytes(info.usedBytes)} usados • ${formatBytes(info.freeBytes)} livres • ${formatBytes(info.totalBytes)} total",
+                        fontSize = 11.sp,
+                        color = XpTextSecondary,
+                    )
+                }
+                if (state.analyzing) XpDialogButton("Cancelar", onClick = onCancel)
+                else XpDialogButton(if (analysis == null) "Analisar" else "Atualizar análise", onClick = onRefresh)
+            }
+            HorizontalDivider(color = XpChromeBorder)
+
+            if (state.analyzing && analysis == null) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) {
+                    CircularProgressIndicator(color = XpBlue)
+                    Spacer(Modifier.height(12.dp))
+                    Text("Analisando armazenamento…", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                    Spacer(Modifier.height(4.dp))
+                    Text("${state.scannedFiles} arquivos verificados", fontSize = 12.sp, color = XpTextSecondary)
+                    Spacer(Modifier.height(5.dp))
+                    Text("A análise roda somente nesta tela e pode ser cancelada.", fontSize = 11.sp, color = Color(0xFF66788F))
+                }
+            } else if (state.error != null && analysis == null) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(20.dp),
+                ) {
+                    androidx.compose.foundation.Image(painterResource(R.drawable.warning), null, modifier = Modifier.size(45.dp))
+                    Spacer(Modifier.height(10.dp))
+                    Text(state.error, fontSize = 13.sp, color = Color(0xFF7D2A20), textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(12.dp))
+                    XpDialogButton("Tentar novamente", onClick = onRefresh)
+                }
+            } else if (analysis != null) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(10.dp)
+                ) {
+                    StorageSummaryCard(info)
+                    Spacer(Modifier.height(14.dp))
+                    StorageSectionHeader("Por tipo de arquivo", "${analysis.scannedFiles} arquivos analisados")
+                    val maxCategory = analysis.categories.maxOfOrNull { it.bytes }?.coerceAtLeast(1L) ?: 1L
+                    analysis.categories.forEach { category ->
+                        StorageCategoryRow(category, maxCategory)
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+                    StorageSectionHeader("Pastas que mais ocupam espaço", "Toque para abrir")
+                    if (analysis.topFolders.isEmpty()) {
+                        Text("Nenhuma pasta pôde ser analisada.", fontSize = 12.sp, color = XpTextSecondary)
+                    } else {
+                        analysis.topFolders.forEachIndexed { index, folder ->
+                            StorageFolderRow(index + 1, folder) { onOpenFolder(folder.folder) }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+                    StorageSectionHeader("Arquivos grandes", "Toque para abrir")
+                    if (analysis.largeFiles.isEmpty()) {
+                        Text("Nenhum arquivo encontrado.", fontSize = 12.sp, color = XpTextSecondary)
+                    } else {
+                        analysis.largeFiles.forEachIndexed { index, file ->
+                            StorageLargeFileRow(index + 1, file) { onOpenFile(file.file) }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Algumas áreas protegidas do Android podem não permitir leitura completa. Por isso, a soma das categorias pode ser menor que o espaço usado pelo sistema.",
+                        fontSize = 10.sp,
+                        color = Color(0xFF66788F),
+                    )
+                }
+                if (state.analyzing) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF6D9)).padding(horizontal = 10.dp, vertical = 5.dp),
+                    ) {
+                        CircularProgressIndicator(color = XpBlue, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text("Atualizando… ${state.scannedFiles} arquivos", fontSize = 11.sp, color = Color(0xFF5F4B00))
+                    }
+                }
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) {
+                    Text("Toque em Analisar para localizar pastas e arquivos que mais ocupam espaço.", fontSize = 13.sp, color = XpTextSecondary, textAlign = TextAlign.Center, modifier = Modifier.padding(20.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StorageSummaryCard(info: StorageInfo) {
+    Column(
+        modifier = Modifier.fillMaxWidth().background(Color.White).border(1.dp, Color(0xFFCAD8E8)).padding(11.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column { Text("Total", fontSize = 11.sp, color = XpTextSecondary); Text(formatBytes(info.totalBytes), fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("Usado", fontSize = 11.sp, color = XpTextSecondary); Text(formatBytes(info.usedBytes), fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+            Column(horizontalAlignment = Alignment.End) { Text("Livre", fontSize = 11.sp, color = XpTextSecondary); Text(formatBytes(info.freeBytes), fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+        }
+        Spacer(Modifier.height(9.dp))
+        Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xFFE1ECF8)).border(1.dp, XpChromeBorder)) {
+            Box(Modifier.fillMaxWidth(info.usedFraction.coerceIn(0f, 1f)).fillMaxHeight().background(Color(0xFF39B54A)))
+        }
+    }
+}
+
+@Composable
+private fun StorageSectionHeader(title: String, hint: String) {
+    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+        Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = XpBlueDark, modifier = Modifier.weight(1f))
+        Text(hint, fontSize = 10.sp, color = XpTextSecondary)
+    }
+}
+
+@Composable
+private fun StorageCategoryRow(category: StorageCategorySummary, maxBytes: Long) {
+    val fraction = (category.bytes.toDouble() / maxBytes.toDouble()).toFloat().coerceIn(0f, 1f)
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(category.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("${category.fileCount} • ${formatBytes(category.bytes)}", fontSize = 11.sp, color = XpTextSecondary)
+        }
+        Spacer(Modifier.height(3.dp))
+        Box(Modifier.fillMaxWidth().height(7.dp).background(Color(0xFFE3EAF2))) {
+            Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(XpBlueLight))
+        }
+    }
+}
+
+@Composable
+private fun StorageFolderRow(index: Int, folder: StorageFolderSummary, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+    ) {
+        Text("$index", fontSize = 11.sp, color = XpTextSecondary, modifier = Modifier.width(22.dp))
+        androidx.compose.foundation.Image(painterResource(FileIconMapper.iconFor(folder.folder, true)), null, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.width(7.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(folder.folder.name.ifBlank { folder.folder.absolutePath }, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${folder.fileCount} arquivos", fontSize = 10.sp, color = XpTextSecondary)
+        }
+        Text(formatBytes(folder.bytes), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+    }
+}
+
+@Composable
+private fun StorageLargeFileRow(index: Int, summary: StorageFileSummary, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+    ) {
+        Text("$index", fontSize = 11.sp, color = XpTextSecondary, modifier = Modifier.width(22.dp))
+        androidx.compose.foundation.Image(painterResource(FileIconMapper.iconFor(summary.file, false)), null, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.width(7.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(summary.file.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(summary.typeLabel, fontSize = 10.sp, color = XpTextSecondary)
+        }
+        Text(formatBytes(summary.bytes), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+    }
+}
+
+@Composable
+private fun LoadingPanelInline(message: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+    ) {
+        CircularProgressIndicator(color = XpBlue)
+        Spacer(Modifier.height(9.dp))
+        Text(message, fontSize = 12.sp, color = XpTextSecondary)
     }
 }
 
@@ -1666,8 +2183,10 @@ private fun FileGrid(
                         item.gridDetailText,
                         fontSize = 11.sp,
                         color = XpTextSecondary,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(3.dp))
                 }
@@ -1705,13 +2224,14 @@ private fun ExplorerStatusBar(
     items: List<FileItem>,
     selectedPaths: Set<String>,
 ) {
-    val (sizeBytes, selectedCount) = remember(items, selectedPaths) {
-        val selectedItems = items.filter { it.path in selectedPaths }
+    val selectedItems = remember(items, selectedPaths) { items.filter { it.path in selectedPaths } }
+    val sizeBytes = remember(items, selectedItems) {
         val shownItems = if (selectedItems.isNotEmpty()) selectedItems else items
-        shownItems.asSequence().filterNot { it.isDirectory }.sumOf { it.size } to selectedItems.size
+        shownItems.asSequence().filterNot { it.isDirectory }.sumOf { it.size }
     }
     val formattedSize = remember(sizeBytes) { formatBytes(sizeBytes) }
     val itemCount = items.size
+    val single = selectedItems.singleOrNull()
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1723,19 +2243,25 @@ private fun ExplorerStatusBar(
             .padding(horizontal = 8.dp)
     ) {
         Text(
-            text = buildString {
-                append("$itemCount ${if (itemCount == 1) "item" else "itens"}")
-                if (selectedCount > 0) append("  •  $selectedCount selecionado(s)")
+            text = when {
+                single != null -> "1 selecionado • ${single.typeLabel}"
+                selectedItems.isNotEmpty() -> "${selectedItems.size} selecionados • $formattedSize"
+                else -> "$itemCount ${if (itemCount == 1) "item" else "itens"}"
             },
             color = Color(0xFF303030),
             fontSize = 12.sp,
-            fontWeight = if (selectedCount > 0) FontWeight.SemiBold else FontWeight.Normal,
+            fontWeight = if (selectedItems.isNotEmpty()) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         Box(modifier = Modifier.fillMaxHeight().width(1.dp).background(XpChromeBorder))
         Text(
-            text = formattedSize,
+            text = when {
+                single?.isDirectory == true -> "Pasta"
+                selectedItems.isNotEmpty() -> formattedSize
+                else -> formattedSize
+            },
             color = Color(0xFF303030),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,

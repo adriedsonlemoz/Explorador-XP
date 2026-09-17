@@ -96,11 +96,17 @@ private fun ExplorerApp(
 
     val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         accessGranted = hasFileAccess(context)
-        if (accessGranted) viewModel.refresh()
+        if (accessGranted) {
+            viewModel.refresh()
+            viewModel.loadTrash()
+        }
     }
     val legacyPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         accessGranted = hasFileAccess(context)
-        if (accessGranted) viewModel.refresh()
+        if (accessGranted) {
+            viewModel.refresh()
+            viewModel.loadTrash()
+        }
     }
 
     fun requestFileAccess() {
@@ -197,6 +203,8 @@ private fun ExplorerApp(
         onClearClipboard = viewModel::clearClipboard,
         onDelete = viewModel::deleteSelected,
         onDeleteTarget = viewModel::deleteFile,
+        onMoveToTrash = viewModel::moveSelectedToTrash,
+        onMoveTargetToTrash = viewModel::moveFileToTrash,
         onShare = viewModel::shareSelected,
         onShareTarget = viewModel::shareFile,
         onOpenTarget = viewModel::openFileOrFolder,
@@ -207,6 +215,12 @@ private fun ExplorerApp(
         onToggleFavorite = viewModel::toggleFavorite,
         onCreateFolder = viewModel::createFolder,
         onRename = viewModel::rename,
+        onLoadTrash = viewModel::loadTrash,
+        onRestoreTrashItem = viewModel::restoreTrashItem,
+        onDeleteTrashItem = viewModel::permanentlyDeleteTrashItem,
+        onEmptyTrash = viewModel::emptyTrash,
+        onAnalyzeStorage = viewModel::analyzeStorage,
+        onCancelStorageAnalysis = viewModel::cancelStorageAnalysis,
         onCancelTransfer = viewModel::cancelTransfer,
         modifier = modifier,
     )

@@ -6,9 +6,13 @@ import android.os.StatFs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.ArrayDeque
+import java.util.PriorityQueue
+import java.util.UUID
 import kotlin.coroutines.coroutineContext
 
 class FileRepository(
@@ -23,13 +27,14 @@ class FileRepository(
 
     /**
      * Lê o diretório apenas uma vez e captura todos os metadados necessários para a UI.
-     * Busca, filtro e ordenação são aplicados depois sobre esse snapshot em memória.
+     * A pasta interna da Lixeira nunca é exposta na navegação, mesmo com ocultos visíveis.
      */
     suspend fun directorySnapshot(directory: File): List<FileItem> = withContext(Dispatchers.IO) {
         require(directory.exists() && directory.isDirectory) { "A pasta não está mais disponível." }
         val favorites = prefs.favorites()
         directory.listFiles()
             .orEmpty()
+            .filterNot(::isManagedTrashDirectory)
             .map { file -> toFileItem(file, file.absolutePath in favorites) }
     }
 
@@ -38,6 +43,7 @@ class FileRepository(
         prefs.favorites().asSequence()
             .map(::File)
             .filter(File::exists)
+            .filterNot { isInsideManagedTrash(it) }
             .map { file -> toFileItem(file, true) }
             .toList()
     }
@@ -47,6 +53,7 @@ class FileRepository(
         val items = prefs.recents().asSequence()
             .map(::File)
             .filter(File::exists)
+            .filterNot { isInsideManagedTrash(it) }
             .map { toFileItem(it, it.absolutePath in favoritePaths) }
             .toList()
         ExplorerItemTransforms.apply(
@@ -77,6 +84,7 @@ class FileRepository(
         runCatching {
             require(newName.isNotBlank()) { "Informe um novo nome." }
             require('/' !in newName && '\\' !in newName) { "O nome não pode conter separadores de caminho." }
+            require(!isInsideManagedTrash(file)) { "Itens da Lixeira devem ser restaurados antes de renomear." }
             val target = File(file.parentFile, newName.trim())
             require(!target.exists()) { "Já existe um item com esse nome." }
             check(file.renameTo(target)) { "Não foi possível renomear o item." }
@@ -98,6 +106,117 @@ class FileRepository(
             }
             ticker.reportFinal(done, "")
         }
+    }
+
+    /** Move itens para a Lixeira oculta do mesmo volume sempre que possível. */
+    suspend fun moveToTrash(files: List<File>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val validFiles = files.filter { it.exists() }
+            require(validFiles.isNotEmpty()) { "Nenhum item disponível para mover para a Lixeira." }
+            val total = validFiles.sumOf { countEntries(it) }.coerceAtLeast(1)
+            var done = 0
+            val ticker = ProgressTicker(total, onProgress)
+
+            validFiles.forEach { source ->
+                coroutineContext.ensureActive()
+                require(!isInsideManagedTrash(source)) { "O item já está na Lixeira." }
+                val entryCount = countEntries(source)
+                val trashRoot = managedTrashRoot(storageRootFor(source))
+                check(trashRoot.mkdirs() || trashRoot.isDirectory) { "Não foi possível preparar a Lixeira." }
+                val container = File(trashRoot, "${System.currentTimeMillis()}-${UUID.randomUUID()}")
+                check(container.mkdirs()) { "Não foi possível criar a entrada da Lixeira." }
+                val target = File(container, source.name)
+                val metadata = JSONObject()
+                    .put("originalPath", source.absolutePath)
+                    .put("deletedAt", System.currentTimeMillis())
+                    .put("size", if (source.isFile) source.length() else 0L)
+                    .put("isDirectory", source.isDirectory)
+                File(container, TRASH_INFO_FILE).writeText(metadata.toString(), Charsets.UTF_8)
+
+                if (source.renameTo(target)) {
+                    done += entryCount
+                    ticker.report(done, source.name)
+                } else {
+                    try {
+                        copyRecursively(source, target) { name ->
+                            done++
+                            ticker.report(done, name)
+                        }
+                        check(deleteRecursively(source)) { "O item foi copiado para a Lixeira, mas não foi possível remover a origem." }
+                    } catch (error: Throwable) {
+                        deleteRecursively(container)
+                        throw error
+                    }
+                }
+            }
+            ticker.reportFinal(done, "")
+        }
+    }
+
+    suspend fun trashSnapshot(): List<TrashItem> = withContext(Dispatchers.IO) {
+        storageLocations().flatMap { location ->
+            val trashRoot = managedTrashRoot(location.root)
+            trashRoot.listFiles().orEmpty().mapNotNull(::readTrashItem)
+        }.sortedByDescending(TrashItem::deletedAt)
+    }
+
+    suspend fun restoreTrash(items: List<TrashItem>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val existing = items.filter { it.trashedFile.exists() }
+            require(existing.isNotEmpty()) { "Nenhum item disponível para restaurar." }
+            val total = existing.sumOf { countEntries(it.trashedFile) }.coerceAtLeast(1)
+            var done = 0
+            val ticker = ProgressTicker(total, onProgress)
+
+            existing.forEach { item ->
+                coroutineContext.ensureActive()
+                val original = File(item.originalPath)
+                val parent = original.parentFile ?: root
+                check(parent.mkdirs() || parent.isDirectory) { "Não foi possível recriar a pasta original." }
+                val target = if (!original.exists()) original else uniqueRestoreTarget(parent, original.name)
+                val entryCount = countEntries(item.trashedFile)
+                if (item.trashedFile.renameTo(target)) {
+                    done += entryCount
+                    ticker.report(done, target.name)
+                } else {
+                    try {
+                        copyRecursively(item.trashedFile, target) { name ->
+                            done++
+                            ticker.report(done, name)
+                        }
+                        check(deleteRecursively(item.trashedFile)) { "O item foi restaurado, mas não foi possível limpar a cópia da Lixeira." }
+                    } catch (error: Throwable) {
+                        // Evita deixar uma restauração parcial/duplicada quando o fallback falha.
+                        deleteRecursively(target)
+                        throw error
+                    }
+                }
+                item.trashedFile.parentFile?.let { deleteRecursively(it) }
+            }
+            ticker.reportFinal(done, "")
+        }
+    }
+
+    suspend fun permanentlyDeleteTrash(items: List<TrashItem>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val existing = items.filter { it.trashedFile.exists() }
+            val total = existing.sumOf { countEntries(it.trashedFile) }.coerceAtLeast(1)
+            var done = 0
+            val ticker = ProgressTicker(total, onProgress)
+            existing.forEach { item ->
+                check(deleteRecursively(item.trashedFile) { name ->
+                    done++
+                    ticker.report(done, name)
+                }) { "Não foi possível apagar ${item.name}." }
+                item.trashedFile.parentFile?.let { deleteRecursively(it) }
+            }
+            ticker.reportFinal(done, "")
+        }
+    }
+
+    suspend fun emptyTrash(onProgress: (TransferProgress) -> Unit = {}): Result<Unit> {
+        val items = trashSnapshot()
+        return permanentlyDeleteTrash(items, onProgress)
     }
 
     suspend fun paste(
@@ -122,8 +241,6 @@ class FileRepository(
                 }
                 val target = uniqueTarget(destination, source.name)
                 if (clipboard.mode == ClipboardMode.CUT && source.renameTo(target)) {
-                    // Fast-path move no mesmo volume: sem cópia byte a byte, então
-                    // o progresso avança de uma vez para todo o subconteúdo movido.
                     done += countEntries(target)
                     ticker.report(done, target.name)
                 } else {
@@ -192,6 +309,82 @@ class FileRepository(
         StorageInfo(totalBytes = stat.totalBytes, freeBytes = stat.availableBytes)
     }.getOrDefault(StorageInfo())
 
+    /** Varredura sob demanda; não é executada durante a abertura normal do Explorer. */
+    suspend fun analyzeStorage(
+        directory: File = root,
+        onProgress: (Int) -> Unit = {},
+    ): Result<StorageAnalysis> = withContext(Dispatchers.IO) {
+        runCatching {
+            val storageRoot = storageRootFor(directory)
+            val info = storageInfo(storageRoot)
+            val categories = linkedMapOf<String, MutableCategory>()
+            val folders = linkedMapOf<String, MutableFolder>()
+            val largest = PriorityQueue<StorageFileSummary>(compareBy { it.bytes })
+            val queue = ArrayDeque<ScanNode>()
+            storageRoot.listFiles().orEmpty().forEach { child ->
+                if (!isManagedTrashDirectory(child)) {
+                    queue.add(ScanNode(child, if (child.isDirectory) child else null))
+                }
+            }
+
+            var scannedFiles = 0
+            var scannedBytes = 0L
+            while (queue.isNotEmpty()) {
+                coroutineContext.ensureActive()
+                val node = queue.removeFirst()
+                val file = node.file
+                if (file.isDirectory) {
+                    file.listFiles().orEmpty().forEach { child ->
+                        if (!isManagedTrashDirectory(child)) queue.add(ScanNode(child, node.topFolder ?: file))
+                    }
+                    continue
+                }
+                if (!file.isFile) continue
+
+                val bytes = runCatching { file.length() }.getOrDefault(0L).coerceAtLeast(0L)
+                scannedFiles++
+                scannedBytes += bytes
+                val (categoryKey, categoryLabel) = FileTypeClassifier.storageCategory(file.extension)
+                val category = categories.getOrPut(categoryKey) { MutableCategory(categoryLabel) }
+                category.bytes += bytes
+                category.count++
+
+                node.topFolder?.let { top ->
+                    val folder = folders.getOrPut(top.absolutePath) { MutableFolder(top) }
+                    folder.bytes += bytes
+                    folder.count++
+                }
+
+                val summary = StorageFileSummary(file, bytes, FileTypeClassifier.labelFor(file, false))
+                if (largest.size < LARGE_FILE_LIMIT) {
+                    largest.add(summary)
+                } else if (bytes > (largest.peek()?.bytes ?: 0L)) {
+                    largest.poll()
+                    largest.add(summary)
+                }
+
+                if (scannedFiles % 200 == 0) onProgress(scannedFiles)
+            }
+            onProgress(scannedFiles)
+
+            StorageAnalysis(
+                root = storageRoot,
+                storageInfo = info,
+                categories = categories.map { (key, value) ->
+                    StorageCategorySummary(key, value.label, value.bytes, value.count)
+                }.sortedByDescending { it.bytes },
+                topFolders = folders.values
+                    .map { StorageFolderSummary(it.folder, it.bytes, it.count) }
+                    .sortedByDescending { it.bytes }
+                    .take(12),
+                largeFiles = largest.toList().sortedByDescending { it.bytes },
+                scannedFiles = scannedFiles,
+                scannedBytes = scannedBytes,
+                completedAt = System.currentTimeMillis(),
+            )
+        }
+    }
+
     private fun volumeRootFromAppExternalDir(appDir: File): File? {
         val normalized = appDir.absolutePath.replace('\\', '/')
         val marker = "/Android/"
@@ -206,14 +399,47 @@ class FileRepository(
     private fun sameAbsolutePath(a: File?, b: File): Boolean =
         a != null && normalizedAbsolutePath(a) == normalizedAbsolutePath(b)
 
+    private fun managedTrashRoot(storageRoot: File): File = File(storageRoot, TRASH_DIR_NAME)
+
+    private fun isManagedTrashDirectory(file: File): Boolean = file.isDirectory && file.name == TRASH_DIR_NAME
+
+    private fun isInsideManagedTrash(file: File): Boolean {
+        val path = normalizedAbsolutePath(file)
+        return storageLocations().any { location ->
+            val trashPath = normalizedAbsolutePath(managedTrashRoot(location.root))
+            path == trashPath || path.startsWith(trashPath + File.separator)
+        }
+    }
+
+    private fun readTrashItem(container: File): TrashItem? = runCatching {
+        if (!container.isDirectory) return@runCatching null
+        val metadataFile = File(container, TRASH_INFO_FILE)
+        if (!metadataFile.isFile) return@runCatching null
+        val metadata = JSONObject(metadataFile.readText(Charsets.UTF_8))
+        val trashedFile = container.listFiles().orEmpty().firstOrNull { it.name != TRASH_INFO_FILE } ?: return@runCatching null
+        val originalPath = metadata.optString("originalPath")
+        if (originalPath.isBlank()) return@runCatching null
+        val isDirectory = metadata.optBoolean("isDirectory", trashedFile.isDirectory)
+        TrashItem(
+            id = container.name,
+            trashedFile = trashedFile,
+            originalPath = originalPath,
+            deletedAt = metadata.optLong("deletedAt", container.lastModified()),
+            size = metadata.optLong("size", if (trashedFile.isFile) trashedFile.length() else 0L),
+            isDirectory = isDirectory,
+            typeLabel = FileTypeClassifier.labelFor(File(originalPath), isDirectory),
+            iconRes = FileIconMapper.iconFor(File(originalPath), isDirectory),
+        )
+    }.getOrNull()
+
     private fun toFileItem(file: File, favorite: Boolean): FileItem {
-        // Toda leitura de metadados acontece aqui, em Dispatchers.IO, uma única vez.
         val isDirectory = file.isDirectory
         val name = file.name.ifBlank { file.absolutePath }
         val extension = if (isDirectory) "" else file.extension.lowercase()
         val size = if (isDirectory) 0L else file.length()
         val modifiedAt = file.lastModified()
         val hidden = name.startsWith('.') || runCatching { file.isHidden }.getOrDefault(false)
+        val typeLabel = FileTypeClassifier.labelFor(file, isDirectory)
         return FileItem(
             file = file,
             iconRes = FileIconMapper.iconFor(file, isDirectory),
@@ -223,8 +449,9 @@ class FileRepository(
             size = size,
             modifiedAt = modifiedAt,
             extension = extension,
-            listDetailText = FileDisplayFormatter.listDetail(modifiedAt, size, isDirectory),
-            gridDetailText = FileDisplayFormatter.gridDetail(modifiedAt),
+            typeLabel = typeLabel,
+            listDetailText = FileDisplayFormatter.listDetail(modifiedAt, size, isDirectory, extension),
+            gridDetailText = FileDisplayFormatter.gridDetail(size, isDirectory, extension),
             isFavorite = favorite,
         )
     }
@@ -238,6 +465,21 @@ class FileRepository(
         var index = 1
         while (candidate.exists()) {
             candidate = File(parent, "$base ($index)$ext")
+            index++
+        }
+        return candidate
+    }
+
+    private fun uniqueRestoreTarget(parent: File, originalName: String): File {
+        var candidate = File(parent, originalName)
+        if (!candidate.exists()) return candidate
+        val dot = originalName.lastIndexOf('.')
+        val base = if (dot > 0) originalName.substring(0, dot) else originalName
+        val ext = if (dot > 0) originalName.substring(dot) else ""
+        var index = 1
+        while (candidate.exists()) {
+            val suffix = if (index == 1) " (restaurado)" else " (restaurado $index)"
+            candidate = File(parent, "$base$suffix$ext")
             index++
         }
         return candidate
@@ -277,6 +519,10 @@ class FileRepository(
         }
     }
 
+    private data class ScanNode(val file: File, val topFolder: File?)
+    private data class MutableCategory(val label: String, var bytes: Long = 0L, var count: Int = 0)
+    private data class MutableFolder(val folder: File, var bytes: Long = 0L, var count: Int = 0)
+
     /**
      * Agrupa atualizações de progresso para não sobrecarregar a UI a cada arquivo processado
      * em transferências grandes: emite no máximo a cada ~80 ms, sempre garantindo a emissão final.
@@ -298,5 +544,11 @@ class FileRepository(
         fun reportFinal(done: Int, currentName: String) {
             onProgress(TransferProgress(done.coerceAtMost(total), total, currentName))
         }
+    }
+
+    companion object {
+        private const val TRASH_DIR_NAME = ".ExploradorXP_Lixeira"
+        private const val TRASH_INFO_FILE = ".trashinfo.json"
+        private const val LARGE_FILE_LIMIT = 20
     }
 }

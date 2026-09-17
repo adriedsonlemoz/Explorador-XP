@@ -82,6 +82,7 @@ class ExplorerItemTransformsTest {
         size = size,
         modifiedAt = 1_700_000_000_000L,
         extension = if (isDirectory) "" else extension,
+        typeLabel = if (isDirectory) "Pasta de arquivos" else "Arquivo de texto",
         listDetailText = "detail",
         gridDetailText = "grid",
         isFavorite = false,

@@ -43,12 +43,13 @@ object FileDisplayFormatter {
         else String.format(locale, "%.1f %s", value, units[index])
     }
 
-    fun listDetail(modifiedAt: Long, size: Long, isDirectory: Boolean): String {
-        val date = date(modifiedAt)
-        val time = time(modifiedAt)
-        return if (isDirectory) "$date  •  $time  •  Pasta de arquivos"
-        else "$date  •  $time  •  ${bytes(size)}"
+    fun listDetail(modifiedAt: Long, size: Long, isDirectory: Boolean, extension: String): String {
+        val type = if (isDirectory) "Pasta de arquivos" else FileTypeClassifier.labelForExtension(extension)
+        val timestamp = "${date(modifiedAt)} • ${time(modifiedAt)}"
+        return if (isDirectory) "$type • $timestamp" else "$type • ${bytes(size)} • $timestamp"
     }
 
-    fun gridDetail(modifiedAt: Long): String = "${date(modifiedAt)} • ${time(modifiedAt)}"
+    fun gridDetail(size: Long, isDirectory: Boolean, extension: String): String {
+        return if (isDirectory) "Pasta" else "${FileTypeClassifier.labelForExtension(extension)} • ${bytes(size)}"
+    }
 }
