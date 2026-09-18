@@ -128,6 +128,7 @@ class FileRepository(
                 val target = File(container, source.name)
                 val metadata = JSONObject()
                     .put("originalPath", source.absolutePath)
+                    .put("originalName", source.name)
                     .put("deletedAt", System.currentTimeMillis())
                     .put("size", if (source.isFile) source.length() else 0L)
                     .put("isDirectory", source.isDirectory)
@@ -463,6 +464,9 @@ class FileRepository(
             id = container.name,
             trashedFile = trashedFile,
             originalPath = originalPath,
+            originalName = metadata.optString("originalName")
+                .ifBlank { File(originalPath).name }
+                .ifBlank { trashedFile.name },
             deletedAt = metadata.optLong("deletedAt", container.lastModified()),
             size = metadata.optLong("size", 0L).takeIf { it > 0L }
                 ?: directorySizeBytes(trashedFile),

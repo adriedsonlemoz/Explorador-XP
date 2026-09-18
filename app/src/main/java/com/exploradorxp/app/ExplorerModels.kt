@@ -71,13 +71,15 @@ data class TrashItem(
     val id: String,
     val trashedFile: File,
     val originalPath: String,
+    val originalName: String,
     val deletedAt: Long,
     val size: Long,
     val isDirectory: Boolean,
     val typeLabel: String,
     val iconRes: Int,
 ) {
-    val name: String get() = File(originalPath).name.ifBlank { trashedFile.name }
+    val name: String
+        get() = originalName.ifBlank { File(originalPath).name }.ifBlank { trashedFile.name }
 }
 
 data class StorageCategorySummary(

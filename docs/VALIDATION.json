@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.39",
-  "version_code": 39,
-  "manager_version": "0.1.0-alpha.39",
-  "manager_code": 39,
+  "version_build": "0.1.0-alpha.40",
+  "version_code": 40,
+  "manager_version": "0.1.0-alpha.40",
+  "manager_code": 40,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.39",
-      "code": 39
+      "version": "0.1.0-alpha.40",
+      "code": 40
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -118,9 +118,51 @@
     "kotlin_receiver_smoke_test": {
       "ok": true,
       "note": "kotlinc sem classpath Android/Compose não apontou erro de parser nem os erros de receiver maxWidth reportados pelo CI; referências Android/Compose permanecem não resolvíveis localmente sem SDK/dependências."
+    },
+    "alpha40_trash_rebuild": {
+      "ok": true,
+      "observed_problem": [
+        "trash rows visually empty because filename/details were squeezed out",
+        "restore buttons expanded excessively",
+        "empty-trash confirmation could hide the destructive action"
+      ],
+      "root_cause": "XpDialogButton internal Row forced fillMaxWidth even when the outer button had no explicit width, allowing buttons to consume sibling space inside Rows",
+      "changes": [
+        "button internal content now wraps and outer modifier controls width",
+        "trash items rebuilt as readable cards with filename, metadata, deleted date and origin",
+        "restore and delete actions are always visible side by side",
+        "refresh and empty-trash actions share the header on normal phone widths",
+        "empty-trash confirmation includes item count and bytes and exposes both actions",
+        "trash metadata persists originalName with legacy fallback"
+      ],
+      "unit_test_added": "TrashItemTest.kt",
+      "full_android_build_executed": false,
+      "full_android_build_reason": "No Gradle executable/Android SDK is available in this session and the project does not include gradlew."
+    },
+    "image_resources_unchanged_alpha40": {
+      "ok": true,
+      "note": "No image/mockup/resource file was added or modified for the trash rebuild."
+    },
+    "alpha40_kotlinc_parser_smoke": {
+      "ok": true,
+      "command": "kotlinc app/src/main/java/com/exploradorxp/app/*.kt -d /tmp/exploradorxp-smoke.jar",
+      "result": "Expected unresolved Android/Compose/kotlinx references without Android classpath; no Kotlin parser diagnostics such as expecting/unclosed and no missing originalName constructor argument were found.",
+      "full_compile": false
+    },
+    "alpha40_name_resolution_smoke": {
+      "ok": true,
+      "compiled": [
+        "ExplorerModels.kt",
+        "standalone TrashItem smoke"
+      ],
+      "verified": [
+        "persisted originalName has priority",
+        "legacy entry falls back to originalPath filename",
+        "blank path filename falls back to physical trashed filename"
+      ]
     }
   },
-  "validated_at_utc": "2026-09-17T23:02:09.671925+00:00",
+  "validated_at_utc": "2026-09-18T01:13:56.459565+00:00",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -135,5 +177,22 @@
       "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
       "github-manager.json"
     ]
+  },
+  "source_diff_alpha40_against_alpha39": {
+    "added": [
+      "app/src/test/java/com/exploradorxp/app/TrashItemTest.kt",
+      "docs/ALPHA40_TRASH_REBUILD_NOTES.md"
+    ],
+    "changed": [
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerModels.kt",
+      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
+      "app/build.gradle.kts",
+      "CHANGELOG.md",
+      "README.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
   }
 }

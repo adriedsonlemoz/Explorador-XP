@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.1.0-alpha.40
+
+- Refeita a interface da **Lixeira** com base no problema observado em aparelho real, eliminando linhas praticamente vazias e devolvendo prioridade visual ao nome do arquivo.
+- Corrigida a causa do sumiço/espremimento dos nomes: `XpDialogButton` não força mais `fillMaxWidth()` internamente, evitando que botões sem largura explícita ocupem toda a linha e comprimam o conteúdo ao lado.
+- Cada item da Lixeira agora exibe nome em destaque, tipo/tamanho, data da exclusão e caminho de origem em blocos legíveis.
+- Ações por item foram simplificadas para **Restaurar** e **Apagar**, sempre visíveis e lado a lado; a exclusão permanente continua protegida por confirmação.
+- **Atualizar** e **Esvaziar Lixeira** ficam lado a lado no cabeçalho em larguras comuns, com fallback vertical apenas em telas extremamente estreitas.
+- O diálogo **Esvaziar Lixeira?** volta a mostrar corretamente **Cancelar** e **Esvaziar**, além de informar quantidade de itens e espaço ocupado.
+- Novos itens enviados à Lixeira gravam também `originalName` no metadado; itens antigos continuam usando o nome derivado do caminho original/arquivo físico como fallback.
+- Adicionado teste unitário para a resolução do nome exibido na Lixeira.
+- README, documentação de validação e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.40` / `versionCode 40`.
+
 ## 0.1.0-alpha.39
 
 - Corrigidos os dois erros Kotlin apontados pelo workflow `Gerar APK` em `ExplorerScreen.kt` nas linhas do diálogo de exclusão.
