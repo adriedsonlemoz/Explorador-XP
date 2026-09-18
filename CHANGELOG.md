@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.1.0-alpha.38
+
+- Refinada a tela da **Lixeira** para corrigir o sumiço do nome do arquivo na listagem e reforçar a leitura do caminho/origem do item.
+- Cabeçalho da Lixeira reorganizado com ações responsivas: **Atualizar** e **Esvaziar Lixeira** permanecem visíveis em larguras menores, sem sair da janela.
+- Diálogo **Excluir itens?** agora exibe os nomes dos arquivos/pastas selecionados e tenta manter **Mover para a Lixeira**, **Apagar** e **Cancelar** lado a lado em telas comuns, com rótulos compactos quando necessário.
+- `XpDialogButton` passou a aceitar quebra controlada em até 2 linhas para evitar cortes em ações mais longas.
+- `TrashItemRow` foi compactado e reorganizado para priorizar nome, metadados e origem, mantendo **Restaurar** como ação principal e exclusão permanente no menu secundário.
+- README, documentação de validação e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.38` / `versionCode 38`.
+
 ## 0.1.0-alpha.37
 
 - Corrigidos os dois erros de compilação Kotlin restantes encontrados no workflow `Gerar APK` após a alpha.36 avançar além de `checkDebugAarMetadata`.

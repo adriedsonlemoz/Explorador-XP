@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.37",
-  "version_code": 37,
-  "manager_version": "0.1.0-alpha.37",
-  "manager_code": 37,
+  "version_build": "0.1.0-alpha.38",
+  "version_code": 38,
+  "manager_version": "0.1.0-alpha.38",
+  "manager_code": 38,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.37",
-      "code": 37
+      "version": "0.1.0-alpha.38",
+      "code": 38
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -80,6 +80,19 @@
       "ok": false,
       "executed": false,
       "reason": "O ambiente local não possui Gradle/Android SDK configurados e o projeto não inclui gradlew. A correção foi guiada pelos erros exatos do CI e validada estruturalmente."
+    },
+    "trash_ui_refinement": {
+      "ok": true,
+      "focus": [
+        "TrashDialog",
+        "TrashItemRow",
+        "DeleteChoiceDialog"
+      ],
+      "changes": [
+        "header actions responsive with visible empty-trash button",
+        "item name and original path emphasized again in recycle bin list",
+        "delete dialog shows selected item names and prefers horizontal 3-button layout"
+      ]
     }
   },
   "validated_at_utc": "2026-09-17T23:02:09.671925+00:00",

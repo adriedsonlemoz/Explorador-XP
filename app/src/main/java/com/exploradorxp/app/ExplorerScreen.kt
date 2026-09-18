@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -328,6 +329,7 @@ fun ExplorerScreen(
         DeleteChoiceDialog(
             title = "Excluir itens?",
             message = "Escolha o que fazer com ${selectedCountLabel(state.selectedPaths.size)}.",
+            itemNames = state.selectedPaths.map { File(it).name.ifBlank { it } }.sorted(),
             onDismiss = { showDeleteConfirm = false },
             onMoveToTrash = {
                 showDeleteConfirm = false
@@ -344,6 +346,7 @@ fun ExplorerScreen(
         DeleteChoiceDialog(
             title = "Excluir item?",
             message = "Escolha o que fazer com \"${target.name}\".",
+            itemNames = listOf(target.name),
             onDismiss = { deleteTarget = null },
             onMoveToTrash = {
                 deleteTarget = null
@@ -1573,6 +1576,8 @@ internal fun XpDialogButton(
                 lineHeight = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 color = when {
                     !enabled -> Color(0xFF999999)
                     danger -> Color(0xFF9C1B12)
@@ -1616,11 +1621,12 @@ private fun XpConfirmDialog(
 private fun DeleteChoiceDialog(
     title: String,
     message: String,
+    itemNames: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onMoveToTrash: () -> Unit,
     onDeletePermanently: () -> Unit,
 ) {
-    XpDialogFrame(title = title, onDismiss = onDismiss, maxWidth = 650) {
+    XpDialogFrame(title = title, onDismiss = onDismiss, maxWidth = 720) {
         Row(verticalAlignment = Alignment.Top) {
             androidx.compose.foundation.Image(
                 painter = painterResource(R.drawable.trash_full),
@@ -1635,13 +1641,49 @@ private fun DeleteChoiceDialog(
                 Text("Mover para a Lixeira permite restaurar depois.", fontSize = 11.sp, color = XpTextSecondary)
             }
         }
+        if (itemNames.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF3F6FB))
+                    .border(1.dp, Color(0xFFD5DDE9))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                Text("Itens selecionados", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                itemNames.take(3).forEach { name ->
+                    Text("• $name", fontSize = 11.sp, color = Color(0xFF2F2F2F), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                val remaining = itemNames.size - 3
+                if (remaining > 0) {
+                    Text("+ $remaining ${if (remaining == 1) "item" else "itens"}", fontSize = 10.5.sp, color = XpTextSecondary)
+                }
+            }
+        }
         Spacer(Modifier.height(16.dp))
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            if (maxWidth >= 540.dp) {
+            if (maxWidth >= 330.dp) {
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
-                    XpDialogButton("Mover para a Lixeira", modifier = Modifier.weight(1f), iconRes = R.drawable.trash_full, onClick = onMoveToTrash)
-                    XpDialogButton("Apagar permanentemente", modifier = Modifier.weight(1f), danger = true, iconRes = R.drawable.delete, onClick = onDeletePermanently)
-                    XpDialogButton("Cancelar", modifier = Modifier.weight(1f), iconRes = R.drawable.close, onClick = onDismiss)
+                    XpDialogButton(
+                        if (maxWidth < 430.dp) "Para Lixeira" else "Mover para a Lixeira",
+                        modifier = Modifier.weight(1f),
+                        iconRes = R.drawable.trash_full,
+                        onClick = onMoveToTrash,
+                    )
+                    XpDialogButton(
+                        if (maxWidth < 430.dp) "Apagar" else "Apagar permanentemente",
+                        modifier = Modifier.weight(1f),
+                        danger = true,
+                        iconRes = R.drawable.delete,
+                        onClick = onDeletePermanently,
+                    )
+                    XpDialogButton(
+                        "Cancelar",
+                        modifier = Modifier.weight(1f),
+                        iconRes = R.drawable.close,
+                        onClick = onDismiss,
+                    )
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
@@ -1703,13 +1745,37 @@ private fun TrashDialog(
                         Text("Restaure itens ou apague-os definitivamente.", fontSize = 11.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 7.dp),
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 7.dp),
                 ) {
-                    XpDialogButton("Atualizar", enabled = !loading, iconRes = R.drawable.refresh, onClick = onRefresh)
-                    Spacer(Modifier.width(6.dp))
-                    XpDialogButton("Esvaziar Lixeira", enabled = items.isNotEmpty() && !loading, danger = true, iconRes = R.drawable.delete) { confirmEmpty = true }
+                    if (maxWidth >= 370.dp) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            XpDialogButton(
+                                "Atualizar",
+                                modifier = Modifier.weight(1f, fill = false),
+                                enabled = !loading,
+                                iconRes = R.drawable.refresh,
+                                onClick = onRefresh,
+                            )
+                            XpDialogButton(
+                                "Esvaziar Lixeira",
+                                modifier = Modifier.weight(1f, fill = false),
+                                enabled = items.isNotEmpty() && !loading,
+                                danger = true,
+                                iconRes = R.drawable.delete,
+                            ) { confirmEmpty = true }
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            XpDialogButton("Atualizar", modifier = Modifier.fillMaxWidth(), enabled = !loading, iconRes = R.drawable.refresh, onClick = onRefresh)
+                            XpDialogButton("Esvaziar Lixeira", modifier = Modifier.fillMaxWidth(), enabled = items.isNotEmpty() && !loading, danger = true, iconRes = R.drawable.delete) { confirmEmpty = true }
+                        }
+                    }
                 }
             }
             HorizontalDivider(color = XpChromeBorder)
@@ -1726,7 +1792,10 @@ private fun TrashDialog(
                     Text("A Lixeira está vazia", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
                     Text("Arquivos enviados para a Lixeira aparecerão aqui.", fontSize = 12.sp, color = XpTextSecondary)
                 }
-                else -> LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White)) {
+                else -> LazyColumn(
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White)
+                ) {
                     items(items, key = { it.id }) { item ->
                         TrashItemRow(
                             item = item,
@@ -1777,18 +1846,19 @@ private fun TrashItemRow(
 ) {
     var menuExpanded by remember(item.id) { mutableStateOf(false) }
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 7.dp),
     ) {
         androidx.compose.foundation.Image(
             painter = painterResource(item.iconRes),
             contentDescription = null,
-            modifier = Modifier.size(30.dp),
+            modifier = Modifier.size(28.dp),
             contentScale = ContentScale.Fit,
         )
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(item.name, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(item.name, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(2.dp))
             Text(
                 buildString {
                     append(item.typeLabel)
@@ -1800,23 +1870,25 @@ private fun TrashItemRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            Spacer(Modifier.height(1.dp))
             Text(
-                compactOriginalPath(item.originalPath),
+                "Origem: ${compactOriginalPath(item.originalPath)}",
                 fontSize = 9.5.sp,
                 color = Color(0xFF66788F),
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.width(6.dp))
-        XpDialogButton("Restaurar", iconRes = R.drawable.move, onClick = onRestore)
-        Spacer(Modifier.width(3.dp))
-        Box {
-            XpIconButton(R.drawable.more, "Mais ações", onClick = { menuExpanded = true }, iconSize = 20, buttonSize = 30)
-            XpPopupMenu(expanded = menuExpanded, onDismiss = { menuExpanded = false }) {
-                XpMenuItem("Apagar permanentemente", R.drawable.delete) {
-                    menuExpanded = false
-                    onDelete()
+        Spacer(Modifier.width(8.dp))
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            XpDialogButton("Restaurar", iconRes = R.drawable.move, onClick = onRestore)
+            Box {
+                XpIconButton(R.drawable.more, "Mais ações", onClick = { menuExpanded = true }, iconSize = 20, buttonSize = 30)
+                XpPopupMenu(expanded = menuExpanded, onDismiss = { menuExpanded = false }) {
+                    XpMenuItem("Apagar permanentemente", R.drawable.delete) {
+                        menuExpanded = false
+                        onDelete()
+                    }
                 }
             }
         }

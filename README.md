@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.37` (`versionCode 37`)  
+**Versão atual:** `0.1.0-alpha.38` (`versionCode 38`)  
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -15,6 +15,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
 - A alpha.30 integra uma **Lixeira real** ao fluxo de exclusão: cada remoção oferece mover para a Lixeira ou apagar permanentemente; itens podem ser restaurados, apagados individualmente ou removidos de uma vez com **Esvaziar Lixeira**.
 - A alpha.31 continua o refinamento visual: menus superiores mais legíveis e roláveis em telas estreitas, barra de seleção com ações sem compressão, listagem com tipo/tamanho e data separados, janelas com botão Fechar no padrão XP e armazenamento com leitura visual mais clara.
+- A alpha.38 refina a experiência da **Lixeira** e do diálogo de exclusão: o item excluído volta a exibir nome e origem na lista, **Esvaziar Lixeira** fica sempre acessível em layout responsivo e a janela de exclusão mostra os nomes selecionados com os três comandos lado a lado sempre que houver largura suficiente.
 - A alpha.37 corrige os dois erros Kotlin restantes apontados pelo CI após a correção do Media3: callback de fechamento do visualizador com retorno `Unit` explícito e tratamento nulo seguro de `WebResourceError` no preview do editor web.
 - A alpha.36 corrige o build do GitHub após o Media3 1.11.1 exigir API 36: o player mantém as mesmas funções, mas passa a usar **Media3/ExoPlayer 1.9.4**, compatível com o `compileSdk 35` e a toolchain atual do projeto.
 - A alpha.35 transforma o visualizador de texto/código em um **editor interno leve**: Salvar/Salvar como, desfazer/refazer, localizar/substituir, ir para linha, linha/coluna, números de linha, codificação detectada, aviso de alterações não salvas, gravação temporária validada e preview web para HTML/CSS/JS. Arquivos grandes entram em leitura parcial para evitar travamentos.
