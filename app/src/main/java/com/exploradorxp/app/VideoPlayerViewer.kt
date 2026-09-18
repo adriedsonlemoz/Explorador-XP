@@ -383,7 +383,7 @@ private fun VideoControls(
                     onDismissRequest = { onSpeedMenuVisibleChange(false) },
                     modifier = Modifier
                         .background(Color(0xFFF8F8F2))
-                        .border(1.dp, Color(0xFF7D8FA6))
+                        .border(1.dp, XpControlBorder)
                         .widthIn(min = 126.dp),
                 ) {
                     videoSpeeds.forEach { speed ->
@@ -534,7 +534,7 @@ private fun VideoInfoPanel(
         modifier = modifier
             .widthIn(max = 430.dp)
             .background(Color(0xEEF8F8F2))
-            .border(1.dp, Color(0xFF7D8FA6))
+            .border(1.dp, XpControlBorder)
             .padding(10.dp),
     ) {
         Text(

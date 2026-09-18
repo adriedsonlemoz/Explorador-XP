@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.40",
-  "version_code": 40,
-  "manager_version": "0.1.0-alpha.40",
-  "manager_code": 40,
+  "version_build": "0.1.0-alpha.41",
+  "version_code": 41,
+  "manager_version": "0.1.0-alpha.41",
+  "manager_code": 41,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.40",
-      "code": 40
+      "version": "0.1.0-alpha.41",
+      "code": 41
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -160,9 +160,60 @@
         "legacy entry falls back to originalPath filename",
         "blank path filename falls back to physical trashed filename"
       ]
+    },
+    "alpha41_safe_area_and_visual_standardization": {
+      "ok": true,
+      "root_insets_change": "MainActivity uses WindowInsets.safeDrawing.asPaddingValues() so root padding no longer consumes insets needed by Dialog windows",
+      "safe_dialogs_reviewed": [
+        "HelpManualDialog",
+        "AboutDialog",
+        "DeviceInfoDialog",
+        "TransferProgressDialog",
+        "XpDialogFrame",
+        "TrashDialog",
+        "StorageDetailsDialog",
+        "FileContextDialog",
+        "FolderContextDialog",
+        "SafeEditorDialog"
+      ],
+      "about_dialog": [
+        "centered in safe area",
+        "max height limited to 92% of safe content",
+        "cards use soft standardized borders",
+        "shortcuts use standardized XpDialogButton"
+      ],
+      "device_info": "scroll content gets extra bottom padding in addition to dialog safeDrawingPadding",
+      "control_border_audit": [
+        "XpDialogButton",
+        "XpPopupMenu",
+        "file/folder context dialogs",
+        "ViewerActionButton",
+        "EditorButton",
+        "EditorDialogActionButton",
+        "light video dropdown/info surfaces"
+      ],
+      "images_created_or_modified": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "No Gradle executable/Android SDK is available and the project has no gradlew."
+    },
+    "alpha41_kotlinc_parser_smoke": {
+      "ok": true,
+      "command": "kotlinc app/src/main/java/com/exploradorxp/app/*.kt -d /tmp/exploradorxp-alpha41-smoke.jar",
+      "expected_exit": "nonzero because Android/Compose/Media3 classpath is unavailable",
+      "parser_diagnostics_found": [],
+      "note": "No expecting/unclosed/unexpected-token parser diagnostics were found; unresolved Android/Compose references are expected without the Android toolchain."
+    },
+    "alpha41_image_resources_unchanged": {
+      "ok": true,
+      "changed": [],
+      "count": 172
+    },
+    "alpha41_workflows_unchanged": {
+      "ok": true,
+      "changed": []
     }
   },
-  "validated_at_utc": "2026-09-18T01:13:56.459565+00:00",
+  "validated_at_utc": "2026-09-18T21:55:06.041016+00:00",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -187,6 +238,25 @@
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "app/src/main/java/com/exploradorxp/app/ExplorerModels.kt",
       "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
+      "app/build.gradle.kts",
+      "CHANGELOG.md",
+      "README.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha41_against_alpha40": {
+    "added": [
+      "docs/ALPHA41_SAFE_AREA_UI_NOTES.md"
+    ],
+    "changed": [
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/DeviceInfoScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/VideoPlayerViewer.kt",
       "app/build.gradle.kts",
       "CHANGELOG.md",
       "README.md",

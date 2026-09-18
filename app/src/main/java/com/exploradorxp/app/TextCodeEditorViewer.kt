@@ -35,9 +35,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -62,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -581,7 +584,7 @@ private fun EditorTextInput(
         modifier = modifier
             .height(28.dp)
             .background(Color.White)
-            .border(1.dp, Color(0xFF7D8FA6))
+            .border(1.dp, XpControlBorder, RoundedCornerShape(4.dp))
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -1058,13 +1061,14 @@ private fun EditorButton(label: String, enabled: Boolean = true, onClick: () -> 
             .height(28.dp)
             .widthIn(min = 42.dp)
             .background(
-                when {
-                    !enabled -> Color(0xFFE6E6E6)
-                    pressed -> Color(0xFFD8E8F8)
-                    else -> Color(0xFFF8F8F2)
-                }
+                color = when {
+                    !enabled -> Color(0xFFF0F2F4)
+                    pressed -> XpControlPressed
+                    else -> XpControlBackground
+                },
+                shape = RoundedCornerShape(4.dp),
             )
-            .border(1.dp, if (enabled) Color(0xFF7D8FA6) else Color(0xFFB9B9B9))
+            .border(1.dp, if (enabled) XpControlBorder else Color(0xFFD3D9E0), RoundedCornerShape(4.dp))
             .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 8.dp),
     ) {
@@ -1095,9 +1099,30 @@ private fun EditorErrorPanel(message: String, onOpenExternal: () -> Unit) {
 }
 
 @Composable
+private fun SafeEditorDialog(
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .safeDrawingPadding()
+                .padding(12.dp),
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
 private fun SaveAsDialog(initialName: String, parentPath: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var value by remember(initialName) { mutableStateOf(initialName) }
-    Dialog(onDismissRequest = onDismiss) {
+    SafeEditorDialog(onDismiss) {
         EditorDialogSurface("Salvar como") {
             Text("Pasta", fontSize = 10.sp, color = XpTextSecondary, fontWeight = FontWeight.Bold)
             Text(parentPath, fontSize = 11.sp, color = Color(0xFF303030), maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -1118,7 +1143,7 @@ private fun SaveAsDialog(initialName: String, parentPath: String, onDismiss: () 
 @Composable
 private fun GoToLineDialog(onDismiss: () -> Unit, onGo: (Int) -> Unit) {
     var value by remember { mutableStateOf("") }
-    Dialog(onDismissRequest = onDismiss) {
+    SafeEditorDialog(onDismiss) {
         EditorDialogSurface("Ir para linha") {
             Text("Digite o número da linha:", fontSize = 12.sp, color = Color(0xFF303030))
             Spacer(Modifier.height(7.dp))
@@ -1146,7 +1171,7 @@ private fun EditorMoreDialog(
     onFindReplace: () -> Unit,
     onPreview: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    SafeEditorDialog(onDismiss) {
         EditorDialogSurface("Editar") {
             EditorMenuRow("Selecionar tudo", true, onSelectAll)
             EditorMenuRow("Copiar", true, onCopy)
@@ -1183,7 +1208,7 @@ private fun EditorChoiceDialog(
     onSecondary: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onCancel) {
+    SafeEditorDialog(onCancel) {
         EditorDialogSurface(title) {
             Text(message, fontSize = 12.sp, color = Color(0xFF303030))
             Spacer(Modifier.height(12.dp))
@@ -1206,8 +1231,8 @@ private fun EditorDialogActionButton(label: String, destructive: Boolean, onClic
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .height(29.dp)
-            .background(if (destructive) Color(0xFFFFE2DE) else Color(0xFFF8F8F2))
-            .border(1.dp, if (destructive) Color(0xFFB73A2D) else Color(0xFF7D8FA6))
+            .background(if (destructive) Color(0xFFFFE9E6) else XpControlBackground, RoundedCornerShape(4.dp))
+            .border(1.dp, if (destructive) Color(0xFFE0A39D) else XpControlBorder, RoundedCornerShape(4.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 9.dp),
     ) {
@@ -1221,8 +1246,8 @@ private fun EditorDialogSurface(title: String, content: @Composable () -> Unit) 
         modifier = Modifier
             .fillMaxWidth(0.92f)
             .widthIn(max = 480.dp)
-            .background(Color(0xFFF7F5E9))
-            .border(2.dp, XpBlueDark)
+            .background(Color(0xFFF9FBFD), RoundedCornerShape(6.dp))
+            .border(1.dp, XpBorder, RoundedCornerShape(6.dp))
     ) {
         Text(
             title,

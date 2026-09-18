@@ -25,7 +25,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
@@ -65,11 +68,13 @@ class MainActivity : ComponentActivity() {
                     surface = XpSurface,
                 )
             ) {
+                // PaddingValues preserva os insets para janelas Dialog filhas; safeDrawingPadding
+                // aqui consumia os insets e fazia modais edge-to-edge perderem a margem inferior.
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(XpBlueDark)
-                        .safeDrawingPadding()
+                        .padding(WindowInsets.safeDrawing.asPaddingValues())
                 ) {
                     ExplorerApp(
                         modifier = Modifier.fillMaxSize(),

@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.1.0-alpha.41
+
+- Corrigido o problema de telas e diálogos invadindo a barra de navegação do Android: a raiz do app deixa de consumir os `WindowInsets.safeDrawing` antes das janelas filhas, permitindo que os modais apliquem corretamente a própria área segura.
+- **Informações do dispositivo** ganhou margem inferior adicional no conteúdo rolável para manter o último card e o botão de exportação visualmente separados da navigation bar.
+- A tela **Sobre o Explorador XP** foi recentralizada dentro da área útil, ganhou limite de altura mais previsível e mantém rolagem interna sem encostar nas barras do sistema.
+- Cards da tela Sobre passaram a usar fundo e borda suaves, com cantos discretos; os botões **Ajuda**, **Informações técnicas** e demais `XpDialogButton` deixaram o contorno cinza-escuro e usam um padrão claro/azulado.
+- O mesmo padrão de borda foi aplicado a menus suspensos, menus de contexto, botões do visualizador interno e botões/diálogos do editor de texto/código.
+- Menus de contexto de arquivo/pasta e diálogos do editor agora também possuem host explícito com `safeDrawingPadding`, evitando futuros vazamentos para status/navigation bars em telas pequenas.
+- Painéis claros e menu de velocidade do player de vídeo tiveram o contorno escuro substituído pela borda clara padrão, sem alterar os controles próprios do player sobre fundo escuro.
+- Revisados os principais `Dialog` do projeto: Ajuda, Sobre, Informações do dispositivo, Lixeira, Armazenamento, progresso, confirmações, propriedades/nomes/ordenação, menus de contexto e editor.
+- README, documentação de validação e `github-manager.json` atualizados.
+- Nenhuma imagem ou mockup foi criada ou adicionada.
+- Versão sincronizada para `0.1.0-alpha.41` / `versionCode 41`.
+
 ## 0.1.0-alpha.40
 
 - Refeita a interface da **Lixeira** com base no problema observado em aparelho real, eliminando linhas praticamente vazias e devolvendo prioridade visual ao nome do arquivo.

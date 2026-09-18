@@ -270,13 +270,14 @@ private fun ViewerActionButton(
             .height(28.dp)
             .widthIn(min = 74.dp)
             .background(
-                when {
-                    !enabled -> Color(0xFFE6E6E6)
-                    pressed -> Color(0xFFD8E8F8)
-                    else -> Color(0xFFF8F8F2)
-                }
+                color = when {
+                    !enabled -> Color(0xFFF0F2F4)
+                    pressed -> XpControlPressed
+                    else -> XpControlBackground
+                },
+                shape = RoundedCornerShape(4.dp),
             )
-            .border(1.dp, if (enabled) Color(0xFF7D8FA6) else Color(0xFFB9B9B9))
+            .border(1.dp, if (enabled) XpControlBorder else Color(0xFFD3D9E0), RoundedCornerShape(4.dp))
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,

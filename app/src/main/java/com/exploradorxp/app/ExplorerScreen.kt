@@ -90,6 +90,10 @@ val XpSelection = Color(0xFFD9E9FB)
 val XpChrome = Color(0xFFF2F4F8)
 val XpChromeBorder = Color(0xFFB8C7DA)
 val XpPanel = Color(0xFFF6FAFF)
+val XpControlBorder = Color(0xFFC5D4E5)
+val XpControlBackground = Color(0xFFFAFCFF)
+val XpControlPressed = Color(0xFFE8F2FC)
+val XpCardBorder = Color(0xFFD7E3EF)
 
 private enum class FileMenuAction { OPEN, COPY, MOVE, RENAME, DELETE, SHARE, FAVORITE, PROPERTIES, SELECT }
 
@@ -902,7 +906,7 @@ private fun XpPopupMenu(
         offset = offset,
         modifier = Modifier
             .background(Color(0xFFF8F8F2))
-            .border(1.dp, Color(0xFF7D8FA6))
+            .border(1.dp, XpControlBorder)
             .widthIn(min = 176.dp, max = 250.dp),
         content = content,
     )
@@ -1263,11 +1267,12 @@ private fun AboutDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 430.dp)
-                    .heightIn(max = maxHeight)
+                    .fillMaxWidth(0.96f)
+                    .widthIn(max = 420.dp)
+                    .heightIn(max = maxHeight * 0.92f)
+                    .clip(RoundedCornerShape(7.dp))
                     .background(Color(0xFFF8F8F2))
-                    .border(1.dp, XpBorder)
+                    .border(1.dp, XpBorder, RoundedCornerShape(7.dp))
             ) {
                 XpDialogTitle("Sobre o Explorador XP", onDismiss)
                 Column(
@@ -1327,10 +1332,10 @@ private fun AboutDialog(
                     Spacer(Modifier.height(10.dp))
                     AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                         listOf(
-                            "Player interno de vídeo migrado para Media3/ExoPlayer, mantendo o restante dos visualizadores intacto.",
-                            "Novos controles: progresso e duração, ±10 s, velocidades de 0.5x a 2x, reiniciar, Ajustar/Preencher e tela cheia.",
-                            "Controles somem durante a reprodução, a posição pode ser retomada e erros oferecem abertura externa com mensagem clara.",
-                            "Rotação e fechamento preservam melhor o estado e liberam corretamente os recursos do player.",
+                            "Janelas e telas longas passam a respeitar de forma consistente a barra de navegação e a área segura do Android.",
+                            "Tela Sobre centralizada dentro da área útil, com limite de altura e rolagem interna previsível.",
+                            "Cards, botões e menus claros usam bordas suaves e padronizadas, removendo contornos escuros desnecessários.",
+                            "Revisão aplicada também aos diálogos, menus de contexto, visualizadores e editor de texto/código.",
                         ).forEach { change ->
                             Text("• $change", fontSize = 11.5.sp, color = Color(0xFF303030), lineHeight = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
                         }
@@ -1358,8 +1363,8 @@ private fun AboutSectionCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
-            .border(1.dp, Color(0xFFCAD8E8))
+            .background(Color(0xFFFBFDFF), RoundedCornerShape(9.dp))
+            .border(1.dp, XpCardBorder, RoundedCornerShape(9.dp))
             .padding(10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1535,19 +1540,24 @@ internal fun XpDialogButton(
             .heightIn(min = 32.dp)
             .widthIn(min = 78.dp)
             .background(
-                when {
-                    !enabled -> Color(0xFFE5E5E5)
-                    danger && pressed -> Color(0xFFFFDAD5)
-                    danger -> Color(0xFFFFF0EE)
-                    pressed -> Color(0xFFD5E7FA)
-                    else -> Color(0xFFF7F7F2)
-                }
+                color = when {
+                    !enabled -> Color(0xFFF0F2F4)
+                    danger && pressed -> Color(0xFFFFE2DE)
+                    danger -> Color(0xFFFFF5F3)
+                    pressed -> XpControlPressed
+                    else -> XpControlBackground
+                },
+                shape = RoundedCornerShape(5.dp),
             )
-            .border(1.dp, when {
-                !enabled -> Color(0xFFB8B8B8)
-                danger -> Color(0xFFC34B40)
-                else -> Color(0xFF7D8FA6)
-            })
+            .border(
+                1.dp,
+                when {
+                    !enabled -> Color(0xFFD3D9E0)
+                    danger -> Color(0xFFE0A39D)
+                    else -> XpControlBorder
+                },
+                RoundedCornerShape(5.dp),
+            )
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
@@ -2273,30 +2283,38 @@ private fun FileContextDialog(
     onProperties: () -> Unit,
     onSelect: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .widthIn(min = 220.dp, max = 270.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, Color(0xFF7D8FA6))
-                .padding(vertical = 3.dp)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(12.dp),
         ) {
-            ContextActionRow(item.iconRes, "Abrir", onOpen)
-            HorizontalDivider(color = Color(0xFFD2D2C8))
-            ContextActionRow(R.drawable.copy, "Copiar", onCopy)
-            ContextActionRow(R.drawable.move, "Mover", onMove)
-            ContextActionRow(R.drawable.rename, "Renomear", onRename)
-            ContextActionRow(R.drawable.delete, "Excluir", onDelete)
-            if (!item.isDirectory) ContextActionRow(R.drawable.share, "Compartilhar", onShare)
-            HorizontalDivider(color = Color(0xFFD2D2C8))
-            ContextActionRow(
-                if (item.isFavorite) R.drawable.favorites else R.drawable.folder_favorite,
-                if (item.isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
-                onFavorite,
-            )
-            ContextActionRow(R.drawable.properties, "Propriedades", onProperties)
-            HorizontalDivider(color = Color(0xFFD2D2C8))
-            ContextActionRow(R.drawable.select_all, "Selecionar", onSelect)
+            Column(
+                modifier = Modifier
+                    .widthIn(min = 220.dp, max = 270.dp)
+                    .background(Color(0xFFF8F8F2), RoundedCornerShape(5.dp))
+                    .border(1.dp, XpControlBorder, RoundedCornerShape(5.dp))
+                    .padding(vertical = 3.dp),
+            ) {
+                ContextActionRow(item.iconRes, "Abrir", onOpen)
+                HorizontalDivider(color = Color(0xFFD2D2C8))
+                ContextActionRow(R.drawable.copy, "Copiar", onCopy)
+                ContextActionRow(R.drawable.move, "Mover", onMove)
+                ContextActionRow(R.drawable.rename, "Renomear", onRename)
+                ContextActionRow(R.drawable.delete, "Excluir", onDelete)
+                if (!item.isDirectory) ContextActionRow(R.drawable.share, "Compartilhar", onShare)
+                HorizontalDivider(color = Color(0xFFD2D2C8))
+                ContextActionRow(
+                    if (item.isFavorite) R.drawable.favorites else R.drawable.folder_favorite,
+                    if (item.isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
+                    onFavorite,
+                )
+                ContextActionRow(R.drawable.properties, "Propriedades", onProperties)
+                HorizontalDivider(color = Color(0xFFD2D2C8))
+                ContextActionRow(R.drawable.select_all, "Selecionar", onSelect)
+            }
         }
     }
 }
@@ -2312,20 +2330,28 @@ private fun FolderContextDialog(
     onProperties: () -> Unit,
     onRefresh: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .widthIn(min = 210.dp, max = 260.dp)
-                .background(Color(0xFFF8F8F2))
-                .border(1.dp, Color(0xFF7D8FA6))
-                .padding(vertical = 3.dp)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(12.dp),
         ) {
-            if (canPaste) ContextActionRow(R.drawable.paste, "Colar aqui", onPaste)
-            ContextActionRow(R.drawable.folder_new, "Nova pasta", onNewFolder)
-            if (canSelectAll) ContextActionRow(R.drawable.select_all, "Selecionar tudo", onSelectAll)
-            HorizontalDivider(color = Color(0xFFD2D2C8))
-            ContextActionRow(R.drawable.refresh, "Atualizar", onRefresh)
-            ContextActionRow(R.drawable.properties, "Propriedades", onProperties)
+            Column(
+                modifier = Modifier
+                    .widthIn(min = 210.dp, max = 260.dp)
+                    .background(Color(0xFFF8F8F2), RoundedCornerShape(5.dp))
+                    .border(1.dp, XpControlBorder, RoundedCornerShape(5.dp))
+                    .padding(vertical = 3.dp),
+            ) {
+                if (canPaste) ContextActionRow(R.drawable.paste, "Colar aqui", onPaste)
+                ContextActionRow(R.drawable.folder_new, "Nova pasta", onNewFolder)
+                if (canSelectAll) ContextActionRow(R.drawable.select_all, "Selecionar tudo", onSelectAll)
+                HorizontalDivider(color = Color(0xFFD2D2C8))
+                ContextActionRow(R.drawable.refresh, "Atualizar", onRefresh)
+                ContextActionRow(R.drawable.properties, "Propriedades", onProperties)
+            }
         }
     }
 }
