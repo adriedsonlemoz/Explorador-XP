@@ -1663,16 +1663,17 @@ private fun DeleteChoiceDialog(
         }
         Spacer(Modifier.height(16.dp))
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            if (maxWidth >= 330.dp) {
+            val availableWidth = maxWidth
+            if (availableWidth >= 330.dp) {
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
                     XpDialogButton(
-                        if (maxWidth < 430.dp) "Para Lixeira" else "Mover para a Lixeira",
+                        if (availableWidth < 430.dp) "Para Lixeira" else "Mover para a Lixeira",
                         modifier = Modifier.weight(1f),
                         iconRes = R.drawable.trash_full,
                         onClick = onMoveToTrash,
                     )
                     XpDialogButton(
-                        if (maxWidth < 430.dp) "Apagar" else "Apagar permanentemente",
+                        if (availableWidth < 430.dp) "Apagar" else "Apagar permanentemente",
                         modifier = Modifier.weight(1f),
                         danger = true,
                         iconRes = R.drawable.delete,

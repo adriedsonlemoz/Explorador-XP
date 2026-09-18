@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.1.0-alpha.39
+
+- Corrigidos os dois erros Kotlin apontados pelo workflow `Gerar APK` em `ExplorerScreen.kt` nas linhas do diálogo de exclusão.
+- A largura disponível do `BoxWithConstraints` agora é salva em `availableWidth` antes da criação do `Row`, evitando acesso inválido ao receiver implícito de `maxWidth`.
+- O comportamento visual da alpha.38 foi preservado: três ações lado a lado quando há espaço, nomes dos itens selecionados e rótulos compactos em telas estreitas.
+- Nenhuma funcionalidade da Lixeira, player, editor ou demais visualizadores foi removida.
+- README, documentação de validação e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.39` / `versionCode 39`.
+
 ## 0.1.0-alpha.38
 
 - Refinada a tela da **Lixeira** para corrigir o sumiço do nome do arquivo na listagem e reforçar a leitura do caminho/origem do item.

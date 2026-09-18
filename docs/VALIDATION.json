@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.38",
-  "version_code": 38,
-  "manager_version": "0.1.0-alpha.38",
-  "manager_code": 38,
+  "version_build": "0.1.0-alpha.39",
+  "version_code": 39,
+  "manager_version": "0.1.0-alpha.39",
+  "manager_code": 39,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.38",
-      "code": 38
+      "version": "0.1.0-alpha.39",
+      "code": 39
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -93,6 +93,31 @@
         "item name and original path emphasized again in recycle bin list",
         "delete dialog shows selected item names and prefers horizontal 3-button layout"
       ]
+    },
+    "ci_log_alpha38_fix": {
+      "ok": true,
+      "source": "Gerar-APK-37-logs.zip",
+      "compile_stage_reached": ":app:compileDebugKotlin",
+      "reported_errors": [
+        "ExplorerScreen.kt:1669 maxWidth implicit receiver invalid inside Row",
+        "ExplorerScreen.kt:1675 maxWidth implicit receiver invalid inside Row"
+      ],
+      "patch": "capture BoxWithConstraints maxWidth as availableWidth before entering Row"
+    },
+    "image_resources_unchanged_from_alpha38": {
+      "ok": true,
+      "count": 172
+    },
+    "workflows_unchanged_from_alpha38": {
+      "ok": true,
+      "files": [
+        ".github/workflows/gerar-apk.yml",
+        ".github/workflows/desempenho.yml"
+      ]
+    },
+    "kotlin_receiver_smoke_test": {
+      "ok": true,
+      "note": "kotlinc sem classpath Android/Compose não apontou erro de parser nem os erros de receiver maxWidth reportados pelo CI; referências Android/Compose permanecem não resolvíveis localmente sem SDK/dependências."
     }
   },
   "validated_at_utc": "2026-09-17T23:02:09.671925+00:00",
