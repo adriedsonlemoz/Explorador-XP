@@ -65,8 +65,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
-import java.util.zip.ZipFile
 
 private val imageExtensions = setOf("jpg", "jpeg", "png", "bmp", "webp", "gif")
 private val videoExtensions = setOf("mp4", "m4v", "3gp", "webm", "mkv", "avi", "mov")
@@ -83,15 +81,11 @@ private val textFileNames = setOf(
     "makefile", "dockerfile", "readme", "license", ".gitignore", ".gitattributes", ".editorconfig"
 )
 
-private const val ZIP_PREVIEW_MAX_ENTRIES = 3_000
-
 private sealed interface ViewerLoadState<out T> {
     data object Loading : ViewerLoadState<Nothing>
     data class Success<T>(val value: T) : ViewerLoadState<T>
     data class Error(val message: String) : ViewerLoadState<Nothing>
 }
-
-private data class ZipPreview(val entries: List<ZipEntryInfo>, val truncated: Boolean)
 
 fun supportsInternalViewer(file: File): Boolean {
     val ext = file.extension.lowercase()
@@ -105,8 +99,10 @@ fun InternalViewerScreen(
     file: File,
     onClose: () -> Unit,
     onOpenExternal: (File) -> Unit,
+    onOpenFolder: (File) -> Unit,
 ) {
     var activeFilePath by rememberSaveable(file.absolutePath) { mutableStateOf(file.absolutePath) }
+    var returnToArchivePath by rememberSaveable(file.absolutePath) { mutableStateOf<String?>(null) }
     val activeFile = remember(activeFilePath) { File(activeFilePath) }
     val extension = activeFile.extension.lowercase()
     val isVideo = extension in videoExtensions
@@ -118,6 +114,10 @@ fun InternalViewerScreen(
     BackHandler {
         when {
             contentFullScreen -> contentFullScreen = false
+            returnToArchivePath != null -> {
+                activeFilePath = returnToArchivePath!!
+                returnToArchivePath = null
+            }
             isTextDocument && guardedCloseRequest != null -> guardedCloseRequest?.invoke()
             else -> onClose()
         }
@@ -162,7 +162,15 @@ fun InternalViewerScreen(
                     onFileChanged = { activeFilePath = it.absolutePath },
                 )
                 "pdf" -> PdfViewer(activeFile)
-                "zip" -> ZipViewer(activeFile)
+                "zip" -> ArchiveZipViewer(
+                    file = activeFile,
+                    onPreviewFile = { preview ->
+                        returnToArchivePath = activeFile.absolutePath
+                        activeFilePath = preview.absolutePath
+                    },
+                    onOpenExternal = onOpenExternal,
+                    onOpenFolder = onOpenFolder,
+                )
                 "apk" -> ApkViewer(activeFile) { onOpenExternal(activeFile) }
                 in textExtensions -> TextCodeEditorViewer(
                     file = activeFile,
@@ -428,111 +436,6 @@ private fun PdfViewer(file: File) {
 }
 
 @Composable
-private fun ZipViewer(file: File) {
-    val scope = rememberCoroutineScope()
-    val key = "${file.absolutePath}:${file.lastModified()}"
-    var loadState by remember(key) { mutableStateOf<ViewerLoadState<ZipPreview>>(ViewerLoadState.Loading) }
-    var status by remember(file.absolutePath) { mutableStateOf("") }
-
-    LaunchedEffect(key) {
-        loadState = ViewerLoadState.Loading
-        loadState = withContext(Dispatchers.IO) {
-            runCatching { readZipPreview(file) }.fold(
-                onSuccess = { ViewerLoadState.Success(it) },
-                onFailure = { ViewerLoadState.Error(it.message ?: "Não foi possível ler o ZIP.") },
-            )
-        }
-    }
-
-    Column(Modifier.fillMaxSize().background(Color.White)) {
-        val preview = (loadState as? ViewerLoadState.Success<ZipPreview>)?.value
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().height(40.dp).background(XpPanel).padding(horizontal = 8.dp)
-        ) {
-            Text(
-                when {
-                    preview == null -> "Conteúdo do arquivo"
-                    preview.truncated -> "${preview.entries.size}+ itens no arquivo"
-                    else -> if (preview.entries.size == 1) "1 item no arquivo" else "${preview.entries.size} itens no arquivo"
-                },
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f)
-            )
-            ViewerActionButton(
-                label = "Extrair",
-                enabled = loadState is ViewerLoadState.Success,
-                onClick = {
-                    scope.launch {
-                        status = "Extraindo..."
-                        val result = withContext(Dispatchers.IO) { extractZipSafely(file) }
-                        status = result.fold(
-                            onSuccess = { "Extraído para: ${it.name}" },
-                            onFailure = { it.message ?: "Falha ao extrair" },
-                        )
-                    }
-                }
-            )
-        }
-        if (status.isNotBlank()) {
-            Text(
-                status,
-                fontSize = 11.sp,
-                color = XpTextSecondary,
-                modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF8D9)).padding(horizontal = 10.dp, vertical = 5.dp),
-            )
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().height(28.dp).background(Color(0xFFEAF2FB)).border(1.dp, Color(0xFFC9D8E8)).padding(horizontal = 10.dp),
-        ) {
-            Text("Nome", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text("Tamanho", fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(78.dp))
-        }
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (val state = loadState) {
-                ViewerLoadState.Loading -> LoadingPanel("Lendo conteúdo...")
-                is ViewerLoadState.Error -> UnsupportedMessage(state.message)
-                is ViewerLoadState.Success -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(state.value.entries) { entry ->
-                        val cleanPath = entry.name.trimEnd('/')
-                        val displayName = cleanPath.substringAfterLast('/').ifBlank { entry.name }
-                        val parentPath = cleanPath.substringBeforeLast('/', "")
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            CachedResourceIcon(
-                                resId = FileIconMapper.iconFor(File(cleanPath), entry.directory),
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                contentScale = ContentScale.Fit,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(displayName, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                if (parentPath.isNotBlank()) {
-                                    Text(parentPath, fontSize = 10.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                            }
-                            Text(
-                                if (entry.directory) "Pasta" else formatViewerBytes(entry.size),
-                                fontSize = 11.sp,
-                                color = XpTextSecondary,
-                                textAlign = TextAlign.End,
-                                modifier = Modifier.width(78.dp),
-                            )
-                        }
-                        HorizontalDivider(color = Color(0xFFE0E6EE))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun ApkViewer(file: File, onInstall: () -> Unit) {
     val context = LocalContext.current
     val key = "${file.absolutePath}:${file.lastModified()}"
@@ -706,7 +609,6 @@ private fun ViewerStatusBar(file: File) {
 }
 
 private data class PdfPageData(val bitmap: Bitmap, val pageCount: Int)
-private data class ZipEntryInfo(val name: String, val directory: Boolean, val size: Long)
 private data class ApkInfo(
     val appName: String,
     val packageName: String,
@@ -751,54 +653,6 @@ private fun decodeSampledBitmap(file: File, reqWidth: Int, reqHeight: Int): Bitm
             }
         )
     }.getOrNull()
-}
-
-private fun readZipPreview(file: File): ZipPreview {
-    ZipFile(file).use { zip ->
-        val entries = ArrayList<ZipEntryInfo>(minOf(zip.size(), ZIP_PREVIEW_MAX_ENTRIES))
-        val enumeration = zip.entries()
-        var truncated = false
-        while (enumeration.hasMoreElements()) {
-            if (entries.size >= ZIP_PREVIEW_MAX_ENTRIES) {
-                truncated = true
-                break
-            }
-            val entry = enumeration.nextElement()
-            entries += ZipEntryInfo(entry.name, entry.isDirectory, entry.size.coerceAtLeast(0L))
-        }
-        return ZipPreview(entries, truncated)
-    }
-}
-
-private fun extractZipSafely(zipFile: File): Result<File> = runCatching {
-    val parent = zipFile.parentFile ?: error("Pasta de destino indisponível.")
-    val baseName = zipFile.nameWithoutExtension.ifBlank { "extraido" }
-    var destination = File(parent, baseName)
-    var counter = 1
-    while (destination.exists()) {
-        destination = File(parent, "$baseName ($counter)")
-        counter++
-    }
-    check(destination.mkdirs()) { "Não foi possível criar a pasta de extração." }
-    val destinationPath = destination.canonicalPath + File.separator
-    ZipFile(zipFile).use { zip ->
-        val enumeration = zip.entries()
-        while (enumeration.hasMoreElements()) {
-            val entry = enumeration.nextElement()
-            val target = File(destination, entry.name)
-            val targetPath = target.canonicalPath
-            require(targetPath == destination.canonicalPath || targetPath.startsWith(destinationPath)) { "Entrada ZIP inválida." }
-            if (entry.isDirectory) {
-                target.mkdirs()
-            } else {
-                target.parentFile?.mkdirs()
-                zip.getInputStream(entry).use { input ->
-                    FileOutputStream(target).use { output -> input.copyTo(output) }
-                }
-            }
-        }
-    }
-    destination
 }
 
 private fun formatViewerBytes(bytes: Long): String {

@@ -51,7 +51,28 @@ jobs:
           test -s app/src/main/baseline-prof.txt
           echo "Baseline Profile existente será reutilizado neste build."
 
-      - name: Gerar APK otimizado de desempenho
+      - name: Preparar assinatura Android permanente
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "Secret ANDROID_KEYSTORE_BASE64 ausente"; exit 1; }
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "Secret ANDROID_KEYSTORE_PASSWORD ausente"; exit 1; }
+          test -n "$ANDROID_KEY_ALIAS" || { echo "Secret ANDROID_KEY_ALIAS ausente"; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "Secret ANDROID_KEY_PASSWORD ausente"; exit 1; }
+          KEYSTORE_PATH="$RUNNER_TEMP/explorador-xp-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+
+      - name: Gerar APK otimizado e assinado
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle :app:assemblePerformance --stacktrace
 
       - name: Preparar APK

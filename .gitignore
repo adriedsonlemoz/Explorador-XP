@@ -8,3 +8,9 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# Android signing keys / local secrets
+*.jks
+*.keystore
+signing.properties
+keystore.properties

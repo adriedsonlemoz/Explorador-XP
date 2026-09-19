@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.41",
-  "version_code": 41,
-  "manager_version": "0.1.0-alpha.41",
-  "manager_code": 41,
+  "version_build": "0.1.0-alpha.43",
+  "version_code": 43,
+  "manager_version": "0.1.0-alpha.43",
+  "manager_code": 43,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.41",
-      "code": 41
+      "version": "0.1.0-alpha.43",
+      "code": 43
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -211,9 +211,38 @@
     "alpha41_workflows_unchanged": {
       "ok": true,
       "changed": []
+    },
+    "alpha43_archive_upgrade": {
+      "ok": true,
+      "features": [
+        "hierarchical ZIP browsing, search and sorting",
+        "full/partial extraction with destination picker",
+        "progress percent, bytes, speed, current entry and cancellation",
+        "rename/replace/skip conflict policy",
+        "open destination after extraction",
+        "password-protected ZIP support through Zip4j 2.11.5",
+        "integrity verification by reading entries/CRC",
+        "single-entry preview to cache",
+        "Zip Slip and absolute-path blocking",
+        "Explorer quick actions: open with, extract here, extract to",
+        "remember last extraction destination for Extract to",
+        "offer Open file when exactly one file is extracted"
+      ],
+      "unit_test_added": "ArchiveManagerTest.kt",
+      "images_created_or_modified": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "No local Gradle/Android SDK and the project has no gradlew; pure ArchiveManager syntax was compiled against API stubs and Kotlin parser smoke checks were run."
+    },
+    "alpha43_archive_manager_syntax_smoke": {
+      "ok": true,
+      "result": "ArchiveManager.kt compiled with Kotlin 1.9.0 against minimal Zip4j API stubs and kotlinx-coroutines-core; path-safety smoke assertions passed after the final alpha.43 changes."
+    },
+    "alpha43_archive_viewer_parser_smoke": {
+      "ok": true,
+      "result": "kotlinc without Android/Compose classpath reports expected unresolved references only; no expecting/unclosed/unexpected-token parser diagnostics were found."
     }
   },
-  "validated_at_utc": "2026-09-18T21:55:06.041016+00:00",
+  "validated_at_utc": "2026-09-19T22:47:48.285598+00:00",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -260,6 +289,26 @@
       "app/build.gradle.kts",
       "CHANGELOG.md",
       "README.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha43_against_alpha42": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/ArchiveManager.kt",
+      "app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/ArchiveProgressNotifier.kt",
+      "app/src/test/java/com/exploradorxp/app/ArchiveManagerTest.kt"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/AndroidManifest.xml",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "README.md",
+      "CHANGELOG.md",
       "docs/VALIDATION.json",
       "github-manager.json"
     ],

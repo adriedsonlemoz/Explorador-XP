@@ -2,7 +2,12 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.41` (`versionCode 41`)  
+**Versão atual:** `0.1.0-alpha.43` (`versionCode 43`)  
+
+### Assinatura permanente dos APKs
+
+A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permanente via GitHub Actions Secrets. O workflow espera exatamente `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD`. O arquivo `.jks` não deve ser enviado ao repositório.
+
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
@@ -15,6 +20,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
 - A alpha.30 integra uma **Lixeira real** ao fluxo de exclusão: cada remoção oferece mover para a Lixeira ou apagar permanentemente; itens podem ser restaurados, apagados individualmente ou removidos de uma vez com **Esvaziar Lixeira**.
 - A alpha.31 continua o refinamento visual: menus superiores mais legíveis e roláveis em telas estreitas, barra de seleção com ações sem compressão, listagem com tipo/tamanho e data separados, janelas com botão Fechar no padrão XP e armazenamento com leitura visual mais clara.
+- A alpha.43 reconstrói o **visualizador e extrator ZIP**: navegação por pastas internas, pesquisa, ordenação, seleção e extração parcial, visualização de itens sem descompactar o pacote inteiro, escolha de destino com memória do último local, progresso real com porcentagem/bytes/velocidade, cancelamento, conflitos (renomear/substituir/ignorar), abrir pasta ao concluir, verificação de integridade, ZIP com senha via Zip4j, proteção contra Zip Slip e ações **Extrair aqui / Extrair para... / Abrir com...** diretamente no Explorer.
 - A alpha.41 corrige o respeito à **área segura do Android** em telas e diálogos, evitando que conteúdo e botões entrem atrás da barra de navegação. A tela **Sobre** foi recentralizada e os cards/botões claros receberam bordas suaves e padronizadas; a revisão também alcança menus de contexto, visualizadores e o editor de texto/código.
 - A alpha.40 reconstrói a **Lixeira** após o problema visual visto em aparelho real: nomes dos arquivos voltam a ocupar a área principal, cada item mostra tipo/tamanho/data/origem, **Restaurar** e **Apagar** ficam visíveis lado a lado, **Atualizar** e **Esvaziar Lixeira** permanecem no topo e os diálogos de confirmação voltam a exibir as duas ações corretamente. O nome original também passa a ser gravado no metadado da Lixeira, preservando compatibilidade com itens antigos.
 - A alpha.39 corrige a compilação da alpha.38 no diálogo de exclusão: a largura responsiva do `BoxWithConstraints` agora é capturada antes do `Row`, evitando o erro de receiver implícito do Compose sem alterar o layout solicitado.
@@ -29,7 +35,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 - Arquivos e pastas ganharam identificação textual consistente de tipo em lista, grade, status, Lixeira e visualizadores (por exemplo, **Imagem JPEG**, **Documento PDF** e **Aplicativo Android (APK)**).
 - A toolbar ganhou acesso direto à Lixeira no lugar da ação duplicada **Exibir**; Ajuda foi reorganizada em tópicos expansíveis e Sobre reúne versão, desenvolvedor, PIX copiável e novidades da versão.
 - Imagens e vídeos agora podem mostrar miniaturas assíncronas em lista/grade com cache LRU limitado; os ícones XP originais continuam sendo o fallback e permanecem inalterados para os demais tipos.
-- ZIP mantém listagem no estilo Explorer; TXT/código agora usa o editor interno da alpha.35 com histórico, busca/substituição, números de linha, codificação e salvamento seguro; APK mostra nome/ícone/metadados reais quando o Android consegue ler o pacote.
+- ZIP agora funciona como navegador de compactados, com pastas internas, pesquisa, ordenação, seleção, extração total/parcial, destino configurável, progresso, senha e verificação de integridade; TXT/código usa o editor interno da alpha.35 com histórico, busca/substituição, números de linha, codificação e salvamento seguro; APK mostra nome/ícone/metadados reais quando o Android consegue ler o pacote.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
 - Histórico de navegação com Voltar e Avançar, além da ação Subir.

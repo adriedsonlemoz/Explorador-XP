@@ -180,6 +180,10 @@ private fun ExplorerApp(
                 viewModel.refresh()
             },
             onOpenExternal = { target -> openFile(context, target) },
+            onOpenFolder = { target ->
+                viewerFilePath = null
+                viewModel.navigateTo(target)
+            },
         )
         return
     }
@@ -215,6 +219,7 @@ private fun ExplorerApp(
         onShare = viewModel::shareSelected,
         onShareTarget = viewModel::shareFile,
         onOpenTarget = viewModel::openFileOrFolder,
+        onOpenExternalTarget = { target -> openFile(context, target) },
         onSelectAll = viewModel::selectAllVisible,
         onClearSelection = viewModel::clearSelection,
         onSelectOnly = viewModel::selectOnly,

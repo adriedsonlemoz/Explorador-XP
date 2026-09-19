@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## 0.1.0-alpha.43
+
+- Visualizador ZIP refeito para navegar por pastas internas em vez de uma lista plana; inclui Subir/Voltar, pesquisa e ordenação por nome, tamanho, tipo e data.
+- Toque simples abre pasta ou visualiza arquivos compatíveis extraindo apenas o item para cache; toque longo seleciona itens e permite extração parcial.
+- Tela de extração permite escolher pasta de destino, lembra o último destino usado em **Extrair para...**, cria pasta com o nome do ZIP e pode abrir o destino automaticamente ao terminar.
+- Progresso de extração mostra porcentagem, itens concluídos, bytes processados, total, arquivo atual e velocidade; operações podem ser canceladas e o arquivo parcial em escrita é removido quando possível.
+- Conflitos de nomes podem ser tratados por Renomear automaticamente, Substituir ou Ignorar, aplicados à operação inteira.
+- Ao concluir, o resumo mostra extraídos, renomeados, ignorados e erros, com **Abrir pasta** e, quando somente um arquivo foi extraído, **Abrir arquivo**.
+- Adicionado suporte real a ZIP protegido por senha (Zip Standard/AES suportados pela Zip4j) e verificação de integridade lendo cada entrada até o CRC.
+- Proteção contra Zip Slip e caminhos absolutos/`..`; espaço necessário é comparado com o espaço livre antes da extração.
+- Notificação de progresso é usada em extrações longas quando a permissão de notificações estiver concedida; a extração continua normalmente sem ela.
+- Explorer principal ganha `Abrir com...`, `Extrair aqui` e `Extrair para...` no menu de arquivos ZIP; as mesmas ações aparecem no menu Mais ao selecionar um único ZIP.
+- `Extrair aqui` cria por padrão uma pasta com o nome do ZIP e evita sobrescrever silenciosamente conteúdo existente.
+- Adicionada dependência `net.lingala.zip4j:zip4j:2.11.5`, testes de segurança de caminho e nomes únicos, sem adicionar ou alterar imagens/mockups.
+- Assinatura permanente introduzida na alpha.42 foi preservada; `applicationId` continua `com.exploradorxp.app`.
+- Versão sincronizada para `0.1.0-alpha.43` / `versionCode 43`.
+
+## 0.1.0-alpha.42
+
+- Criada configuração de assinatura Android permanente para os APKs instaláveis.
+- `performance` e `release` passam a usar a mesma chave via GitHub Actions Secrets.
+- Workflow valida e reconstrói o keystore a partir de `ANDROID_KEYSTORE_BASE64`.
+- Secrets esperados: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD`.
+- Arquivos `.jks`/`.keystore` e propriedades locais de assinatura foram adicionados ao `.gitignore`.
+- `github-manager.json` mantido no schema já usado pelo GitHub Manager e sincronizado para `0.1.0-alpha.42` / `versionCode 42`.
+
 ## 0.1.0-alpha.41
 
 - Corrigido o problema de telas e diálogos invadindo a barra de navegação do Android: a raiz do app deixa de consumir os `WindowInsets.safeDrawing` antes das janelas filhas, permitindo que os modais apliquem corretamente a própria área segura.

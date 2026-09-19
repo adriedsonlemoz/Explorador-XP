@@ -95,7 +95,7 @@ val XpControlBackground = Color(0xFFFAFCFF)
 val XpControlPressed = Color(0xFFE8F2FC)
 val XpCardBorder = Color(0xFFD7E3EF)
 
-private enum class FileMenuAction { OPEN, COPY, MOVE, RENAME, DELETE, SHARE, FAVORITE, PROPERTIES, SELECT }
+private enum class FileMenuAction { OPEN, OPEN_WITH, EXTRACT_HERE, EXTRACT_TO, COPY, MOVE, RENAME, DELETE, SHARE, FAVORITE, PROPERTIES, SELECT }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -130,6 +130,7 @@ fun ExplorerScreen(
     onShare: () -> Unit,
     onShareTarget: (File) -> Unit,
     onOpenTarget: (File) -> Unit,
+    onOpenExternalTarget: (File) -> Unit,
     onSelectAll: () -> Unit,
     onClearSelection: () -> Unit,
     onSelectOnly: (File) -> Unit,
@@ -157,6 +158,7 @@ fun ExplorerScreen(
     var showDeviceInfo by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     var showStorageDetails by remember { mutableStateOf(false) }
+    var archiveExtractTarget by remember { mutableStateOf<Pair<File, Boolean>?>(null) }
 
     Column(
         modifier = modifier
@@ -210,6 +212,11 @@ fun ExplorerScreen(
             onShowManual = { showManual = true },
             onShowAbout = { showAbout = true },
             onShowDeviceInfo = { showDeviceInfo = true },
+            selectedArchive = state.selectedPaths.singleOrNull()?.let(::File)?.takeIf { it.isFile && it.extension.equals("zip", ignoreCase = true) },
+            onOpenSelectedArchive = { target -> onClearSelection(); onOpenTarget(target) },
+            onOpenExternalSelectedArchive = { target -> onClearSelection(); onOpenExternalTarget(target) },
+            onExtractHereSelectedArchive = { target -> onClearSelection(); archiveExtractTarget = target to true },
+            onExtractToSelectedArchive = { target -> onClearSelection(); archiveExtractTarget = target to false },
             trashHasItems = state.trashHasItems,
             onOpenTrash = {
                 showTrash = true
@@ -255,6 +262,9 @@ fun ExplorerScreen(
                     onMenuAction = { item, action ->
                         when (action) {
                             FileMenuAction.OPEN -> onOpenTarget(item.file)
+                            FileMenuAction.OPEN_WITH -> onOpenExternalTarget(item.file)
+                            FileMenuAction.EXTRACT_HERE -> archiveExtractTarget = item.file to true
+                            FileMenuAction.EXTRACT_TO -> archiveExtractTarget = item.file to false
                             FileMenuAction.COPY -> onCopyTarget(item.file)
                             FileMenuAction.MOVE -> onCutTarget(item.file)
                             FileMenuAction.RENAME -> renameTarget = item.file
@@ -277,6 +287,9 @@ fun ExplorerScreen(
                     onMenuAction = { item, action ->
                         when (action) {
                             FileMenuAction.OPEN -> onOpenTarget(item.file)
+                            FileMenuAction.OPEN_WITH -> onOpenExternalTarget(item.file)
+                            FileMenuAction.EXTRACT_HERE -> archiveExtractTarget = item.file to true
+                            FileMenuAction.EXTRACT_TO -> archiveExtractTarget = item.file to false
                             FileMenuAction.COPY -> onCopyTarget(item.file)
                             FileMenuAction.MOVE -> onCutTarget(item.file)
                             FileMenuAction.RENAME -> renameTarget = item.file
@@ -296,6 +309,25 @@ fun ExplorerScreen(
         ExplorerStatusBar(
             items = state.items,
             selectedPaths = state.selectedPaths,
+        )
+    }
+
+    archiveExtractTarget?.let { (target, quick) ->
+        ArchiveExtractionLauncher(
+            zipFile = target,
+            initialQuick = quick,
+            onDismiss = {
+                archiveExtractTarget = null
+                onRefresh()
+            },
+            onOpenFolder = { folder ->
+                archiveExtractTarget = null
+                onNavigateTo(folder)
+            },
+            onOpenFile = { extractedFile ->
+                archiveExtractTarget = null
+                onOpenTarget(extractedFile)
+            },
         )
     }
 
@@ -469,6 +501,11 @@ private fun XpHeader(
     onShowManual: () -> Unit,
     onShowAbout: () -> Unit,
     onShowDeviceInfo: () -> Unit,
+    selectedArchive: File?,
+    onOpenSelectedArchive: (File) -> Unit,
+    onOpenExternalSelectedArchive: (File) -> Unit,
+    onExtractHereSelectedArchive: (File) -> Unit,
+    onExtractToSelectedArchive: (File) -> Unit,
     trashHasItems: Boolean,
     onOpenTrash: () -> Unit,
 ) {
@@ -691,6 +728,26 @@ private fun XpHeader(
                             Modifier.fillMaxWidth(),
                         )
                         XpPopupMenu(expanded = selectionMoreMenu, onDismiss = { selectionMoreMenu = false }) {
+                            if (selectedArchive != null) {
+                                XpMenuItem("Abrir", R.drawable.file_zip) {
+                                    selectionMoreMenu = false
+                                    onOpenSelectedArchive(selectedArchive)
+                                }
+                                XpMenuItem("Abrir com...", R.drawable.folder_open) {
+                                    selectionMoreMenu = false
+                                    onOpenExternalSelectedArchive(selectedArchive)
+                                }
+                                XpMenuDivider()
+                                XpMenuItem("Extrair aqui", R.drawable.folder_compressed) {
+                                    selectionMoreMenu = false
+                                    onExtractHereSelectedArchive(selectedArchive)
+                                }
+                                XpMenuItem("Extrair para...", R.drawable.folder_open) {
+                                    selectionMoreMenu = false
+                                    onExtractToSelectedArchive(selectedArchive)
+                                }
+                                XpMenuDivider()
+                            }
                             XpMenuItem("Renomear", R.drawable.rename, enabled = selectionCount == 1) {
                                 selectionMoreMenu = false
                                 onRenameSelection()
@@ -1167,7 +1224,7 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
         "Armazenamento" to "Toque no cartão de armazenamento para analisar espaço total, usado e livre. As porcentagens por categoria usam somente os arquivos acessíveis analisados; áreas protegidas do Android podem não entrar na soma. A Lixeira aparece separadamente.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
         "Favoritos" to "Adicione arquivos ou pastas aos Favoritos pelo menu de opções. A lista fica disponível no menu Favoritos do cabeçalho.",
-        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. O player de vídeo oferece progresso, ±10 s, velocidade, tela cheia, Ajustar/Preencher e retomada de posição. Se um formato falhar ou não for suportado, use Abrir com outro aplicativo.",
+        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. ZIP permite navegar por pastas internas, pesquisar, selecionar, visualizar itens e extrair para um destino escolhido. O player de vídeo oferece progresso, ±10 s, velocidade, tela cheia, Ajustar/Preencher e retomada de posição. Se um formato falhar ou não for suportado, use Abrir com outro aplicativo.",
         "Arquivos ocultos" to "No menu Exibir é possível mostrar ou ocultar arquivos ocultos. A pasta interna usada pela Lixeira continua protegida e não aparece na navegação comum.",
     )
 
@@ -2368,6 +2425,14 @@ private fun XpFileDropdownMenu(
         onDismiss = onDismiss,
     ) {
         XpContextMenuItem(item.iconRes, "Abrir") { onAction(FileMenuAction.OPEN) }
+        if (!item.isDirectory) {
+            XpContextMenuItem(R.drawable.folder_open, "Abrir com...") { onAction(FileMenuAction.OPEN_WITH) }
+        }
+        if (!item.isDirectory && item.file.extension.equals("zip", ignoreCase = true)) {
+            HorizontalDivider(color = Color(0xFFD2D2C8))
+            XpContextMenuItem(R.drawable.folder_compressed, "Extrair aqui") { onAction(FileMenuAction.EXTRACT_HERE) }
+            XpContextMenuItem(R.drawable.folder_open, "Extrair para...") { onAction(FileMenuAction.EXTRACT_TO) }
+        }
         HorizontalDivider(color = Color(0xFFD2D2C8))
         XpContextMenuItem(R.drawable.copy, "Copiar") { onAction(FileMenuAction.COPY) }
         XpContextMenuItem(R.drawable.move, "Mover") { onAction(FileMenuAction.MOVE) }

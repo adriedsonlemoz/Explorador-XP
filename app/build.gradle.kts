@@ -13,11 +13,27 @@ android {
         applicationId = "com.exploradorxp.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 41
-        versionName = "0.1.0-alpha.41"
+        versionCode = 43
+        versionName = "0.1.0-alpha.43"
 
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        create("permanentRelease") {
+            val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            val keystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            val alias = System.getenv("ANDROID_KEY_ALIAS")
+            val keyPasswordValue = System.getenv("ANDROID_KEY_PASSWORD")
+
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = alias
+                keyPassword = keyPasswordValue
+            }
         }
     }
 
@@ -25,18 +41,19 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("permanentRelease")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
 
-        // Build instalável para medir desempenho real sem o overhead do modo Debug.
-        // Usa a chave de debug apenas na alpha; a configuração Release permanece sem
-        // assinatura de produção no repositório.
+        // Build instalável usado nos testes e releases de desenvolvimento.
+        // A partir da alpha.42 ele usa a chave permanente reconstruída a partir
+        // dos GitHub Actions Secrets para permitir atualização sobre versões futuras.
         create("performance") {
             initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("permanentRelease")
             matchingFallbacks += listOf("release")
         }
 
@@ -81,6 +98,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("net.lingala.zip4j:zip4j:2.11.5")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation("androidx.media3:media3-exoplayer:1.9.4")
     implementation("androidx.media3:media3-ui:1.9.4")
