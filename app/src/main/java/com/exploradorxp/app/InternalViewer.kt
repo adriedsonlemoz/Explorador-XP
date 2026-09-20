@@ -68,6 +68,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.compose.BackHandler
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.content.FileProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -451,7 +454,9 @@ private fun PdfViewer(file: File) {
 @Composable
 private fun ApkViewer(file: File, onInstall: () -> Unit) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var resumeRevision by remember(file.absolutePath) { mutableIntStateOf(0) }
+    var pendingInstallAfterPermission by remember(file.absolutePath) { mutableStateOf(false) }
     val key = "${file.absolutePath}:${file.lastModified()}:$resumeRevision"
     var loadState by remember(key) { mutableStateOf<ViewerLoadState<ApkInfo>>(ViewerLoadState.Loading) }
 
@@ -459,29 +464,62 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
         resumeRevision++
     }
 
-    val unknownSourcesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()) {
-            runCatching { installerLauncher.launch(apkInstallerIntent(context, file)) }.onFailure {
-                Toast.makeText(context, "Não foi possível abrir o instalador do Android.", Toast.LENGTH_SHORT).show()
-                onInstall()
-            }
-        } else {
-            Toast.makeText(context, "Permita instalar apps desta fonte e tente novamente.", Toast.LENGTH_LONG).show()
+    fun launchInstallerNow() {
+        runCatching { installerLauncher.launch(apkInstallerIntent(context, file)) }.onFailure {
+            Toast.makeText(context, "Não foi possível abrir o instalador do Android.", Toast.LENGTH_SHORT).show()
+            onInstall()
         }
+    }
+
+    val unknownSourcesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (pendingInstallAfterPermission &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls())
+        ) {
+            pendingInstallAfterPermission = false
+            launchInstallerNow()
+        } else if (pendingInstallAfterPermission) {
+            Toast.makeText(
+                context,
+                "Ative 'Permitir desta fonte' e use Voltar. O instalador abrirá automaticamente.",
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+        resumeRevision++
+    }
+
+    // O Android não oferece callback no exato momento em que o usuário move o switch da tela
+    // do sistema. Assim que a tela de Configurações devolve o foco ao app, este observador
+    // continua a instalação automaticamente, sem exigir um segundo toque em Instalar.
+    DisposableEffect(lifecycleOwner, pendingInstallAfterPermission, file.absolutePath) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME &&
+                pendingInstallAfterPermission &&
+                (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls())
+            ) {
+                pendingInstallAfterPermission = false
+                launchInstallerNow()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     fun requestInstall() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+            pendingInstallAfterPermission = true
+            Toast.makeText(
+                context,
+                "Ative 'Permitir desta fonte' e toque em Voltar. A instalação continuará sozinha.",
+                Toast.LENGTH_LONG,
+            ).show()
             val settingsIntent = Intent(
                 Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                 Uri.parse("package:${context.packageName}"),
             )
             unknownSourcesLauncher.launch(settingsIntent)
         } else {
-            runCatching { installerLauncher.launch(apkInstallerIntent(context, file)) }.onFailure {
-                Toast.makeText(context, "Não foi possível abrir o instalador do Android.", Toast.LENGTH_SHORT).show()
-                onInstall()
-            }
+            pendingInstallAfterPermission = false
+            launchInstallerNow()
         }
     }
 
@@ -535,10 +573,14 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
         when (val state = loadState) {
             ViewerLoadState.Loading -> {
+                Spacer(Modifier.height(20.dp))
                 CircularProgressIndicator(color = XpBlue)
                 Spacer(Modifier.height(10.dp))
                 Text("Lendo informações do APK...", color = XpTextSecondary, fontSize = 12.sp)
@@ -550,82 +592,243 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
                     modifier = Modifier.size(82.dp),
                 )
                 Spacer(Modifier.height(10.dp))
-                Text(file.name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(file.name, fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(8.dp))
                 Text(state.message, color = XpTextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(14.dp))
-                ViewerActionButton("Tentar instalar", onClick = ::requestInstall)
+                ApkPrimaryButton(
+                    label = "Tentar instalar",
+                    icon = R.drawable.file_apk,
+                    primary = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = ::requestInstall,
+                )
             }
             is ViewerLoadState.Success -> {
                 val info = state.value
-                if (info.iconBitmap != null) {
-                    Image(
-                        bitmap = info.iconBitmap.asImageBitmap(),
-                        contentDescription = info.appName,
-                        modifier = Modifier.size(92.dp).clip(RoundedCornerShape(18.dp)),
-                        contentScale = ContentScale.Fit,
-                    )
-                } else {
-                    Image(
-                        painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk_large),
-                        contentDescription = null,
-                        modifier = Modifier.size(86.dp),
-                    )
-                }
-                Spacer(Modifier.height(10.dp))
-                Text(info.appName, fontWeight = FontWeight.Bold, fontSize = 20.sp, textAlign = TextAlign.Center)
-                Text(file.name, color = XpTextSecondary, fontSize = 11.sp, textAlign = TextAlign.Center)
-                Spacer(Modifier.height(10.dp))
-                Box(
-                    modifier = Modifier
-                        .background(if (info.installedVersion != null) Color(0xFFE2F4E4) else Color(0xFFEAF2FB))
-                        .border(1.dp, if (info.installedVersion != null) Color(0xFF78A87B) else Color(0xFFA9BED5))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                ) {
-                    Text(
-                        if (info.installedVersion != null) "Instalado • versão ${info.installedVersion}" else "Não instalado",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF30475F),
-                    )
-                }
-                Spacer(Modifier.height(16.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(XpPanel)
-                        .border(1.dp, XpChromeBorder)
-                        .padding(12.dp),
-                ) {
-                    InfoLine("Pacote", info.packageName)
-                    InfoLine("Versão", info.versionName)
-                    InfoLine("Código", info.versionCode)
-                    InfoLine("Android mín.", info.minSdk?.let { "API $it" } ?: "-")
-                    InfoLine("Android alvo", info.targetSdk?.let { "API $it" } ?: "-")
-                    InfoLine("Tamanho", formatViewerBytes(file.length()))
-                }
-                Spacer(Modifier.height(18.dp))
                 val apkCode = info.versionCode.toLongOrNull()
+                val relationLabel = when {
+                    info.installedVersionCode == null -> "Não instalado neste aparelho"
+                    apkCode != null && info.installedVersionCode < apkCode -> "Atualização disponível"
+                    apkCode != null && info.installedVersionCode == apkCode -> "Mesma versão instalada"
+                    else -> "APK mais antigo que o instalado"
+                }
                 val installLabel = when {
                     info.installedVersionCode == null -> "Instalar"
-                    apkCode != null && info.installedVersionCode < apkCode -> "Atualizar aplicativo"
+                    apkCode != null && info.installedVersionCode < apkCode -> "Atualizar"
                     apkCode != null && info.installedVersionCode == apkCode -> "Reinstalar"
                     else -> "Instalar esta versão"
                 }
-                ViewerActionButton(installLabel, onClick = ::requestInstall)
-                if (info.installedVersion != null && info.canLaunchInstalled) {
-                    Spacer(Modifier.height(8.dp))
-                    ViewerActionButton("Abrir aplicativo") {
-                        val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
-                        if (launchIntent != null) {
-                            context.startActivity(launchIntent)
-                        } else {
-                            Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF3F7FC), RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(12.dp))
+                        .padding(14.dp),
+                ) {
+                    if (info.iconBitmap != null) {
+                        Image(
+                            bitmap = info.iconBitmap.asImageBitmap(),
+                            contentDescription = info.appName,
+                            modifier = Modifier.size(82.dp).clip(RoundedCornerShape(18.dp)),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Image(
+                            painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk_large),
+                            contentDescription = null,
+                            modifier = Modifier.size(76.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            info.appName,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = Color(0xFF152A48),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            file.name,
+                            color = XpTextSecondary,
+                            fontSize = 10.5.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (info.installedVersion != null) Color(0xFFE1F3E4) else Color(0xFFE7F0FB),
+                                    RoundedCornerShape(6.dp),
+                                )
+                                .border(
+                                    1.dp,
+                                    if (info.installedVersion != null) Color(0xFF82AF87) else Color(0xFFABC0D9),
+                                    RoundedCornerShape(6.dp),
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                relationLabel,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF30475F),
+                            )
                         }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White, RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 13.dp, vertical = 9.dp),
+                ) {
+                    ApkInfoLine("Pacote", info.packageName)
+                    HorizontalDivider(color = Color(0xFFE3E9F0))
+                    ApkInfoLine("Versão do APK", info.versionName)
+                    if (info.installedVersion != null) {
+                        HorizontalDivider(color = Color(0xFFE3E9F0))
+                        ApkInfoLine("Instalada", info.installedVersion)
+                    }
+                    HorizontalDivider(color = Color(0xFFE3E9F0))
+                    ApkInfoLine("Código", info.versionCode)
+                    HorizontalDivider(color = Color(0xFFE3E9F0))
+                    ApkInfoLine(
+                        "Android",
+                        "mín. API ${info.minSdk ?: "-"}  •  alvo API ${info.targetSdk ?: "-"}",
+                    )
+                    HorizontalDivider(color = Color(0xFFE3E9F0))
+                    ApkInfoLine("Tamanho", formatViewerBytes(file.length()))
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF7F9FC), RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
+                        .padding(10.dp),
+                ) {
+                    Text(
+                        "Ações",
+                        color = Color(0xFF183363),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        ApkPrimaryButton(
+                            label = installLabel,
+                            icon = R.drawable.file_apk,
+                            primary = true,
+                            modifier = Modifier.weight(1f),
+                            onClick = ::requestInstall,
+                        )
+                        if (info.installedVersion != null && info.canLaunchInstalled) {
+                            ApkPrimaryButton(
+                                label = "Abrir app",
+                                icon = R.drawable.visible,
+                                primary = false,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
+                                if (launchIntent != null) {
+                                    context.startActivity(launchIntent)
+                                } else {
+                                    Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Na primeira instalação, o Android pode pedir autorização para este Explorador instalar APKs. Depois de ativar, use Voltar: a instalação continua automaticamente.",
+                            fontSize = 10.5.sp,
+                            color = XpTextSecondary,
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ApkInfoLine(label: String, value: String) {
+    Row(
+        verticalAlignment = Alignment.Top,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+    ) {
+        Text(
+            label,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.5.sp,
+            color = Color(0xFF53657B),
+            modifier = Modifier.width(108.dp),
+        )
+        Text(
+            value,
+            fontSize = 11.5.sp,
+            color = Color(0xFF202B38),
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun ApkPrimaryButton(
+    label: String,
+    icon: Int,
+    primary: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val background = when {
+        primary && pressed -> Color(0xFF0A54A9)
+        primary -> Color(0xFF1476DF)
+        pressed -> Color(0xFFDCE8F5)
+        else -> Color.White
+    }
+    val foreground = if (primary) Color.White else Color(0xFF173A67)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .height(42.dp)
+            .clip(RoundedCornerShape(7.dp))
+            .background(background)
+            .border(1.dp, if (primary) Color(0xFF0D5DB6) else Color(0xFF9DB4CF), RoundedCornerShape(7.dp))
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .padding(horizontal = 10.dp),
+    ) {
+        CachedResourceIcon(icon, label, modifier = Modifier.size(19.dp), contentScale = ContentScale.Fit)
+        Spacer(Modifier.width(7.dp))
+        Text(
+            label,
+            color = foreground,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

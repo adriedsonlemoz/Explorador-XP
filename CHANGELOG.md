@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.1.0-alpha.49
+
+- Visualizador de APK redesenhado com card de identidade do aplicativo, status de instalação mais claro e painel de informações com separadores.
+- Ações principais deixaram de ficar empilhadas: **Instalar/Reinstalar/Atualizar** e **Abrir app** aparecem lado a lado quando aplicável.
+- Botões do APK ganharam ícones e hierarquia visual de ação primária/secundária.
+- O fluxo de **Permitir desta fonte** agora mantém uma instalação pendente e, ao retornar da tela do Android com a permissão concedida, abre automaticamente o instalador sem exigir novo toque.
+- Adicionado observador de ciclo de vida como fallback para continuar a instalação mesmo quando a tela de Configurações não devolve um resultado confiável.
+- O Android não permite que o app feche à força a tela de **Instalar apps desconhecidos** no exato momento em que o switch é ativado; por isso a interface orienta usar **Voltar** uma única vez e continua sozinha.
+- Assinatura permanente e `applicationId` preservados.
+- Versão sincronizada para `0.1.0-alpha.49` / `versionCode 49`.
+
 ## 0.1.0-alpha.48
 
 - Removido **Atualizar** da barra principal de ícones; a ação agora fica no menu **Exibir**, liberando espaço horizontal no topo.
