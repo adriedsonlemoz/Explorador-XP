@@ -7,8 +7,14 @@ import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
 import net.lingala.zip4j.model.FileHeader
 import java.io.File
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Calendar
+import java.util.zip.Deflater
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlin.coroutines.coroutineContext
 
 internal enum class ArchiveConflictMode {
@@ -73,11 +79,136 @@ internal data class ArchiveExtractionSummary(
     val errorMessages: List<String>,
 )
 
+internal data class ArchiveCreationSummary(
+    val archive: File,
+    val selectedItems: Int,
+    val archivedEntries: Int,
+    val inputBytes: Long,
+    val outputBytes: Long,
+)
+
+private data class ArchiveSourceEntry(
+    val source: File,
+    val entryPath: String,
+    val directory: Boolean,
+)
+
 internal class ArchivePasswordRequiredException : Exception("Este ZIP é protegido por senha.")
 internal class ArchivePasswordIncorrectException : Exception("Senha incorreta ou conteúdo criptografado inválido.")
 internal class ArchiveUnsafePathException(path: String) : Exception("Entrada ZIP insegura bloqueada: $path")
 
 internal object ArchiveManager {
+    suspend fun createZip(
+        sources: List<File>,
+        destinationParent: File,
+        archiveName: String,
+        onProgress: (ArchiveProgress) -> Unit = {},
+    ): Result<ArchiveCreationSummary> = withContext(Dispatchers.IO) {
+        runCatching {
+            val validSources = sources.distinctBy { it.absolutePath }.filter { it.exists() }
+            require(validSources.isNotEmpty()) { "Nenhum item disponível para compactar." }
+            require(destinationParent.exists() || destinationParent.mkdirs()) { "Não foi possível acessar a pasta de destino." }
+            require(destinationParent.isDirectory) { "O destino escolhido não é uma pasta." }
+
+            val normalizedName = normalizeArchiveFileName(archiveName)
+            require(normalizedName.isNotBlank()) { "Informe um nome para o arquivo ZIP." }
+            val requestedTarget = File(destinationParent, normalizedName)
+            val target = uniqueFile(requestedTarget)
+            val targetCanonical = target.canonicalFile
+
+            val entries = mutableListOf<ArchiveSourceEntry>()
+            val usedRoots = linkedSetOf<String>()
+            val visitedDirectories = hashSetOf<String>()
+            validSources.forEach { source ->
+                coroutineContext.ensureActive()
+                val rootName = uniqueArchiveRootName(source.name.ifBlank { "item" }, usedRoots)
+                collectArchiveSourceEntries(
+                    source = source,
+                    entryPath = rootName,
+                    outputTarget = targetCanonical,
+                    destination = entries,
+                    visitedDirectories = visitedDirectories,
+                )
+            }
+            require(entries.isNotEmpty()) { "Nenhum item pôde ser preparado para compactação." }
+
+            val totalBytes = entries.filterNot { it.directory }.sumOf { it.source.length().coerceAtLeast(0L) }
+            val requiredWithMargin = totalBytes + (totalBytes / 50L).coerceAtLeast(1L * 1024L * 1024L)
+            if (destinationParent.usableSpace in 1 until requiredWithMargin) {
+                error(
+                    "Espaço insuficiente. Necessário aproximadamente ${archiveFormatBytes(requiredWithMargin)} " +
+                        "e disponível ${archiveFormatBytes(destinationParent.usableSpace)}."
+                )
+            }
+
+            val temp = File(destinationParent, ".${target.name}.compactando-${System.nanoTime()}")
+            var processedBytes = 0L
+            var completed = 0
+            val startedAt = System.nanoTime()
+            try {
+                ZipOutputStream(BufferedOutputStream(FileOutputStream(temp))).use { zipOut ->
+                    zipOut.setLevel(Deflater.DEFAULT_COMPRESSION)
+                    entries.forEach { item ->
+                        coroutineContext.ensureActive()
+                        val zipPath = item.entryPath.replace(File.separatorChar, '/').trimStart('/') + if (item.directory) "/" else ""
+                        val entry = ZipEntry(zipPath).apply {
+                            if (item.source.lastModified() > 0L) time = item.source.lastModified()
+                        }
+                        zipOut.putNextEntry(entry)
+                        if (!item.directory) {
+                            BufferedInputStream(FileInputStream(item.source)).use { input ->
+                                val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 4)
+                                while (true) {
+                                    coroutineContext.ensureActive()
+                                    val read = input.read(buffer)
+                                    if (read < 0) break
+                                    zipOut.write(buffer, 0, read)
+                                    processedBytes += read
+                                    emitProgress(
+                                        onProgress,
+                                        completed,
+                                        entries.size,
+                                        processedBytes,
+                                        totalBytes,
+                                        startedAt,
+                                        item.entryPath,
+                                    )
+                                }
+                            }
+                        }
+                        zipOut.closeEntry()
+                        completed++
+                        emitProgress(
+                            onProgress,
+                            completed,
+                            entries.size,
+                            processedBytes,
+                            totalBytes,
+                            startedAt,
+                            item.entryPath,
+                        )
+                    }
+                }
+                coroutineContext.ensureActive()
+                require(temp.renameTo(target)) { "Não foi possível finalizar o arquivo ZIP." }
+                emitProgress(onProgress, entries.size, entries.size, totalBytes, totalBytes, startedAt, "Concluído")
+                ArchiveCreationSummary(
+                    archive = target,
+                    selectedItems = validSources.size,
+                    archivedEntries = entries.size,
+                    inputBytes = totalBytes,
+                    outputBytes = target.length().coerceAtLeast(0L),
+                )
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                runCatching { temp.delete() }
+                throw cancelled
+            } catch (error: Throwable) {
+                runCatching { temp.delete() }
+                throw error
+            }
+        }
+    }
+
     suspend fun readZip(file: File): Result<ZipArchiveInfo> = withContext(Dispatchers.IO) {
         runCatching {
             require(file.exists() && file.isFile) { "Arquivo ZIP não encontrado." }
@@ -324,6 +455,59 @@ internal object ArchiveManager {
             .filterNot { it.isDirectory }
             .filter { entry -> normalized.any { selected -> entry.path == selected || entry.path.startsWith("$selected/") } }
             .sumOf { it.size.coerceAtLeast(0L) }
+    }
+}
+
+internal fun normalizeArchiveFileName(value: String): String {
+    val cleaned = value.trim()
+        .replace('/', '_')
+        .replace('\\', '_')
+        .replace(Regex("[\u0000-\u001F]"), "")
+        .trim('.', ' ')
+    if (cleaned.isBlank()) return ""
+    return if (cleaned.endsWith(".zip", ignoreCase = true)) cleaned else "$cleaned.zip"
+}
+
+private fun uniqueArchiveRootName(name: String, used: MutableSet<String>): String {
+    if (used.add(name.lowercase())) return name
+    val dot = name.lastIndexOf('.')
+    val base = if (dot > 0) name.substring(0, dot) else name
+    val ext = if (dot > 0) name.substring(dot) else ""
+    var index = 1
+    while (true) {
+        val candidate = "$base ($index)$ext"
+        if (used.add(candidate.lowercase())) return candidate
+        index++
+    }
+}
+
+private suspend fun collectArchiveSourceEntries(
+    source: File,
+    entryPath: String,
+    outputTarget: File,
+    destination: MutableList<ArchiveSourceEntry>,
+    visitedDirectories: MutableSet<String>,
+) {
+    coroutineContext.ensureActive()
+    val canonical = runCatching { source.canonicalFile }.getOrElse { source.absoluteFile }
+    if (canonical.path == outputTarget.path) return
+    if (source.isDirectory) {
+        if (!visitedDirectories.add(canonical.path)) return
+        destination += ArchiveSourceEntry(source, entryPath, directory = true)
+        val children = source.listFiles()?.sortedWith(
+            compareBy<File>({ !it.isDirectory }, { it.name.lowercase() })
+        ).orEmpty()
+        for (child in children) {
+            collectArchiveSourceEntries(
+                source = child,
+                entryPath = "$entryPath/${child.name}",
+                outputTarget = outputTarget,
+                destination = destination,
+                visitedDirectories = visitedDirectories,
+            )
+        }
+    } else if (source.isFile) {
+        destination += ArchiveSourceEntry(source, entryPath, directory = false)
     }
 }
 

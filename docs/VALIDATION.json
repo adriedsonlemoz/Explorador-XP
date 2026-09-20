@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.43",
-  "version_code": 43,
-  "manager_version": "0.1.0-alpha.43",
-  "manager_code": 43,
+  "version_build": "0.1.0-alpha.44",
+  "version_code": 44,
+  "manager_version": "0.1.0-alpha.44",
+  "manager_code": 44,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.43",
-      "code": 43
+      "version": "0.1.0-alpha.44",
+      "code": 44
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -240,9 +240,28 @@
     "alpha43_archive_viewer_parser_smoke": {
       "ok": true,
       "result": "kotlinc without Android/Compose classpath reports expected unresolved references only; no expecting/unclosed/unexpected-token parser diagnostics were found."
+    },
+    "alpha44_multi_selection_zip_creation": {
+      "ok": true,
+      "features": [
+        "Mais > Compactar em ZIP appears for one or multiple selected files/folders",
+        "archive name and destination folder configuration",
+        "recursive folder compression preserving hierarchy",
+        "real progress by bytes and entries with percentage, speed and cancellation",
+        "temporary output removed on cancellation/error",
+        "automatic non-destructive unique output naming",
+        "open resulting ZIP or destination folder after completion",
+        "output excluded from source enumeration to avoid self-inclusion"
+      ],
+      "archive_manager_compile_smoke": "ArchiveManager.kt compiled with Kotlin 1.9.0, kotlinx-coroutines-core and minimal Zip4j API stubs.",
+      "archive_creation_runtime_smoke": "Created ZIP from mixed folder/file selection; verified nested entries, 100% progress, name collision -> (1), and filename sanitization.",
+      "ui_parser_smoke": "ExplorerScreen.kt and ArchiveViewer.kt showed no expecting/unclosed/unexpected-token diagnostics in kotlinc parser smoke without Android/Compose classpath.",
+      "images_created_or_modified": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "No local Android SDK/Gradle wrapper is available in this environment."
     }
   },
-  "validated_at_utc": "2026-09-19T22:47:48.285598+00:00",
+  "validated_at_utc": "2026-09-20T04:51:20.022734+00:00",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -307,6 +326,23 @@
       "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha44_against_alpha43": {
+    "added": [
+      "docs/ALPHA44_COMPRESSION_NOTES.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ArchiveManager.kt",
+      "app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/test/java/com/exploradorxp/app/ArchiveManagerTest.kt",
       "README.md",
       "CHANGELOG.md",
       "docs/VALIDATION.json",

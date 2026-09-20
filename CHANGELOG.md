@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.1.0-alpha.44
+
+- Adicionada a ação **Compactar em ZIP** no menu **Mais** quando um ou vários arquivos/pastas estão selecionados.
+- A compactação aceita seleção mista de arquivos e pastas e preserva a estrutura interna de diretórios.
+- Nova janela permite definir o nome do ZIP e escolher a pasta de destino antes de iniciar.
+- O último destino de compactação é lembrado; quando os itens vêm da mesma pasta, ela é usada como destino inicial quando não há preferência anterior.
+- Progresso mostra porcentagem, itens concluídos, bytes processados, total, item atual e velocidade, com **Cancelar compactação**.
+- O ZIP é montado primeiro em arquivo temporário e só é promovido ao nome final ao concluir; em cancelamento/erro, o parcial é removido.
+- Se já existir um arquivo com o mesmo nome, é escolhido automaticamente um nome livre (`Arquivo (1).zip`, etc.), evitando sobrescrita silenciosa.
+- A conclusão mostra tamanho original e tamanho final, com ações **Abrir ZIP**, **Abrir pasta** e **Fechar**.
+- Nomes inválidos são saneados e a saída é excluída da enumeração de origem para evitar auto-inclusão quando o destino estiver dentro de uma pasta selecionada.
+- Assinatura permanente e `applicationId` foram preservados; nenhuma imagem/mockup foi criada ou alterada.
+- Versão sincronizada para `0.1.0-alpha.44` / `versionCode 44`.
+
 ## 0.1.0-alpha.43
 
 - Visualizador ZIP refeito para navegar por pastas internas em vez de uma lista plana; inclui Subir/Voltar, pesquisa e ordenação por nome, tamanho, tipo e data.

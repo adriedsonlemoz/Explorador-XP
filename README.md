@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.43` (`versionCode 43`)  
+**Versão atual:** `0.1.0-alpha.44` (`versionCode 44`)  
 
 ### Assinatura permanente dos APKs
 
@@ -20,6 +20,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 - A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
 - A alpha.30 integra uma **Lixeira real** ao fluxo de exclusão: cada remoção oferece mover para a Lixeira ou apagar permanentemente; itens podem ser restaurados, apagados individualmente ou removidos de uma vez com **Esvaziar Lixeira**.
 - A alpha.31 continua o refinamento visual: menus superiores mais legíveis e roláveis em telas estreitas, barra de seleção com ações sem compressão, listagem com tipo/tamanho e data separados, janelas com botão Fechar no padrão XP e armazenamento com leitura visual mais clara.
+- A alpha.44 adiciona **compactação ZIP de arquivos e pastas selecionados**: no modo de seleção, **Mais > Compactar em ZIP** abre uma configuração com nome e pasta de destino, preserva a hierarquia das pastas, mostra progresso real com porcentagem/bytes/velocidade, permite cancelar com remoção do arquivo parcial, evita sobrescrita silenciosa criando nome livre e oferece **Abrir ZIP** ou **Abrir pasta** ao terminar.
 - A alpha.43 reconstrói o **visualizador e extrator ZIP**: navegação por pastas internas, pesquisa, ordenação, seleção e extração parcial, visualização de itens sem descompactar o pacote inteiro, escolha de destino com memória do último local, progresso real com porcentagem/bytes/velocidade, cancelamento, conflitos (renomear/substituir/ignorar), abrir pasta ao concluir, verificação de integridade, ZIP com senha via Zip4j, proteção contra Zip Slip e ações **Extrair aqui / Extrair para... / Abrir com...** diretamente no Explorer.
 - A alpha.41 corrige o respeito à **área segura do Android** em telas e diálogos, evitando que conteúdo e botões entrem atrás da barra de navegação. A tela **Sobre** foi recentralizada e os cards/botões claros receberam bordas suaves e padronizadas; a revisão também alcança menus de contexto, visualizadores e o editor de texto/código.
 - A alpha.40 reconstrói a **Lixeira** após o problema visual visto em aparelho real: nomes dos arquivos voltam a ocupar a área principal, cada item mostra tipo/tamanho/data/origem, **Restaurar** e **Apagar** ficam visíveis lado a lado, **Atualizar** e **Esvaziar Lixeira** permanecem no topo e os diálogos de confirmação voltam a exibir as duas ações corretamente. O nome original também passa a ser gravado no metadado da Lixeira, preservando compatibilidade com itens antigos.
@@ -78,6 +79,9 @@ app/src/main/java/com/exploradorxp/app/
   InternalViewer.kt
   VideoPlayerViewer.kt
   TextCodeEditorViewer.kt
+  ArchiveManager.kt
+  ArchiveViewer.kt
+  ArchiveProgressNotifier.kt
   PreferencesStore.kt
   DeviceInfo.kt
   DeviceInfoScreen.kt

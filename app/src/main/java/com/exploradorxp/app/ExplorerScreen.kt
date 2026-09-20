@@ -159,6 +159,7 @@ fun ExplorerScreen(
     var showTrash by remember { mutableStateOf(false) }
     var showStorageDetails by remember { mutableStateOf(false) }
     var archiveExtractTarget by remember { mutableStateOf<Pair<File, Boolean>?>(null) }
+    var archiveCreateSources by remember { mutableStateOf<List<File>?>(null) }
 
     Column(
         modifier = modifier
@@ -205,6 +206,10 @@ fun ExplorerScreen(
             },
             onPropertiesSelection = {
                 state.selectedPaths.singleOrNull()?.let { propertiesTarget = File(it) }
+                onClearSelection()
+            },
+            onCompressSelection = {
+                archiveCreateSources = state.selectedPaths.map(::File)
                 onClearSelection()
             },
             onSelectAll = onSelectAll,
@@ -328,6 +333,26 @@ fun ExplorerScreen(
                 archiveExtractTarget = null
                 onOpenTarget(extractedFile)
             },
+        )
+    }
+
+    archiveCreateSources?.takeIf { it.isNotEmpty() }?.let { sources ->
+        ArchiveCreationFlow(
+            sources = sources,
+            initialDestination = state.currentDir,
+            onDismiss = {
+                archiveCreateSources = null
+                onRefresh()
+            },
+            onOpenFolder = { folder ->
+                archiveCreateSources = null
+                onNavigateTo(folder)
+            },
+            onOpenArchive = { archive ->
+                archiveCreateSources = null
+                onOpenTarget(archive)
+            },
+            onCreated = onRefresh,
         )
     }
 
@@ -496,6 +521,7 @@ private fun XpHeader(
     onDeleteSelection: () -> Unit,
     onRenameSelection: () -> Unit,
     onPropertiesSelection: () -> Unit,
+    onCompressSelection: () -> Unit,
     onSelectAll: () -> Unit,
     onClearSelection: () -> Unit,
     onShowManual: () -> Unit,
@@ -748,6 +774,11 @@ private fun XpHeader(
                                 }
                                 XpMenuDivider()
                             }
+                            XpMenuItem("Compactar em ZIP", R.drawable.folder_compressed) {
+                                selectionMoreMenu = false
+                                onCompressSelection()
+                            }
+                            XpMenuDivider()
                             XpMenuItem("Renomear", R.drawable.rename, enabled = selectionCount == 1) {
                                 selectionMoreMenu = false
                                 onRenameSelection()
@@ -1220,6 +1251,7 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
         "Navegação" to "O campo Endereço funciona como caminho navegável. Toque em uma parte do caminho para voltar diretamente até ela. A seta ao lado do endereço permite trocar entre armazenamentos detectados.",
         "Arquivos e pastas" to "A lista e a grade mostram o tipo do arquivo, tamanho e outras informações úteis. O botão de opções abre ações como copiar, mover, renomear, excluir, compartilhar, favoritar e ver propriedades.",
         "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Downloads é temporariamente substituído por Colar.",
+        "Compactar ZIP" to "Selecione um ou vários arquivos/pastas, abra Mais e escolha Compactar em ZIP. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
         "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A pasta interna e artefatos de lixeira do sistema ficam ocultos da navegação comum. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
         "Armazenamento" to "Toque no cartão de armazenamento para analisar espaço total, usado e livre. As porcentagens por categoria usam somente os arquivos acessíveis analisados; áreas protegidas do Android podem não entrar na soma. A Lixeira aparece separadamente.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
@@ -1389,10 +1421,10 @@ private fun AboutDialog(
                     Spacer(Modifier.height(10.dp))
                     AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                         listOf(
-                            "Janelas e telas longas passam a respeitar de forma consistente a barra de navegação e a área segura do Android.",
-                            "Tela Sobre centralizada dentro da área útil, com limite de altura e rolagem interna previsível.",
-                            "Cards, botões e menus claros usam bordas suaves e padronizadas, removendo contornos escuros desnecessários.",
-                            "Revisão aplicada também aos diálogos, menus de contexto, visualizadores e editor de texto/código.",
+                            "Selecione um ou vários arquivos/pastas e use Mais > Compactar em ZIP.",
+                            "A compactação permite escolher nome e destino, preservando a estrutura das pastas.",
+                            "Progresso real mostra porcentagem, bytes, velocidade e item atual, com opção de cancelar.",
+                            "Ao concluir, é possível abrir o ZIP ou ir direto à pasta onde ele foi criado.",
                         ).forEach { change ->
                             Text("• $change", fontSize = 11.5.sp, color = Color(0xFF303030), lineHeight = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
                         }

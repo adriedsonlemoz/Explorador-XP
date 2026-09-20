@@ -617,10 +617,192 @@ internal fun ArchiveExtractionFlow(
 }
 
 @Composable
+internal fun ArchiveCreationFlow(
+    sources: List<File>,
+    initialDestination: File,
+    onDismiss: () -> Unit,
+    onOpenFolder: (File) -> Unit,
+    onOpenArchive: (File) -> Unit,
+    onCreated: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences("archive_creation", android.content.Context.MODE_PRIVATE)
+    }
+    val defaultName = remember(sources) {
+        when {
+            sources.size == 1 -> {
+                val source = sources.first()
+                val base = if (source.isDirectory) source.name else source.nameWithoutExtension
+                "${base.ifBlank { "Arquivo" }}.zip"
+            }
+            else -> "Arquivos.zip"
+        }
+    }
+    var archiveName by remember(sources) { mutableStateOf(defaultName) }
+    var destination by remember(initialDestination.absolutePath, sources) {
+        val remembered = prefs.getString("last_destination", null)
+            ?.let(::File)
+            ?.takeIf { it.exists() && it.isDirectory }
+        val commonParent = sources.mapNotNull { it.parentFile?.absoluteFile }.distinctBy { it.absolutePath }.singleOrNull()
+        mutableStateOf(remembered ?: commonParent ?: initialDestination)
+    }
+    var showPicker by remember { mutableStateOf(false) }
+    var stage by remember { mutableStateOf("config") }
+    var progress by remember { mutableStateOf(ArchiveProgress(0, 0, 0, 0, 0, 0, "Preparando…")) }
+    var summary by remember { mutableStateOf<ArchiveCreationSummary?>(null) }
+    var errorText by remember { mutableStateOf<String?>(null) }
+    var job by remember { mutableStateOf<Job?>(null) }
+
+    fun startCompression() {
+        if (archiveName.isBlank()) {
+            errorText = "Informe um nome para o arquivo ZIP."
+            return
+        }
+        prefs.edit().putString("last_destination", destination.absolutePath).apply()
+        errorText = null
+        stage = "progress"
+        job?.cancel()
+        job = scope.launch {
+            val result = ArchiveManager.createZip(
+                sources = sources,
+                destinationParent = destination,
+                archiveName = archiveName,
+                onProgress = { progress = it },
+            )
+            result.onSuccess {
+                summary = it
+                stage = "done"
+                onCreated()
+            }.onFailure { error ->
+                if (error is kotlinx.coroutines.CancellationException) {
+                    stage = "config"
+                    errorText = "Compactação cancelada."
+                } else {
+                    stage = "config"
+                    errorText = error.message ?: "Não foi possível criar o arquivo ZIP."
+                }
+            }
+        }
+    }
+
+    when (stage) {
+        "config" -> XpDialogFrame(title = "Compactar em ZIP", onDismiss = onDismiss) {
+            Text(
+                if (sources.size == 1) "1 item selecionado" else "${sources.size} itens selecionados",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF173A67),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text("Nome do arquivo", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = XpTextSecondary)
+            Spacer(Modifier.height(4.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(38.dp)
+                    .background(Color.White)
+                    .border(1.dp, XpControlBorder)
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                BasicTextField(
+                    value = archiveName,
+                    onValueChange = { archiveName = it; errorText = null },
+                    singleLine = true,
+                    textStyle = TextStyle(fontSize = 13.sp, color = Color(0xFF202020)),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.height(9.dp))
+            Text("Destino", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = XpTextSecondary)
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    destination.absolutePath,
+                    fontSize = 10.5.sp,
+                    color = XpTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(7.dp))
+                XpDialogButton("Alterar", onClick = { showPicker = true })
+            }
+            Spacer(Modifier.height(7.dp))
+            Text(
+                "Pastas são incluídas com toda a estrutura interna. Se já existir um ZIP com esse nome, será criado um nome livre automaticamente.",
+                fontSize = 10.5.sp,
+                color = XpTextSecondary,
+            )
+            if (errorText != null) {
+                Spacer(Modifier.height(7.dp))
+                Text(errorText.orEmpty(), fontSize = 11.sp, color = Color(0xFF9C1B12))
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                XpDialogButton("Cancelar", onClick = onDismiss, modifier = Modifier.weight(1f))
+                XpDialogButton("Compactar", enabled = archiveName.isNotBlank(), onClick = { startCompression() }, modifier = Modifier.weight(1f))
+            }
+        }
+        "progress" -> ArchiveProgressDialog(
+            title = "Compactando arquivos",
+            progress = progress,
+            cancellable = true,
+            cancelLabel = "Cancelar compactação",
+            onCancel = {
+                job?.cancel()
+                stage = "config"
+                errorText = "Compactação cancelada."
+            },
+        )
+        "done" -> XpDialogFrame(title = "Compactação concluída", onDismiss = onDismiss) {
+            val result = summary
+            if (result != null) {
+                Text(
+                    "${result.selectedItems} selecionados • ${result.archivedEntries} itens no ZIP",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(result.archive.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF173A67))
+                Text(result.archive.parentFile?.absolutePath.orEmpty(), fontSize = 10.5.sp, color = XpTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Original: ${archiveFormatBytes(result.inputBytes)} • ZIP: ${archiveFormatBytes(result.outputBytes)}",
+                    fontSize = 11.sp,
+                    color = XpTextSecondary,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                    XpDialogButton("Fechar", onClick = onDismiss, modifier = Modifier.weight(1f))
+                    XpDialogButton("Abrir ZIP", onClick = { onOpenArchive(result.archive) }, modifier = Modifier.weight(1f))
+                    XpDialogButton("Abrir pasta", onClick = { result.archive.parentFile?.let(onOpenFolder) }, modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+
+    if (showPicker) {
+        ArchiveFolderPickerDialog(
+            initial = destination,
+            onDismiss = { showPicker = false },
+            onChoose = {
+                destination = it
+                prefs.edit().putString("last_destination", it.absolutePath).apply()
+                showPicker = false
+            },
+        )
+    }
+}
+
+@Composable
 private fun ArchiveProgressDialog(
     title: String,
     progress: ArchiveProgress,
     cancellable: Boolean,
+    cancelLabel: String = "Cancelar extração",
     onCancel: () -> Unit,
 ) {
     Dialog(onDismissRequest = { if (cancellable) onCancel() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -641,7 +823,7 @@ private fun ArchiveProgressDialog(
                 Text(progress.currentEntry, fontSize = 10.sp, color = XpTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (cancellable) {
                     Spacer(Modifier.height(10.dp))
-                    XpDialogButton("Cancelar extração", onClick = onCancel, modifier = Modifier.fillMaxWidth())
+                    XpDialogButton(cancelLabel, onClick = onCancel, modifier = Modifier.fillMaxWidth())
                 }
             }
         }

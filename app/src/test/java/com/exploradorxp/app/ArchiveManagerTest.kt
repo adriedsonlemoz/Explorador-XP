@@ -46,4 +46,11 @@ class ArchiveManagerTest {
             root.deleteRecursively()
         }
     }
+    @Test
+    fun normalizesZipOutputName() {
+        assertEquals("Fotos.zip", normalizeArchiveFileName("Fotos"))
+        assertEquals("backup.ZIP", normalizeArchiveFileName("backup.ZIP"))
+        assertEquals("pasta_sub.zip", normalizeArchiveFileName("pasta/sub"))
+    }
+
 }
