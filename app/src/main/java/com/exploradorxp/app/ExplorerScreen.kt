@@ -137,6 +137,7 @@ fun ExplorerScreen(
     onToggleSelection: (File) -> Unit,
     onToggleFavorite: (File) -> Unit,
     onCreateFolder: (String) -> Unit,
+    onCreateFile: (String) -> Unit,
     onRename: (File, String) -> Unit,
     onLoadTrash: () -> Unit,
     onRestoreTrashItem: (TrashItem) -> Unit,
@@ -148,6 +149,7 @@ fun ExplorerScreen(
     modifier: Modifier = Modifier,
 ) {
     var showNewFolder by remember { mutableStateOf(false) }
+    var showNewFile by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<File?>(null) }
     var propertiesTarget by remember { mutableStateOf<File?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -173,6 +175,7 @@ fun ExplorerScreen(
             onQueryChange = onQueryChange,
             onToggleSearch = onToggleSearch,
             onNewFolder = { showNewFolder = true },
+            onNewFile = { showNewFile = true },
             onRefresh = onRefresh,
             canPaste = state.clipboard != null && state.tab != ExplorerTab.FAVORITES,
             onPaste = onPaste,
@@ -229,16 +232,7 @@ fun ExplorerScreen(
             },
         )
 
-        val internalRoot = state.storageLocations.firstOrNull { !it.removable }?.root
-            ?: android.os.Environment.getExternalStorageDirectory()
-        val isHomePage = state.tab == ExplorerTab.FILES && samePath(state.currentDir, internalRoot)
-
-        if (isHomePage && !state.searchVisible && state.selectedPaths.isEmpty()) {
-            StorageCard(state.storageInfo) {
-                showStorageDetails = true
-                onAnalyzeStorage(false)
-            }
-        } else if (state.tab == ExplorerTab.FAVORITES && !state.searchVisible && state.selectedPaths.isEmpty()) {
+        if (state.tab == ExplorerTab.FAVORITES && !state.searchVisible && state.selectedPaths.isEmpty()) {
             SectionTitle(title = "Favoritos", icon = R.drawable.favorites)
         }
 
@@ -314,6 +308,11 @@ fun ExplorerScreen(
         ExplorerStatusBar(
             items = state.items,
             selectedPaths = state.selectedPaths,
+            storageInfo = state.storageInfo,
+            onStorageClick = {
+                showStorageDetails = true
+                onAnalyzeStorage(false)
+            },
         )
     }
 
@@ -365,6 +364,19 @@ fun ExplorerScreen(
             onConfirm = {
                 showNewFolder = false
                 onCreateFolder(it)
+            }
+        )
+    }
+
+    if (showNewFile) {
+        NameDialog(
+            title = "Novo arquivo",
+            initialValue = "Novo arquivo.txt",
+            confirmText = "Criar",
+            onDismiss = { showNewFile = false },
+            onConfirm = {
+                showNewFile = false
+                onCreateFile(it)
             }
         )
     }
@@ -428,6 +440,7 @@ fun ExplorerScreen(
             onDismiss = { showFolderContext = false },
             onPaste = { showFolderContext = false; onPaste() },
             onNewFolder = { showFolderContext = false; showNewFolder = true },
+            onNewFile = { showFolderContext = false; showNewFile = true },
             onSelectAll = { showFolderContext = false; onSelectAll() },
             onProperties = { showFolderContext = false; propertiesTarget = state.currentDir },
             onRefresh = { showFolderContext = false; onRefresh() },
@@ -492,6 +505,7 @@ private fun XpHeader(
     onQueryChange: (String) -> Unit,
     onToggleSearch: () -> Unit,
     onNewFolder: () -> Unit,
+    onNewFile: () -> Unit,
     onRefresh: () -> Unit,
     canPaste: Boolean,
     onPaste: () -> Unit,
@@ -544,6 +558,7 @@ private fun XpHeader(
     var helpMenu by remember { mutableStateOf(false) }
     var addressMenu by remember { mutableStateOf(false) }
     var selectionMoreMenu by remember { mutableStateOf(false) }
+    var newMenu by remember { mutableStateOf(false) }
 
     val fallbackRoot = android.os.Environment.getExternalStorageDirectory()
     val effectiveLocations = storageLocations.ifEmpty {
@@ -640,6 +655,7 @@ private fun XpHeader(
                     XpMenuLabel("Arquivo", fileMenu) { fileMenu = true }
                     XpPopupMenu(expanded = fileMenu, onDismiss = { fileMenu = false }) {
                         XpMenuItem("Nova pasta", R.drawable.folder_new) { fileMenu = false; onNewFolder() }
+                        XpMenuItem("Novo arquivo", R.drawable.file_new) { fileMenu = false; onNewFile() }
                         if (canPaste) XpMenuItem("Colar", R.drawable.paste) { fileMenu = false; onPaste() }
                         XpMenuDivider()
                         XpMenuItem("Lixeira", if (trashHasItems) R.drawable.trash_full else R.drawable.trash_empty) { fileMenu = false; onOpenTrash() }
@@ -742,9 +758,12 @@ private fun XpHeader(
                     .padding(horizontal = 2.dp)
             ) {
                 if (selectionCount > 0) {
-                    XpClassicToolButton(R.drawable.copy, "Copiar", true, onCopySelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.move, "Mover", true, onCutSelection, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.delete, "Excluir", true, onDeleteSelection, Modifier.weight(1f))
+                    XpClassicToolButton(R.drawable.copy, "Copiar", true, onCopySelection, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.move, "Mover", true, onCutSelection, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.rename, "Renomear", selectionCount == 1, onRenameSelection, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.share, "Compart.", true, onShareSelection, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.folder_compressed, "ZIP", true, onCompressSelection, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.delete, "Excluir", true, onDeleteSelection, Modifier.weight(1f), compact = true)
                     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         XpClassicToolButton(
                             R.drawable.more,
@@ -752,6 +771,7 @@ private fun XpHeader(
                             true,
                             { selectionMoreMenu = true },
                             Modifier.fillMaxWidth(),
+                            compact = true,
                         )
                         XpPopupMenu(expanded = selectionMoreMenu, onDismiss = { selectionMoreMenu = false }) {
                             if (selectedArchive != null) {
@@ -774,19 +794,6 @@ private fun XpHeader(
                                 }
                                 XpMenuDivider()
                             }
-                            XpMenuItem("Compactar em ZIP", R.drawable.folder_compressed) {
-                                selectionMoreMenu = false
-                                onCompressSelection()
-                            }
-                            XpMenuDivider()
-                            XpMenuItem("Renomear", R.drawable.rename, enabled = selectionCount == 1) {
-                                selectionMoreMenu = false
-                                onRenameSelection()
-                            }
-                            XpMenuItem("Compartilhar", R.drawable.share) {
-                                selectionMoreMenu = false
-                                onShareSelection()
-                            }
                             XpMenuItem("Propriedades", R.drawable.properties, enabled = selectionCount == 1) {
                                 selectionMoreMenu = false
                                 onPropertiesSelection()
@@ -799,15 +806,36 @@ private fun XpHeader(
                         }
                     }
                 } else {
-                    XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.home, "Início", true, onHome, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.up, "Subir", true, onUp, Modifier.weight(1f))
-                    XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch, Modifier.weight(1f))
+                    XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.home, "Início", true, onHome, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.up, "Subir", true, onUp, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.refresh, "Atualizar", true, onRefresh, Modifier.weight(1f), compact = true)
+                    XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch, Modifier.weight(1f), compact = true)
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        XpClassicToolButton(
+                            R.drawable.file_new,
+                            "Novo",
+                            true,
+                            { newMenu = true },
+                            Modifier.fillMaxWidth(),
+                            compact = true,
+                        )
+                        XpPopupMenu(expanded = newMenu, onDismiss = { newMenu = false }) {
+                            XpMenuItem("Nova pasta", R.drawable.folder_new) {
+                                newMenu = false
+                                onNewFolder()
+                            }
+                            XpMenuItem("Novo arquivo", R.drawable.file_new) {
+                                newMenu = false
+                                onNewFile()
+                            }
+                        }
+                    }
                     if (canPaste) {
-                        XpClassicToolButton(R.drawable.paste, "Colar", true, onPaste, Modifier.weight(1f))
+                        XpClassicToolButton(R.drawable.paste, "Colar", true, onPaste, Modifier.weight(1f), compact = true)
                     } else {
-                        XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads, Modifier.weight(1f))
+                        XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads, Modifier.weight(1f), compact = true)
                     }
                     XpClassicToolButton(
                         if (trashHasItems) R.drawable.trash_full else R.drawable.trash_empty,
@@ -815,6 +843,7 @@ private fun XpHeader(
                         true,
                         onOpenTrash,
                         Modifier.weight(1f),
+                        compact = true,
                     )
                 }
             }
@@ -1070,6 +1099,7 @@ private fun XpClassicToolButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -1090,14 +1120,14 @@ private fun XpClassicToolButton(
         androidx.compose.foundation.Image(
             painter = painterResource(icon),
             contentDescription = label,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(if (compact) 23.dp else 28.dp),
             contentScale = ContentScale.Fit,
             alpha = if (enabled) 1f else .30f,
         )
         Text(
             text = label,
             color = if (enabled) Color(0xFF202020) else Color(0xFF999999),
-            fontSize = 11.sp,
+            fontSize = if (compact) 8.sp else 11.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1247,13 +1277,13 @@ private fun SectionTitle(title: String, icon: Int) {
 private fun HelpManualDialog(onDismiss: () -> Unit) {
     var expandedTopic by remember { mutableStateOf("Começando") }
     val topics = listOf(
-        "Começando" to "Use a barra superior para voltar, avançar, ir ao Início, subir uma pasta, pesquisar, abrir Downloads e acessar a Lixeira. Toque em um arquivo para abrir e segure para selecionar.",
+        "Começando" to "Use a barra superior para voltar, avançar, ir ao Início, subir uma pasta, atualizar, pesquisar, criar novos itens, abrir Downloads e acessar a Lixeira. Toque em um arquivo para abrir e segure para selecionar.",
         "Navegação" to "O campo Endereço funciona como caminho navegável. Toque em uma parte do caminho para voltar diretamente até ela. A seta ao lado do endereço permite trocar entre armazenamentos detectados.",
         "Arquivos e pastas" to "A lista e a grade mostram o tipo do arquivo, tamanho e outras informações úteis. O botão de opções abre ações como copiar, mover, renomear, excluir, compartilhar, favoritar e ver propriedades.",
         "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Downloads é temporariamente substituído por Colar.",
-        "Compactar ZIP" to "Selecione um ou vários arquivos/pastas, abra Mais e escolha Compactar em ZIP. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
+        "Compactar ZIP" to "Selecione um ou vários arquivos/pastas e use o atalho ZIP da barra de seleção. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
         "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A pasta interna e artefatos de lixeira do sistema ficam ocultos da navegação comum. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
-        "Armazenamento" to "Toque no cartão de armazenamento para analisar espaço total, usado e livre. As porcentagens por categoria usam somente os arquivos acessíveis analisados; áreas protegidas do Android podem não entrar na soma. A Lixeira aparece separadamente.",
+        "Armazenamento" to "O espaço livre e o percentual usado aparecem de forma compacta na barra inferior. Toque nessa área para abrir a análise completa. As porcentagens por categoria usam somente os arquivos acessíveis analisados; áreas protegidas do Android podem não entrar na soma. A Lixeira aparece separadamente.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
         "Favoritos" to "Adicione arquivos ou pastas aos Favoritos pelo menu de opções. A lista fica disponível no menu Favoritos do cabeçalho.",
         "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. ZIP permite navegar por pastas internas, pesquisar, selecionar, visualizar itens e extrair para um destino escolhido. O player de vídeo oferece progresso, ±10 s, velocidade, tela cheia, Ajustar/Preencher e retomada de posição. Se um formato falhar ou não for suportado, use Abrir com outro aplicativo.",
@@ -1421,10 +1451,10 @@ private fun AboutDialog(
                     Spacer(Modifier.height(10.dp))
                     AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                         listOf(
-                            "Selecione um ou vários arquivos/pastas e use Mais > Compactar em ZIP.",
-                            "A compactação permite escolher nome e destino, preservando a estrutura das pastas.",
-                            "Progresso real mostra porcentagem, bytes, velocidade e item atual, com opção de cancelar.",
-                            "Ao concluir, é possível abrir o ZIP ou ir direto à pasta onde ele foi criado.",
+                            "O cartão grande de armazenamento saiu da tela principal; espaço livre e uso agora ficam na barra inferior.",
+                            "Toque no indicador de armazenamento da barra inferior para abrir a análise completa.",
+                            "A barra principal ganhou atalhos diretos para Atualizar e Novo, com criação rápida de pasta ou arquivo.",
+                            "Na seleção, Renomear, Compartilhar, Compactar em ZIP e Excluir ficam acessíveis sem depender de Mais.",
                         ).forEach { change ->
                             Text("• $change", fontSize = 11.5.sp, color = Color(0xFF303030), lineHeight = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
                         }
@@ -2415,6 +2445,7 @@ private fun FolderContextDialog(
     onDismiss: () -> Unit,
     onPaste: () -> Unit,
     onNewFolder: () -> Unit,
+    onNewFile: () -> Unit,
     onSelectAll: () -> Unit,
     onProperties: () -> Unit,
     onRefresh: () -> Unit,
@@ -2436,6 +2467,7 @@ private fun FolderContextDialog(
             ) {
                 if (canPaste) ContextActionRow(R.drawable.paste, "Colar aqui", onPaste)
                 ContextActionRow(R.drawable.folder_new, "Nova pasta", onNewFolder)
+                ContextActionRow(R.drawable.file_new, "Novo arquivo", onNewFile)
                 if (canSelectAll) ContextActionRow(R.drawable.select_all, "Selecionar tudo", onSelectAll)
                 HorizontalDivider(color = Color(0xFFD2D2C8))
                 ContextActionRow(R.drawable.refresh, "Atualizar", onRefresh)
@@ -2750,6 +2782,8 @@ private fun FileGrid(
 private fun ExplorerStatusBar(
     items: List<FileItem>,
     selectedPaths: Set<String>,
+    storageInfo: StorageInfo,
+    onStorageClick: () -> Unit,
 ) {
     val selectedItems = remember(items, selectedPaths) { items.filter { it.path in selectedPaths } }
     val sizeBytes = remember(items, selectedItems) {
@@ -2761,15 +2795,19 @@ private fun ExplorerStatusBar(
     val folderCount = remember(items) { items.count { it.isDirectory } }
     val fileCount = itemCount - folderCount
     val single = selectedItems.singleOrNull()
+    val usedPercent = remember(storageInfo.usedFraction) {
+        (storageInfo.usedFraction * 100f).toInt().coerceIn(0, 100)
+    }
+    val freeText = remember(storageInfo.freeBytes) { formatBytes(storageInfo.freeBytes) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(30.dp)
+            .height(34.dp)
             .background(XpChrome)
             .border(1.dp, XpChromeBorder)
-            .padding(horizontal = 8.dp)
+            .padding(start = 8.dp)
     ) {
         Text(
             text = when {
@@ -2778,27 +2816,61 @@ private fun ExplorerStatusBar(
                 else -> "$itemCount ${if (itemCount == 1) "item" else "itens"} • $folderCount ${if (folderCount == 1) "pasta" else "pastas"} • $fileCount arquivos"
             },
             color = Color(0xFF303030),
-            fontSize = 12.sp,
+            fontSize = 10.5.sp,
             fontWeight = if (selectedItems.isNotEmpty()) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        val trailing = when {
-            single?.isDirectory == true -> "Pasta"
-            sizeBytes > 0L -> formattedSize
-            else -> null
-        }
-        if (trailing != null) {
+        if (selectedItems.isEmpty()) {
             Box(modifier = Modifier.fillMaxHeight().width(1.dp).background(XpChromeBorder))
-            Text(
-                text = trailing,
-                color = Color(0xFF303030),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                modifier = Modifier.padding(start = 9.dp),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .clickable(onClick = onStorageClick)
+                    .padding(horizontal = 7.dp),
+            ) {
+                CachedResourceIcon(
+                    resId = R.drawable.drive_hdd,
+                    contentDescription = "Abrir análise de armazenamento",
+                    modifier = Modifier.size(15.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Spacer(Modifier.width(5.dp))
+                Column(verticalArrangement = Arrangement.Center) {
+                    Text(
+                        if (storageInfo.totalBytes > 0L) "$freeText livres" else "Armazenamento",
+                        color = Color(0xFF303030),
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                    Text(
+                        if (storageInfo.totalBytes > 0L) "$usedPercent% usado" else "calculando…",
+                        color = XpBlueDark,
+                        fontSize = 8.5.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
+        } else {
+            val trailing = when {
+                single?.isDirectory == true -> "Pasta"
+                sizeBytes > 0L -> formattedSize
+                else -> null
+            }
+            if (trailing != null) {
+                Box(modifier = Modifier.fillMaxHeight().width(1.dp).background(XpChromeBorder))
+                Text(
+                    text = trailing,
+                    color = Color(0xFF303030),
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 9.dp),
+                )
+            }
         }
     }
 }

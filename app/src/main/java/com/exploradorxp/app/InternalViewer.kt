@@ -108,6 +108,9 @@ fun InternalViewerScreen(
     val isVideo = extension in videoExtensions
     val isTextDocument = extension in textExtensions || extension in setOf("html", "htm") ||
         activeFile.name.lowercase() in textFileNames
+    val isArchivePreview = remember(activeFilePath, returnToArchivePath) {
+        returnToArchivePath != null || activeFile.absolutePath.contains("/archive-preview/")
+    }
     var contentFullScreen by rememberSaveable(activeFilePath) { mutableStateOf(false) }
     var guardedCloseRequest by remember(activeFilePath) { mutableStateOf<(() -> Unit)?>(null) }
 
@@ -154,6 +157,7 @@ fun InternalViewerScreen(
                 in audioExtensions -> MediaViewer(activeFile)
                 "html", "htm" -> TextCodeEditorViewer(
                     file = activeFile,
+                    forcedReadOnly = isArchivePreview,
                     fullScreen = contentFullScreen,
                     onFullScreenChange = { contentFullScreen = it },
                     onClose = onClose,
@@ -174,6 +178,7 @@ fun InternalViewerScreen(
                 "apk" -> ApkViewer(activeFile) { onOpenExternal(activeFile) }
                 in textExtensions -> TextCodeEditorViewer(
                     file = activeFile,
+                    forcedReadOnly = isArchivePreview,
                     fullScreen = contentFullScreen,
                     onFullScreenChange = { contentFullScreen = it },
                     onClose = onClose,
@@ -184,6 +189,7 @@ fun InternalViewerScreen(
                 else -> if (activeFile.name.lowercase() in textFileNames) {
                     TextCodeEditorViewer(
                         file = activeFile,
+                        forcedReadOnly = isArchivePreview,
                         fullScreen = contentFullScreen,
                         onFullScreenChange = { contentFullScreen = it },
                         onClose = onClose,

@@ -172,8 +172,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Descoberta de volumes ocorre uma vez por sessão. O StatFs só é consultado na página
-     * inicial do armazenamento interno, onde o cartão de capacidade realmente é exibido.
+     * Descoberta de volumes ocorre uma vez por sessão. Como a capacidade agora fica na
+     * barra de status, o StatFs acompanha o volume da pasta atual (interno/SD) sem executar
+     * a análise pesada de conteúdo, que continua totalmente sob demanda.
      */
     private fun ensureStorageMetadata(state: ExplorerUiState) {
         storageJob?.cancel()
@@ -184,13 +185,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                 state.storageLocations
             }
 
-            val internalRoot = locations.firstOrNull { !it.removable }?.root ?: repository.root
-            val shouldLoadInfo = state.tab == ExplorerTab.FILES && sameAbsolutePath(state.currentDir, internalRoot)
-            val storageInfo = if (shouldLoadInfo) {
-                withContext(Dispatchers.IO) { repository.storageInfo(internalRoot) }
-            } else {
-                null
-            }
+            val storageInfo = if (state.tab != ExplorerTab.FAVORITES) {
+                withContext(Dispatchers.IO) { repository.storageInfo(state.currentDir) }
+            } else null
 
             _uiState.update { current ->
                 current.copy(
@@ -472,6 +469,19 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     startRefresh(useCache = false)
                 }
                 .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao criar pasta.")) }
+        }
+    }
+
+    fun createFile(name: String) {
+        viewModelScope.launch {
+            repository.createFile(_uiState.value.currentDir, name)
+                .onSuccess { file ->
+                    invalidateAllSnapshots()
+                    _events.emit(ExplorerEvent.ShowMessage("Arquivo criado."))
+                    startRefresh(useCache = false)
+                    if (supportsInternalViewer(file)) _events.emit(ExplorerEvent.OpenFile(file))
+                }
+                .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao criar arquivo.")) }
         }
     }
 

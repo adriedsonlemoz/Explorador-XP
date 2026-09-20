@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.44",
-  "version_code": 44,
-  "manager_version": "0.1.0-alpha.44",
-  "manager_code": 44,
+  "version_build": "0.1.0-alpha.46",
+  "version_code": 46,
+  "manager_version": "0.1.0-alpha.46",
+  "manager_code": 46,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.44",
-      "code": 44
+      "version": "0.1.0-alpha.46",
+      "code": 46
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -244,7 +244,7 @@
     "alpha44_multi_selection_zip_creation": {
       "ok": true,
       "features": [
-        "Mais > Compactar em ZIP appears for one or multiple selected files/folders",
+        "Direct ZIP action appears for one or multiple selected files/folders",
         "archive name and destination folder configuration",
         "recursive folder compression preserving hierarchy",
         "real progress by bytes and entries with percentage, speed and cancellation",
@@ -259,6 +259,22 @@
       "images_created_or_modified": false,
       "full_android_build_executed": false,
       "full_android_build_reason": "No local Android SDK/Gradle wrapper is available in this environment."
+    },
+    "alpha46_main_ui": {
+      "ok": true,
+      "storage_card_removed_from_home": true,
+      "storage_status_bar_clickable": true,
+      "toolbar_refresh_and_new": true,
+      "new_file_flow": true,
+      "selection_direct_actions": [
+        "copy",
+        "move",
+        "rename",
+        "share",
+        "zip",
+        "delete",
+        "more"
+      ]
     }
   },
   "validated_at_utc": "2026-09-20T04:51:20.022734+00:00",

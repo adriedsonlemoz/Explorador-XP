@@ -118,6 +118,7 @@ private enum class EditorViewMode { CODE, PREVIEW }
 @Composable
 fun TextCodeEditorViewer(
     file: File,
+    forcedReadOnly: Boolean = false,
     fullScreen: Boolean,
     onFullScreenChange: (Boolean) -> Unit,
     onClose: () -> Unit,
@@ -126,9 +127,13 @@ fun TextCodeEditorViewer(
     onFileChanged: (File) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val extension = file.extension.lowercase()
     val supportsPreview = extension in webExtensions
     val key = "${file.absolutePath}:${file.lastModified()}:${file.length()}"
+    val isArchivePreview = remember(file.absolutePath, forcedReadOnly) {
+        forcedReadOnly || file.absolutePath.startsWith(File(context.cacheDir, "archive-preview").absolutePath)
+    }
 
     var loadState by remember(key) { mutableStateOf<EditorLoadState>(EditorLoadState.Loading) }
     var editorView by remember(file.absolutePath) { mutableStateOf<CodeEditText?>(null) }
@@ -313,7 +318,7 @@ fun TextCodeEditorViewer(
 
     if (showMore) {
         EditorMoreDialog(
-            editable = (loadState as? EditorLoadState.Ready)?.document?.truncated == false,
+            editable = ((loadState as? EditorLoadState.Ready)?.document?.truncated == false) && !isArchivePreview,
             supportsPreview = supportsPreview,
             onDismiss = { showMore = false },
             onSelectAll = { editorView?.selectAll(); showMore = false },
@@ -378,6 +383,7 @@ fun TextCodeEditorViewer(
         val ready = loadState as? EditorLoadState.Ready
         val warning = when {
             statusMessage.isNotBlank() -> statusMessage
+            isArchivePreview -> "Pré-visualização temporária extraída do ZIP: aberto em modo somente leitura para evitar travamentos e alterações acidentais."
             ready?.document?.truncated == true -> "Arquivo grande: aberto parcialmente e somente para leitura para evitar travamentos."
             ready != null && file.length() > SYNTAX_HIGHLIGHT_MAX_CHARS && extension in syntaxExtensions ->
                 "Realce de sintaxe reduzido neste arquivo para manter o editor responsivo."
@@ -448,7 +454,7 @@ fun TextCodeEditorViewer(
                         key(file.absolutePath, state.document.encoding.label) {
                             CodeEditorView(
                                 initialText = state.document.text,
-                                readOnly = state.document.truncated,
+                                readOnly = state.document.truncated || isArchivePreview,
                                 extension = extension,
                                 syntaxHighlight = !state.document.truncated && state.document.text.length <= SYNTAX_HIGHLIGHT_MAX_CHARS,
                                 onViewReady = { editorView = it },
@@ -612,19 +618,34 @@ private fun CodeEditorView(
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
-            CodeEditText(context).apply {
-                configure(
-                    initialText = initialText,
-                    readOnly = readOnly,
-                    extension = extension,
-                    syntaxHighlight = syntaxHighlight,
-                    onTextState = onTextState,
-                    onHistoryState = onHistoryState,
-                )
-                onViewReady(this)
+            runCatching {
+                CodeEditText(context).apply {
+                    configure(
+                        initialText = initialText,
+                        readOnly = readOnly,
+                        extension = extension,
+                        syntaxHighlight = syntaxHighlight,
+                        onTextState = onTextState,
+                        onHistoryState = onHistoryState,
+                    )
+                    onViewReady(this)
+                }
+            }.getOrElse { error ->
+                EditText(context).apply {
+                    setText(
+                        "Não foi possível inicializar o editor interno.\n\n" +
+                            (error.message ?: "Erro inesperado.")
+                    )
+                    isFocusable = false
+                    isFocusableInTouchMode = false
+                    isClickable = false
+                    setTextColor(android.graphics.Color.rgb(122, 33, 26))
+                    setBackgroundColor(android.graphics.Color.WHITE)
+                    setPadding(28, 28, 28, 28)
+                }
             }
         },
-        update = { view -> onViewReady(view) },
+        update = { view -> if (view is CodeEditText) onViewReady(view) },
     )
 }
 

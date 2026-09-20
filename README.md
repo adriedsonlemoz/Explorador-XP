@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.44` (`versionCode 44`)  
+**Versão atual:** `0.1.0-alpha.46` (`versionCode 46`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,12 +14,14 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.46 simplifica a **tela principal**: o cartão grande de armazenamento foi removido e espaço livre/uso passaram para a barra inferior clicável; a toolbar ganhou **Atualizar** e **Novo** (pasta/arquivo), enquanto a barra de seleção expõe Renomear, Compartilhar, ZIP e Excluir diretamente, reduzindo a dependência de **Mais**.
 - Interface principal baseada no Explorer clássico do Windows XP: barra de título azul, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, barra de ferramentas compacta, barra de endereço, indicador de armazenamento, lista/grade e barra de status inferior.
 - Pacote visual XP com ícones PNG otimizados por densidade Android; os 150 ícones comuns usados na navegação ficam em `drawable-xxxhdpi`, com variantes grandes apenas onde necessário.
 - A experiência vetorial da alpha.27 foi revertida na alpha.28 por preferência visual e ausência de ganho perceptível no aparelho; o app voltou ao pipeline PNG otimizado com decodificação assíncrona/cache.
 - A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
 - A alpha.30 integra uma **Lixeira real** ao fluxo de exclusão: cada remoção oferece mover para a Lixeira ou apagar permanentemente; itens podem ser restaurados, apagados individualmente ou removidos de uma vez com **Esvaziar Lixeira**.
 - A alpha.31 continua o refinamento visual: menus superiores mais legíveis e roláveis em telas estreitas, barra de seleção com ações sem compressão, listagem com tipo/tamanho e data separados, janelas com botão Fechar no padrão XP e armazenamento com leitura visual mais clara.
+- A alpha.45 faz o primeiro polimento do **visualizador ZIP** após o uso real: os botões do topo agora têm ícones e hierarquia visual melhor, o estado da ordenação fica visível, arquivos TXT/HTML abertos a partir do ZIP entram em pré-visualização temporária somente leitura e o editor ganhou um fallback defensivo para evitar fechamento brusco caso a inicialização falhe.
 - A alpha.44 adiciona **compactação ZIP de arquivos e pastas selecionados**: no modo de seleção, **Mais > Compactar em ZIP** abre uma configuração com nome e pasta de destino, preserva a hierarquia das pastas, mostra progresso real com porcentagem/bytes/velocidade, permite cancelar com remoção do arquivo parcial, evita sobrescrita silenciosa criando nome livre e oferece **Abrir ZIP** ou **Abrir pasta** ao terminar.
 - A alpha.43 reconstrói o **visualizador e extrator ZIP**: navegação por pastas internas, pesquisa, ordenação, seleção e extração parcial, visualização de itens sem descompactar o pacote inteiro, escolha de destino com memória do último local, progresso real com porcentagem/bytes/velocidade, cancelamento, conflitos (renomear/substituir/ignorar), abrir pasta ao concluir, verificação de integridade, ZIP com senha via Zip4j, proteção contra Zip Slip e ações **Extrair aqui / Extrair para... / Abrir com...** diretamente no Explorer.
 - A alpha.41 corrige o respeito à **área segura do Android** em telas e diálogos, evitando que conteúdo e botões entrem atrás da barra de navegação. A tela **Sobre** foi recentralizada e os cards/botões claros receberam bordas suaves e padronizadas; a revisão também alcança menus de contexto, visualizadores e o editor de texto/código.

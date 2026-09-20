@@ -226,6 +226,7 @@ private fun ExplorerApp(
         onToggleSelection = viewModel::toggleSelection,
         onToggleFavorite = viewModel::toggleFavorite,
         onCreateFolder = viewModel::createFolder,
+        onCreateFile = viewModel::createFile,
         onRename = viewModel::rename,
         onLoadTrash = viewModel::loadTrash,
         onRestoreTrashItem = viewModel::restoreTrashItem,

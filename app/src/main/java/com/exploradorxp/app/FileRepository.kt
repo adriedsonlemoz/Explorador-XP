@@ -80,6 +80,18 @@ class FileRepository(
         }
     }
 
+    suspend fun createFile(parent: File, name: String): Result<File> = withContext(Dispatchers.IO) {
+        runCatching {
+            require(name.isNotBlank()) { "Informe um nome para o arquivo." }
+            require('/' !in name && '\\' !in name) { "O nome não pode conter separadores de caminho." }
+            require('\u0000' !in name) { "O nome contém um caractere inválido." }
+            val file = File(parent, name.trim())
+            require(!file.exists()) { "Já existe um item com esse nome." }
+            check(file.createNewFile()) { "Não foi possível criar o arquivo." }
+            file
+        }
+    }
+
     suspend fun rename(file: File, newName: String): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             require(newName.isNotBlank()) { "Informe um novo nome." }

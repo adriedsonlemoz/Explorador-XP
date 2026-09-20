@@ -165,34 +165,54 @@ internal fun ArchiveZipViewer(
     }
 
     Column(Modifier.fillMaxSize().background(Color.White)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().background(XpPanel).padding(horizontal = 7.dp, vertical = 5.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpPanel)
+                .border(1.dp, XpChromeBorder)
+                .padding(horizontal = 7.dp, vertical = 6.dp),
         ) {
-            ArchiveSmallButton("↑", enabled = currentPath.isNotBlank()) {
-                currentPath = currentPath.substringBeforeLast('/', "")
-                selected = emptySet()
-            }
-            Spacer(Modifier.width(5.dp))
-            Column(Modifier.weight(1f)) {
-                val countText = archiveInfo?.let { "${it.fileCount} arquivos • ${it.directoryCount} pastas" } ?: "Lendo conteúdo..."
-                Text(countText, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (archiveInfo != null) {
-                    val ratio = archiveInfo.compressionRatio?.let { " • compressão $it%" }.orEmpty()
-                    Text(
-                        "${archiveFormatBytes(file.length())} compactado • ${archiveFormatBytes(archiveInfo.uncompressedBytes)} descompactado$ratio",
-                        fontSize = 10.sp,
-                        color = XpTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                ArchiveHeaderIconButton(
+                    icon = R.drawable.up,
+                    label = "Subir",
+                    enabled = currentPath.isNotBlank(),
+                ) {
+                    currentPath = currentPath.substringBeforeLast('/', "")
+                    selected = emptySet()
+                }
+                Spacer(Modifier.width(7.dp))
+                Column(Modifier.weight(1f)) {
+                    val countText = archiveInfo?.let { "${it.fileCount} arquivos • ${it.directoryCount} pastas" } ?: "Lendo conteúdo..."
+                    Text(countText, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (archiveInfo != null) {
+                        val ratio = archiveInfo.compressionRatio?.let { " • compressão $it%" }.orEmpty()
+                        Text(
+                            "${archiveFormatBytes(file.length())} compactado • ${archiveFormatBytes(archiveInfo.uncompressedBytes)} descompactado$ratio",
+                            fontSize = 10.sp,
+                            color = XpTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
-            ArchiveSmallButton("Info") { showArchiveDetails = true }
-            Spacer(Modifier.width(4.dp))
-            ArchiveSmallButton("Verificar", enabled = archiveInfo != null) { verifyArchive() }
-            Spacer(Modifier.width(4.dp))
-            ArchiveSmallButton(if (selected.isEmpty()) "Extrair" else "Extrair ${selected.size}", enabled = archiveInfo != null) { showExtraction = true }
+            Spacer(Modifier.height(7.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+            ) {
+                ArchiveActionButton("Info", R.drawable.info, archiveInfo != null) { showArchiveDetails = true }
+                ArchiveActionButton("Verificar", R.drawable.check, archiveInfo != null) { verifyArchive() }
+                ArchiveActionButton(
+                    if (selected.isEmpty()) "Extrair" else "Extrair ${selected.size}",
+                    R.drawable.folder_open,
+                    archiveInfo != null,
+                ) { showExtraction = true }
+                ArchiveActionButton("Ordenar", R.drawable.sort, archiveInfo != null) { showSortMenu = true }
+            }
         }
 
         Row(
@@ -208,7 +228,16 @@ internal fun ArchiveZipViewer(
                 modifier = Modifier.weight(1f),
             )
             Box {
-                ArchiveSmallButton("Ordenar") { showSortMenu = true }
+                Text(
+                    "Classificação: ${when (sortMode) {
+                        ArchiveSortMode.NAME -> "Nome"
+                        ArchiveSortMode.SIZE -> "Tamanho"
+                        ArchiveSortMode.TYPE -> "Tipo"
+                        ArchiveSortMode.DATE -> "Data"
+                    }} • ${if (ascending) "↑" else "↓"}",
+                    fontSize = 10.5.sp,
+                    color = XpTextSecondary,
+                )
                 DropdownMenu(
                     expanded = showSortMenu,
                     onDismissRequest = { showSortMenu = false },
@@ -964,6 +993,65 @@ private fun ArchiveChoiceButton(label: String, selected: Boolean, modifier: Modi
         contentAlignment = Alignment.Center,
     ) {
         Text(label, fontSize = 10.5.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+    }
+}
+
+@Composable
+private fun ArchiveHeaderIconButton(
+    icon: Int,
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(46.dp)
+            .background(if (enabled) Color.White else Color(0xFFF0F0F0))
+            .border(1.dp, XpControlBorder)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(5.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            CachedResourceIcon(icon, label, modifier = Modifier.size(18.dp), contentScale = ContentScale.Fit)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                label,
+                fontSize = 9.sp,
+                color = if (enabled) Color(0xFF183363) else Color(0xFF9A9A9A),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArchiveActionButton(
+    label: String,
+    icon: Int,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .height(34.dp)
+            .background(if (enabled) Color.White else Color(0xFFF0F0F0))
+            .border(1.dp, XpControlBorder)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 9.dp),
+    ) {
+        CachedResourceIcon(icon, label, modifier = Modifier.size(15.dp), contentScale = ContentScale.Fit)
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            fontSize = 10.5.sp,
+            color = if (enabled) Color(0xFF202020) else Color(0xFF999999),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
     }
 }
 

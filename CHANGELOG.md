@@ -1,17 +1,32 @@
 # CHANGELOG
 
+## 0.1.0-alpha.46
+
+- Removido o cartão grande de armazenamento da tela principal; espaço livre e percentual usado agora aparecem de forma compacta e clicável na barra inferior.
+- Ao tocar no indicador de armazenamento, a análise detalhada continua disponível com total/usado/livre, categorias, pastas e arquivos grandes.
+- A capacidade exibida passa a acompanhar o volume da pasta atual (armazenamento interno ou cartão SD), sem iniciar a análise pesada automaticamente.
+- Barra principal ganhou atalhos **Atualizar** e **Novo**; **Novo** abre ações para **Nova pasta** e **Novo arquivo**.
+- Implementada criação de arquivo vazio com validação de nome; arquivos de texto compatíveis podem abrir diretamente no editor após a criação.
+- Barra de seleção agora exibe diretamente **Copiar**, **Mover**, **Renomear**, **Compartilhar**, **ZIP**, **Excluir** e **Mais**, reduzindo ações escondidas.
+- Ajuda, Sobre e validações internas foram atualizados para refletir o novo fluxo.
+- Assinatura permanente e `applicationId` preservados; versão sincronizada para `0.1.0-alpha.46` / `versionCode 46`.
+
+## 0.1.0-alpha.45
+
+- Visual do topo do visualizador ZIP refinado: os comandos **Info**, **Verificar**, **Extrair** e **Ordenar** agora usam botões com ícones no estilo XP, hierarquia visual melhor e leitura mais clara em telas estreitas.
+- A navegação interna do ZIP ganhou um botão **Subir** com ícone dedicado e o estado da classificação fica visível ao lado do caminho atual.
+- Abertura de arquivos de texto/HTML extraídos temporariamente do ZIP passou a usar um fluxo mais seguro, em **somente leitura**, reduzindo risco de travamento e edição acidental sobre arquivos de cache.
+- O editor interno recebeu um fallback defensivo: se a inicialização do editor avançado falhar, o app mostra uma área de erro legível em vez de fechar abruptamente.
+- Avisos mais claros foram adicionados quando o conteúdo aberto é uma pré-visualização temporária do ZIP.
+- Assinatura permanente e `applicationId` foram preservados; nenhuma imagem/mockup foi criada ou alterada.
+- Versão sincronizada para `0.1.0-alpha.45` / `versionCode 45`.
+
 ## 0.1.0-alpha.44
 
 - Adicionada a ação **Compactar em ZIP** no menu **Mais** quando um ou vários arquivos/pastas estão selecionados.
-- A compactação aceita seleção mista de arquivos e pastas e preserva a estrutura interna de diretórios.
-- Nova janela permite definir o nome do ZIP e escolher a pasta de destino antes de iniciar.
-- O último destino de compactação é lembrado; quando os itens vêm da mesma pasta, ela é usada como destino inicial quando não há preferência anterior.
-- Progresso mostra porcentagem, itens concluídos, bytes processados, total, item atual e velocidade, com **Cancelar compactação**.
-- O ZIP é montado primeiro em arquivo temporário e só é promovido ao nome final ao concluir; em cancelamento/erro, o parcial é removido.
-- Se já existir um arquivo com o mesmo nome, é escolhido automaticamente um nome livre (`Arquivo (1).zip`, etc.), evitando sobrescrita silenciosa.
-- A conclusão mostra tamanho original e tamanho final, com ações **Abrir ZIP**, **Abrir pasta** e **Fechar**.
-- Nomes inválidos são saneados e a saída é excluída da enumeração de origem para evitar auto-inclusão quando o destino estiver dentro de uma pasta selecionada.
-- Assinatura permanente e `applicationId` foram preservados; nenhuma imagem/mockup foi criada ou alterada.
+- A compactação aceita seleção mista de arquivos e pastas, preserva a estrutura interna e permite informar nome e pasta de destino.
+- O fluxo mostra progresso real com porcentagem, bytes, item atual e velocidade, além de permitir cancelar com limpeza do arquivo parcial.
+- Quando a compactação termina, o usuário pode **Abrir ZIP** ou **Abrir pasta** diretamente pelo resumo final.
 - Versão sincronizada para `0.1.0-alpha.44` / `versionCode 44`.
 
 ## 0.1.0-alpha.43
