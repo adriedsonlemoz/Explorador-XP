@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.1.0-alpha.48
+
+- Removido **Atualizar** da barra principal de ícones; a ação agora fica no menu **Exibir**, liberando espaço horizontal no topo.
+- O indicador de armazenamento da barra inferior foi alargado e agora mostra **livre + percentual usado** em uma única linha, evitando corte na navegação Android.
+- A informação da pasta na barra inferior passou a calcular em segundo plano e somar recursivamente **arquivos, subpastas e tamanho** de todo o conteúdo acessível dentro da pasta atual.
+- Ao selecionar uma única pasta, a barra inferior também mostra arquivos internos, subpastas e tamanho total acessível.
+- Corrigida a detecção de aplicativos já instalados no visualizador APK com visibilidade de pacotes apropriada no Android moderno.
+- Adicionadas as permissões `REQUEST_INSTALL_PACKAGES` e `QUERY_ALL_PACKAGES` para permitir instalação solicitada pelo usuário e conferência confiável do pacote instalado.
+- O botão do APK agora abre diretamente o instalador do Android; quando necessário, leva primeiro à tela **Instalar apps desconhecidos** e retorna ao fluxo de instalação.
+- Quando o pacote já está instalado, o visualizador diferencia **Atualizar**, **Reinstalar** ou **Instalar esta versão** e oferece **Abrir aplicativo** quando houver atividade inicial.
+- Ajuda e Sobre foram atualizados; assinatura permanente e `applicationId` foram preservados.
+- Versão sincronizada para `0.1.0-alpha.48` / `versionCode 48`.
+
 ## 0.1.0-alpha.47
 
 - Corrigido o erro de compilação em `ArchiveViewer.kt`: a faixa horizontal de ações do visualizador ZIP usava `horizontalScroll(...)` sem importar a extensão `androidx.compose.foundation.horizontalScroll`.

@@ -73,6 +73,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.DateFormat
@@ -308,6 +310,8 @@ fun ExplorerScreen(
         ExplorerStatusBar(
             items = state.items,
             selectedPaths = state.selectedPaths,
+            currentDir = state.currentDir,
+            recursiveFolderStats = state.tab != ExplorerTab.FAVORITES,
             storageInfo = state.storageInfo,
             onStorageClick = {
                 showStorageDetails = true
@@ -659,7 +663,6 @@ private fun XpHeader(
                         if (canPaste) XpMenuItem("Colar", R.drawable.paste) { fileMenu = false; onPaste() }
                         XpMenuDivider()
                         XpMenuItem("Lixeira", if (trashHasItems) R.drawable.trash_full else R.drawable.trash_empty) { fileMenu = false; onOpenTrash() }
-                        XpMenuItem("Atualizar", R.drawable.refresh) { fileMenu = false; onRefresh() }
                     }
                 }
 
@@ -687,6 +690,8 @@ private fun XpHeader(
                             R.drawable.visible,
                             checked = showHidden,
                         ) { viewMenu = false; onShowHiddenChange(!showHidden) }
+                        XpMenuDivider()
+                        XpMenuItem("Atualizar", R.drawable.refresh) { viewMenu = false; onRefresh() }
                     }
                 }
 
@@ -810,7 +815,6 @@ private fun XpHeader(
                     XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward, Modifier.weight(1f), compact = true)
                     XpClassicToolButton(R.drawable.home, "Início", true, onHome, Modifier.weight(1f), compact = true)
                     XpClassicToolButton(R.drawable.up, "Subir", true, onUp, Modifier.weight(1f), compact = true)
-                    XpClassicToolButton(R.drawable.refresh, "Atualizar", true, onRefresh, Modifier.weight(1f), compact = true)
                     XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch, Modifier.weight(1f), compact = true)
                     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         XpClassicToolButton(
@@ -1277,16 +1281,16 @@ private fun SectionTitle(title: String, icon: Int) {
 private fun HelpManualDialog(onDismiss: () -> Unit) {
     var expandedTopic by remember { mutableStateOf("Começando") }
     val topics = listOf(
-        "Começando" to "Use a barra superior para voltar, avançar, ir ao Início, subir uma pasta, atualizar, pesquisar, criar novos itens, abrir Downloads e acessar a Lixeira. Toque em um arquivo para abrir e segure para selecionar.",
+        "Começando" to "Use a barra superior para voltar, avançar, ir ao Início, subir uma pasta, pesquisar, criar novos itens, abrir Downloads e acessar a Lixeira. Atualizar fica no menu Exibir. Toque em um arquivo para abrir e segure para selecionar.",
         "Navegação" to "O campo Endereço funciona como caminho navegável. Toque em uma parte do caminho para voltar diretamente até ela. A seta ao lado do endereço permite trocar entre armazenamentos detectados.",
         "Arquivos e pastas" to "A lista e a grade mostram o tipo do arquivo, tamanho e outras informações úteis. O botão de opções abre ações como copiar, mover, renomear, excluir, compartilhar, favoritar e ver propriedades.",
         "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Downloads é temporariamente substituído por Colar.",
         "Compactar ZIP" to "Selecione um ou vários arquivos/pastas e use o atalho ZIP da barra de seleção. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
         "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A pasta interna e artefatos de lixeira do sistema ficam ocultos da navegação comum. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
-        "Armazenamento" to "O espaço livre e o percentual usado aparecem de forma compacta na barra inferior. Toque nessa área para abrir a análise completa. As porcentagens por categoria usam somente os arquivos acessíveis analisados; áreas protegidas do Android podem não entrar na soma. A Lixeira aparece separadamente.",
+        "Armazenamento" to "A barra inferior mostra espaço livre e percentual usado em uma faixa mais larga. Ao lado, a contagem da pasta soma arquivos, subpastas e tamanho acessível também dentro das subpastas. Toque no armazenamento para abrir a análise completa; áreas protegidas do Android podem não entrar na soma.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
         "Favoritos" to "Adicione arquivos ou pastas aos Favoritos pelo menu de opções. A lista fica disponível no menu Favoritos do cabeçalho.",
-        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. ZIP permite navegar por pastas internas, pesquisar, selecionar, visualizar itens e extrair para um destino escolhido. O player de vídeo oferece progresso, ±10 s, velocidade, tela cheia, Ajustar/Preencher e retomada de posição. Se um formato falhar ou não for suportado, use Abrir com outro aplicativo.",
+        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. O visualizador APK identifica quando o pacote já está instalado e usa o instalador do Android, pedindo a permissão de fonte desconhecida quando necessário. ZIP permite navegar, pesquisar, selecionar e extrair itens.",
         "Arquivos ocultos" to "No menu Exibir é possível mostrar ou ocultar arquivos ocultos. A pasta interna usada pela Lixeira continua protegida e não aparece na navegação comum.",
     )
 
@@ -1451,10 +1455,10 @@ private fun AboutDialog(
                     Spacer(Modifier.height(10.dp))
                     AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                         listOf(
-                            "O cartão grande de armazenamento saiu da tela principal; espaço livre e uso agora ficam na barra inferior.",
-                            "Toque no indicador de armazenamento da barra inferior para abrir a análise completa.",
-                            "A barra principal ganhou atalhos diretos para Atualizar e Novo, com criação rápida de pasta ou arquivo.",
-                            "Na seleção, Renomear, Compartilhar, Compactar em ZIP e Excluir ficam acessíveis sem depender de Mais.",
+                            "Atualizar saiu da barra de ícones e agora fica no menu Exibir, liberando espaço no topo.",
+                            "A barra inferior ganhou uma área maior para armazenamento e mostra livre + percentual usado em uma única linha.",
+                            "A contagem da pasta agora soma arquivos, subpastas e tamanho também dentro das subpastas, sem travar a interface.",
+                            "O visualizador APK corrige a detecção de apps instalados e abre diretamente o instalador do Android, incluindo a permissão para instalar desta fonte.",
                         ).forEach { change ->
                             Text("• $change", fontSize = 11.5.sp, color = Color(0xFF303030), lineHeight = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
                         }
@@ -2782,6 +2786,8 @@ private fun FileGrid(
 private fun ExplorerStatusBar(
     items: List<FileItem>,
     selectedPaths: Set<String>,
+    currentDir: File,
+    recursiveFolderStats: Boolean,
     storageInfo: StorageInfo,
     onStorageClick: () -> Unit,
 ) {
@@ -2791,14 +2797,44 @@ private fun ExplorerStatusBar(
         shownItems.asSequence().filterNot { it.isDirectory }.sumOf { it.size }
     }
     val formattedSize = remember(sizeBytes) { formatBytes(sizeBytes) }
-    val itemCount = items.size
-    val folderCount = remember(items) { items.count { it.isDirectory } }
-    val fileCount = itemCount - folderCount
     val single = selectedItems.singleOrNull()
     val usedPercent = remember(storageInfo.usedFraction) {
         (storageInfo.usedFraction * 100f).toInt().coerceIn(0, 100)
     }
     val freeText = remember(storageInfo.freeBytes) { formatBytes(storageInfo.freeBytes) }
+    val directStats = remember(items) {
+        FolderTreeStats(
+            files = items.count { !it.isDirectory },
+            folders = items.count { it.isDirectory },
+            bytes = items.asSequence().filterNot { it.isDirectory }.sumOf { it.size },
+        )
+    }
+    var folderStats by remember(currentDir.absolutePath, recursiveFolderStats) { mutableStateOf(directStats) }
+    var folderStatsLoading by remember(currentDir.absolutePath, recursiveFolderStats) { mutableStateOf(false) }
+    val contentRevision = remember(items) {
+        items.fold(17L) { acc, item ->
+            (acc * 31L) xor item.modifiedAt xor item.size xor item.name.hashCode().toLong()
+        }
+    }
+    LaunchedEffect(currentDir.absolutePath, contentRevision, recursiveFolderStats) {
+        folderStats = directStats
+        if (recursiveFolderStats && currentDir.exists() && currentDir.isDirectory) {
+            folderStatsLoading = true
+            try {
+                folderStats = scanFolderTreeStats(currentDir)
+            } finally {
+                folderStatsLoading = false
+            }
+        } else {
+            folderStatsLoading = false
+        }
+    }
+
+    val selectedDirectory = single?.file?.takeIf { it.isDirectory }
+    var selectedDirectoryStats by remember(selectedDirectory?.absolutePath) { mutableStateOf<FolderTreeStats?>(null) }
+    LaunchedEffect(selectedDirectory?.absolutePath, selectedDirectory?.lastModified()) {
+        selectedDirectoryStats = selectedDirectory?.let { scanFolderTreeStats(it) }
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -2811,9 +2847,18 @@ private fun ExplorerStatusBar(
     ) {
         Text(
             text = when {
+                single?.isDirectory == true && selectedDirectoryStats != null -> {
+                    val stats = selectedDirectoryStats!!
+                    "1 pasta • ${stats.files} arquivos • ${stats.folders} subpastas • ${formatBytes(stats.bytes)}"
+                }
                 single != null -> "1 selecionado • ${single.typeLabel}"
                 selectedItems.isNotEmpty() -> if (sizeBytes > 0L) "${selectedItems.size} selecionados • $formattedSize" else "${selectedItems.size} selecionados"
-                else -> "$itemCount ${if (itemCount == 1) "item" else "itens"} • $folderCount ${if (folderCount == 1) "pasta" else "pastas"} • $fileCount arquivos"
+                else -> {
+                    val stats = folderStats
+                    "${stats.files} ${if (stats.files == 1) "arquivo" else "arquivos"} • " +
+                        "${stats.folders} ${if (stats.folders == 1) "pasta" else "pastas"} • " +
+                        if (folderStatsLoading) "calculando…" else formatBytes(stats.bytes)
+                }
             },
             color = Color(0xFF303030),
             fontSize = 10.5.sp,
@@ -2828,8 +2873,9 @@ private fun ExplorerStatusBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxHeight()
+                    .widthIn(min = 150.dp)
                     .clickable(onClick = onStorageClick)
-                    .padding(horizontal = 7.dp),
+                    .padding(horizontal = 8.dp),
             ) {
                 CachedResourceIcon(
                     resId = R.drawable.drive_hdd,
@@ -2838,21 +2884,14 @@ private fun ExplorerStatusBar(
                     contentScale = ContentScale.Fit,
                 )
                 Spacer(Modifier.width(5.dp))
-                Column(verticalArrangement = Arrangement.Center) {
-                    Text(
-                        if (storageInfo.totalBytes > 0L) "$freeText livres" else "Armazenamento",
-                        color = Color(0xFF303030),
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                    Text(
-                        if (storageInfo.totalBytes > 0L) "$usedPercent% usado" else "calculando…",
-                        color = XpBlueDark,
-                        fontSize = 8.5.sp,
-                        maxLines = 1,
-                    )
-                }
+                Text(
+                    if (storageInfo.totalBytes > 0L) "$freeText livres • $usedPercent% usado" else "Armazenamento • calculando…",
+                    color = Color(0xFF303030),
+                    fontSize = 9.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         } else {
             val trailing = when {
@@ -2873,6 +2912,35 @@ private fun ExplorerStatusBar(
             }
         }
     }
+}
+
+private data class FolderTreeStats(
+    val files: Int,
+    val folders: Int,
+    val bytes: Long,
+)
+
+private suspend fun scanFolderTreeStats(root: File): FolderTreeStats = withContext(Dispatchers.IO) {
+    var files = 0
+    var folders = 0
+    var bytes = 0L
+    val pending = ArrayDeque<File>()
+    runCatching { root.listFiles() }.getOrNull().orEmpty().forEach(pending::addLast)
+    var visited = 0
+
+    while (pending.isNotEmpty()) {
+        if ((visited++ and 127) == 0) currentCoroutineContext().ensureActive()
+        val entry = pending.removeLast()
+        if (entry.isDirectory) {
+            if (entry.name == ".ExploradorXP_Lixeira") continue
+            folders++
+            runCatching { entry.listFiles() }.getOrNull().orEmpty().forEach(pending::addLast)
+        } else if (entry.isFile) {
+            files++
+            bytes += entry.length().coerceAtLeast(0L)
+        }
+    }
+    FolderTreeStats(files = files, folders = folders, bytes = bytes)
 }
 
 @Composable

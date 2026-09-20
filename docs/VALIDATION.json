@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.46",
-  "version_code": 46,
-  "manager_version": "0.1.0-alpha.46",
-  "manager_code": 46,
+  "version_build": "0.1.0-alpha.48",
+  "version_code": 48,
+  "manager_version": "0.1.0-alpha.48",
+  "manager_code": 48,
   "checks": {
     "version_sync": {
       "ok": true,
@@ -275,6 +275,22 @@
         "delete",
         "more"
       ]
+    },
+    "alpha48_main_status_apk": {
+      "ok": true,
+      "changes": [
+        "refresh moved from main toolbar/file menu to Exibir menu",
+        "storage status widened and compacted to one line",
+        "recursive current-folder file/folder/byte summary calculated off the UI thread",
+        "APK installed-package detection enabled with package visibility",
+        "APK install flow uses Android package installer and unknown-source settings when required"
+      ],
+      "manifest_permissions": [
+        "android.permission.REQUEST_INSTALL_PACKAGES",
+        "android.permission.QUERY_ALL_PACKAGES"
+      ],
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project still has no gradlew and this environment has no Android Gradle toolchain configured."
     }
   },
   "validated_at_utc": "2026-09-20T04:51:20.022734+00:00",

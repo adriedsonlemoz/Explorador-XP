@@ -2,13 +2,19 @@ package com.exploradorxp.app
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.content.Intent
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.provider.Settings
 import android.widget.MediaController
+import android.widget.Toast
 import android.widget.VideoView
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -61,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.compose.BackHandler
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -444,8 +451,39 @@ private fun PdfViewer(file: File) {
 @Composable
 private fun ApkViewer(file: File, onInstall: () -> Unit) {
     val context = LocalContext.current
-    val key = "${file.absolutePath}:${file.lastModified()}"
+    var resumeRevision by remember(file.absolutePath) { mutableIntStateOf(0) }
+    val key = "${file.absolutePath}:${file.lastModified()}:$resumeRevision"
     var loadState by remember(key) { mutableStateOf<ViewerLoadState<ApkInfo>>(ViewerLoadState.Loading) }
+
+    val installerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        resumeRevision++
+    }
+
+    val unknownSourcesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()) {
+            runCatching { installerLauncher.launch(apkInstallerIntent(context, file)) }.onFailure {
+                Toast.makeText(context, "Não foi possível abrir o instalador do Android.", Toast.LENGTH_SHORT).show()
+                onInstall()
+            }
+        } else {
+            Toast.makeText(context, "Permita instalar apps desta fonte e tente novamente.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun requestInstall() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+            val settingsIntent = Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:${context.packageName}"),
+            )
+            unknownSourcesLauncher.launch(settingsIntent)
+        } else {
+            runCatching { installerLauncher.launch(apkInstallerIntent(context, file)) }.onFailure {
+                Toast.makeText(context, "Não foi possível abrir o instalador do Android.", Toast.LENGTH_SHORT).show()
+                onInstall()
+            }
+        }
+    }
 
     LaunchedEffect(key) {
         loadState = withContext(Dispatchers.IO) {
@@ -458,7 +496,21 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
                     it.publicSourceDir = file.absolutePath
                 }
                 val packageName = info.packageName
-                val installedInfo = runCatching { pm.getPackageInfo(packageName, 0) }.getOrNull()
+                val installedInfo = runCatching {
+                    if (Build.VERSION.SDK_INT >= 33) {
+                        pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        pm.getPackageInfo(packageName, 0)
+                    }
+                }.getOrNull()
+                val apkVersionCode = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+                val installedVersionCode = installedInfo?.let {
+                    if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else {
+                        @Suppress("DEPRECATION")
+                        it.versionCode.toLong()
+                    }
+                }
                 val iconBitmap = runCatching {
                     appInfo?.loadIcon(pm)?.toBitmap(width = 144, height = 144, config = Bitmap.Config.ARGB_8888)
                 }.getOrNull()
@@ -466,10 +518,12 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
                     appName = runCatching { appInfo?.loadLabel(pm)?.toString() }.getOrNull().orEmpty().ifBlank { file.nameWithoutExtension },
                     packageName = packageName,
                     versionName = info.versionName ?: "Desconhecida",
-                    versionCode = if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode.toString() else info.versionCode.toString(),
+                    versionCode = apkVersionCode.toString(),
                     minSdk = appInfo?.minSdkVersion,
                     targetSdk = appInfo?.targetSdkVersion,
                     installedVersion = installedInfo?.versionName,
+                    installedVersionCode = installedVersionCode,
+                    canLaunchInstalled = runCatching { pm.getLaunchIntentForPackage(packageName) != null }.getOrDefault(false),
                     iconBitmap = iconBitmap,
                 )
             }.fold(
@@ -499,6 +553,8 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
                 Text(file.name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Spacer(Modifier.height(8.dp))
                 Text(state.message, color = XpTextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(14.dp))
+                ViewerActionButton("Tentar instalar", onClick = ::requestInstall)
             }
             is ViewerLoadState.Success -> {
                 val info = state.value
@@ -548,10 +604,28 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
                     InfoLine("Android alvo", info.targetSdk?.let { "API $it" } ?: "-")
                     InfoLine("Tamanho", formatViewerBytes(file.length()))
                 }
+                Spacer(Modifier.height(18.dp))
+                val apkCode = info.versionCode.toLongOrNull()
+                val installLabel = when {
+                    info.installedVersionCode == null -> "Instalar"
+                    apkCode != null && info.installedVersionCode < apkCode -> "Atualizar aplicativo"
+                    apkCode != null && info.installedVersionCode == apkCode -> "Reinstalar"
+                    else -> "Instalar esta versão"
+                }
+                ViewerActionButton(installLabel, onClick = ::requestInstall)
+                if (info.installedVersion != null && info.canLaunchInstalled) {
+                    Spacer(Modifier.height(8.dp))
+                    ViewerActionButton("Abrir aplicativo") {
+                        val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
+                        if (launchIntent != null) {
+                            context.startActivity(launchIntent)
+                        } else {
+                            Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(18.dp))
-        ViewerActionButton("Instalar / Abrir com sistema", onClick = onInstall)
     }
 }
 
@@ -623,8 +697,19 @@ private data class ApkInfo(
     val minSdk: Int?,
     val targetSdk: Int?,
     val installedVersion: String?,
+    val installedVersionCode: Long?,
+    val canLaunchInstalled: Boolean,
     val iconBitmap: Bitmap?,
 )
+
+private fun apkInstallerIntent(context: Context, file: File): Intent {
+    require(file.exists() && file.isFile) { "O APK não existe mais." }
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    return Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "application/vnd.android.package-archive")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+}
 
 private fun renderPdfPage(file: File, pageIndex: Int): PdfPageData {
     ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
