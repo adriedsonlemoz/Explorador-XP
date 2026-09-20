@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.1.0-alpha.47
+
+- Corrigido o erro de compilação em `ArchiveViewer.kt`: a faixa horizontal de ações do visualizador ZIP usava `horizontalScroll(...)` sem importar a extensão `androidx.compose.foundation.horizontalScroll`.
+- As melhorias visuais de **Info**, **Verificar**, **Extrair** e **Ordenar** foram preservadas; nenhuma funcionalidade foi removida para contornar o erro.
+- Mantidas as mudanças da alpha.46 na tela principal, barra inferior de armazenamento e ações rápidas de seleção.
+- Assinatura permanente e `applicationId` preservados; versão sincronizada para `0.1.0-alpha.47` / `versionCode 47`.
+
 ## 0.1.0-alpha.46
 
 - Removido o cartão grande de armazenamento da tela principal; espaço livre e percentual usado agora aparecem de forma compacta e clicável na barra inferior.

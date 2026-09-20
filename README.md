@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.46` (`versionCode 46`)  
+**Versão atual:** `0.1.0-alpha.47` (`versionCode 47`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,6 +14,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.47 corrige a compilação do visualizador ZIP após o polimento visual da alpha.45: foi restaurado o import de `horizontalScroll` usado na faixa de ações **Info / Verificar / Extrair / Ordenar**, sem remover as melhorias da alpha.46.
 - A alpha.46 simplifica a **tela principal**: o cartão grande de armazenamento foi removido e espaço livre/uso passaram para a barra inferior clicável; a toolbar ganhou **Atualizar** e **Novo** (pasta/arquivo), enquanto a barra de seleção expõe Renomear, Compartilhar, ZIP e Excluir diretamente, reduzindo a dependência de **Mais**.
 - Interface principal baseada no Explorer clássico do Windows XP: barra de título azul, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, barra de ferramentas compacta, barra de endereço, indicador de armazenamento, lista/grade e barra de status inferior.
 - Pacote visual XP com ícones PNG otimizados por densidade Android; os 150 ícones comuns usados na navegação ficam em `drawable-xxxhdpi`, com variantes grandes apenas onde necessário.
