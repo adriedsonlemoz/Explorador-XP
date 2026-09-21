@@ -1309,7 +1309,7 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
         "Armazenamento" to "A barra inferior mostra espaço livre e percentual usado em uma faixa mais larga. Ao lado, a contagem da pasta soma arquivos, subpastas e tamanho acessível também dentro das subpastas. Toque no armazenamento para abrir a análise completa; áreas protegidas do Android podem não entrar na soma.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
         "Favoritos" to "Adicione arquivos ou pastas aos Favoritos pelo menu de opções. A lista fica disponível no menu Favoritos do cabeçalho.",
-        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. O visualizador APK identifica quando o pacote já está instalado e usa o instalador do Android, pedindo a permissão de fonte desconhecida quando necessário. ZIP permite navegar, pesquisar, selecionar e extrair itens.",
+        "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. O visualizador APK compara a versão instalada, assinatura, Android/CPU e permissões antes de chamar o instalador do sistema; a permissão de fonte desconhecida é guiada quando necessária. ZIP permite navegar, pesquisar, selecionar e extrair itens.",
         "Arquivos ocultos" to "No menu Exibir é possível mostrar ou ocultar arquivos ocultos. A pasta interna usada pela Lixeira continua protegida e não aparece na navegação comum.",
     )
 
@@ -1488,10 +1488,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "O navegador ZIP agora calcula tamanho e conteúdo de pastas internas, inclusive quando o ZIP não grava entradas explícitas de pasta.",
-                    "O caminho virou uma trilha navegável e a pesquisa mostra onde cada resultado está dentro do arquivo compactado.",
-                    "Seleção ganhou Selecionar tudo, Inverter, tamanho total selecionado e extração parcial mais clara.",
-                    "Pré-visualizações grandes exibem progresso, podem ser canceladas e reutilizam cache temporário seguro.",
+                    "O instalador de APK agora compara claramente a versão do arquivo com a versão instalada.",
+                    "Compatibilidade de Android e processador é verificada antes de abrir o instalador do sistema.",
+                    "Assinaturas SHA-256 do APK e do app instalado são comparadas para detectar atualizações incompatíveis.",
+                    "Permissões declaradas, arquiteturas, SDK e dados técnicos podem ser consultados antes de instalar.",
                 ).forEach { change ->
                     Text(
                         "• $change",

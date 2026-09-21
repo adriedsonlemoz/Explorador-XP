@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.59` (`versionCode 59`)  
+**Versão atual:** `0.1.0-alpha.60` (`versionCode 60`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,6 +14,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.60 renova o **instalador/inspector de APK**: compara versão instalada × APK, valida compatibilidade de Android e ABI, compara assinatura SHA-256 quando há app instalado, lista permissões declaradas, mostra arquiteturas e bloqueia tentativas claramente incompatíveis antes de abrir o instalador do sistema.
 - A alpha.59 evolui o **navegador ZIP**: cria um índice hierárquico único com pastas implícitas, tamanho/contagem recursivos por pasta, breadcrumb clicável, pesquisa com caminho do resultado, seleção rápida com tamanho real selecionado, barra de status do nível atual e pré-visualização com progresso/cancelamento e cache temporário reutilizável.
 - A alpha.58 adiciona **Pausar / Continuar** às operações longas de copiar, mover, excluir e Lixeira. A pausa é cooperativa e acontece entre arquivos e entre blocos de 256 KiB durante cópias, sem cancelar nem reiniciar a operação; velocidade e ETA desconsideram o tempo em que a tarefa ficou pausada, e **Cancelar** continua disponível mesmo durante a pausa.
 - A alpha.57 melhora as operações de arquivos com progresso por bytes, velocidade e tempo restante em cópia/movimentação, além de tratamento explícito de conflitos com **Substituir / Ignorar / Manter ambos** e opção de aplicar a decisão aos próximos conflitos. O visualizador de imagens agora permite navegar por **Anterior/Próxima** ou gesto lateral sem sair da tela, usando somente as imagens da pasta que estava aberta no Explorer e respeitando a ordenação atual.
@@ -51,7 +52,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 - Arquivos e pastas ganharam identificação textual consistente de tipo em lista, grade, status, Lixeira e visualizadores (por exemplo, **Imagem JPEG**, **Documento PDF** e **Aplicativo Android (APK)**).
 - A toolbar ganhou acesso direto à Lixeira no lugar da ação duplicada **Exibir**; Ajuda foi reorganizada em tópicos expansíveis e Sobre reúne versão, desenvolvedor, PIX copiável e novidades da versão.
 - Imagens e vídeos agora podem mostrar miniaturas assíncronas em lista/grade com cache LRU limitado; os ícones XP originais continuam sendo o fallback e permanecem inalterados para os demais tipos.
-- ZIP agora funciona como navegador de compactados, com pastas internas, pesquisa, ordenação, seleção, extração total/parcial, destino configurável, progresso, senha e verificação de integridade; TXT/código usa o editor interno da alpha.35 com histórico, busca/substituição, números de linha, codificação e salvamento seguro; APK mostra nome/ícone/metadados reais quando o Android consegue ler o pacote.
+- ZIP agora funciona como navegador de compactados, com pastas internas, pesquisa, ordenação, seleção, extração total/parcial, destino configurável, progresso, senha e verificação de integridade; TXT/código usa o editor interno da alpha.35 com histórico, busca/substituição, números de linha, codificação e salvamento seguro; APK mostra nome/ícone, versão instalada × arquivo, SDK, arquiteturas, assinatura SHA-256, permissões e compatibilidade antes de encaminhar ao instalador do Android.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
 - Histórico de navegação com Voltar e Avançar, além da ação Subir.

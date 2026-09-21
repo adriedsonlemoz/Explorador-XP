@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.59",
-  "version_code": 59,
-  "manager_version": "0.1.0-alpha.59",
-  "manager_code": 59,
+  "version_build": "0.1.0-alpha.60",
+  "version_code": 60,
+  "manager_version": "0.1.0-alpha.60",
+  "manager_code": 60,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.58",
-      "code": 58
+      "version": "0.1.0-alpha.60",
+      "code": 60
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -413,6 +413,40 @@
       "generated_art_or_mockups": false,
       "full_android_build_executed": false,
       "full_android_build_reason": "Project has no gradlew and this environment has no configured Android SDK/Gradle toolchain. FileOperationPlan pause/resume was compiled and executed with kotlinc/JVM."
+    },
+    "alpha60_apk_installer": {
+      "ok": true,
+      "focus": [
+        "installed version versus APK versionCode comparison",
+        "minSdk versus device API compatibility",
+        "native ABI extraction from lib/<ABI>/*.so and device ABI comparison",
+        "APK versus installed signing certificate SHA-256 comparison",
+        "requested permission inventory with dangerous protection classification",
+        "unknown-source permission flow and automatic continuation",
+        "installed-app management refresh"
+      ],
+      "behavior": [
+        "new install, upgrade and same-version reinstall remain installable when otherwise compatible",
+        "direct downgrade is blocked and points the user to Manage app",
+        "signature mismatch with an installed package is blocked before invoking Package Installer",
+        "Android/API or ABI incompatibility is shown before install",
+        "APK without native libraries passes the CPU compatibility check",
+        "full signer SHA-256 digests are available in technical details"
+      ],
+      "files_added": [
+        "app/src/main/java/com/exploradorxp/app/ApkInspector.kt",
+        "app/src/main/java/com/exploradorxp/app/ApkInspectorSupport.kt",
+        "app/src/test/java/com/exploradorxp/app/ApkInspectorSupportTest.kt",
+        "docs/ALPHA60_APK_INSTALLER.md"
+      ],
+      "pure_jvm_smoke": "ApkInspectorSupport.kt compiled and a synthetic APK ZIP verified version relation, signer relation, arm64-v8a/armeabi-v7a extraction, ABI compatibility and known SHA-256.",
+      "android_api_stub_compile": "ApkInspector.kt compiled with Kotlin/JVM against minimal Android API stubs including PackageInfoFlags and PermissionInfoFlags overloads.",
+      "internal_viewer_parser_smoke": "No expecting/unclosed/unexpected-token diagnostics; unresolved Android/Compose references are expected without Android classpath.",
+      "images_created_or_modified": false,
+      "image_resources_unchanged_from_alpha59": "172 image files byte-identical.",
+      "apk_workflows_unchanged_from_alpha59": true,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain."
     }
   },
   "validated_at_utc": "2026-09-21T18:38:35.899574+00:00",
@@ -832,6 +866,24 @@
       "app/build.gradle.kts",
       "app/src/main/java/com/exploradorxp/app/ArchiveManager.kt",
       "app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha60_against_alpha59": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/ApkInspector.kt",
+      "app/src/main/java/com/exploradorxp/app/ApkInspectorSupport.kt",
+      "app/src/test/java/com/exploradorxp/app/ApkInspectorSupportTest.kt",
+      "docs/ALPHA60_APK_INSTALLER.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "README.md",
       "CHANGELOG.md",

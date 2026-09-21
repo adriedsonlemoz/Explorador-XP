@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.1.0-alpha.60
+
+- Renovado o visualizador/instalador de APK para fazer uma inspeção mais completa antes de chamar o instalador do Android.
+- Comparação entre **versão do APK** e **versão instalada** agora mostra versão e `versionCode`, distinguindo instalação nova, atualização, reinstalação e downgrade.
+- Adicionada verificação de compatibilidade com o Android atual usando `minSdk`, além de leitura das arquiteturas nativas (`lib/<ABI>/*.so`) do APK e comparação com as ABIs suportadas pelo aparelho.
+- Assinaturas do APK e do aplicativo instalado passam a ser lidas com `GET_SIGNING_CERTIFICATES`/fallback legado e exibidas como SHA-256; atualizações com assinatura incompatível são sinalizadas antes da tentativa de instalação.
+- O painel agora lista as permissões declaradas pelo APK, usando os rótulos do Android quando disponíveis e destacando permissões classificadas como perigosas pelo sistema.
+- Criadas seções de **Versões**, **Compatibilidade e segurança**, **Detalhes técnicos**, **Permissões solicitadas** e **Ações**, mantendo o visual do Explorador XP.
+- O botão de instalar fica indisponível quando o APK é claramente incompatível com a versão do Android, ABI do aparelho, assinatura do pacote instalado ou quando representa downgrade direto; **Gerenciar app** abre a tela do Android para o usuário decidir sobre a versão instalada.
+- A autorização **Permitir instalação nesta fonte** ganhou ação própria; se a instalação tiver sido iniciada antes de conceder a permissão, ela continua automaticamente ao voltar para o Explorador XP.
+- Ao voltar de **Gerenciar app**, o painel é reanalisado para refletir instalação/desinstalação ou outras mudanças no pacote.
+- Adicionados `ApkInspector.kt`, `ApkInspectorSupport.kt` e testes JVM para relação de versões, assinatura, ABIs e SHA-256.
+- Nenhuma imagem ou mockup foi criada ou modificada.
+- README, tela Sobre, documentação, validações e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.60` / `versionCode 60`.
+
 ## 0.1.0-alpha.59
 
 - O visualizador ZIP passa a montar um índice hierárquico reutilizável ao abrir o arquivo, incluindo pastas implícitas que não possuem uma entrada de diretório própria.
