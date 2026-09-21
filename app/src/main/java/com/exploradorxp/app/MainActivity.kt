@@ -119,10 +119,21 @@ class MainActivity : ComponentActivity() {
         if (sourceIntent?.action != Intent.ACTION_VIEW) return
         val uri = sourceIntent.data ?: return
         if (sourceIntent.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION != 0) {
-            val takeFlags = sourceIntent.flags and
-                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            if (takeFlags != 0) {
-                runCatching { contentResolver.takePersistableUriPermission(uri, takeFlags) }
+            val canRead = sourceIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0
+            val canWrite = sourceIntent.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION != 0
+            when {
+                canRead && canWrite -> runCatching {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                    )
+                }
+                canRead -> runCatching {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                canWrite -> runCatching {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
             }
         }
         externalOpenSequence += 1

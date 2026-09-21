@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.63",
-  "version_code": 63,
-  "manager_version": "0.1.0-alpha.63",
-  "manager_code": 63,
+  "version_build": "0.1.0-alpha.64",
+  "version_code": 64,
+  "manager_version": "0.1.0-alpha.64",
+  "manager_code": 64,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.63",
-      "code": 63
+      "version": "0.1.0-alpha.64",
+      "code": 64
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -78,7 +78,7 @@
     "full_gradle_android_build": {
       "ok": false,
       "executed": false,
-      "reason": "O projeto não inclui gradlew e este ambiente não possui Android SDK/Gradle Android configurados. Foram executados compile-smokes Kotlin direcionados e validações estruturais."
+      "reason": "O projeto nao inclui gradlew e este ambiente nao possui Gradle/Android SDK configurados. O log do GitHub Actions fornecido confirma compileDebugKotlin e testDebugUnitTest bem-sucedidos na alpha.63; a alpha.64 altera apenas o uso das flags persistiveis e metadados."
     },
     "trash_ui_refinement": {
       "ok": true,
@@ -502,6 +502,45 @@
       "generated_art_or_mockups": false,
       "full_android_build_executed": false,
       "full_android_build_reason": "Project has no gradlew and this environment has no configured Android SDK/Gradle Android toolchain."
+    },
+    "ci_log_alpha64_fix": {
+      "ok": true,
+      "source": "Gerar-APK-61-logs.zip",
+      "compile_debug_kotlin": "successful",
+      "unit_tests": "BUILD SUCCESSFUL",
+      "lint_blocking_errors": 1,
+      "reported_error": "MainActivity.kt:125 WrongConstant em ContentResolver.takePersistableUriPermission",
+      "patch": "substituida flag mascarada/dinamica por chamadas explicitas READ, WRITE ou READ|WRITE",
+      "suppress_lint_used": false
+    },
+    "alpha64_structural_validation": {
+      "ok": true,
+      "json_files": {
+        "count": 3,
+        "errors": []
+      },
+      "xml_files": {
+        "count": 11,
+        "errors": []
+      },
+      "yaml_files": {
+        "count": 2,
+        "errors": []
+      },
+      "kotlin_parser": {
+        "syntax_markers": [],
+        "note": "MainActivity.kt sem marcadores expecting/unclosed/unexpected-token; referencias Android/Compose ficam irresolvidas sem classpath Android."
+      },
+      "images_unchanged_from_alpha63": {
+        "ok": true,
+        "project_image_files": 172
+      },
+      "workflows_unchanged_from_alpha63": {
+        "ok": true,
+        "count": 2
+      },
+      "application_id": "com.exploradorxp.app",
+      "wrongconstant_suppression_used": false
     }
   },
   "validated_at_utc": "2026-09-21T22:25:51Z",

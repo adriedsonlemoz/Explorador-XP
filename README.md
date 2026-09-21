@@ -2,7 +2,9 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.63` (`versionCode 63`)  
+**Versão atual:** `0.1.0-alpha.64` (`versionCode 64`)  
+
+- A alpha.64 corrige o bloqueio de Lint `WrongConstant` no fluxo **Abrir com**: permissões persistentes de leitura/escrita agora são solicitadas somente com combinações explícitas aceitas pela API Android, mantendo todo o modo de arquivos grandes da alpha.63.
 
 ### Assinatura permanente dos APKs
 

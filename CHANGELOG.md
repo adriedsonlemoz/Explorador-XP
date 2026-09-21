@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.1.0-alpha.64
+
+- Corrigido o erro de Lint `WrongConstant` em `MainActivity.updateExternalOpenRequest()` relatado no `Gerar-APK-61-logs.zip`.
+- A persistência de permissões do fluxo **Abrir com** agora chama `takePersistableUriPermission()` com combinações explícitas e válidas de `FLAG_GRANT_READ_URI_PERMISSION` e `FLAG_GRANT_WRITE_URI_PERMISSION`, sem mascarar/silenciar o Lint.
+- Mantido o comportamento da alpha.63 para arquivos grandes, editor, quebra de linha e gravação externa.
+- `applicationId`/namespace preservados como `com.exploradorxp.app`.
+- Versão sincronizada para `0.1.0-alpha.64` / `versionCode 64`.
+
 ## 0.1.0-alpha.63
 
 - Arquivos de texto/código acima de 750 KB deixam de abrir apenas como prévia truncada: entra em ação o novo **Modo arquivo grande** paginado.
