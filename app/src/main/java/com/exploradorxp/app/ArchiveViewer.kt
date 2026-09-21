@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -836,7 +835,7 @@ private fun ArchiveProgressDialog(
     onCancel: () -> Unit,
 ) {
     Dialog(onDismissRequest = { if (cancellable) onCancel() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().background(Color(0x99000000)).safeDrawingPadding(), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(Color(0x99000000)).padding(12.dp), contentAlignment = Alignment.Center) {
             Column(
                 modifier = Modifier.fillMaxWidth(0.92f).widthIn(max = 560.dp).background(Color(0xFFF8F8F2)).border(1.dp, XpBorder).padding(14.dp),
             ) {
@@ -867,7 +866,7 @@ private fun ArchiveFolderPickerDialog(initial: File, onDismiss: () -> Unit, onCh
         runCatching { current.listFiles()?.filter { it.isDirectory && !it.name.startsWith(".") }?.sortedBy { it.name.lowercase(Locale.getDefault()) }.orEmpty() }.getOrDefault(emptyList())
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().background(Color(0x99000000)).safeDrawingPadding(), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(Color(0x99000000)).padding(12.dp), contentAlignment = Alignment.Center) {
             Column(
                 modifier = Modifier.fillMaxWidth(0.94f).heightIn(max = 620.dp).background(Color(0xFFF8F8F2)).border(1.dp, XpBorder).padding(12.dp),
             ) {

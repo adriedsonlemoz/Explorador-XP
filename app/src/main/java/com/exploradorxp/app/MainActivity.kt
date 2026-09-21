@@ -88,8 +88,8 @@ class MainActivity : ComponentActivity() {
                     surface = XpSurface,
                 )
             ) {
-                // PaddingValues preserva os insets para janelas Dialog filhas; safeDrawingPadding
-                // aqui consumia os insets e fazia modais edge-to-edge perderem a margem inferior.
+                // A raiz do app respeita as áreas seguras do sistema. Dialogs usam a área útil
+                // fornecida pela própria Window do Android e não reaplicam esses insets.
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

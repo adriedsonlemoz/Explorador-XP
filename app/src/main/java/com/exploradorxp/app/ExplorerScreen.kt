@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -1473,10 +1472,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Copiar, mover, excluir e Lixeira agora reutilizam um único plano da árvore, reduzindo leituras repetidas do armazenamento.",
-                    "Movimentações rápidas por renameTo reaproveitam a contagem já preparada, sem percorrer novamente toda a pasta.",
-                    "A cópia usa buffer maior e cancelamento periódico para reduzir overhead em operações com muitos arquivos.",
-                    "Novas entradas da Lixeira guardam tamanho total e quantidade de itens para reabrir mais rapidamente.",
+                    "Janelas grandes e diálogos agora ficam centralizados de forma simétrica na área útil do aplicativo.",
+                    "Removido o inset duplicado que deslocava Sobre, Ajuda, Lixeira e outras janelas para baixo.",
+                    "Ícones de Movies, Music e Pictures/DCIM foram corrigidos na origem, sem partes cortadas nas bordas.",
+                    "Mantida a área segura dos ícones e o enquadramento proporcional na lista e na grade.",
                 ).forEach { change ->
                     Text(
                         "• $change",
@@ -1539,7 +1538,6 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0x66000000))
-                .safeDrawingPadding()
                 .padding(12.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -1635,11 +1633,14 @@ internal fun XpModalWindow(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        // Dialog já recebe do Android uma área útil ajustada às barras do sistema.
+        // Aplicar safeDrawingPadding() de novo deslocava a janela para baixo em aparelhos
+        // edge-to-edge. O padding abaixo é propositalmente simétrico para manter o centro
+        // visual dentro da área do aplicativo.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0x99000000))
-                .safeDrawingPadding()
                 .padding(horizontal = 12.dp, vertical = 14.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -1693,7 +1694,6 @@ internal fun XpDialogFrame(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0x66000000))
-                .safeDrawingPadding()
                 .padding(12.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -2515,7 +2515,7 @@ private fun FileContextDialog(
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
         ) {
             Column(
                 modifier = Modifier
@@ -2563,7 +2563,7 @@ private fun FolderContextDialog(
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
         ) {
             Column(
                 modifier = Modifier

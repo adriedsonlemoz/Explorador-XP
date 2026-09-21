@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.54",
-  "version_code": 54,
-  "manager_version": "0.1.0-alpha.54",
-  "manager_code": 54,
+  "version_build": "0.1.0-alpha.55",
+  "version_code": 55,
+  "manager_version": "0.1.0-alpha.55",
+  "manager_code": 55,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.54",
-      "code": 54
+      "version": "0.1.0-alpha.55",
+      "code": 55
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -543,6 +543,22 @@
       "images_created_or_modified": false,
       "full_android_build_executed": false,
       "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain."
+    },
+    "alpha55_modal_centering_and_icons": {
+      "ok": true,
+      "dialog_root_cause": "Compose Dialog already receives a system-bar adjusted content area; safeDrawingPadding was applied again inside the dialog host, producing a second inset and a visible downward shift on edge-to-edge devices.",
+      "dialog_fix": [
+        "removed dialog-level safeDrawingPadding from shared XpModalWindow and XpDialogFrame",
+        "applied same rule to transfer/context/editor/archive dialogs",
+        "kept symmetric outer padding and centered alignment"
+      ],
+      "icon_root_cause": "folder_videos.png, folder_music.png and folder_images.png were already visually truncated inside the source bitmap; layout scaling could not restore missing content.",
+      "icon_fix": "rebuilt the three category folder resources from existing project XP assets only, with complete overlays and safe margins",
+      "generated_art_or_mockups": false,
+      "icon_dimensions": "192x192",
+      "icon_alpha_bounds": "11,11–181,181",
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain."
     }
   },
   "source_diff_alpha51_against_alpha50": {
@@ -608,6 +624,26 @@
       "app/build.gradle.kts",
       "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha55_against_alpha54": {
+    "added": [
+      "docs/ALPHA55_UI_CENTERING_AND_ICONS.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt",
+      "app/src/main/res/drawable-xxxhdpi/folder_videos.png",
+      "app/src/main/res/drawable-xxxhdpi/folder_music.png",
+      "app/src/main/res/drawable-xxxhdpi/folder_images.png",
       "README.md",
       "CHANGELOG.md",
       "docs/VALIDATION.json",

@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.1.0-alpha.55
+
+- Corrigida a centralização vertical das janelas modais: o `Dialog` do Android já entrega uma área útil ajustada às barras do sistema, e o app reaplicava `safeDrawingPadding()`, criando um segundo inset e deslocando visualmente as janelas para baixo.
+- **Ajuda, Sobre, Lixeira, Armazenamento e Informações do dispositivo** agora usam padding externo simétrico e ficam centralizadas na área útil real do aplicativo.
+- A mesma correção de inset duplicado foi aplicada aos diálogos menores de transferência, menus contextuais, editor de texto/código e operações de ZIP para manter comportamento consistente.
+- Confirmado que o corte de **Movies, Music e Pictures/DCIM** não era apenas de `ContentScale`: os próprios PNGs `folder_videos`, `folder_music` e `folder_images` continham o elemento sobreposto truncado na borda.
+- Esses três recursos foram reconstruídos usando somente o `folder.png` e os glifos XP já existentes (`videos.png`, `music.png`, `pictures.png`), preservando identidade, proporção e margem sem gerar arte nova.
+- Mantido `ContentScale.Fit` e a área segura interna do `FileVisual`, agora trabalhando com recursos que possuem conteúdo completo.
+- README, CHANGELOG, validações e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.55` / `versionCode 55`.
+
 ## 0.1.0-alpha.54
 
 - Segunda etapa da otimização estrutural de desempenho, focada em **copiar, mover, excluir e Lixeira**.
