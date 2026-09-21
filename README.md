@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.51` (`versionCode 51`)  
+**Versão atual:** `0.1.0-alpha.52` (`versionCode 52`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,6 +14,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.52 padroniza as janelas maiores do app: **Ajuda, Sobre, Lixeira, Armazenamento e Informações do dispositivo** passam a ficar centralizadas dentro da área segura, com altura limitada, conteúdo rolável e rodapé fixo, deixando visível onde cada janela termina.
 - A alpha.51 integra o Explorador XP ao **Abrir com** do Android somente para formatos que o app realmente consegue tratar. Arquivos recebidos por `content://` são validados, copiados para uma área temporária privada e abertos diretamente no leitor interno; ZIP, PDF, APK, textos/código, imagens, áudio e vídeo compatíveis podem ser recebidos sem registrar MIME coringa. Arquivos externos de texto entram em leitura segura para não editar apenas uma cópia temporária.
 - A alpha.50 corrige a inicialização do **leitor/editor interno de texto e código** em aparelhos Android onde o `EditText` dispara seleção ainda durante o construtor. O callback de cursor agora é protegido até o editor terminar de configurar, eliminando o erro minificado `Function2 ... null object reference` observado ao abrir Markdown e preservando edição, números de linha, localizar/substituir e salvamento.
 - A alpha.49 redesenha o **visualizador de APK** com cabeçalho em card, comparação clara entre APK e versão instalada, detalhes mais limpos e ações **Instalar/Reinstalar/Atualizar** + **Abrir app** lado a lado. O fluxo de fonte desconhecida também foi reforçado: ao voltar da tela do Android após conceder a permissão, o instalador é aberto automaticamente sem exigir um segundo toque no botão.

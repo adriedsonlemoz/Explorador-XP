@@ -1294,37 +1294,40 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
         "Arquivos ocultos" to "No menu Exibir é possível mostrar ou ocultar arquivos ocultos. A pasta interna usada pela Lixeira continua protegida e não aparece na navegação comum.",
     )
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0x99000000))
-                .safeDrawingPadding()
-                .padding(10.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFF8F8F2))
-                    .border(1.dp, XpBorder)
+    XpModalWindow(
+        onDismiss = onDismiss,
+        maxWidth = 640,
+        heightFraction = 0.86f,
+        header = { XpDialogTitle("Ajuda", onDismiss) },
+        footer = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                XpDialogTitle("Ajuda", onDismiss)
+                Text(
+                    "${topics.size} tópicos de ajuda",
+                    fontSize = 10.5.sp,
+                    color = XpTextSecondary,
+                    modifier = Modifier.weight(1f),
+                )
+                XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
+            }
+        },
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
             Text(
                 "Escolha um assunto para ver somente a explicação necessária.",
                 fontSize = 12.sp,
                 color = XpTextSecondary,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             )
+            HorizontalDivider(color = XpChromeBorder)
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 10.dp, vertical = 2.dp)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
             ) {
                 topics.forEach { (title, text) ->
                     HelpTopic(
@@ -1334,7 +1337,6 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
                         onClick = { expandedTopic = if (expandedTopic == title) "" else title },
                     )
                     Spacer(Modifier.height(6.dp))
-                }
                 }
             }
         }
@@ -1376,101 +1378,109 @@ private fun AboutDialog(
 ) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+
+    XpModalWindow(
+        onDismiss = onDismiss,
+        maxWidth = 520,
+        heightFraction = 0.84f,
+        header = { XpDialogTitle("Sobre o Explorador XP", onDismiss) },
+        footer = {
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val compact = maxWidth < 355.dp
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    XpDialogButton(
+                        "Ajuda",
+                        modifier = Modifier.weight(1f),
+                        iconRes = R.drawable.help,
+                        onClick = onOpenHelp,
+                    )
+                    XpDialogButton(
+                        if (compact) "Info técnica" else "Informações técnicas",
+                        modifier = Modifier.weight(1f),
+                        iconRes = R.drawable.device_mobile,
+                        onClick = onOpenDeviceInfo,
+                    )
+                    XpDialogButton(
+                        "Fechar",
+                        modifier = Modifier.weight(1f),
+                        iconRes = R.drawable.close,
+                        onClick = onDismiss,
+                    )
+                }
+            }
+        },
     ) {
-        BoxWithConstraints(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0x99000000))
-                .safeDrawingPadding()
-                .padding(12.dp),
-            contentAlignment = Alignment.Center,
+                .verticalScroll(rememberScrollState())
+                .padding(14.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(0.96f)
-                    .widthIn(max = 420.dp)
-                    .heightIn(max = maxHeight * 0.92f)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(Color(0xFFF8F8F2))
-                    .border(1.dp, XpBorder, RoundedCornerShape(7.dp))
-            ) {
-                XpDialogTitle("Sobre o Explorador XP", onDismiss)
-                Column(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(14.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.foundation.Image(
-                            painter = painterResource(R.drawable.info),
-                            contentDescription = null,
-                            modifier = Modifier.size(42.dp),
-                            contentScale = ContentScale.Fit,
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Explorador XP", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
-                            Text(
-                                "Gerenciador de arquivos Android com identidade inspirada no Windows XP.",
-                                fontSize = 12.sp,
-                                color = Color(0xFF303030),
-                                lineHeight = 16.sp,
-                            )
-                        }
-                    }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(R.drawable.info),
+                    contentDescription = null,
+                    modifier = Modifier.size(42.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Explorador XP", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                    Text(
+                        "Gerenciador de arquivos Android com identidade inspirada no Windows XP.",
+                        fontSize = 12.sp,
+                        color = Color(0xFF303030),
+                        lineHeight = 16.sp,
+                    )
+                }
+            }
 
-                    Spacer(Modifier.height(12.dp))
-                    AboutSectionCard("Informações", R.drawable.info) {
-                        PropertyLine("Versão", BuildConfig.VERSION_NAME)
-                        PropertyLine("versionCode", BuildConfig.VERSION_CODE.toString())
-                        PropertyLine("Desenvolvedor", "Adriedson Lemos")
-                    }
+            Spacer(Modifier.height(12.dp))
+            AboutSectionCard("Informações", R.drawable.info) {
+                PropertyLine("Versão", BuildConfig.VERSION_NAME)
+                PropertyLine("versionCode", BuildConfig.VERSION_CODE.toString())
+                PropertyLine("Desenvolvedor", "Adriedson Lemos")
+            }
 
-                    Spacer(Modifier.height(10.dp))
-                    AboutSectionCard("Apoiar o projeto", R.drawable.favorites) {
-                        Text("PIX", fontSize = 10.5.sp, color = XpTextSecondary)
-                        Text(
-                            "adriedson@outlook.com",
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF202020),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        XpDialogButton(
-                            label = if (copied) "Chave copiada" else "Copiar chave",
-                            iconRes = if (copied) R.drawable.check else R.drawable.copy,
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("PIX Explorador XP", "adriedson@outlook.com"))
-                                copied = true
-                            },
-                        )
-                    }
+            Spacer(Modifier.height(10.dp))
+            AboutSectionCard("Apoiar o projeto", R.drawable.favorites) {
+                Text("PIX", fontSize = 10.5.sp, color = XpTextSecondary)
+                Text(
+                    "adriedson@outlook.com",
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF202020),
+                )
+                Spacer(Modifier.height(8.dp))
+                XpDialogButton(
+                    label = if (copied) "Chave copiada" else "Copiar chave",
+                    iconRes = if (copied) R.drawable.check else R.drawable.copy,
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("PIX Explorador XP", "adriedson@outlook.com"))
+                        copied = true
+                    },
+                )
+            }
 
-                    Spacer(Modifier.height(10.dp))
-                    AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
-                        listOf(
-                            "O Explorador XP agora aparece em Abrir com para formatos realmente compatíveis.",
-                            "ZIP, PDF, APK, textos/código, imagens, áudio e vídeo suportados podem abrir direto de outros apps.",
-                            "Arquivos recebidos por content:// são validados e lidos por uma cópia temporária privada.",
-                            "Não foi registrado MIME coringa: formatos sem leitor interno continuam fora do seletor.",
-                        ).forEach { change ->
-                            Text("• $change", fontSize = 11.5.sp, color = Color(0xFF303030), lineHeight = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
-                        }
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-                    AboutSectionCard("Atalhos úteis", R.drawable.help) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
-                            XpDialogButton("Ajuda", modifier = Modifier.weight(1f), iconRes = R.drawable.help, onClick = onOpenHelp)
-                            XpDialogButton("Informações técnicas", modifier = Modifier.weight(1f), iconRes = R.drawable.device_mobile, onClick = onOpenDeviceInfo)
-                        }
-                    }
+            Spacer(Modifier.height(10.dp))
+            AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
+                listOf(
+                    "Janelas principais agora têm altura limitada, centralização real e margens seguras em cima e embaixo.",
+                    "Ajuda, Sobre, Lixeira e Informações do dispositivo usam conteúdo rolável dentro da janela, sem crescer até a barra de navegação.",
+                    "Foi adicionado rodapé fixo e divisões visuais para deixar claro onde a janela termina.",
+                    "O Explorador XP continua aparecendo em Abrir com somente para formatos compatíveis.",
+                ).forEach { change ->
+                    Text(
+                        "• $change",
+                        fontSize = 11.5.sp,
+                        color = Color(0xFF303030),
+                        lineHeight = 15.sp,
+                        modifier = Modifier.padding(bottom = 5.dp),
+                    )
                 }
             }
         }
@@ -1604,6 +1614,65 @@ private fun XpDialogTitle(title: String, onDismiss: () -> Unit) {
     }
 }
 
+
+
+@Composable
+internal fun XpModalWindow(
+    onDismiss: () -> Unit,
+    maxWidth: Int = 620,
+    heightFraction: Float = 0.86f,
+    background: Color = Color(0xFFF8F8F2),
+    header: @Composable () -> Unit,
+    footer: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val safeHeightFraction = heightFraction.coerceIn(0.60f, 0.94f)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0x99000000))
+                .safeDrawingPadding()
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = maxWidth.dp)
+                    .fillMaxWidth(0.96f)
+                    .fillMaxHeight(safeHeightFraction)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(background)
+                    .border(1.dp, XpBorder, RoundedCornerShape(7.dp)),
+            ) {
+                header()
+                HorizontalDivider(color = XpChromeBorder)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(background),
+                ) {
+                    content()
+                }
+                if (footer != null) {
+                    HorizontalDivider(color = XpChromeBorder)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(XpChrome)
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                    ) {
+                        footer()
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 internal fun XpDialogFrame(
@@ -1843,154 +1912,156 @@ private fun TrashDialog(
     var confirmEmpty by remember { mutableStateOf(false) }
     val trashBytes = items.sumOf { it.size }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+    XpModalWindow(
+        onDismiss = onDismiss,
+        maxWidth = 680,
+        heightFraction = 0.88f,
+        header = { XpDialogTitle("Lixeira", onDismiss) },
+        footer = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
+                    fontSize = 10.5.sp,
+                    color = XpTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
+            }
+        },
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0x99000000))
-                .safeDrawingPadding()
-                .padding(8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFF8F8F2))
-                    .border(1.dp, XpBorder),
+                    .fillMaxWidth()
+                    .background(XpChrome)
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
             ) {
-                XpDialogTitle("Lixeira", onDismiss)
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(XpChrome)
-                        .padding(horizontal = 10.dp, vertical = 9.dp),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painter = painterResource(if (items.isEmpty()) R.drawable.trash_empty else R.drawable.trash_full),
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            contentScale = ContentScale.Fit,
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(if (items.isEmpty()) R.drawable.trash_empty else R.drawable.trash_full),
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                    Spacer(Modifier.width(9.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF202020),
                         )
-                        Spacer(Modifier.width(9.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
-                                fontSize = 13.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF202020),
-                            )
-                            Spacer(Modifier.height(1.dp))
-                            Text(
-                                "Restaure o que precisar ou apague definitivamente.",
-                                fontSize = 10.5.sp,
-                                color = XpTextSecondary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
+                        Spacer(Modifier.height(1.dp))
+                        Text(
+                            "Restaure o que precisar ou apague definitivamente.",
+                            fontSize = 10.5.sp,
+                            color = XpTextSecondary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        if (maxWidth >= 290.dp) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                }
+                Spacer(Modifier.height(8.dp))
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    if (maxWidth >= 290.dp) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            XpDialogButton(
+                                "Atualizar",
+                                modifier = Modifier.weight(1f),
+                                enabled = !loading,
+                                iconRes = R.drawable.refresh,
+                                onClick = onRefresh,
+                            )
+                            XpDialogButton(
+                                "Esvaziar Lixeira",
+                                modifier = Modifier.weight(1f),
+                                enabled = items.isNotEmpty() && !loading,
+                                danger = true,
+                                iconRes = R.drawable.delete,
+                            ) { confirmEmpty = true }
+                        }
+                    } else {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            XpDialogButton(
+                                "Atualizar",
                                 modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                XpDialogButton(
-                                    "Atualizar",
-                                    modifier = Modifier.weight(1f),
-                                    enabled = !loading,
-                                    iconRes = R.drawable.refresh,
-                                    onClick = onRefresh,
-                                )
-                                XpDialogButton(
-                                    "Esvaziar Lixeira",
-                                    modifier = Modifier.weight(1f),
-                                    enabled = items.isNotEmpty() && !loading,
-                                    danger = true,
-                                    iconRes = R.drawable.delete,
-                                ) { confirmEmpty = true }
-                            }
-                        } else {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                enabled = !loading,
+                                iconRes = R.drawable.refresh,
+                                onClick = onRefresh,
+                            )
+                            XpDialogButton(
+                                "Esvaziar Lixeira",
                                 modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                XpDialogButton(
-                                    "Atualizar",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !loading,
-                                    iconRes = R.drawable.refresh,
-                                    onClick = onRefresh,
-                                )
-                                XpDialogButton(
-                                    "Esvaziar Lixeira",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = items.isNotEmpty() && !loading,
-                                    danger = true,
-                                    iconRes = R.drawable.delete,
-                                ) { confirmEmpty = true }
-                            }
+                                enabled = items.isNotEmpty() && !loading,
+                                danger = true,
+                                iconRes = R.drawable.delete,
+                            ) { confirmEmpty = true }
                         }
                     }
                 }
+            }
 
-                HorizontalDivider(color = XpChromeBorder)
+            HorizontalDivider(color = XpChromeBorder)
 
-                when {
-                    loading -> LoadingPanelInline("Carregando Lixeira…")
-                    items.isEmpty() -> Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .background(Color.White),
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painterResource(R.drawable.trash_empty),
-                            null,
-                            modifier = Modifier.size(64.dp),
+            when {
+                loading -> LoadingPanelInline("Carregando Lixeira…")
+                items.isEmpty() -> Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(Color.White),
+                ) {
+                    androidx.compose.foundation.Image(
+                        painterResource(R.drawable.trash_empty),
+                        null,
+                        modifier = Modifier.size(64.dp),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "A Lixeira está vazia",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = XpBlueDark,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        "Arquivos enviados para a Lixeira aparecerão aqui.",
+                        fontSize = 11.5.sp,
+                        color = XpTextSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                    )
+                }
+                else -> LazyColumn(
+                    contentPadding = PaddingValues(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(Color(0xFFF1F4F8)),
+                ) {
+                    items(items, key = { it.id }) { item ->
+                        TrashItemRow(
+                            item = item,
+                            onRestore = { onRestore(item) },
+                            onDelete = { deleteCandidate = item },
                         )
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            "A Lixeira está vazia",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = XpBlueDark,
-                        )
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            "Arquivos enviados para a Lixeira aparecerão aqui.",
-                            fontSize = 11.5.sp,
-                            color = XpTextSecondary,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 18.dp),
-                        )
-                    }
-                    else -> LazyColumn(
-                        contentPadding = PaddingValues(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .background(Color(0xFFF1F4F8)),
-                    ) {
-                        items(items, key = { it.id }) { item ->
-                            TrashItemRow(
-                                item = item,
-                                onRestore = { onRestore(item) },
-                                onDelete = { deleteCandidate = item },
-                            )
-                        }
                     }
                 }
             }
@@ -2131,28 +2202,36 @@ private fun StorageDetailsDialog(
 ) {
     val analysis = state.analysis
     val info = analysis?.storageInfo ?: fallbackInfo
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0x99000000))
-                .safeDrawingPadding()
-                .padding(8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFF8F8F2))
-                    .border(1.dp, XpBorder)
-            ) {
-                XpDialogTitle("Armazenamento", onDismiss)
+
+    XpModalWindow(
+        onDismiss = onDismiss,
+        maxWidth = 680,
+        heightFraction = 0.88f,
+        header = { XpDialogTitle("Armazenamento", onDismiss) },
+        footer = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().background(XpChrome).padding(horizontal = 10.dp, vertical = 7.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    if (state.analyzing) "${state.scannedFiles} arquivos verificados" else "${storageUsedPercent(info)}% usado • ${100 - storageUsedPercent(info)}% livre",
+                    fontSize = 10.5.sp,
+                    color = XpTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
+            }
+        },
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(XpChrome)
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
             ) {
                 androidx.compose.foundation.Image(painterResource(R.drawable.drive_storage), null, modifier = Modifier.size(31.dp))
                 Spacer(Modifier.width(8.dp))
@@ -2169,8 +2248,15 @@ private fun StorageDetailsDialog(
                         color = Color(0xFF66788F),
                     )
                 }
-                if (state.analyzing) XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
-                else XpDialogButton(if (analysis == null) "Analisar" else "Atualizar análise", iconRes = R.drawable.drive_storage, onClick = onRefresh)
+                if (state.analyzing) {
+                    XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
+                } else {
+                    XpDialogButton(
+                        if (analysis == null) "Analisar" else "Atualizar análise",
+                        iconRes = R.drawable.drive_storage,
+                        onClick = onRefresh,
+                    )
+                }
             }
             HorizontalDivider(color = XpChromeBorder)
 
@@ -2202,7 +2288,11 @@ private fun StorageDetailsDialog(
                 }
             } else if (analysis != null) {
                 Column(
-                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(10.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(10.dp),
                 ) {
                     StorageSummaryCard(info)
                     Spacer(Modifier.height(14.dp))
@@ -2251,7 +2341,10 @@ private fun StorageDetailsDialog(
                 if (state.analyzing) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF6D9)).padding(horizontal = 10.dp, vertical = 5.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFF6D9))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
                     ) {
                         CircularProgressIndicator(color = XpBlue, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(7.dp))
@@ -2264,13 +2357,19 @@ private fun StorageDetailsDialog(
                     verticalArrangement = Arrangement.Center,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) {
-                    Text("Toque em Analisar para localizar pastas e arquivos que mais ocupam espaço.", fontSize = 13.sp, color = XpTextSecondary, textAlign = TextAlign.Center, modifier = Modifier.padding(20.dp))
+                    Text(
+                        "Toque em Analisar para localizar pastas e arquivos que mais ocupam espaço.",
+                        fontSize = 13.sp,
+                        color = XpTextSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(20.dp),
+                    )
                 }
-            }
             }
         }
     }
 }
+
 @Composable
 private fun StorageSummaryCard(info: StorageInfo) {
     val usedPercent = storageUsedPercent(info)

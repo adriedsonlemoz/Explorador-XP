@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.1.0-alpha.52
+
+- Criado um contêiner modal reutilizável para as janelas grandes do Explorador XP, com centralização real dentro da área segura, largura limitada e altura proporcional à tela.
+- **Ajuda**, **Sobre**, **Lixeira**, **Armazenamento** e **Informações do dispositivo** deixam de ocupar quase toda a altura disponível e passam a manter respiro visível acima e abaixo.
+- Cabeçalho e rodapé permanecem fixos enquanto somente o conteúdo central rola, evitando a sensação de painel sem limite inferior.
+- Adicionados divisores entre cabeçalho, conteúdo e rodapé, além de ação **Fechar** também no rodapé das janelas principais.
+- A tela **Sobre** teve os atalhos movidos para o rodapé fixo e as novidades atualizadas para refletir a padronização visual.
+- Nenhuma função foi removida; Lixeira, análise de armazenamento, exportação/compartilhamento de informações e demais ações continuam preservadas.
+- Versão sincronizada para `0.1.0-alpha.52` / `versionCode 52`.
+
 ## 0.1.0-alpha.51
 
 - Integrado o Explorador XP ao seletor **Abrir com** do Android por `ACTION_VIEW`, sem registrar `*/*` ou `application/octet-stream`.

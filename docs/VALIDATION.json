@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.51",
-  "version_code": 51,
-  "manager_version": "0.1.0-alpha.51",
-  "manager_code": 51,
+  "version_build": "0.1.0-alpha.52",
+  "version_code": 52,
+  "manager_version": "0.1.0-alpha.52",
+  "manager_code": 52,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.51",
-      "code": 51
+      "version": "0.1.0-alpha.52",
+      "code": 52
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -293,7 +293,7 @@
       "full_android_build_reason": "Project still has no gradlew and this environment has no Android Gradle toolchain configured."
     }
   },
-  "validated_at_utc": "2026-09-21T12:57:49.458734+00:00",
+  "validated_at_utc": "2026-09-21T13:57:25.531058+00:00",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -458,6 +458,41 @@
       "kotlin_parser_smoke": "Changed Kotlin files produced no parser/syntax diagnostics; unresolved Android/Compose references are expected without Android classpath.",
       "safe_external_filename": "Separators/control chars sanitized and dot/dot-dot names blocked before writing into cache.",
       "external_open_support_smoke": "ZIP/x-zip/APK variant/Markdown/plain text/JSON/MKV accepted; RAR/SVG/octet-stream rejected."
+    },
+    "alpha52_modal_window_standardization": {
+      "ok": true,
+      "root_cause": "Large dialogs used different sizing strategies; Help/Trash/Storage/DeviceInfo could fill almost the entire safe area, so the lower window boundary was visually unclear and About did not share the same structural frame.",
+      "shared_component": "XpModalWindow",
+      "migrated_screens": [
+        "HelpManualDialog",
+        "AboutDialog",
+        "TrashDialog",
+        "StorageDetailsDialog",
+        "DeviceInfoDialog"
+      ],
+      "behavior": [
+        "centered inside safeDrawingPadding",
+        "visible top and bottom exterior margins",
+        "bounded width and proportional height",
+        "fixed header and fixed footer",
+        "scrolling restricted to central content",
+        "visual dividers between header/content/footer"
+      ],
+      "functional_regressions_intentionally_avoided": [
+        "trash restore/delete/empty preserved",
+        "storage analysis/cancel/open preserved",
+        "device export/share preserved",
+        "help expansion preserved",
+        "about PIX/help/device shortcuts preserved"
+      ],
+      "kotlin_parser_smoke": "ExplorerScreen.kt and DeviceInfoScreen.kt produced no expecting/unclosed/unexpected-token diagnostics with kotlinc; unresolved Android/Compose symbols are expected without Android classpath.",
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain.",
+      "images_created_or_modified": false,
+      "json_parse": "3 files ok",
+      "xml_parse": "12 files ok",
+      "image_resources_unchanged_from_alpha51": "165 image files unchanged",
+      "version_sync": "0.1.0-alpha.52 / 52 in app/build.gradle.kts, github-manager.json and README"
     }
   },
   "source_diff_alpha51_against_alpha50": {
@@ -473,6 +508,21 @@
       "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha52_against_alpha51": {
+    "added": [
+      "docs/ALPHA52_MODAL_WINDOW_NOTES.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/DeviceInfoScreen.kt",
       "README.md",
       "CHANGELOG.md",
       "docs/VALIDATION.json",
