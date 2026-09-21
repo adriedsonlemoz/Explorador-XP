@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.1.0-alpha.54
+
+- Segunda etapa da otimização estrutural de desempenho, focada em **copiar, mover, excluir e Lixeira**.
+- Criado um plano iterativo reutilizável de operação (`FileOperationPlan`): cada árvore de arquivos é enumerada uma única vez e a mesma lista planejada é usada para cópia/exclusão, evitando a antiga sequência `countEntries()` + nova travessia recursiva.
+- Cópia/recorte com fallback, exclusão permanente, mover para Lixeira, restaurar, apagar da Lixeira e esvaziar Lixeira deixam de chamar `listFiles()` repetidamente sobre a mesma árvore apenas para progresso.
+- Movimentações que conseguem `renameTo()` continuam rápidas e agora reaproveitam a contagem já obtida no plano, sem uma segunda contagem da pasta após renomear.
+- O copiador passa a usar buffer de 256 KiB e checagens periódicas de cancelamento, reduzindo overhead em arquivos maiores sem perder a opção **Cancelar**.
+- Novas entradas da Lixeira gravam `treeSize` e `entryCount` no metadado; ao reabrir a Lixeira, o tamanho dessas entradas pode ser mostrado sem recalcular recursivamente toda a pasta. Entradas antigas continuam compatíveis pelo fallback existente.
+- A exclusão planejada é iterativa e processa filhos antes dos pais, reduzindo também o risco de stack profundo em árvores muito aninhadas.
+- Adicionado teste JVM para planejamento, cópia e exclusão da árvore sem alterar imagens, mockups ou recursos visuais.
+- README, CHANGELOG, documentação de desempenho, validações e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.54` / `versionCode 54`.
+
 ## 0.1.0-alpha.53
 
 - Iniciada a primeira etapa da grande melhoria de desempenho, priorizando navegação e rolagem antes das próximas evoluções funcionais.

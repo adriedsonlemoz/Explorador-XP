@@ -8,8 +8,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.util.ArrayDeque
 import java.util.PriorityQueue
 import java.util.UUID
@@ -114,15 +112,16 @@ class FileRepository(
 
     suspend fun delete(files: List<File>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            val total = files.sumOf { countEntries(it) }.coerceAtLeast(1)
+            val plans = files.map { file -> buildFileOperationPlan(file) }
+            val total = plans.sumOf { it.entryCount }.coerceAtLeast(1)
             var done = 0
             val ticker = ProgressTicker(total, onProgress)
-            files.forEach { file ->
+            plans.forEach { plan ->
                 coroutineContext.ensureActive()
-                check(deleteRecursively(file) { name ->
+                check(deleteFileOperationPlan(plan) { name ->
                     done++
                     ticker.report(done, name)
-                }) { "Não foi possível excluir ${file.name}." }
+                }) { "Não foi possível excluir ${plan.root.name}." }
             }
             ticker.reportFinal(done, "")
         }
@@ -133,14 +132,15 @@ class FileRepository(
         runCatching {
             val validFiles = files.filter { it.exists() }
             require(validFiles.isNotEmpty()) { "Nenhum item disponível para mover para a Lixeira." }
-            val total = validFiles.sumOf { countEntries(it) }.coerceAtLeast(1)
+            val plans = validFiles.map { source -> buildFileOperationPlan(source) }
+            val total = plans.sumOf { it.entryCount }.coerceAtLeast(1)
             var done = 0
             val ticker = ProgressTicker(total, onProgress)
 
-            validFiles.forEach { source ->
+            plans.forEach { plan ->
                 coroutineContext.ensureActive()
+                val source = plan.root
                 require(!isInsideManagedTrash(source)) { "O item já está na Lixeira." }
-                val entryCount = countEntries(source)
                 val trashRoot = managedTrashRoot(storageRootFor(source))
                 check(trashRoot.mkdirs() || trashRoot.isDirectory) { "Não foi possível preparar a Lixeira." }
                 val container = File(trashRoot, "${System.currentTimeMillis()}-${UUID.randomUUID()}")
@@ -150,23 +150,30 @@ class FileRepository(
                     .put("originalPath", source.absolutePath)
                     .put("originalName", source.name)
                     .put("deletedAt", System.currentTimeMillis())
-                    .put("size", if (source.isFile) source.length() else 0L)
+                    .put("size", if (source.isFile) plan.totalBytes else 0L)
+                    .put("treeSize", plan.totalBytes)
+                    .put("entryCount", plan.entryCount)
                     .put("isDirectory", source.isDirectory)
                 File(container, TRASH_INFO_FILE).writeText(metadata.toString(), Charsets.UTF_8)
 
                 if (source.renameTo(target)) {
-                    done += entryCount
+                    done += plan.entryCount
                     ticker.report(done, source.name)
                 } else {
                     try {
-                        copyRecursively(source, target) { name ->
+                        copyFileOperationPlan(plan, target) { name ->
                             done++
                             ticker.report(done, name)
                         }
-                        check(deleteRecursively(source)) { "O item foi copiado para a Lixeira, mas não foi possível remover a origem." }
                     } catch (error: Throwable) {
+                        // Só remove a entrada parcial quando a cópia falha. Depois de uma cópia
+                        // completa, preservar a cópia na Lixeira é mais seguro caso a origem não
+                        // consiga ser removida integralmente.
                         deleteRecursively(container)
                         throw error
+                    }
+                    check(deleteFileOperationPlan(plan)) {
+                        "O item foi copiado para a Lixeira, mas não foi possível remover toda a origem. A cópia foi preservada na Lixeira."
                     }
                 }
             }
@@ -185,34 +192,36 @@ class FileRepository(
         runCatching {
             val existing = items.filter { it.trashedFile.exists() }
             require(existing.isNotEmpty()) { "Nenhum item disponível para restaurar." }
-            val total = existing.sumOf { countEntries(it.trashedFile) }.coerceAtLeast(1)
+            val plannedItems = existing.map { item -> item to buildFileOperationPlan(item.trashedFile) }
+            val total = plannedItems.sumOf { it.second.entryCount }.coerceAtLeast(1)
             var done = 0
             val ticker = ProgressTicker(total, onProgress)
 
-            existing.forEach { item ->
+            plannedItems.forEach { (item, plan) ->
                 coroutineContext.ensureActive()
                 val original = File(item.originalPath)
                 val parent = original.parentFile ?: root
                 check(parent.mkdirs() || parent.isDirectory) { "Não foi possível recriar a pasta original." }
                 val target = if (!original.exists()) original else uniqueRestoreTarget(parent, original.name)
-                val entryCount = countEntries(item.trashedFile)
                 if (item.trashedFile.renameTo(target)) {
-                    done += entryCount
+                    done += plan.entryCount
                     ticker.report(done, target.name)
                 } else {
                     try {
-                        copyRecursively(item.trashedFile, target) { name ->
+                        copyFileOperationPlan(plan, target) { name ->
                             done++
                             ticker.report(done, name)
                         }
-                        check(deleteRecursively(item.trashedFile)) { "O item foi restaurado, mas não foi possível limpar a cópia da Lixeira." }
                     } catch (error: Throwable) {
-                        // Evita deixar uma restauração parcial/duplicada quando o fallback falha.
+                        // Se a cópia de restauração não terminou, remove somente o destino parcial.
                         deleteRecursively(target)
                         throw error
                     }
+                    check(deleteFileOperationPlan(plan)) {
+                        "O item foi restaurado, mas não foi possível limpar totalmente a cópia da Lixeira. O arquivo restaurado foi preservado."
+                    }
                 }
-                item.trashedFile.parentFile?.let { deleteRecursively(it) }
+                item.trashedFile.parentFile?.let(::cleanupTrashContainer)
             }
             pruneEmptyManagedTrashRoots()
             ticker.reportFinal(done, "")
@@ -222,15 +231,17 @@ class FileRepository(
     suspend fun permanentlyDeleteTrash(items: List<TrashItem>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val existing = items.filter { it.trashedFile.exists() }
-            val total = existing.sumOf { countEntries(it.trashedFile) }.coerceAtLeast(1)
+            val plannedItems = existing.map { item -> item to buildFileOperationPlan(item.trashedFile) }
+            val total = plannedItems.sumOf { it.second.entryCount }.coerceAtLeast(1)
             var done = 0
             val ticker = ProgressTicker(total, onProgress)
-            existing.forEach { item ->
-                check(deleteRecursively(item.trashedFile) { name ->
+            plannedItems.forEach { (item, plan) ->
+                coroutineContext.ensureActive()
+                check(deleteFileOperationPlan(plan) { name ->
                     done++
                     ticker.report(done, name)
                 }) { "Não foi possível apagar ${item.name}." }
-                item.trashedFile.parentFile?.let { deleteRecursively(it) }
+                item.trashedFile.parentFile?.let(::cleanupTrashContainer)
             }
             pruneEmptyManagedTrashRoots()
             ticker.reportFinal(done, "")
@@ -241,15 +252,16 @@ class FileRepository(
         runCatching {
             val roots = storageLocations().map { managedTrashRoot(it.root) }.filter(File::exists)
             val entries = roots.flatMap { it.listFiles().orEmpty().toList() }
-            val total = entries.sumOf(::countEntries).coerceAtLeast(1)
+            val plans = entries.map { entry -> buildFileOperationPlan(entry) }
+            val total = plans.sumOf { it.entryCount }.coerceAtLeast(1)
             var done = 0
             val ticker = ProgressTicker(total, onProgress)
-            entries.forEach { entry ->
+            plans.forEach { plan ->
                 coroutineContext.ensureActive()
-                check(deleteRecursively(entry) { name ->
+                check(deleteFileOperationPlan(plan) { name ->
                     done++
                     ticker.report(done, name)
-                }) { "Não foi possível remover ${entry.name} da Lixeira." }
+                }) { "Não foi possível remover ${plan.root.name} da Lixeira." }
             }
             // Remove também a pasta gerenciada vazia para garantir que nenhum resíduo físico
             // do Explorador XP permaneça após “Esvaziar Lixeira”. Ela será recriada quando necessário.
@@ -264,9 +276,7 @@ class FileRepository(
         onProgress: (TransferProgress) -> Unit = {},
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            val total = clipboard.files.sumOf { countEntries(it) }.coerceAtLeast(1)
-            var done = 0
-            val ticker = ProgressTicker(total, onProgress)
+            val prepared = mutableListOf<FileOperationPlan>()
             clipboard.files.forEach { source ->
                 coroutineContext.ensureActive()
                 require(source.exists()) { "${source.name} não existe mais." }
@@ -278,17 +288,26 @@ class FileRepository(
                     val destinationPath = normalizedAbsolutePath(destination) + File.separator
                     require(!destinationPath.startsWith(sourcePath)) { "Não é possível copiar uma pasta para dentro dela mesma." }
                 }
+                prepared += buildFileOperationPlan(source)
+            }
+            val total = prepared.sumOf { it.entryCount }.coerceAtLeast(1)
+            var done = 0
+            val ticker = ProgressTicker(total, onProgress)
+
+            prepared.forEach { plan ->
+                coroutineContext.ensureActive()
+                val source = plan.root
                 val target = uniqueTarget(destination, source.name)
                 if (clipboard.mode == ClipboardMode.CUT && source.renameTo(target)) {
-                    done += countEntries(target)
+                    done += plan.entryCount
                     ticker.report(done, target.name)
                 } else {
-                    copyRecursively(source, target) { name ->
+                    copyFileOperationPlan(plan, target) { name ->
                         done++
                         ticker.report(done, name)
                     }
                     if (clipboard.mode == ClipboardMode.CUT) {
-                        check(deleteRecursively(source)) { "O item foi copiado, mas não foi possível remover a origem." }
+                        check(deleteFileOperationPlan(plan)) { "O item foi copiado, mas não foi possível remover a origem." }
                     }
                 }
             }
@@ -488,8 +507,12 @@ class FileRepository(
                 .ifBlank { File(originalPath).name }
                 .ifBlank { trashedFile.name },
             deletedAt = metadata.optLong("deletedAt", container.lastModified()),
-            size = metadata.optLong("size", 0L).takeIf { it > 0L }
-                ?: directorySizeBytes(trashedFile),
+            size = if (metadata.has("treeSize")) {
+                metadata.optLong("treeSize", 0L).coerceAtLeast(0L)
+            } else {
+                metadata.optLong("size", 0L).takeIf { it > 0L }
+                    ?: directorySizeBytes(trashedFile)
+            },
             isDirectory = isDirectory,
             typeLabel = FileTypeClassifier.labelFor(File(originalPath), isDirectory),
             iconRes = FileIconMapper.iconFor(File(originalPath), isDirectory),
@@ -549,6 +572,14 @@ class FileRepository(
         return candidate
     }
 
+    /** Limpa os metadados do contêiner sem reenumerar a árvore do item já processado. */
+    private fun cleanupTrashContainer(container: File) {
+        File(container, TRASH_INFO_FILE).delete()
+        if (container.exists() && container.listFiles().orEmpty().isEmpty()) {
+            container.delete()
+        }
+    }
+
     private fun pruneEmptyManagedTrashRoots() {
         storageLocations().map { managedTrashRoot(it.root) }.forEach { trashRoot ->
             if (trashRoot.exists() && trashRoot.listFiles().orEmpty().isEmpty()) trashRoot.delete()
@@ -561,24 +592,6 @@ class FileRepository(
         return file.listFiles().orEmpty().sumOf(::directorySizeBytes)
     }
 
-    private suspend fun copyRecursively(source: File, target: File, onEntry: (String) -> Unit) {
-        coroutineContext.ensureActive()
-        if (source.isDirectory) {
-            check(target.mkdirs() || target.isDirectory) { "Não foi possível criar ${target.name}." }
-            onEntry(target.name)
-            source.listFiles().orEmpty().forEach { child ->
-                copyRecursively(child, File(target, child.name), onEntry)
-            }
-        } else {
-            target.parentFile?.mkdirs()
-            FileInputStream(source).use { input ->
-                FileOutputStream(target).use { output -> input.copyTo(output) }
-            }
-            target.setLastModified(source.lastModified())
-            onEntry(target.name)
-        }
-    }
-
     private fun deleteRecursively(file: File, onEntry: (String) -> Unit = {}): Boolean {
         if (file.isDirectory) file.listFiles().orEmpty().forEach { if (!deleteRecursively(it, onEntry)) return false }
         val removed = file.delete() || !file.exists()
@@ -586,14 +599,6 @@ class FileRepository(
         return removed
     }
 
-    /** Conta pastas e arquivos (incluindo a própria raiz) para estimar o total de uma transferência. */
-    private fun countEntries(file: File): Int {
-        return if (file.isDirectory) {
-            1 + file.listFiles().orEmpty().sumOf { countEntries(it) }
-        } else {
-            1
-        }
-    }
 
     private data class ScanNode(val file: File, val topFolder: File?)
     private data class MutableCategory(val label: String, var bytes: Long = 0L, var count: Int = 0)

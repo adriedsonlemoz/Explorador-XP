@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.53` (`versionCode 53`)  
+**Versão atual:** `0.1.0-alpha.54` (`versionCode 54`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,6 +14,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.54 continua a melhoria de desempenho nas operações pesadas: copiar, mover, excluir e Lixeira agora montam um plano iterativo da árvore uma única vez e reutilizam esse snapshot para executar a operação, eliminando enumerações recursivas duplicadas com `listFiles()`. O mesmo plano fornece contagem e tamanho total, usa buffer maior na cópia e grava o tamanho da árvore no metadado da Lixeira para acelerar reaberturas futuras.
 - A alpha.53 inicia a otimização estrutural de desempenho: leituras de diretórios grandes passam a responder ao cancelamento em lotes, navegações que já têm snapshot em cache adiam a releitura do armazenamento para evitar I/O inútil, estatísticas recursivas da barra inferior ganham cache curto e scanner único, e miniaturas deixam de ser decodificadas durante a rolagem. A mesma versão corrige o enquadramento dos ícones XP de pastas especiais e separa o botão **Instalar APK** do fluxo `ACTION_VIEW`, impedindo que a instalação seja recapturada pelo próprio **Abrir com** do Explorador XP.
 - A alpha.52 padroniza as janelas maiores do app: **Ajuda, Sobre, Lixeira, Armazenamento e Informações do dispositivo** passam a ficar centralizadas dentro da área segura, com altura limitada, conteúdo rolável e rodapé fixo, deixando visível onde cada janela termina.
 - A alpha.51 integra o Explorador XP ao **Abrir com** do Android somente para formatos que o app realmente consegue tratar. Arquivos recebidos por `content://` são validados, copiados para uma área temporária privada e abertos diretamente no leitor interno; ZIP, PDF, APK, textos/código, imagens, áudio e vídeo compatíveis podem ser recebidos sem registrar MIME coringa. Arquivos externos de texto entram em leitura segura para não editar apenas uma cópia temporária.

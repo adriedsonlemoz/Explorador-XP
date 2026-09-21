@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.53",
-  "version_code": 53,
-  "manager_version": "0.1.0-alpha.53",
-  "manager_code": 53,
+  "version_build": "0.1.0-alpha.54",
+  "version_code": 54,
+  "manager_version": "0.1.0-alpha.54",
+  "manager_code": 54,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.53",
-      "code": 53
+      "version": "0.1.0-alpha.54",
+      "code": 54
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -516,6 +516,33 @@
       "xml_parse": "12 files ok",
       "image_resources_unchanged_from_alpha51": "165 image files unchanged",
       "version_sync": "0.1.0-alpha.52 / 52 in app/build.gradle.kts, github-manager.json and README"
+    },
+    "alpha54_file_operation_plan": {
+      "ok": true,
+      "focus": [
+        "copy/paste",
+        "cut/move",
+        "permanent delete",
+        "move to trash",
+        "restore trash",
+        "permanent trash delete",
+        "empty trash"
+      ],
+      "root_cause": "Recursive operations enumerated the same directory tree once to count progress and again to perform the operation; move/restore fallback paths could enumerate it additional times.",
+      "changes": [
+        "FileOperationPlan enumerates each source tree once using an iterative queue",
+        "copy and delete reuse planned entries without a second listFiles traversal",
+        "delete processes planned entries in reverse order so children are removed before parents",
+        "copy buffer increased to 256 KiB with periodic coroutine cancellation checks",
+        "renameTo fast paths reuse entryCount from the already prepared plan",
+        "new trash metadata stores treeSize and entryCount and legacy entries keep fallback compatibility",
+        "copy fallback cleanup only removes partial destinations; completed safety copies are preserved if source cleanup fails"
+      ],
+      "jvm_smoke": "FileOperationPlan.kt compiled with Kotlin and kotlinx-coroutines; an isolated temp-tree smoke test verified 5 planned entries, 8 bytes, hierarchical copy and reverse deletion.",
+      "unit_test_added": "FileOperationPlanTest.kt",
+      "images_created_or_modified": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain."
     }
   },
   "source_diff_alpha51_against_alpha50": {
@@ -564,6 +591,23 @@
       "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
       "app/src/main/java/com/exploradorxp/app/FileThumbnail.kt",
       "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha54_against_alpha53": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/FileOperationPlan.kt",
+      "app/src/test/java/com/exploradorxp/app/FileOperationPlanTest.kt",
+      "docs/PERFORMANCE_ALPHA54.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "README.md",
       "CHANGELOG.md",
       "docs/VALIDATION.json",

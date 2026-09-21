@@ -1473,10 +1473,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Primeira etapa de desempenho reduz varreduras repetidas ao navegar e cancela leituras antigas mais cedo.",
-                    "Miniaturas pesadas deixam de ser iniciadas durante a rolagem e retomam quando a lista para.",
-                    "Ícones de pastas especiais agora usam uma área segura para evitar cortes em Movies, Music e outros recursos.",
-                    "O botão Instalar usa o fluxo do instalador Android sem ser capturado pelo próprio Abrir com do Explorador XP.",
+                    "Copiar, mover, excluir e Lixeira agora reutilizam um único plano da árvore, reduzindo leituras repetidas do armazenamento.",
+                    "Movimentações rápidas por renameTo reaproveitam a contagem já preparada, sem percorrer novamente toda a pasta.",
+                    "A cópia usa buffer maior e cancelamento periódico para reduzir overhead em operações com muitos arquivos.",
+                    "Novas entradas da Lixeira guardam tamanho total e quantidade de itens para reabrir mais rapidamente.",
                 ).forEach { change ->
                     Text(
                         "• $change",
