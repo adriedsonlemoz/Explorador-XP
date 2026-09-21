@@ -80,12 +80,17 @@ internal suspend fun buildFileOperationPlan(root: File): FileOperationPlan {
     return FileOperationPlan(root = root, entries = entries, totalBytes = totalBytes)
 }
 
-/** Copia a árvore já enumerada sem chamar listFiles() novamente. */
+/** Copia a árvore já enumerada sem chamar listFiles() novamente.
+ *
+ * O callback recebe incrementos de bytes enquanto o arquivo é copiado e sinaliza quando
+ * a entrada terminou. Isso permite progresso real por bytes sem uma segunda leitura.
+ */
 internal suspend fun copyFileOperationPlan(
     plan: FileOperationPlan,
     targetRoot: File,
-    onEntry: (String) -> Unit,
+    onProgress: (name: String, bytesDelta: Long, entryCompleted: Boolean) -> Unit,
 ) {
+    val buffer = ByteArray(COPY_BUFFER_SIZE)
     plan.entries.forEachIndexed { index, entry ->
         if ((index and 31) == 0) coroutineContext.ensureActive()
         val target = if (entry.relativePath.isEmpty()) {
@@ -96,18 +101,26 @@ internal suspend fun copyFileOperationPlan(
 
         if (entry.isDirectory) {
             check(target.mkdirs() || target.isDirectory) { "Não foi possível criar ${target.name}." }
+            onProgress(target.name, 0L, true)
         } else {
             target.parentFile?.let { parent ->
                 check(parent.mkdirs() || parent.isDirectory) { "Não foi possível criar ${parent.name}." }
             }
             FileInputStream(entry.source).use { input ->
                 FileOutputStream(target).use { output ->
-                    input.copyTo(output, COPY_BUFFER_SIZE)
+                    while (true) {
+                        coroutineContext.ensureActive()
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        if (read == 0) continue
+                        output.write(buffer, 0, read)
+                        onProgress(target.name, read.toLong(), false)
+                    }
                 }
             }
             if (entry.modifiedAt > 0L) target.setLastModified(entry.modifiedAt)
+            onProgress(target.name, 0L, true)
         }
-        onEntry(target.name)
     }
 }
 
@@ -117,14 +130,15 @@ internal suspend fun copyFileOperationPlan(
  */
 internal suspend fun deleteFileOperationPlan(
     plan: FileOperationPlan,
-    onEntry: (String) -> Unit = {},
+    onEntry: (PlannedFileEntry) -> Unit = {},
 ): Boolean {
     for (index in plan.entries.lastIndex downTo 0) {
         if ((index and 31) == 0) coroutineContext.ensureActive()
-        val source = plan.entries[index].source
+        val entry = plan.entries[index]
+        val source = entry.source
         val removed = source.delete() || !source.exists()
         if (!removed) return false
-        onEntry(source.name)
+        onEntry(entry)
     }
     return true
 }

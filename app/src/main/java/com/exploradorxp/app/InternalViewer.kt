@@ -18,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.border
@@ -58,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
@@ -76,7 +78,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private val imageExtensions = setOf("jpg", "jpeg", "png", "bmp", "webp", "gif")
+internal val imageExtensions = setOf("jpg", "jpeg", "png", "bmp", "webp", "gif")
 private val videoExtensions = setOf("mp4", "m4v", "3gp", "webm", "mkv", "avi", "mov")
 private val audioExtensions = setOf("mp3", "wav", "m4a", "aac", "ogg", "flac", "opus")
 internal val textExtensions = setOf(
@@ -109,6 +111,7 @@ fun InternalViewerScreen(
     file: File,
     externalMimeType: String? = null,
     forcedReadOnly: Boolean = false,
+    folderImages: List<File> = emptyList(),
     onClose: () -> Unit,
     onOpenExternal: (File) -> Unit,
     onOpenFolder: (File) -> Unit,
@@ -162,7 +165,12 @@ fun InternalViewerScreen(
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (extension) {
-                in imageExtensions -> ImageViewer(activeFile) { onOpenExternal(activeFile) }
+                in imageExtensions -> ImageViewer(
+                    file = activeFile,
+                    folderImages = folderImages,
+                    onSelectFile = { selected -> activeFilePath = selected.absolutePath },
+                    onOpenExternal = { onOpenExternal(activeFile) },
+                )
                 in videoExtensions -> VideoPlayerViewer(
                     file = activeFile,
                     fullScreen = contentFullScreen,
@@ -326,9 +334,31 @@ private fun ViewerActionButton(
 }
 
 @Composable
-private fun ImageViewer(file: File, onOpenExternal: () -> Unit) {
+private fun ImageViewer(
+    file: File,
+    folderImages: List<File>,
+    onSelectFile: (File) -> Unit,
+    onOpenExternal: () -> Unit,
+) {
     val key = "${file.absolutePath}:${file.lastModified()}"
     var loadState by remember(key) { mutableStateOf<ViewerLoadState<Bitmap>>(ViewerLoadState.Loading) }
+
+    // A sequência é recebida do snapshot da pasta que já estava aberta no Explorer.
+    // O visualizador não varre subpastas e não mistura imagens de outras localizações.
+    val gallery = remember(folderImages, file.absolutePath) {
+        val sameFolder = file.parentFile?.absolutePath
+        val valid = folderImages
+            .asSequence()
+            .filter { it.parentFile?.absolutePath == sameFolder }
+            .filter { it.extension.lowercase() in imageExtensions }
+            .distinctBy { it.absolutePath }
+            .toMutableList()
+        if (valid.none { it.absolutePath == file.absolutePath }) valid.add(file)
+        valid
+    }
+    val currentIndex = gallery.indexOfFirst { it.absolutePath == file.absolutePath }.coerceAtLeast(0)
+    val canGoPrevious = currentIndex > 0
+    val canGoNext = currentIndex in 0 until gallery.lastIndex
 
     LaunchedEffect(key) {
         loadState = ViewerLoadState.Loading
@@ -353,27 +383,83 @@ private fun ImageViewer(file: File, onOpenExternal: () -> Unit) {
         }
     }
 
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize().background(Color(0xFF262626)).padding(8.dp)
+    fun previous() {
+        if (canGoPrevious) onSelectFile(gallery[currentIndex - 1])
+    }
+
+    fun next() {
+        if (canGoNext) onSelectFile(gallery[currentIndex + 1])
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF262626))
     ) {
-        when (val state = loadState) {
-            ViewerLoadState.Loading -> CircularProgressIndicator(color = Color.White)
-            is ViewerLoadState.Error -> Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(20.dp),
-            ) {
-                Text(state.message, color = Color.White, textAlign = TextAlign.Center)
-                Spacer(Modifier.height(12.dp))
-                ViewerActionButton("Abrir com outro aplicativo", onClick = onOpenExternal)
+        var dragDistance by remember(file.absolutePath) { mutableStateOf(0f) }
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(8.dp)
+                .pointerInput(file.absolutePath, gallery.size) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { dragDistance = 0f },
+                        onHorizontalDrag = { _, amount ->
+                            dragDistance += amount
+                        },
+                        onDragEnd = {
+                            when {
+                                dragDistance <= -80f -> next()
+                                dragDistance >= 80f -> previous()
+                            }
+                            dragDistance = 0f
+                        },
+                        onDragCancel = { dragDistance = 0f },
+                    )
+                }
+        ) {
+            when (val state = loadState) {
+                ViewerLoadState.Loading -> CircularProgressIndicator(color = Color.White)
+                is ViewerLoadState.Error -> Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(20.dp),
+                ) {
+                    Text(state.message, color = Color.White, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(12.dp))
+                    ViewerActionButton("Abrir com outro aplicativo", onClick = onOpenExternal)
+                }
+                is ViewerLoadState.Success -> Image(
+                    bitmap = state.value.asImageBitmap(),
+                    contentDescription = file.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                )
             }
-            is ViewerLoadState.Success -> Image(
-                bitmap = state.value.asImageBitmap(),
-                contentDescription = file.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
+        }
+
+        if (gallery.size > 1) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF171717))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+            ) {
+                ViewerActionButton("◀ Anterior", enabled = canGoPrevious, onClick = ::previous)
+                Text(
+                    text = "${currentIndex + 1} de ${gallery.size}",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+                ViewerActionButton("Próxima ▶", enabled = canGoNext, onClick = ::next)
+            }
         }
     }
 }

@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.1.0-alpha.57
+
+- Próxima etapa das operações de arquivos: cópia, movimentação, exclusão e Lixeira passam a transportar progresso por **bytes**, além da contagem de entradas já existente.
+- A janela de transferência mostra quantidade processada, porcentagem e, em cópia/movimentação, **velocidade média** e **estimativa de tempo restante**.
+- O copiador de `FileOperationPlan` relata bytes a cada bloco de 256 KiB sem reler o arquivo apenas para calcular progresso; cancelamento continua sendo verificado entre blocos.
+- Ao colar em um destino que já possui item com o mesmo nome, o Explorador XP agora pergunta entre **Substituir**, **Ignorar** e **Manter ambos**, com opção **Aplicar esta escolha a todos os próximos conflitos**.
+- Copiar um item para a própria pasta protege a origem: a opção destrutiva não é aplicada ao próprio arquivo e o app cria automaticamente uma cópia com nome único.
+- O visualizador interno de imagens vira uma galeria da pasta atual: botões **Anterior/Próxima**, contador e gesto horizontal permitem trocar de foto sem fechar o visualizador.
+- A galeria recebe o snapshot que já estava carregado pelo Explorer, não faz busca global nem percorre subpastas; somente imagens da pasta aberta entram na sequência, respeitando ordenação e visibilidade de ocultos atuais.
+- Imagens abertas por `Abrir com`, Favoritos, ZIP ou atalhos fora da pasta atual continuam isoladas, evitando misturar arquivos de outros locais.
+- README, tela Sobre, documentação, validações e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.57` / `versionCode 57`.
+
 ## 0.1.0-alpha.56
 
 - Terceira etapa da otimização estrutural de desempenho, focada em **recomposição do Compose, metadados e análise de armazenamento**.

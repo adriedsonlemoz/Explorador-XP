@@ -138,6 +138,7 @@ private fun ExplorerApp(
     var viewerMimeType by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerForcedReadOnly by rememberSaveable { mutableStateOf(false) }
     var viewerCleanupDirectory by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewerFolderImagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     var externalOpenLoading by remember(externalOpenRequest?.id) { mutableStateOf(externalOpenRequest != null) }
     var initialDirectoryHandled by remember(initialDirectoryPath) { mutableStateOf(false) }
 
@@ -180,6 +181,7 @@ private fun ExplorerApp(
                         viewerCleanupDirectory = null
                         viewerMimeType = null
                         viewerForcedReadOnly = false
+                        viewerFolderImagePaths = event.folderImages.map { it.absolutePath }
                         viewerFilePath = event.file.absolutePath
                     } else openFile(context, event.file)
                 }
@@ -210,6 +212,7 @@ private fun ExplorerApp(
             if (previous != prepared.cleanupDirectory.absolutePath) File(previous).deleteRecursively()
         }
         viewerFilePath = prepared.file.absolutePath
+        viewerFolderImagePaths = emptyList()
         viewerMimeType = prepared.mimeType
         viewerForcedReadOnly = true
         viewerCleanupDirectory = prepared.cleanupDirectory.absolutePath
@@ -256,6 +259,7 @@ private fun ExplorerApp(
             file = activeViewer,
             externalMimeType = viewerMimeType,
             forcedReadOnly = viewerForcedReadOnly,
+            folderImages = viewerFolderImagePaths.map(::File),
             onClose = {
                 val cleanup = viewerCleanupDirectory
                 val wasExternalOpen = cleanup != null
@@ -263,6 +267,7 @@ private fun ExplorerApp(
                 viewerMimeType = null
                 viewerForcedReadOnly = false
                 viewerCleanupDirectory = null
+                viewerFolderImagePaths = emptyList()
                 cleanup?.let { File(it).deleteRecursively() }
                 if (wasExternalOpen) {
                     (context as? android.app.Activity)?.finish()
@@ -277,6 +282,7 @@ private fun ExplorerApp(
                 viewerMimeType = null
                 viewerForcedReadOnly = false
                 viewerCleanupDirectory = null
+                viewerFolderImagePaths = emptyList()
                 cleanup?.let { File(it).deleteRecursively() }
                 if (accessGranted) viewModel.navigateTo(target)
                 else Toast.makeText(context, "Libere o acesso aos arquivos para abrir esta pasta.", Toast.LENGTH_SHORT).show()
@@ -337,6 +343,8 @@ private fun ExplorerApp(
         onAnalyzeStorage = viewModel::analyzeStorage,
         onCancelStorageAnalysis = viewModel::cancelStorageAnalysis,
         onCancelTransfer = viewModel::cancelTransfer,
+        onResolveTransferConflict = viewModel::resolveTransferConflict,
+        transferConflict = viewModel.transferConflict,
         trashState = viewModel.trashState,
         storageScanState = viewModel.storageScanState,
         transferState = viewModel.transferState,

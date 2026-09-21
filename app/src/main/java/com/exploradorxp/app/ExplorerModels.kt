@@ -14,7 +14,27 @@ data class TransferProgress(
     val done: Int,
     val total: Int,
     val currentName: String,
+    val bytesDone: Long = 0L,
+    val bytesTotal: Long = 0L,
 )
+
+enum class ConflictDecision { REPLACE, SKIP, KEEP_BOTH }
+
+data class ConflictResolution(
+    val decision: ConflictDecision,
+    val applyToAll: Boolean = false,
+)
+
+@Immutable
+data class TransferConflict(
+    val sourcePath: String,
+    val targetPath: String,
+    val sourceIsDirectory: Boolean,
+    val targetIsDirectory: Boolean,
+) {
+    val sourceName: String get() = File(sourcePath).name
+    val targetName: String get() = File(targetPath).name
+}
 
 /** Estado exibido na UI enquanto uma transferência está em andamento. */
 @Immutable
@@ -23,8 +43,17 @@ data class TransferState(
     val done: Int,
     val total: Int,
     val currentName: String,
+    val bytesDone: Long = 0L,
+    val bytesTotal: Long = 0L,
+    val bytesPerSecond: Long = 0L,
+    val etaSeconds: Long? = null,
 ) {
-    val fraction: Float get() = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
+    val fraction: Float
+        get() = if (bytesTotal > 0L) {
+            (bytesDone.toDouble() / bytesTotal.toDouble()).toFloat().coerceIn(0f, 1f)
+        } else if (total > 0) {
+            (done.toFloat() / total).coerceIn(0f, 1f)
+        } else 0f
 }
 
 @Immutable
@@ -156,7 +185,10 @@ data class ExplorerUiState(
 )
 
 sealed interface ExplorerEvent {
-    data class OpenFile(val file: File) : ExplorerEvent
+    data class OpenFile(
+        val file: File,
+        val folderImages: List<File> = emptyList(),
+    ) : ExplorerEvent
     data class ShareFiles(val files: List<File>) : ExplorerEvent
     data class ShowMessage(val message: String) : ExplorerEvent
 }

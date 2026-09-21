@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.56",
-  "version_code": 56,
-  "manager_version": "0.1.0-alpha.56",
-  "manager_code": 56,
+  "version_build": "0.1.0-alpha.57",
+  "version_code": 57,
+  "manager_version": "0.1.0-alpha.57",
+  "manager_code": 57,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.56",
-      "code": 56
+      "version": "0.1.0-alpha.57",
+      "code": 57
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -358,6 +358,39 @@
         "high-frequency fields remain outside ExplorerUiState",
         "TrashUiState.hasItems behavior"
       ]
+    },
+    "alpha57_operations_and_image_gallery": {
+      "ok": true,
+      "operations": [
+        "FileOperationPlan copy reports byte deltas while writing the existing 256 KiB blocks",
+        "TransferState carries bytes processed/total, average bytes per second and ETA",
+        "paste conflicts offer replace, skip or keep both",
+        "conflict decision can be applied to subsequent conflicts in the same paste operation",
+        "copying an item into its own folder never replaces/deletes the source and keeps both instead",
+        "cancel remains available; pause/resume is intentionally deferred"
+      ],
+      "image_viewer": [
+        "previous/next controls",
+        "horizontal swipe navigation",
+        "position counter",
+        "gallery sequence comes from the already loaded current-folder snapshot",
+        "no recursive/subfolder/global image scan",
+        "current sort mode and hidden-file preference are respected",
+        "external/favorites/archive/non-current-folder opens do not mix images from elsewhere"
+      ],
+      "file_operation_plan_compile_smoke": "ok",
+      "file_operation_plan_byte_smoke": "4 entries / 700005 bytes copied and reverse deletion verified in temporary tree",
+      "explorer_models_compile_smoke": "ok with minimal Compose Immutable annotation stub",
+      "kotlin_parser_smoke": "Changed Android/Compose Kotlin files were passed through kotlinc without Android classpath; expected unresolved references occurred but no expecting/unclosed/unexpected-token parser diagnostics were found.",
+      "json_parse": "3 files ok",
+      "xml_parse": "12 files ok",
+      "yaml_parse": "2 workflow files ok",
+      "drawable_references": "127 referenced names, none missing",
+      "image_resources_unchanged_from_alpha56": "172 image files unchanged",
+      "workflows_unchanged_from_alpha56": true,
+      "generated_art_or_mockups": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain."
     }
   },
   "validated_at_utc": "2026-09-21T13:57:25.531058+00:00",
@@ -690,6 +723,28 @@
       "app/src/main/res/drawable-xxxhdpi/folder_images.png",
       "README.md",
       "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha57_against_alpha56": {
+    "added": [
+      "docs/ALPHA57_OPERATIONS_AND_IMAGE_GALLERY.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ExplorerModels.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerViewModel.kt",
+      "app/src/main/java/com/exploradorxp/app/FileOperationPlan.kt",
+      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/test/java/com/exploradorxp/app/FileOperationPlanTest.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/PERFORMANCE_PROFILING.md",
       "docs/VALIDATION.json",
       "github-manager.json"
     ],

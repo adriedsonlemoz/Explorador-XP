@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.56` (`versionCode 56`)  
+**Versão atual:** `0.1.0-alpha.57` (`versionCode 57`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,6 +14,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.57 melhora as operações de arquivos com progresso por bytes, velocidade e tempo restante em cópia/movimentação, além de tratamento explícito de conflitos com **Substituir / Ignorar / Manter ambos** e opção de aplicar a decisão aos próximos conflitos. O visualizador de imagens agora permite navegar por **Anterior/Próxima** ou gesto lateral sem sair da tela, usando somente as imagens da pasta que estava aberta no Explorer e respeitando a ordenação atual.
 - A alpha.56 continua a otimização de desempenho: progresso de transferências, análise de armazenamento e estado da Lixeira foram separados do `ExplorerUiState` principal para não recomporem toda a tela; itens de arquivo reutilizam um cache LRU de metadados já formatados; lista/grade informam `contentType` ao Compose; seleção na barra inferior usa índice por caminho; e a análise de armazenamento reaproveita o tamanho persistido da Lixeira em vez de revarrer árvores novas.
 - A alpha.55 corrige dois problemas visuais persistentes: as janelas modais deixam de reaplicar os insets do sistema dentro do `Dialog`, ficando centralizadas de forma simétrica na área útil do aplicativo; e os recursos de **Movies, Music e Pictures/DCIM** foram reconstruídos a partir dos próprios recursos XP existentes no projeto porque os PNGs especializados antigos já continham o desenho cortado na origem. Nenhuma arte generativa ou mockup foi criado.
 - A alpha.54 continua a melhoria de desempenho nas operações pesadas: copiar, mover, excluir e Lixeira agora montam um plano iterativo da árvore uma única vez e reutilizam esse snapshot para executar a operação, eliminando enumerações recursivas duplicadas com `listFiles()`. O mesmo plano fornece contagem e tamanho total, usa buffer maior na cópia e grava o tamanho da árvore no metadado da Lixeira para acelerar reaberturas futuras.

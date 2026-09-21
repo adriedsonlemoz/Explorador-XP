@@ -27,8 +27,13 @@ class FileOperationPlanTest {
 
             val target = File(temp, "destino")
             var copied = 0
-            copyFileOperationPlan(plan, target) { copied++ }
+            var copiedBytes = 0L
+            copyFileOperationPlan(plan, target) { _, bytesDelta, entryCompleted ->
+                copiedBytes += bytesDelta
+                if (entryCompleted) copied++
+            }
             assertEquals(plan.entryCount, copied)
+            assertEquals(plan.totalBytes, copiedBytes)
             assertEquals("abc", File(target, "a.txt").readText())
             assertEquals(5L, File(target, "sub/pasta/b.bin").length())
 

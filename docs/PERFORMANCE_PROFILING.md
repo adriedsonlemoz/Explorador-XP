@@ -75,3 +75,9 @@ A alpha.27 testou substituir os ícones XP por vetores/categorias genéricas. No
 A alpha.56 separa progresso de transferência, análise de armazenamento e Lixeira do `ExplorerUiState` principal. Isso reduz o escopo de recomposição durante operações longas. A listagem também reutiliza `FileItem`s já formatados por um cache LRU e informa `contentType` à lista/grade.
 
 Ao comparar traces novos, observar principalmente `FrameTimingMetric` durante uma transferência em paralelo com rolagem e durante seleção múltipla em pastas grandes. A expectativa é reduzir trabalho de composição sem alterar o resultado funcional das operações.
+
+## Progresso por bytes e galeria — alpha.57
+
+A alpha.57 mantém o `FileOperationPlan` de travessia única e passa a reportar bytes durante a própria cópia dos blocos de 256 KiB. A UI calcula velocidade média e ETA a partir desses mesmos eventos, sem reler o arquivo para medir progresso. Conflitos de destino são resolvidos antes da cópia com Substituir / Ignorar / Manter ambos e decisão opcional para todos os próximos conflitos da mesma operação.
+
+O visualizador de imagens não faz scan adicional do armazenamento: recebe do `ExplorerViewModel` a sequência de imagens derivada do snapshot já carregado da pasta atual. Assim Anterior/Próxima e gesto lateral não introduzem uma varredura global ou recursiva.

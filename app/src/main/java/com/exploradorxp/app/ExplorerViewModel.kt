@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -39,6 +40,10 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     // transferência/análise e atualização da Lixeira não recompõem a árvore inteira do Explorer.
     private val _transferState = MutableStateFlow<TransferState?>(null)
     val transferState: StateFlow<TransferState?> = _transferState.asStateFlow()
+
+    private val _transferConflict = MutableStateFlow<TransferConflict?>(null)
+    val transferConflict: StateFlow<TransferConflict?> = _transferConflict.asStateFlow()
+    private var transferConflictWaiter: CompletableDeferred<ConflictResolution>? = null
 
     private val _trashState = MutableStateFlow(TrashUiState())
     val trashState: StateFlow<TrashUiState> = _trashState.asStateFlow()
@@ -225,7 +230,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             navigateTo(item.file)
         } else {
             viewModelScope.launch(Dispatchers.IO) { repository.addRecent(item.file) }
-            _events.tryEmit(ExplorerEvent.OpenFile(item.file))
+            _events.tryEmit(ExplorerEvent.OpenFile(item.file, currentFolderImages(item.file)))
         }
     }
 
@@ -407,7 +412,14 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             kind = kind,
             successMessage = "Operação concluída.",
             failureFallback = "Falha ao colar.",
-        ) { onProgress -> repository.paste(clipboard, destination, onProgress) }
+        ) { onProgress ->
+            repository.paste(
+                clipboard = clipboard,
+                destination = destination,
+                onProgress = onProgress,
+                onConflict = ::requestTransferConflict,
+            )
+        }
     }
 
     /** Exclusão permanente, usada apenas após escolha explícita do usuário. */
@@ -444,9 +456,34 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                 navigateTo(file)
             } else {
                 withContext(Dispatchers.IO) { repository.addRecent(file) }
-                _events.tryEmit(ExplorerEvent.OpenFile(file))
+                _events.tryEmit(ExplorerEvent.OpenFile(file, currentFolderImages(file)))
             }
         }
+    }
+
+    private fun currentFolderImages(openedFile: File): List<File> {
+        val state = _uiState.value
+        if (state.tab == ExplorerTab.FAVORITES || openedFile.extension.lowercase() !in imageExtensions) return emptyList()
+        val parentPath = openedFile.parentFile?.absolutePath ?: return listOf(openedFile)
+        if (state.currentDir.absolutePath != parentPath || currentSnapshotKey != snapshotKey(state)) return listOf(openedFile)
+
+        val orderedItems = if (state.query.isBlank()) {
+            state.items
+        } else {
+            // A busca pode esconder outras fotos da mesma pasta. Para a galeria, refaz somente
+            // a projeção em memória sem o texto de busca; nenhuma leitura de disco é necessária.
+            ExplorerItemTransforms.apply(
+                snapshot = currentSnapshot,
+                query = "",
+                sortMode = state.sortMode,
+                showHidden = state.showHidden,
+                foldersFirst = false,
+            )
+        }
+        return orderedItems.asSequence()
+            .filter { !it.isDirectory && it.extension in imageExtensions }
+            .map(FileItem::file)
+            .toList()
     }
 
     fun selectAllVisible() {
@@ -625,7 +662,29 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     /** Cancela a cópia/mover/exclusão em andamento, se houver. */
     fun cancelTransfer() {
+        transferConflictWaiter?.cancel()
+        transferConflictWaiter = null
+        _transferConflict.value = null
         transferJob?.cancel()
+    }
+
+    fun resolveTransferConflict(decision: ConflictDecision, applyToAll: Boolean) {
+        val waiter = transferConflictWaiter ?: return
+        if (!waiter.isCompleted) waiter.complete(ConflictResolution(decision, applyToAll))
+        transferConflictWaiter = null
+        _transferConflict.value = null
+    }
+
+    private suspend fun requestTransferConflict(conflict: TransferConflict): ConflictResolution {
+        val waiter = CompletableDeferred<ConflictResolution>()
+        transferConflictWaiter = waiter
+        _transferConflict.value = conflict
+        return try {
+            waiter.await()
+        } finally {
+            if (transferConflictWaiter === waiter) transferConflictWaiter = null
+            if (_transferConflict.value == conflict) _transferConflict.value = null
+        }
     }
 
     /**
@@ -641,11 +700,34 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         operation: suspend ((TransferProgress) -> Unit) -> Result<Unit>,
     ) {
         transferJob?.cancel()
+        transferConflictWaiter?.cancel()
+        transferConflictWaiter = null
+        _transferConflict.value = null
         transferJob = viewModelScope.launch {
             _transferState.value = TransferState(kind, done = 0, total = 1, currentName = "")
+            var firstByteAtNs = 0L
             val result = operation { progress ->
-                _transferState.value = TransferState(kind, progress.done, progress.total, progress.currentName)
+                if (progress.bytesDone > 0L && firstByteAtNs == 0L) firstByteAtNs = System.nanoTime()
+                val elapsedSeconds = if (firstByteAtNs == 0L) 0.0 else
+                    ((System.nanoTime() - firstByteAtNs).coerceAtLeast(1L) / 1_000_000_000.0)
+                val bytesPerSecond = if (elapsedSeconds > 0.15 && progress.bytesDone > 0L)
+                    (progress.bytesDone / elapsedSeconds).toLong().coerceAtLeast(0L) else 0L
+                val remainingBytes = (progress.bytesTotal - progress.bytesDone).coerceAtLeast(0L)
+                val etaSeconds = if (bytesPerSecond > 0L && remainingBytes > 0L)
+                    ((remainingBytes + bytesPerSecond - 1) / bytesPerSecond) else null
+                _transferState.value = TransferState(
+                    kind = kind,
+                    done = progress.done,
+                    total = progress.total,
+                    currentName = progress.currentName,
+                    bytesDone = progress.bytesDone,
+                    bytesTotal = progress.bytesTotal,
+                    bytesPerSecond = bytesPerSecond,
+                    etaSeconds = etaSeconds,
+                )
             }
+            transferConflictWaiter = null
+            _transferConflict.value = null
             _transferState.value = null
             result
                 .onSuccess {

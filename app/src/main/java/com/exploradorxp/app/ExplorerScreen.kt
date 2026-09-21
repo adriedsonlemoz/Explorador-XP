@@ -39,6 +39,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -153,6 +154,8 @@ fun ExplorerScreen(
     onAnalyzeStorage: (Boolean) -> Unit,
     onCancelStorageAnalysis: () -> Unit,
     onCancelTransfer: () -> Unit,
+    onResolveTransferConflict: (ConflictDecision, Boolean) -> Unit,
+    transferConflict: StateFlow<TransferConflict?>,
     trashState: StateFlow<TrashUiState>,
     storageScanState: StateFlow<StorageScanState>,
     transferState: StateFlow<TransferState?>,
@@ -500,6 +503,11 @@ fun ExplorerScreen(
         },
     )
     TransferProgressHost(stateFlow = transferState, onCancel = onCancelTransfer)
+    TransferConflictHost(
+        stateFlow = transferConflict,
+        onResolve = onResolveTransferConflict,
+        onCancel = onCancelTransfer,
+    )
 
 }
 
@@ -1473,10 +1481,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Progresso de copiar/mover/excluir e análise de armazenamento não recompõem mais toda a tela principal.",
-                    "Metadados já formatados de arquivos são reutilizados por cache quando o item não mudou.",
-                    "Lista, grade e seleção ficaram mais leves em pastas com muitos itens.",
-                    "A análise de armazenamento reaproveita o tamanho já salvo das novas entradas da Lixeira.",
+                    "Cópias e movimentações mostram bytes processados, velocidade e estimativa de tempo restante.",
+                    "Conflitos de nome agora oferecem Substituir, Ignorar ou Manter ambos, com opção de aplicar a todos.",
+                    "O visualizador de imagens permite ir para a foto anterior/próxima e aceita gesto lateral.",
+                    "A galeria usa somente as imagens da pasta aberta no Explorer e respeita a ordenação atual.",
                 ).forEach { change ->
                     Text(
                         "• $change",
@@ -1636,11 +1644,27 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
                         .clip(RoundedCornerShape(5.dp)),
                 )
                 Spacer(Modifier.height(6.dp))
+                val percent = (transfer.fraction * 100f).toInt().coerceIn(0, 100)
                 Text(
-                    text = "${transfer.done.coerceAtMost(transfer.total)} de ${transfer.total} • ${(transfer.fraction * 100f).toInt().coerceIn(0, 100)}%",
+                    text = if (transfer.bytesTotal > 0L) {
+                        "${formatBytes(transfer.bytesDone)} de ${formatBytes(transfer.bytesTotal)} • $percent%"
+                    } else {
+                        "${transfer.done.coerceAtMost(transfer.total)} de ${transfer.total} • $percent%"
+                    },
                     fontSize = 12.sp,
                     color = XpTextSecondary,
                 )
+                if (transfer.kind != TransferKind.DELETE && transfer.bytesPerSecond > 0L) {
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = buildString {
+                            append("${formatBytes(transfer.bytesPerSecond)}/s")
+                            transfer.etaSeconds?.let { append(" • restante ~${formatTransferDuration(it)}") }
+                        },
+                        fontSize = 11.sp,
+                        color = XpTextSecondary,
+                    )
+                }
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                     XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
@@ -1648,6 +1672,106 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
             }
         }
     }
+    }
+}
+
+@Composable
+private fun TransferConflictHost(
+    stateFlow: StateFlow<TransferConflict?>,
+    onResolve: (ConflictDecision, Boolean) -> Unit,
+    onCancel: () -> Unit,
+) {
+    val conflict by stateFlow.collectAsStateWithLifecycle()
+    conflict?.let {
+        TransferConflictDialog(conflict = it, onResolve = onResolve, onCancel = onCancel)
+    }
+}
+
+@Composable
+private fun TransferConflictDialog(
+    conflict: TransferConflict,
+    onResolve: (ConflictDecision, Boolean) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var applyToAll by remember(conflict.sourcePath, conflict.targetPath) { mutableStateOf(false) }
+    Dialog(
+        onDismissRequest = onCancel,
+        properties = DialogProperties(dismissOnClickOutside = false, usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0x77000000))
+                .padding(14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 470.dp)
+                    .background(Color(0xFFF8F8F2))
+                    .border(1.dp, XpBorder),
+            ) {
+                XpDialogTitle("Já existe um item com esse nome", onCancel)
+                Column(Modifier.padding(14.dp)) {
+                    Text(
+                        "O destino já contém “${conflict.targetName}”. Escolha como continuar.",
+                        fontSize = 13.sp,
+                        color = Color(0xFF303030),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text("Origem: ${conflict.sourceName}", fontSize = 12.sp, color = XpTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("Destino: ${conflict.targetName}", fontSize = 12.sp, color = XpTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = applyToAll, onCheckedChange = { applyToAll = it })
+                        Text(
+                            "Aplicar esta escolha a todos os próximos conflitos",
+                            fontSize = 12.sp,
+                            color = Color(0xFF303030),
+                            modifier = Modifier.clickable { applyToAll = !applyToAll },
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        XpDialogButton(
+                            "Substituir",
+                            iconRes = R.drawable.refresh,
+                            danger = true,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onResolve(ConflictDecision.REPLACE, applyToAll) },
+                        )
+                        XpDialogButton(
+                            "Ignorar",
+                            iconRes = R.drawable.close,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onResolve(ConflictDecision.SKIP, applyToAll) },
+                        )
+                        XpDialogButton(
+                            "Manter ambos",
+                            iconRes = R.drawable.copy,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onResolve(ConflictDecision.KEEP_BOTH, applyToAll) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatTransferDuration(seconds: Long): String {
+    val safe = seconds.coerceAtLeast(0L)
+    val hours = safe / 3600L
+    val minutes = (safe % 3600L) / 60L
+    val secs = safe % 60L
+    return when {
+        hours > 0L -> "${hours}h ${minutes}min"
+        minutes > 0L -> "${minutes}min ${secs}s"
+        else -> "${secs}s"
     }
 }
 
