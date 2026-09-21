@@ -425,22 +425,86 @@ internal object ArchiveManager {
         entryPath: String,
         cacheRoot: File,
         password: CharArray? = null,
+        onProgress: (ArchiveProgress) -> Unit = {},
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             val zip = ZipFile(zipFile, password)
             if (zip.isEncrypted && (password == null || password.isEmpty())) throw ArchivePasswordRequiredException()
             val header = zip.getFileHeader(entryPath) ?: error("Item não encontrado no ZIP.")
             require(!header.isDirectory) { "Não é possível visualizar uma pasta." }
-            val safeName = File(safeEntryPath(header.fileName.orEmpty())).name.ifBlank { "arquivo" }
-            val previewDir = File(cacheRoot, "archive-preview").apply {
+            val normalizedPath = normalizeEntryPath(header.fileName.orEmpty())
+            val safeName = File(safeEntryPath(normalizedPath)).name.ifBlank { "arquivo" }
+            val archiveKey = buildString {
+                append(zipFile.absolutePath.hashCode().toUInt().toString(16))
+                append('-')
+                append(zipFile.length())
+                append('-')
+                append(zipFile.lastModified())
+            }
+            val previewDir = File(cacheRoot, "archive-preview/$archiveKey").apply {
                 if (!exists()) mkdirs()
             }
-            val target = uniqueFile(File(previewDir, safeName))
+            val entryKey = normalizedPath.hashCode().toUInt().toString(16)
+            val target = File(previewDir, "${entryKey}_$safeName")
+            val expectedBytes = header.uncompressedSize.coerceAtLeast(0L)
+            if (target.isFile && (expectedBytes <= 0L || target.length() == expectedBytes)) {
+                onProgress(
+                    ArchiveProgress(
+                        percent = 100,
+                        completedEntries = 1,
+                        totalEntries = 1,
+                        extractedBytes = target.length(),
+                        totalBytes = expectedBytes,
+                        speedBytesPerSecond = 0L,
+                        currentEntry = normalizedPath,
+                    )
+                )
+                return@runCatching target
+            }
+
+            val temp = File(previewDir, ".${target.name}.abrindo-${System.nanoTime()}")
+            val startedAt = System.nanoTime()
+            var copiedBytes = 0L
             try {
                 zip.getInputStream(header).use { input ->
-                    FileOutputStream(target).use { output -> input.copyTo(output) }
+                    FileOutputStream(temp).use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 4)
+                        while (true) {
+                            coroutineContext.ensureActive()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            copiedBytes += read
+                            emitProgress(
+                                onProgress,
+                                completed = 0,
+                                totalEntries = 1,
+                                copiedBytes = copiedBytes,
+                                totalBytes = expectedBytes,
+                                startedAtNanos = startedAt,
+                                currentEntry = normalizedPath,
+                            )
+                        }
+                        output.fd.sync()
+                    }
                 }
+                coroutineContext.ensureActive()
+                if (target.exists() && !target.delete()) error("Não foi possível atualizar a pré-visualização temporária.")
+                require(temp.renameTo(target)) { "Não foi possível preparar o item para visualização." }
+                emitProgress(
+                    onProgress,
+                    completed = 1,
+                    totalEntries = 1,
+                    copiedBytes = copiedBytes,
+                    totalBytes = expectedBytes,
+                    startedAtNanos = startedAt,
+                    currentEntry = normalizedPath,
+                )
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                runCatching { temp.delete() }
+                throw cancelled
             } catch (t: Throwable) {
+                runCatching { temp.delete() }
                 if (looksLikePasswordError(t, zip.isEncrypted)) throw ArchivePasswordIncorrectException()
                 throw t
             }

@@ -67,16 +67,6 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
-private data class ArchiveBrowserItem(
-    val path: String,
-    val name: String,
-    val directory: Boolean,
-    val size: Long,
-    val compressedSize: Long,
-    val modifiedAt: Long,
-    val source: ArchiveEntryInfo?,
-)
-
 private enum class ArchivePasswordAction { PREVIEW, VERIFY }
 private data class ArchivePasswordRequest(val action: ArchivePasswordAction, val entryPath: String? = null)
 
@@ -104,14 +94,23 @@ internal fun ArchiveZipViewer(
     var verifyMessage by remember { mutableStateOf<String?>(null) }
     var password by remember { mutableStateOf<CharArray?>(null) }
     var passwordRequest by remember { mutableStateOf<ArchivePasswordRequest?>(null) }
+    var previewProgress by remember { mutableStateOf<ArchiveProgress?>(null) }
+    var previewJob by remember { mutableStateOf<Job?>(null) }
+    var previewRequestId by remember { mutableStateOf(0L) }
 
     LaunchedEffect(file.absolutePath, file.lastModified()) {
         infoResult = ArchiveManager.readZip(file)
     }
 
     val archiveInfo = infoResult?.getOrNull()
-    val visibleItems = remember(archiveInfo, currentPath, query, sortMode, ascending) {
-        archiveInfo?.let { buildBrowserItems(it.entries, currentPath, query, sortMode, ascending) }.orEmpty()
+    val browserIndex = remember(archiveInfo) {
+        archiveInfo?.let { buildArchiveBrowserIndex(it.entries) }
+    }
+    val visibleItems = remember(browserIndex, currentPath, query, sortMode, ascending) {
+        browserIndex?.let { buildArchiveBrowserItems(it, currentPath, query, sortMode, ascending) }.orEmpty()
+    }
+    val selectedBytes = remember(archiveInfo, selected) {
+        archiveInfo?.let { ArchiveManager.requiredBytes(it, selected.takeIf { paths -> paths.isNotEmpty() }) } ?: 0L
     }
 
     BackHandler(enabled = selected.isNotEmpty() || currentPath.isNotBlank() || query.isNotBlank()) {
@@ -128,11 +127,26 @@ internal fun ArchiveZipViewer(
             passwordRequest = ArchivePasswordRequest(ArchivePasswordAction.PREVIEW, path)
             return
         }
-        scope.launch {
-            val result = ArchiveManager.extractEntryToCache(file, path, context.cacheDir, password)
+        previewJob?.cancel()
+        val requestId = previewRequestId + 1L
+        previewRequestId = requestId
+        previewProgress = ArchiveProgress(0, 0, 1, 0L, 0L, 0L, path)
+        previewJob = scope.launch {
+            val result = ArchiveManager.extractEntryToCache(
+                zipFile = file,
+                entryPath = path,
+                cacheRoot = context.cacheDir,
+                password = password,
+                onProgress = { progress ->
+                    if (previewRequestId == requestId) previewProgress = progress
+                },
+            )
+            if (previewRequestId != requestId) return@launch
+            previewProgress = null
             result.onSuccess { extracted ->
                 if (supportsInternalViewer(extracted)) onPreviewFile(extracted) else onOpenExternal(extracted)
             }.onFailure { error ->
+                if (error is kotlinx.coroutines.CancellationException) return@onFailure
                 if (error is ArchivePasswordRequiredException || error is ArchivePasswordIncorrectException) {
                     password = null
                     passwordRequest = ArchivePasswordRequest(ArchivePasswordAction.PREVIEW, path)
@@ -183,7 +197,7 @@ internal fun ArchiveZipViewer(
                 }
                 Spacer(Modifier.width(7.dp))
                 Column(Modifier.weight(1f)) {
-                    val countText = archiveInfo?.let { "${it.fileCount} arquivos • ${it.directoryCount} pastas" } ?: "Lendo conteúdo..."
+                    val countText = browserIndex?.let { "${it.totalFiles} arquivos • ${it.totalDirectories} pastas" } ?: "Lendo conteúdo..."
                     Text(countText, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (archiveInfo != null) {
                         val ratio = archiveInfo.compressionRatio?.let { " • compressão $it%" }.orEmpty()
@@ -219,14 +233,16 @@ internal fun ArchiveZipViewer(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().height(38.dp).background(Color(0xFFF8FAFD)).border(1.dp, XpControlBorder).padding(horizontal = 7.dp),
         ) {
-            Text(
-                if (currentPath.isBlank()) "ZIP:/" else "ZIP:/$currentPath",
-                fontSize = 11.sp,
-                color = XpTextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            Box(
+                modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                ArchiveBreadcrumb(currentPath = currentPath) { target ->
+                    currentPath = target
+                    query = ""
+                    selected = emptySet()
+                }
+            }
             Box {
                 Text(
                     "Classificação: ${when (sortMode) {
@@ -277,13 +293,37 @@ internal fun ArchiveZipViewer(
             }
         }
 
-        if (selected.isNotEmpty()) {
+        if (visibleItems.isNotEmpty()) {
+            val visiblePaths = visibleItems.mapTo(linkedSetOf()) { it.path }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().background(Color(0xFFEAF2FB)).padding(horizontal = 8.dp, vertical = 5.dp),
             ) {
-                Text("${selected.size} selecionado(s)", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                ArchiveSmallButton("Limpar seleção") { selected = emptySet() }
+                Text(
+                    if (selected.isEmpty()) {
+                        if (visibleItems.size == 1) "1 item visível" else "${visibleItems.size} itens visíveis"
+                    } else {
+                        val selectionLabel = if (selected.size == 1) "1 selecionado" else "${selected.size} selecionados"
+                        "$selectionLabel • ${archiveFormatBytes(selectedBytes)}"
+                    },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    modifier = Modifier.widthIn(max = 210.dp).horizontalScroll(rememberScrollState()),
+                ) {
+                    if (selected.isEmpty()) {
+                        ArchiveSmallButton("Selecionar tudo") { selected = visiblePaths }
+                    } else {
+                        ArchiveSmallButton("Tudo") { selected = visiblePaths }
+                        ArchiveSmallButton("Inverter") { selected = visiblePaths.filterNotTo(linkedSetOf()) { it in selected } }
+                        ArchiveSmallButton("Limpar") { selected = emptySet() }
+                    }
+                }
             }
         }
 
@@ -351,14 +391,27 @@ internal fun ArchiveZipViewer(
                             Column(Modifier.weight(1f)) {
                                 Text(item.name, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 val detail = when {
-                                    item.directory -> "Pasta"
-                                    item.source?.encrypted == true -> "${item.source.compressionMethod} • protegido por senha"
-                                    else -> item.source?.compressionMethod ?: "Arquivo"
+                                    item.directory -> {
+                                        val folders = if (item.descendantDirectories > 0) " • ${item.descendantDirectories} pastas" else ""
+                                        "${item.descendantFiles} arquivos$folders • ${archiveFormatBytes(item.size)}"
+                                    }
+                                    item.source?.encrypted == true -> "${item.source.compressionMethod} • ${archiveFormatBytes(item.compressedSize)} compactado • senha"
+                                    else -> "${item.source?.compressionMethod ?: "Arquivo"} • ${archiveFormatBytes(item.compressedSize)} compactado"
                                 }
                                 Text(detail, fontSize = 10.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (query.isNotBlank()) {
+                                    val parent = item.path.substringBeforeLast('/', "ZIP:/")
+                                    Text(
+                                        if (parent == "ZIP:/") parent else "ZIP:/$parent",
+                                        fontSize = 9.5.sp,
+                                        color = Color(0xFF667788),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
                             }
                             Text(
-                                if (item.directory) "Pasta" else archiveFormatBytes(item.size),
+                                archiveFormatBytes(item.size),
                                 fontSize = 11.sp,
                                 color = XpTextSecondary,
                                 textAlign = TextAlign.End,
@@ -397,6 +450,24 @@ internal fun ArchiveZipViewer(
                 }
             }
         }
+
+        val folderInfo = browserIndex?.itemsByPath?.get(currentPath.trim('/'))
+        val statusText = when {
+            query.isNotBlank() -> if (visibleItems.size == 1) "1 resultado • pesquisa em todo o ZIP" else "${visibleItems.size} resultados • pesquisa em todo o ZIP"
+            currentPath.isBlank() && browserIndex != null && archiveInfo != null ->
+                "${browserIndex.totalFiles} arquivos • ${browserIndex.totalDirectories} pastas • ${archiveFormatBytes(archiveInfo.uncompressedBytes)}"
+            folderInfo != null ->
+                "${folderInfo.descendantFiles} arquivos • ${folderInfo.descendantDirectories} pastas • ${archiveFormatBytes(folderInfo.size)}"
+            else -> ""
+        }
+        if (statusText.isNotBlank()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().height(28.dp).background(Color(0xFFEAF2FB)).border(1.dp, Color(0xFFC9D8E8)).padding(horizontal = 9.dp),
+            ) {
+                Text(statusText, fontSize = 10.5.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
     }
 
     if (showExtraction && archiveInfo != null) {
@@ -418,7 +489,7 @@ internal fun ArchiveZipViewer(
     }
 
     if (showArchiveDetails && archiveInfo != null) {
-        ArchiveInfoDialog(file, archiveInfo) { showArchiveDetails = false }
+        ArchiveInfoDialog(file, archiveInfo, browserIndex) { showArchiveDetails = false }
     }
 
     verifyProgress?.let { progress ->
@@ -427,6 +498,20 @@ internal fun ArchiveZipViewer(
             progress = progress,
             cancellable = false,
             onCancel = {},
+        )
+    }
+
+    previewProgress?.let { progress ->
+        ArchiveProgressDialog(
+            title = "Preparando ${File(progress.currentEntry).name.ifBlank { "arquivo" }}",
+            progress = progress,
+            cancellable = true,
+            cancelLabel = "Cancelar abertura",
+            onCancel = {
+                previewRequestId += 1L
+                previewJob?.cancel()
+                previewProgress = null
+            },
         )
     }
 
@@ -928,13 +1013,14 @@ private fun ArchivePasswordDialog(onDismiss: () -> Unit, onConfirm: (String) -> 
 }
 
 @Composable
-private fun ArchiveInfoDialog(file: File, info: ZipArchiveInfo, onDismiss: () -> Unit) {
+private fun ArchiveInfoDialog(file: File, info: ZipArchiveInfo, index: ArchiveBrowserIndex?, onDismiss: () -> Unit) {
     XpDialogFrame(title = "Informações do ZIP", onDismiss = onDismiss) {
         ArchiveInfoLine("Arquivo", file.name)
         ArchiveInfoLine("Tamanho", archiveFormatBytes(file.length()))
         ArchiveInfoLine("Descompactado", archiveFormatBytes(info.uncompressedBytes))
-        ArchiveInfoLine("Arquivos", info.fileCount.toString())
-        ArchiveInfoLine("Pastas", info.directoryCount.toString())
+        ArchiveInfoLine("Arquivos", (index?.totalFiles ?: info.fileCount).toString())
+        ArchiveInfoLine("Pastas", (index?.totalDirectories ?: info.directoryCount).toString())
+        ArchiveInfoLine("Itens", ((index?.totalFiles ?: info.fileCount) + (index?.totalDirectories ?: info.directoryCount)).toString())
         ArchiveInfoLine("Criptografado", if (info.encrypted) "Sim" else "Não")
         ArchiveInfoLine("ZIP dividido", if (info.splitArchive) "Sim" else "Não")
         ArchiveInfoLine("Cabeçalhos", if (info.validHeaders) "Válidos" else "Inválidos")
@@ -950,9 +1036,15 @@ private fun ArchiveEntryDetailsDialog(item: ArchiveBrowserItem, onDismiss: () ->
         ArchiveInfoLine("Nome", item.name)
         ArchiveInfoLine("Caminho", item.path)
         ArchiveInfoLine("Tipo", if (item.directory) "Pasta" else FileTypeClassifier.labelFor(File(item.name), false))
-        if (!item.directory) {
+        if (item.directory) {
+            ArchiveInfoLine("Conteúdo", "${item.descendantFiles} arquivos • ${item.descendantDirectories} pastas")
+            ArchiveInfoLine("Tamanho total", archiveFormatBytes(item.size))
+            ArchiveInfoLine("Compactado", archiveFormatBytes(item.compressedSize))
+        } else {
             ArchiveInfoLine("Tamanho", archiveFormatBytes(item.size))
             ArchiveInfoLine("Compactado", archiveFormatBytes(item.compressedSize))
+            val ratio = if (item.size > 0L) ((1.0 - item.compressedSize.toDouble() / item.size.toDouble()) * 100.0).toInt().coerceIn(-999, 100) else null
+            ratio?.let { ArchiveInfoLine("Compressão", "$it%") }
             item.source?.let {
                 ArchiveInfoLine("Método", it.compressionMethod)
                 ArchiveInfoLine("Criptografado", if (it.encrypted) "Sim" else "Não")
@@ -1086,49 +1178,30 @@ private fun togglePath(current: Set<String>, path: String): Set<String> = curren
     if (!add(path)) remove(path)
 }
 
-private fun buildBrowserItems(
-    entries: List<ArchiveEntryInfo>,
-    currentPath: String,
-    query: String,
-    sortMode: ArchiveSortMode,
-    ascending: Boolean,
-): List<ArchiveBrowserItem> {
-    val normalizedCurrent = currentPath.trim('/')
-    val prefix = if (normalizedCurrent.isBlank()) "" else "$normalizedCurrent/"
-    val folderMap = linkedMapOf<String, ArchiveBrowserItem>()
-
-    entries.forEach { entry ->
-        val path = entry.path.trim('/')
-        if (query.isNotBlank()) {
-            if (!path.contains(query, ignoreCase = true)) return@forEach
-            val name = path.substringAfterLast('/')
-            folderMap[path] = ArchiveBrowserItem(path, name, entry.isDirectory, entry.size, entry.compressedSize, entry.modifiedAt, entry)
-            return@forEach
-        }
-        if (!path.startsWith(prefix) || path == normalizedCurrent) return@forEach
-        val remainder = path.removePrefix(prefix)
-        if (remainder.isBlank()) return@forEach
-        val first = remainder.substringBefore('/')
-        val childPath = if (prefix.isBlank()) first else "$normalizedCurrent/$first"
-        val hasNested = remainder.contains('/')
-        if (hasNested) {
-            val existing = folderMap[childPath]
-            if (existing == null) {
-                folderMap[childPath] = ArchiveBrowserItem(childPath, first, true, 0L, 0L, 0L, null)
-            }
-        } else {
-            folderMap[childPath] = ArchiveBrowserItem(childPath, first, entry.isDirectory, entry.size, entry.compressedSize, entry.modifiedAt, entry)
+@Composable
+private fun ArchiveBreadcrumb(currentPath: String, onNavigate: (String) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            "ZIP:/",
+            fontSize = 11.sp,
+            color = XpBlue,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.clickable { onNavigate("") }.padding(vertical = 5.dp),
+        )
+        val parts = normalizeEntryPath(currentPath).split('/').filter { it.isNotBlank() }
+        parts.forEachIndexed { index, part ->
+            Text("/", fontSize = 11.sp, color = XpTextSecondary, modifier = Modifier.padding(horizontal = 2.dp))
+            val target = parts.take(index + 1).joinToString("/")
+            Text(
+                part,
+                fontSize = 11.sp,
+                color = if (index == parts.lastIndex) Color(0xFF303030) else XpBlue,
+                fontWeight = if (index == parts.lastIndex) FontWeight.SemiBold else FontWeight.Normal,
+                modifier = Modifier.clickable { onNavigate(target) }.padding(vertical = 5.dp),
+                maxLines = 1,
+            )
         }
     }
-
-    val comparator = when (sortMode) {
-        ArchiveSortMode.NAME -> compareBy<ArchiveBrowserItem> { !it.directory }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
-        ArchiveSortMode.SIZE -> compareBy<ArchiveBrowserItem> { !it.directory }.thenBy { it.size }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
-        ArchiveSortMode.TYPE -> compareBy<ArchiveBrowserItem> { !it.directory }.thenBy { File(it.name).extension.lowercase() }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
-        ArchiveSortMode.DATE -> compareBy<ArchiveBrowserItem> { !it.directory }.thenBy { it.modifiedAt }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
-    }
-    val sorted = folderMap.values.sortedWith(comparator)
-    return if (ascending) sorted else sorted.reversed()
 }
 
 @Composable

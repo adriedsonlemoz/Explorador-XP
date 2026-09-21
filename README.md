@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.58` (`versionCode 58`)  
+**Versão atual:** `0.1.0-alpha.59` (`versionCode 59`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,6 +14,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.59 evolui o **navegador ZIP**: cria um índice hierárquico único com pastas implícitas, tamanho/contagem recursivos por pasta, breadcrumb clicável, pesquisa com caminho do resultado, seleção rápida com tamanho real selecionado, barra de status do nível atual e pré-visualização com progresso/cancelamento e cache temporário reutilizável.
 - A alpha.58 adiciona **Pausar / Continuar** às operações longas de copiar, mover, excluir e Lixeira. A pausa é cooperativa e acontece entre arquivos e entre blocos de 256 KiB durante cópias, sem cancelar nem reiniciar a operação; velocidade e ETA desconsideram o tempo em que a tarefa ficou pausada, e **Cancelar** continua disponível mesmo durante a pausa.
 - A alpha.57 melhora as operações de arquivos com progresso por bytes, velocidade e tempo restante em cópia/movimentação, além de tratamento explícito de conflitos com **Substituir / Ignorar / Manter ambos** e opção de aplicar a decisão aos próximos conflitos. O visualizador de imagens agora permite navegar por **Anterior/Próxima** ou gesto lateral sem sair da tela, usando somente as imagens da pasta que estava aberta no Explorer e respeitando a ordenação atual.
 - A alpha.56 continua a otimização de desempenho: progresso de transferências, análise de armazenamento e estado da Lixeira foram separados do `ExplorerUiState` principal para não recomporem toda a tela; itens de arquivo reutilizam um cache LRU de metadados já formatados; lista/grade informam `contentType` ao Compose; seleção na barra inferior usa índice por caminho; e a análise de armazenamento reaproveita o tamanho persistido da Lixeira em vez de revarrer árvores novas.
@@ -94,6 +95,7 @@ app/src/main/java/com/exploradorxp/app/
   VideoPlayerViewer.kt
   TextCodeEditorViewer.kt
   ArchiveManager.kt
+  ArchiveBrowserIndex.kt
   ArchiveViewer.kt
   ArchiveProgressNotifier.kt
   PreferencesStore.kt
@@ -102,6 +104,7 @@ app/src/main/java/com/exploradorxp/app/
 
 app/src/test/java/com/exploradorxp/app/
   ExplorerItemTransformsTest.kt
+  ArchiveBrowserIndexTest.kt
   DeviceInfoReportTest.kt
 
 baselineprofile/src/main/java/com/exploradorxp/benchmark/

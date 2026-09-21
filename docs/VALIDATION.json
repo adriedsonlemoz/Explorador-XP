@@ -1,8 +1,8 @@
 {
-  "version_build": "0.1.0-alpha.58",
-  "version_code": 58,
-  "manager_version": "0.1.0-alpha.58",
-  "manager_code": 58,
+  "version_build": "0.1.0-alpha.59",
+  "version_code": 59,
+  "manager_version": "0.1.0-alpha.59",
+  "manager_code": 59,
   "checks": {
     "version_sync": {
       "ok": true,
@@ -415,7 +415,7 @@
       "full_android_build_reason": "Project has no gradlew and this environment has no configured Android SDK/Gradle toolchain. FileOperationPlan pause/resume was compiled and executed with kotlinc/JVM."
     }
   },
-  "validated_at_utc": "2026-09-21T18:24:53.997803+00:00",
+  "validated_at_utc": "2026-09-21T18:38:35.899574+00:00",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -658,6 +658,35 @@
       "icon_alpha_bounds": "11,11–181,181",
       "full_android_build_executed": false,
       "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain."
+    },
+    "alpha59_zip_browser": {
+      "ok": true,
+      "focus": [
+        "single hierarchical ZIP index",
+        "implicit directory reconstruction",
+        "recursive folder size/count statistics",
+        "clickable ZIP breadcrumb",
+        "search result paths",
+        "select all/invert/clear",
+        "selected extraction byte summary",
+        "preview progress/cancellation/cache"
+      ],
+      "behavior": [
+        "folder sorting uses recursive aggregate size/date",
+        "descending sort keeps folders before files",
+        "preview cache key includes archive path/length/lastModified and entry path",
+        "partial preview writes use a temporary file and atomic-style rename on completion",
+        "RAR/7Z/TAR/GZ remain unsupported internally rather than falsely advertised"
+      ],
+      "unit_test_added": "ArchiveBrowserIndexTest.kt",
+      "images_created_or_modified": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain.",
+      "archive_index_smoke": "Compiled as pure JVM helper; implicit dirs=2, files=3, docs recursive size=15 bytes, descending folder-first sort and implicit-folder search passed.",
+      "archive_manager_compile_smoke": "ArchiveManager.kt compiled with Kotlin/JVM using lightweight Zip4j stubs plus bundled kotlinx-coroutines; preview-cache/progress changes produced no compile errors.",
+      "archive_viewer_parser_smoke": "No expecting/unclosed/unexpected-token diagnostics from kotlinc parser pass; unresolved Android/Compose symbols are expected without Android classpath.",
+      "json_xml_parse": "3 JSON files and 12 XML files parsed successfully.",
+      "image_resources_unchanged_from_alpha58": "165 image files byte-identical."
     }
   },
   "source_diff_alpha51_against_alpha50": {
@@ -788,6 +817,24 @@
       "README.md",
       "CHANGELOG.md",
       "docs/PERFORMANCE_PROFILING.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha59_against_alpha58": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/ArchiveBrowserIndex.kt",
+      "app/src/test/java/com/exploradorxp/app/ArchiveBrowserIndexTest.kt",
+      "docs/ALPHA59_ZIP_BROWSER.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ArchiveManager.kt",
+      "app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "README.md",
+      "CHANGELOG.md",
       "docs/VALIDATION.json",
       "github-manager.json"
     ],

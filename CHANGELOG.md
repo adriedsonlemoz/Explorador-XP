@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.1.0-alpha.59
+
+- O visualizador ZIP passa a montar um índice hierárquico reutilizável ao abrir o arquivo, incluindo pastas implícitas que não possuem uma entrada de diretório própria.
+- Pastas internas agora mostram tamanho total recursivo, tamanho compactado acumulado, quantidade de arquivos e subpastas; ordenação por tamanho/data usa esses valores agregados.
+- Corrigida a ordenação decrescente do ZIP para manter pastas antes dos arquivos, em vez de inverter também os grupos.
+- O caminho `ZIP:/...` virou breadcrumb clicável para retornar diretamente a qualquer nível.
+- A pesquisa em todo o ZIP passa a mostrar o caminho de cada resultado, reduzindo ambiguidade quando há nomes repetidos.
+- Seleção ganhou **Selecionar tudo**, **Tudo**, **Inverter** e **Limpar**, além do tamanho real que será extraído.
+- A barra inferior do ZIP mostra resumo do nível atual (arquivos, pastas e tamanho) ou quantidade de resultados da pesquisa.
+- Informações de pasta exibem estatísticas recursivas; arquivos passam a mostrar também a taxa de compressão quando disponível.
+- Pré-visualização de itens grandes agora mostra progresso, pode ser cancelada e usa cache temporário estável por ZIP/entrada; arquivos parciais só são promovidos ao cache após escrita completa.
+- Adicionado `ArchiveBrowserIndex.kt` e teste JVM para pastas implícitas, estatísticas recursivas, pesquisa e ordenação com pastas primeiro.
+- Nenhuma imagem ou mockup foi criada ou modificada.
+- README, tela Sobre, documentação, validações e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.59` / `versionCode 59`.
+
 ## 0.1.0-alpha.58
 
 - A janela de operações agora oferece **Pausar** e **Continuar** sem cancelar ou reiniciar a tarefa em andamento.

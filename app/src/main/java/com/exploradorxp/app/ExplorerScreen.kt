@@ -1488,10 +1488,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Operações longas agora podem ser pausadas e continuadas sem reiniciar o trabalho já concluído.",
-                    "Pausar funciona em copiar, mover, excluir e nas principais operações da Lixeira.",
-                    "Velocidade e tempo restante desconsideram o período em que a tarefa ficou pausada.",
-                    "Cancelar continua disponível mesmo durante a pausa.",
+                    "O navegador ZIP agora calcula tamanho e conteúdo de pastas internas, inclusive quando o ZIP não grava entradas explícitas de pasta.",
+                    "O caminho virou uma trilha navegável e a pesquisa mostra onde cada resultado está dentro do arquivo compactado.",
+                    "Seleção ganhou Selecionar tudo, Inverter, tamanho total selecionado e extração parcial mais clara.",
+                    "Pré-visualizações grandes exibem progresso, podem ser canceladas e reutilizam cache temporário seguro.",
                 ).forEach { change ->
                     Text(
                         "• $change",
