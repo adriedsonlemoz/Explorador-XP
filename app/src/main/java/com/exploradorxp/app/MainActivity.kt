@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.OpenableColumns
 import android.provider.Settings
 import android.webkit.MimeTypeMap
 import android.widget.Toast
@@ -39,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -46,14 +48,32 @@ import androidx.core.view.WindowCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val EXTRA_PERFORMANCE_START_PATH = "com.exploradorxp.app.extra.PERFORMANCE_START_PATH"
 
+private data class ExternalOpenRequest(
+    val id: Int,
+    val uri: Uri,
+    val mimeType: String?,
+)
+
+private data class PreparedExternalFile(
+    val file: File,
+    val mimeType: String?,
+    val cleanupDirectory: File,
+)
+
 class MainActivity : ComponentActivity() {
+    private var externalOpenSequence = 0
+    private var externalOpenRequest by mutableStateOf<ExternalOpenRequest?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        updateExternalOpenRequest(intent)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = false
@@ -79,24 +99,46 @@ class MainActivity : ComponentActivity() {
                     ExplorerApp(
                         modifier = Modifier.fillMaxSize(),
                         initialDirectoryPath = intent.getStringExtra(EXTRA_PERFORMANCE_START_PATH),
+                        externalOpenRequest = externalOpenRequest,
                     )
                 }
             }
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        updateExternalOpenRequest(intent)
+    }
+
+    private fun updateExternalOpenRequest(sourceIntent: Intent?) {
+        if (sourceIntent?.action != Intent.ACTION_VIEW) return
+        val uri = sourceIntent.data ?: return
+        externalOpenSequence += 1
+        externalOpenRequest = ExternalOpenRequest(
+            id = externalOpenSequence,
+            uri = uri,
+            mimeType = sourceIntent.type,
+        )
+    }
 }
 
 @Composable
 private fun ExplorerApp(
     modifier: Modifier = Modifier,
     initialDirectoryPath: String? = null,
+    externalOpenRequest: ExternalOpenRequest? = null,
     viewModel: ExplorerViewModel = viewModel(),
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var accessGranted by remember { mutableStateOf(hasFileAccess(context)) }
     var viewerFilePath by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewerMimeType by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewerForcedReadOnly by rememberSaveable { mutableStateOf(false) }
+    var viewerCleanupDirectory by rememberSaveable { mutableStateOf<String?>(null) }
+    var externalOpenLoading by remember(externalOpenRequest?.id) { mutableStateOf(externalOpenRequest != null) }
     var initialDirectoryHandled by remember(initialDirectoryPath) { mutableStateOf(false) }
 
     val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -133,13 +175,45 @@ private fun ExplorerApp(
         viewModel.events.collectLatest { event ->
             when (event) {
                 is ExplorerEvent.OpenFile -> {
-                    if (supportsInternalViewer(event.file)) viewerFilePath = event.file.absolutePath
-                    else openFile(context, event.file)
+                    if (supportsInternalViewer(event.file)) {
+                        viewerCleanupDirectory?.let { File(it).deleteRecursively() }
+                        viewerCleanupDirectory = null
+                        viewerMimeType = null
+                        viewerForcedReadOnly = false
+                        viewerFilePath = event.file.absolutePath
+                    } else openFile(context, event.file)
                 }
                 is ExplorerEvent.ShareFiles -> shareFiles(context, event.files)
                 is ExplorerEvent.ShowMessage -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    LaunchedEffect(externalOpenRequest?.id) {
+        val request = externalOpenRequest ?: return@LaunchedEffect
+        externalOpenLoading = true
+        val result = runCatching { prepareExternalFile(context, request) }
+        val prepared = result.getOrNull()
+        if (prepared == null) {
+            externalOpenLoading = false
+            val error = result.exceptionOrNull()
+            Toast.makeText(
+                context,
+                error?.message ?: "Não foi possível abrir este arquivo no Explorador XP.",
+                Toast.LENGTH_LONG,
+            ).show()
+            (context as? android.app.Activity)?.finish()
+            return@LaunchedEffect
+        }
+
+        viewerCleanupDirectory?.let { previous ->
+            if (previous != prepared.cleanupDirectory.absolutePath) File(previous).deleteRecursively()
+        }
+        viewerFilePath = prepared.file.absolutePath
+        viewerMimeType = prepared.mimeType
+        viewerForcedReadOnly = true
+        viewerCleanupDirectory = prepared.cleanupDirectory.absolutePath
+        externalOpenLoading = false
     }
 
     // Entrada opcional usada somente pelas rotinas de desempenho. Não muda o fluxo normal.
@@ -166,8 +240,13 @@ private fun ExplorerApp(
         }
     }
 
-    if (!accessGranted) {
-        PermissionAccessDialog(onRequestAccess = ::requestFileAccess)
+    if (externalOpenLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(XpSurface),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("Abrindo arquivo...", color = XpBlueDark)
+        }
         return
     }
 
@@ -175,16 +254,39 @@ private fun ExplorerApp(
     if (activeViewer != null) {
         InternalViewerScreen(
             file = activeViewer,
+            externalMimeType = viewerMimeType,
+            forcedReadOnly = viewerForcedReadOnly,
             onClose = {
+                val cleanup = viewerCleanupDirectory
+                val wasExternalOpen = cleanup != null
                 viewerFilePath = null
-                viewModel.refresh()
+                viewerMimeType = null
+                viewerForcedReadOnly = false
+                viewerCleanupDirectory = null
+                cleanup?.let { File(it).deleteRecursively() }
+                if (wasExternalOpen) {
+                    (context as? android.app.Activity)?.finish()
+                } else if (accessGranted) {
+                    viewModel.refresh()
+                }
             },
             onOpenExternal = { target -> openFile(context, target) },
             onOpenFolder = { target ->
+                val cleanup = viewerCleanupDirectory
                 viewerFilePath = null
-                viewModel.navigateTo(target)
+                viewerMimeType = null
+                viewerForcedReadOnly = false
+                viewerCleanupDirectory = null
+                cleanup?.let { File(it).deleteRecursively() }
+                if (accessGranted) viewModel.navigateTo(target)
+                else Toast.makeText(context, "Libere o acesso aos arquivos para abrir esta pasta.", Toast.LENGTH_SHORT).show()
             },
         )
+        return
+    }
+
+    if (!accessGranted) {
+        PermissionAccessDialog(onRequestAccess = ::requestFileAccess)
         return
     }
 
@@ -258,6 +360,77 @@ private fun PermissionAccessDialog(onRequestAccess: () -> Unit) {
             XpDialogButton("Liberar acesso", onClick = onRequestAccess)
         }
     }
+}
+
+private suspend fun prepareExternalFile(context: Context, request: ExternalOpenRequest): PreparedExternalFile =
+    withContext(Dispatchers.IO) {
+        val resolver = context.contentResolver
+        val resolvedMime = ExternalOpenSupport.normalizeMime(
+            runCatching { resolver.getType(request.uri) }.getOrNull() ?: request.mimeType
+        ).takeIf { it.isNotBlank() }
+        val displayName = queryDisplayName(context, request.uri)
+            ?: request.uri.lastPathSegment?.substringAfterLast('/')
+            ?: "arquivo"
+
+        if (!ExternalOpenSupport.isCompatible(displayName, resolvedMime)) {
+            throw IllegalArgumentException("Este tipo de arquivo não é compatível com o Explorador XP.")
+        }
+
+        val safeName = safeExternalFileName(displayName, resolvedMime)
+        val requestDir = File(context.cacheDir, "external-open/${request.id}")
+        if (requestDir.exists()) requestDir.deleteRecursively()
+        check(requestDir.mkdirs() || requestDir.isDirectory) { "Não foi possível preparar o arquivo temporário." }
+        val destination = File(requestDir, safeName)
+
+        try {
+            resolver.openInputStream(request.uri)?.use { input ->
+                destination.outputStream().buffered().use { output -> input.copyTo(output) }
+            } ?: throw IllegalStateException("O aplicativo de origem não forneceu acesso ao arquivo.")
+        } catch (error: Throwable) {
+            requestDir.deleteRecursively()
+            throw error
+        }
+
+        if (!destination.isFile) {
+            requestDir.deleteRecursively()
+            throw IllegalStateException("Não foi possível copiar o arquivo para leitura.")
+        }
+
+        PreparedExternalFile(
+            file = destination,
+            mimeType = resolvedMime,
+            cleanupDirectory = requestDir,
+        )
+    }
+
+private fun queryDisplayName(context: Context, uri: Uri): String? = runCatching {
+    context.contentResolver.query(
+        uri,
+        arrayOf(OpenableColumns.DISPLAY_NAME),
+        null,
+        null,
+        null,
+    )?.use { cursor ->
+        if (!cursor.moveToFirst()) return@use null
+        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        if (index >= 0) cursor.getString(index) else null
+    }
+}.getOrNull()
+
+private fun safeExternalFileName(displayName: String, mimeType: String?): String {
+    var safe = displayName
+        .substringAfterLast('/')
+        .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001F]"), "_")
+        .trim()
+        .take(180)
+        .ifBlank { "arquivo" }
+    if (safe == "." || safe == "..") safe = "arquivo"
+    if (!ExternalOpenSupport.hasSupportedExtension(safe)) {
+        ExternalOpenSupport.preferredExtensionForMime(mimeType)?.let { preferred ->
+            if (!safe.lowercase().endsWith(".$preferred")) safe += ".$preferred"
+        }
+    }
+    return safe
 }
 
 fun hasFileAccess(context: Context): Boolean {

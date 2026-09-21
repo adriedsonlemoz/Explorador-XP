@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.48",
-  "version_code": 48,
-  "manager_version": "0.1.0-alpha.48",
-  "manager_code": 48,
+  "version_build": "0.1.0-alpha.51",
+  "version_code": 51,
+  "manager_version": "0.1.0-alpha.51",
+  "manager_code": 51,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.46",
-      "code": 46
+      "version": "0.1.0-alpha.51",
+      "code": 51
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -413,6 +413,71 @@
       "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain.",
       "jvm_super_constructor_dispatch_smoke": "Pure Kotlin smoke reproduced the pre-initialization callback NPE with a non-null Function2 field and passed with the nullable safe-invoke pattern used by alpha.50.",
       "kotlin_parser_smoke": "TextCodeEditorViewer.kt produced only expected unresolved Android/Compose references without an Android classpath; no parser diagnostics were found."
+    },
+    "alpha51_open_with": {
+      "ok": true,
+      "intent_action": "android.intent.action.VIEW",
+      "wildcard_mime_registered": false,
+      "octet_stream_registered": false,
+      "supported_groups": [
+        "text/code",
+        "zip",
+        "pdf",
+        "apk",
+        "images",
+        "audio",
+        "video"
+      ],
+      "uri_schemes": [
+        "content",
+        "file"
+      ],
+      "external_cache_copy": true,
+      "external_text_read_only": true,
+      "opens_without_manage_external_storage": true,
+      "single_top_new_intent": true,
+      "unsupported_examples_rejected": [
+        "rar",
+        "svg",
+        "application/octet-stream"
+      ],
+      "manifest_xml_parse": "ok",
+      "external_open_support_kotlinc": "ok",
+      "jvm_smoke": "ZIP/Markdown/plain text accepted; RAR/generic binary rejected",
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain.",
+      "browsable_category": true,
+      "loading_state_without_storage_prompt": true,
+      "returns_to_calling_app_on_close": true,
+      "mime_variants": [
+        "application/x-zip",
+        "application/x-android-package-archive"
+      ],
+      "manifest_mime_entries": 41,
+      "json_xml_parse": "ok",
+      "kotlin_parser_smoke": "Changed Kotlin files produced no parser/syntax diagnostics; unresolved Android/Compose references are expected without Android classpath.",
+      "safe_external_filename": "Separators/control chars sanitized and dot/dot-dot names blocked before writing into cache.",
+      "external_open_support_smoke": "ZIP/x-zip/APK variant/Markdown/plain text/JSON/MKV accepted; RAR/SVG/octet-stream rejected."
     }
+  },
+  "source_diff_alpha51_against_alpha50": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/ExternalOpenSupport.kt",
+      "app/src/test/java/com/exploradorxp/app/ExternalOpenSupportTest.kt",
+      "docs/ALPHA51_OPEN_WITH_NOTES.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/AndroidManifest.xml",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
   }
 }

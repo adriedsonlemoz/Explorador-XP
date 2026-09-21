@@ -131,9 +131,10 @@ fun TextCodeEditorViewer(
     val extension = file.extension.lowercase()
     val supportsPreview = extension in webExtensions
     val key = "${file.absolutePath}:${file.lastModified()}:${file.length()}"
-    val isArchivePreview = remember(file.absolutePath, forcedReadOnly) {
-        forcedReadOnly || file.absolutePath.startsWith(File(context.cacheDir, "archive-preview").absolutePath)
+    val isArchiveCachePreview = remember(file.absolutePath) {
+        file.absolutePath.startsWith(File(context.cacheDir, "archive-preview").absolutePath)
     }
+    val isArchivePreview = forcedReadOnly || isArchiveCachePreview
 
     var loadState by remember(key) { mutableStateOf<EditorLoadState>(EditorLoadState.Loading) }
     var editorView by remember(file.absolutePath) { mutableStateOf<CodeEditText?>(null) }
@@ -358,7 +359,7 @@ fun TextCodeEditorViewer(
     Column(Modifier.fillMaxSize().background(Color.White)) {
         EditorToolbar(
             dirty = dirty,
-            editable = (loadState as? EditorLoadState.Ready)?.document?.truncated == false,
+            editable = ((loadState as? EditorLoadState.Ready)?.document?.truncated == false) && !isArchivePreview,
             canUndo = historyState.canUndo,
             canRedo = historyState.canRedo,
             supportsPreview = supportsPreview,
@@ -383,7 +384,8 @@ fun TextCodeEditorViewer(
         val ready = loadState as? EditorLoadState.Ready
         val warning = when {
             statusMessage.isNotBlank() -> statusMessage
-            isArchivePreview -> "Pré-visualização temporária extraída do ZIP: aberto em modo somente leitura para evitar travamentos e alterações acidentais."
+            isArchiveCachePreview -> "Pré-visualização temporária extraída do ZIP: aberto em modo somente leitura para evitar travamentos e alterações acidentais."
+            forcedReadOnly -> "Arquivo aberto por outro aplicativo: modo somente leitura para preservar o documento original."
             ready?.document?.truncated == true -> "Arquivo grande: aberto parcialmente e somente para leitura para evitar travamentos."
             ready != null && file.length() > SYNTAX_HIGHLIGHT_MAX_CHARS && extension in syntaxExtensions ->
                 "Realce de sintaxe reduzido neste arquivo para manter o editor responsivo."

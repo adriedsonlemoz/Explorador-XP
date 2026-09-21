@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.51
+
+- Integrado o Explorador XP ao seletor **Abrir com** do Android por `ACTION_VIEW`, sem registrar `*/*` ou `application/octet-stream`.
+- Registrados somente MIME types realmente atendidos pelos leitores internos: texto/código, ZIP, PDF, APK, imagens, áudio e vídeo suportados.
+- Adicionado recebimento de URIs `content://`/`file://`, resolução do nome real via `OpenableColumns` e cópia segura para cache privado antes de abrir no visualizador baseado em `File`.
+- Arquivos externos podem abrir mesmo antes da permissão global de armazenamento; ao fechar, o cache temporário da abertura é removido.
+- Durante a preparação de uma URI externa é exibido **Abrindo arquivo...** sem solicitar `MANAGE_EXTERNAL_STORAGE`; ao fechar o leitor externo, o app retorna ao aplicativo de origem.
+- Textos recebidos externamente são abertos em modo somente leitura, evitando que o usuário edite uma cópia temporária acreditando estar alterando o arquivo original.
+- `launchMode=singleTop` e `onNewIntent()` permitem abrir outro arquivo compatível quando o Explorador XP já está no topo.
+- Adicionada validação compartilhada de formatos externos e teste JVM para aceitar ZIP/Markdown/JSON/mídia compatível e rejeitar RAR/SVG/binários ainda sem leitor interno.
+- Versão sincronizada para `0.1.0-alpha.51` / `versionCode 51`.
+
 ## 0.1.0-alpha.50
 
 - Corrigida a falha ao abrir arquivos Markdown e outros textos no editor interno, exibida como `Attempt to invoke interface method ... on a null object reference`.

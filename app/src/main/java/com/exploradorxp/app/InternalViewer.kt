@@ -107,6 +107,8 @@ fun supportsInternalViewer(file: File): Boolean {
 @Composable
 fun InternalViewerScreen(
     file: File,
+    externalMimeType: String? = null,
+    forcedReadOnly: Boolean = false,
     onClose: () -> Unit,
     onOpenExternal: (File) -> Unit,
     onOpenFolder: (File) -> Unit,
@@ -116,8 +118,11 @@ fun InternalViewerScreen(
     val activeFile = remember(activeFilePath) { File(activeFilePath) }
     val extension = activeFile.extension.lowercase()
     val isVideo = extension in videoExtensions
+    val isExternalText = remember(externalMimeType) {
+        ExternalOpenSupport.normalizeMime(externalMimeType).startsWith("text/")
+    }
     val isTextDocument = extension in textExtensions || extension in setOf("html", "htm") ||
-        activeFile.name.lowercase() in textFileNames
+        activeFile.name.lowercase() in textFileNames || isExternalText
     val isArchivePreview = remember(activeFilePath, returnToArchivePath) {
         returnToArchivePath != null || activeFile.absolutePath.contains("/archive-preview/")
     }
@@ -167,7 +172,7 @@ fun InternalViewerScreen(
                 in audioExtensions -> MediaViewer(activeFile)
                 "html", "htm" -> TextCodeEditorViewer(
                     file = activeFile,
-                    forcedReadOnly = isArchivePreview,
+                    forcedReadOnly = isArchivePreview || forcedReadOnly,
                     fullScreen = contentFullScreen,
                     onFullScreenChange = { contentFullScreen = it },
                     onClose = onClose,
@@ -188,7 +193,7 @@ fun InternalViewerScreen(
                 "apk" -> ApkViewer(activeFile) { onOpenExternal(activeFile) }
                 in textExtensions -> TextCodeEditorViewer(
                     file = activeFile,
-                    forcedReadOnly = isArchivePreview,
+                    forcedReadOnly = isArchivePreview || forcedReadOnly,
                     fullScreen = contentFullScreen,
                     onFullScreenChange = { contentFullScreen = it },
                     onClose = onClose,
@@ -196,10 +201,10 @@ fun InternalViewerScreen(
                     onOpenExternal = { onOpenExternal(activeFile) },
                     onFileChanged = { activeFilePath = it.absolutePath },
                 )
-                else -> if (activeFile.name.lowercase() in textFileNames) {
+                else -> if (activeFile.name.lowercase() in textFileNames || isExternalText) {
                     TextCodeEditorViewer(
                         file = activeFile,
-                        forcedReadOnly = isArchivePreview,
+                        forcedReadOnly = isArchivePreview || forcedReadOnly,
                         fullScreen = contentFullScreen,
                         onFullScreenChange = { contentFullScreen = it },
                         onClose = onClose,

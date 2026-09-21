@@ -1455,10 +1455,10 @@ private fun AboutDialog(
                     Spacer(Modifier.height(10.dp))
                     AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                         listOf(
-                            "Corrigida a abertura de Markdown e outros arquivos de texto/código no editor interno.",
-                            "O editor agora ignora eventos de seleção disparados cedo demais pelo Android durante sua própria inicialização.",
-                            "Edição, números de linha, localizar/substituir, desfazer/refazer e salvamento seguro foram preservados.",
-                            "O fallback de erro continua disponível apenas para falhas reais de inicialização, sem fechar o aplicativo.",
+                            "O Explorador XP agora aparece em Abrir com para formatos realmente compatíveis.",
+                            "ZIP, PDF, APK, textos/código, imagens, áudio e vídeo suportados podem abrir direto de outros apps.",
+                            "Arquivos recebidos por content:// são validados e lidos por uma cópia temporária privada.",
+                            "Não foi registrado MIME coringa: formatos sem leitor interno continuam fora do seletor.",
                         ).forEach { change ->
                             Text("• $change", fontSize = 11.5.sp, color = Color(0xFF303030), lineHeight = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
                         }
