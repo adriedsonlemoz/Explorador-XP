@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.62",
-  "version_code": 62,
-  "manager_version": "0.1.0-alpha.62",
-  "manager_code": 62,
+  "version_build": "0.1.0-alpha.63",
+  "version_code": 63,
+  "manager_version": "0.1.0-alpha.63",
+  "manager_code": 63,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.62",
-      "code": 62
+      "version": "0.1.0-alpha.63",
+      "code": 63
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -475,6 +475,33 @@
       "root_cause": "PackageManager.getPermissionInfo(String, Int) does not expose a PermissionInfoFlags overload; the alpha.60 implementation referenced a nonexistent nested type.",
       "patch": "Use pm.getPermissionInfo(name, 0) while retaining PackageInfoFlags for package-info APIs.",
       "compile_smoke": "ApkInspector.kt + ApkInspectorSupport.kt compiled successfully against Android API stubs that intentionally provide PackageInfoFlags but only getPermissionInfo(String, Int)."
+    },
+    "alpha63_large_file_editor": {
+      "ok": true,
+      "focus": [
+        "files above 750 KB use bounded paged editing instead of 400 KB truncated read-only preview",
+        "target window about 384 KB with previous/next navigation and global line/column coordinates",
+        "go-to-line scans the file on disk without materializing the complete document",
+        "global find scans by streaming, counts occurrences, supports forward/backward wrap, progress and cancellation",
+        "current window remains editable with word wrap, syntax highlighting, autoindent, auto-pairs and undo/redo",
+        "syntax highlighting is restricted to the visible viewport plus margin in large-file mode",
+        "undo/redo uses a reduced character-memory budget in large-file mode",
+        "save and save-as rebuild prefix/current-window/suffix through streaming temporary files",
+        "external Open-with large files save through disk streaming with SHA-256 conflict protection and disk backup"
+      ],
+      "large_engine_compile_smoke": "LargeTextFileEngine.kt compiled and executed as pure Kotlin/JVM.",
+      "large_engine_smoke": "UTF-8 ~7.6 MB, UTF-16 LE with BOM and a ~12 MB single-line file passed under java -Xmx128m.",
+      "window_coverage_property": "Sequential windows reconstructed UTF-8 and UTF-16 test documents exactly with no gaps or duplicate bytes; 142 case-insensitive search results matched expected positions.",
+      "kotlin_parser_smoke": "Bounded raw kotlinc parser probe found no expecting/unclosed/unexpected-token diagnostics; Android/Compose references remain unresolved without Android classpath.",
+      "json_parse": "3 files ok",
+      "xml_parse": "12 files ok",
+      "yaml_parse": "2 workflow files ok",
+      "image_resources_unchanged_from_alpha62": "172 image files byte-identical.",
+      "apk_workflows_unchanged_from_alpha62": true,
+      "application_id_preserved": "com.exploradorxp.app",
+      "generated_art_or_mockups": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android SDK/Gradle Android toolchain."
     }
   },
   "validated_at_utc": "2026-09-21T22:25:51Z",
@@ -976,6 +1003,23 @@
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "app/src/main/java/com/exploradorxp/app/ExternalOpenOrigin.kt",
       "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha63_against_alpha62": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/LargeTextFileEngine.kt",
+      "app/src/test/java/com/exploradorxp/app/LargeTextFileEngineTest.kt",
+      "docs/ALPHA63_LARGE_FILE_EDITOR.md"
+    ],
+    "changed": [
+      "CHANGELOG.md",
+      "README.md",
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
       "docs/VALIDATION.json",
       "github-manager.json"

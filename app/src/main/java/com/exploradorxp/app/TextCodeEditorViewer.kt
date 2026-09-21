@@ -82,13 +82,16 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.UUID
+import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 
-private const val EDITOR_EDIT_MAX_BYTES = 750_000L
-private const val EDITOR_PREVIEW_MAX_BYTES = 400_000
+private const val EDITOR_LARGE_FILE_THRESHOLD_BYTES = 750_000L
 private const val SYNTAX_HIGHLIGHT_MAX_CHARS = 140_000
 private const val HISTORY_LIMIT = 250
 private const val HISTORY_CHAR_BUDGET = 4_000_000
+private const val LARGE_FILE_HISTORY_CHAR_BUDGET = 1_200_000
+private const val VISIBLE_SYNTAX_MARGIN_LINES = 40
 private const val EDITOR_PREFERENCES = "text_code_editor"
 private const val PREF_USE_TABS = "use_tabs"
 private const val PREF_INDENT_SIZE = "indent_size"
@@ -112,8 +115,17 @@ private sealed interface EditorLoadState {
 private data class EditorDocument(
     val text: String,
     val encoding: EditorEncoding,
-    val truncated: Boolean,
+    val truncated: Boolean = false,
     val lineEnding: String,
+    val largeWindow: LargeTextFileEngine.Window? = null,
+    val knownTotalLines: Int? = null,
+) {
+    val isLargeFile: Boolean get() = largeWindow != null
+}
+
+private data class EditorOperationState(
+    val label: String,
+    val progress: Float? = null,
 )
 
 private data class EditorEncoding(
@@ -172,7 +184,7 @@ fun TextCodeEditorViewer(
     val extension = file.extension.lowercase()
     val syntaxExtension = remember(file.name) { editorSyntaxExtension(file) }
     val supportsPreview = extension in webExtensions
-    val key = "${file.absolutePath}:${file.lastModified()}:${file.length()}"
+    val key = file.absolutePath
     val isArchiveCachePreview = remember(file.absolutePath) {
         file.absolutePath.startsWith(File(context.cacheDir, "archive-preview").absolutePath)
     }
@@ -209,6 +221,9 @@ fun TextCodeEditorViewer(
         mutableStateOf(externalOrigin?.sourceSha256)
     }
     var closeAfterExternalSaveAs by remember(file.absolutePath) { mutableStateOf(false) }
+    var operationState by remember(file.absolutePath) { mutableStateOf<EditorOperationState?>(null) }
+    var operationCancelToken by remember(file.absolutePath) { mutableStateOf<AtomicBoolean?>(null) }
+    var pendingLargeSelection by remember(file.absolutePath) { mutableStateOf<LargeTextFileEngine.SearchMatch?>(null) }
 
     val externalSaveAsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(externalOrigin?.mimeType ?: "text/plain"),
@@ -227,6 +242,53 @@ fun TextCodeEditorViewer(
         val textToSave = editorView?.text?.toString() ?: workingText
         scope.launch {
             statusMessage = "Salvando cópia..."
+            val largeWindow = ready.document.largeWindow
+            if (largeWindow != null) {
+                val temp = File(context.cacheDir, "external-save-${UUID.randomUUID()}.tmp")
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        LargeTextFileEngine.writePatchedCopy(
+                            source = file,
+                            target = temp,
+                            window = largeWindow,
+                            editedText = textToSave,
+                            charset = ready.document.encoding.charset,
+                            bom = ready.document.encoding.bom,
+                            preferredLineEnding = ready.document.lineEnding,
+                        )
+                        safeWriteFileUri(context, uri, temp, expectedSha256 = null).getOrThrow()
+                        LargeTextFileEngine.patchInPlace(
+                            file = file,
+                            window = largeWindow,
+                            editedText = textToSave,
+                            charset = ready.document.encoding.charset,
+                            bom = ready.document.encoding.bom,
+                            preferredLineEnding = ready.document.lineEnding,
+                        )
+                    }.also { temp.delete() }
+                }
+                result.fold(
+                    onSuccess = { patchedWindow ->
+                        loadState = EditorLoadState.Ready(
+                            ready.document.copy(text = textToSave, largeWindow = patchedWindow, knownTotalLines = adjustedKnownTotalLines(ready.document, largeWindow, textToSave))
+                        )
+                        workingText = textToSave
+                        dirty = false
+                        editorView?.markSaved()
+                        historyState = EditorHistoryState()
+                        statusMessage = "Cópia salva com sucesso"
+                        val shouldClose = closeAfterExternalSaveAs
+                        closeAfterExternalSaveAs = false
+                        if (shouldClose) onClose()
+                    },
+                    onFailure = { error ->
+                        closeAfterExternalSaveAs = false
+                        statusMessage = "Não foi possível salvar a cópia: ${error.message ?: "erro desconhecido"}"
+                    },
+                )
+                return@launch
+            }
+
             val result = withContext(Dispatchers.IO) {
                 safeWriteTextUri(
                     context = context,
@@ -258,17 +320,46 @@ fun TextCodeEditorViewer(
         }
     }
 
+
     LaunchedEffect(key) {
         loadState = EditorLoadState.Loading
-        loadState = withContext(Dispatchers.IO) { loadEditorDocument(file) }
+        val token = AtomicBoolean(false)
+        operationCancelToken = token
+        val largeCandidate = file.length() > EDITOR_LARGE_FILE_THRESHOLD_BYTES
+        if (largeCandidate) operationState = EditorOperationState("Abrindo modo arquivo grande…", 0f)
+        val mainHandler = Handler(Looper.getMainLooper())
+        loadState = withContext(Dispatchers.IO) {
+            loadEditorDocument(
+                file = file,
+                onProgress = { done, total ->
+                    if (largeCandidate && total > 0L) {
+                        val progress = (done.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                        mainHandler.post {
+                            if (operationCancelToken === token && !token.get()) {
+                                operationState = EditorOperationState("Abrindo modo arquivo grande…", progress)
+                            }
+                        }
+                    }
+                },
+                cancelled = { token.get() },
+            )
+        }
+        if (operationCancelToken === token) {
+            operationState = null
+            operationCancelToken = null
+        }
         val ready = loadState as? EditorLoadState.Ready
         workingText = ready?.document?.text.orEmpty()
         previewSource = workingText
         dirty = false
-        metrics = metricsForText(workingText, 0)
+        metrics = ready?.document?.largeWindow?.let {
+            metricsForText(workingText, 0).copy(line = it.firstLine, column = it.firstColumn)
+        } ?: metricsForText(workingText, 0)
         historyState = EditorHistoryState()
         searchState = EditorSearchState()
-        statusMessage = ""
+        statusMessage = if (ready?.document?.isLargeFile == true) {
+            "Modo arquivo grande: somente o trecho atual fica carregado na memória."
+        } else ""
         expectedExternalDigest = externalOrigin?.sourceSha256
         editorView = null
         viewMode = EditorViewMode.CODE
@@ -281,7 +372,234 @@ fun TextCodeEditorViewer(
     DisposableEffect(file.absolutePath) {
         val handler = { requestCloseState.value.invoke() }
         onCloseHandlerChanged(handler)
-        onDispose { onCloseHandlerChanged(null) }
+        onDispose {
+            operationCancelToken?.set(true)
+            onCloseHandlerChanged(null)
+        }
+    }
+
+    fun progressReporter(token: AtomicBoolean, label: String): (Long, Long) -> Unit {
+        val mainHandler = Handler(Looper.getMainLooper())
+        var lastPercent = -1
+        return { done, total ->
+            if (total > 0L && !token.get()) {
+                val percent = ((done * 100L) / total).toInt().coerceIn(0, 100)
+                if (percent != lastPercent) {
+                    lastPercent = percent
+                    val progress = percent / 100f
+                    mainHandler.post {
+                        if (operationCancelToken === token && !token.get()) {
+                            operationState = EditorOperationState(label, progress)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun installLargeWindow(
+        window: LargeTextFileEngine.Window,
+        knownTotalLines: Int? = (loadState as? EditorLoadState.Ready)?.document?.knownTotalLines,
+        message: String? = null,
+    ) {
+        val ready = loadState as? EditorLoadState.Ready ?: return
+        loadState = EditorLoadState.Ready(
+            ready.document.copy(
+                text = window.text,
+                truncated = false,
+                largeWindow = window,
+                knownTotalLines = knownTotalLines,
+            )
+        )
+        workingText = window.text
+        previewSource = window.text
+        editorView = null
+        dirty = false
+        historyState = EditorHistoryState()
+        searchState = EditorSearchState()
+        metrics = EditorMetrics(
+            line = window.firstLine,
+            column = window.firstColumn,
+            lineCount = window.firstLine + window.lineBreaks,
+        )
+        message?.let { statusMessage = it }
+    }
+
+    fun navigateLargeFile(forward: Boolean) {
+        val ready = loadState as? EditorLoadState.Ready ?: return
+        val current = ready.document.largeWindow ?: return
+        if (dirty) {
+            statusMessage = "Salve as alterações do trecho atual antes de mudar de trecho."
+            return
+        }
+        operationCancelToken?.set(true)
+        val token = AtomicBoolean(false)
+        operationCancelToken = token
+        val label = if (forward) "Carregando próximo trecho…" else "Carregando trecho anterior…"
+        operationState = EditorOperationState(label, 0f)
+        scope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    if (forward) {
+                        LargeTextFileEngine.loadNext(
+                            file, current, ready.document.encoding.charset, ready.document.encoding.bom,
+                            onProgress = progressReporter(token, label),
+                            cancelled = { token.get() },
+                        )
+                    } else {
+                        LargeTextFileEngine.loadPrevious(
+                            file, current, ready.document.encoding.charset, ready.document.encoding.bom,
+                            onProgress = progressReporter(token, label),
+                            cancelled = { token.get() },
+                        )
+                    }
+                }
+            }
+            if (operationCancelToken === token) {
+                operationState = null
+                operationCancelToken = null
+            }
+            result.fold(
+                onSuccess = { window ->
+                    if (window != null) {
+                        installLargeWindow(
+                            window,
+                            message = if (forward) "Próximo trecho carregado" else "Trecho anterior carregado",
+                        )
+                    } else {
+                        statusMessage = if (forward) "Você já está no fim do arquivo." else "Você já está no início do arquivo."
+                    }
+                },
+                onFailure = { error ->
+                    statusMessage = if (error is CancellationException) "Operação cancelada"
+                    else "Não foi possível carregar o trecho: ${error.message ?: "erro desconhecido"}"
+                },
+            )
+        }
+    }
+
+    fun goToLargeLine(requestedLine: Int) {
+        val ready = loadState as? EditorLoadState.Ready ?: return
+        if (!ready.document.isLargeFile) return
+        if (dirty) {
+            statusMessage = "Salve as alterações do trecho atual antes de ir para outra linha."
+            return
+        }
+        operationCancelToken?.set(true)
+        val token = AtomicBoolean(false)
+        operationCancelToken = token
+        val label = "Procurando linha $requestedLine…"
+        operationState = EditorOperationState(label, 0f)
+        scope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    LargeTextFileEngine.loadAtLine(
+                        file = file,
+                        requestedLine = requestedLine,
+                        charset = ready.document.encoding.charset,
+                        bom = ready.document.encoding.bom,
+                        onProgress = progressReporter(token, label),
+                        cancelled = { token.get() },
+                    )
+                }
+            }
+            if (operationCancelToken === token) {
+                operationState = null
+                operationCancelToken = null
+            }
+            result.fold(
+                onSuccess = { window ->
+                    if (window == null) {
+                        statusMessage = "Linha $requestedLine não existe neste arquivo"
+                    } else {
+                        pendingLargeSelection = LargeTextFileEngine.SearchMatch(requestedLine, 1, 0)
+                        installLargeWindow(window, message = "Posicionado na linha $requestedLine")
+                    }
+                },
+                onFailure = { error ->
+                    statusMessage = if (error is CancellationException) "Operação cancelada"
+                    else "Não foi possível localizar a linha: ${error.message ?: "erro desconhecido"}"
+                },
+            )
+        }
+    }
+
+    fun searchLargeFile(forward: Boolean) {
+        val ready = loadState as? EditorLoadState.Ready ?: return
+        if (!ready.document.isLargeFile) return
+        val query = findQuery
+        if (query.isBlank()) {
+            statusMessage = "Digite um texto para localizar"
+            return
+        }
+        if ('\n' in query || '\r' in query) {
+            statusMessage = "No modo arquivo grande, a busca global aceita texto de uma única linha."
+            return
+        }
+        if (dirty) {
+            statusMessage = "Salve o trecho atual antes de navegar por resultados em outros trechos."
+            return
+        }
+        operationCancelToken?.set(true)
+        val token = AtomicBoolean(false)
+        operationCancelToken = token
+        val label = "Buscando no arquivo inteiro…"
+        operationState = EditorOperationState(label, 0f)
+        val currentLine = metrics.line
+        val currentColumn = if (forward && searchState.current == 0) (metrics.column - 1).coerceAtLeast(0) else metrics.column
+        scope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    val search = LargeTextFileEngine.search(
+                        file = file,
+                        query = query,
+                        currentLine = currentLine,
+                        currentColumn = currentColumn,
+                        forward = forward,
+                        charset = ready.document.encoding.charset,
+                        bom = ready.document.encoding.bom,
+                        onProgress = progressReporter(token, label),
+                        cancelled = { token.get() },
+                    )
+                    val window = search.match?.let { match ->
+                        LargeTextFileEngine.loadAtLine(
+                            file = file,
+                            requestedLine = match.line,
+                            charset = ready.document.encoding.charset,
+                            bom = ready.document.encoding.bom,
+                            onProgress = progressReporter(token, "Abrindo resultado…"),
+                            cancelled = { token.get() },
+                        )
+                    }
+                    search to window
+                }
+            }
+            if (operationCancelToken === token) {
+                operationState = null
+                operationCancelToken = null
+            }
+            result.fold(
+                onSuccess = { (search, window) ->
+                    val match = search.match
+                    searchState = EditorSearchState(total = search.total, current = match?.ordinal ?: 0)
+                    if (match == null || window == null) {
+                        statusMessage = "Texto não encontrado no arquivo"
+                    } else {
+                        pendingLargeSelection = match
+                        installLargeWindow(
+                            window = window,
+                            knownTotalLines = search.totalLines,
+                            message = if (search.total == 1) "1 ocorrência" else "Ocorrência ${match.ordinal} de ${search.total}",
+                        )
+                        searchState = EditorSearchState(total = search.total, current = match.ordinal)
+                    }
+                },
+                onFailure = { error ->
+                    statusMessage = if (error is CancellationException) "Busca cancelada"
+                    else "Não foi possível concluir a busca: ${error.message ?: "erro desconhecido"}"
+                },
+            )
+        }
     }
 
     fun refreshPreview() {
@@ -295,12 +613,60 @@ fun TextCodeEditorViewer(
     fun saveTo(target: File, switchToTarget: Boolean) {
         val ready = loadState as? EditorLoadState.Ready ?: return
         if (ready.document.truncated) {
-            statusMessage = "Este arquivo está em modo somente leitura porque é muito grande."
+            statusMessage = "Este arquivo está em modo somente leitura."
             return
         }
         val textToSave = editorView?.text?.toString() ?: workingText
+        val largeWindow = ready.document.largeWindow
         scope.launch {
             statusMessage = "Salvando com segurança..."
+            if (largeWindow != null) {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        if (target.absolutePath == file.absolutePath) {
+                            LargeTextFileEngine.patchInPlace(
+                                file = file,
+                                window = largeWindow,
+                                editedText = textToSave,
+                                charset = ready.document.encoding.charset,
+                                bom = ready.document.encoding.bom,
+                                preferredLineEnding = ready.document.lineEnding,
+                            )
+                        } else {
+                            LargeTextFileEngine.writePatchedCopy(
+                                source = file,
+                                target = target,
+                                window = largeWindow,
+                                editedText = textToSave,
+                                charset = ready.document.encoding.charset,
+                                bom = ready.document.encoding.bom,
+                                preferredLineEnding = ready.document.lineEnding,
+                            )
+                            null
+                        }
+                    }
+                }
+                result.fold(
+                    onSuccess = { patchedWindow ->
+                        workingText = textToSave
+                        dirty = false
+                        editorView?.markSaved()
+                        historyState = EditorHistoryState()
+                        if (patchedWindow != null) {
+                            loadState = EditorLoadState.Ready(
+                                ready.document.copy(text = textToSave, largeWindow = patchedWindow, knownTotalLines = adjustedKnownTotalLines(ready.document, largeWindow, textToSave))
+                            )
+                        }
+                        statusMessage = if (switchToTarget) "Salvo como ${target.name}" else "Trecho salvo no arquivo"
+                        if (switchToTarget && target.absolutePath != file.absolutePath) onFileChanged(target)
+                    },
+                    onFailure = { error ->
+                        statusMessage = "Não foi possível salvar: ${error.message ?: "erro desconhecido"}"
+                    },
+                )
+                return@launch
+            }
+
             val result = withContext(Dispatchers.IO) {
                 safeWriteTextFile(
                     target = target,
@@ -339,21 +705,57 @@ fun TextCodeEditorViewer(
             return
         }
         if (ready.document.truncated) {
-            statusMessage = "Este arquivo está em modo somente leitura porque é muito grande."
+            statusMessage = "Este arquivo está em modo somente leitura."
             return
         }
         val textToSave = editorView?.text?.toString() ?: workingText
+        val largeWindow = ready.document.largeWindow
         scope.launch {
+            var currentReady = ready
+            if (largeWindow != null) {
+                statusMessage = "Atualizando a cópia de trabalho..."
+                val patch = withContext(Dispatchers.IO) {
+                    runCatching {
+                        LargeTextFileEngine.patchInPlace(
+                            file = file,
+                            window = largeWindow,
+                            editedText = textToSave,
+                            charset = ready.document.encoding.charset,
+                            bom = ready.document.encoding.bom,
+                            preferredLineEnding = ready.document.lineEnding,
+                        )
+                    }
+                }
+                val patchedWindow = patch.getOrElse { error ->
+                    statusMessage = "Não foi possível preparar o arquivo para salvar: ${error.message ?: "erro desconhecido"}"
+                    return@launch
+                }
+                currentReady = EditorLoadState.Ready(
+                    ready.document.copy(text = textToSave, largeWindow = patchedWindow, knownTotalLines = adjustedKnownTotalLines(ready.document, largeWindow, textToSave))
+                )
+                loadState = currentReady
+                workingText = textToSave
+            }
+
             statusMessage = "Verificando e salvando no arquivo original..."
             val result = withContext(Dispatchers.IO) {
-                safeWriteTextUri(
-                    context = context,
-                    uri = Uri.parse(origin.uri),
-                    text = textToSave,
-                    encoding = ready.document.encoding,
-                    preferredLineEnding = ready.document.lineEnding,
-                    expectedSha256 = expectedExternalDigest,
-                )
+                if (currentReady.document.isLargeFile) {
+                    safeWriteFileUri(
+                        context = context,
+                        uri = Uri.parse(origin.uri),
+                        source = file,
+                        expectedSha256 = expectedExternalDigest,
+                    )
+                } else {
+                    safeWriteTextUri(
+                        context = context,
+                        uri = Uri.parse(origin.uri),
+                        text = textToSave,
+                        encoding = currentReady.document.encoding,
+                        preferredLineEnding = currentReady.document.lineEnding,
+                        expectedSha256 = expectedExternalDigest,
+                    )
+                }
             }
             result.fold(
                 onSuccess = { newDigest ->
@@ -374,6 +776,45 @@ fun TextCodeEditorViewer(
                         else -> "Não foi possível salvar no original: ${error.message ?: "erro desconhecido"}"
                     }
                 },
+            )
+        }
+    }
+
+    fun saveLocalAndClose() {
+        val ready = loadState as? EditorLoadState.Ready ?: return
+        val textToSave = editorView?.text?.toString() ?: workingText
+        scope.launch {
+            statusMessage = "Salvando com segurança..."
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val window = ready.document.largeWindow
+                    if (window != null) {
+                        LargeTextFileEngine.patchInPlace(
+                            file = file,
+                            window = window,
+                            editedText = textToSave,
+                            charset = ready.document.encoding.charset,
+                            bom = ready.document.encoding.bom,
+                            preferredLineEnding = ready.document.lineEnding,
+                        )
+                    } else {
+                        safeWriteTextFile(
+                            target = file,
+                            text = textToSave,
+                            encoding = ready.document.encoding,
+                            preferredLineEnding = ready.document.lineEnding,
+                        ).getOrThrow()
+                        null
+                    }
+                }
+            }
+            result.fold(
+                onSuccess = {
+                    dirty = false
+                    editorView?.markSaved()
+                    onClose()
+                },
+                onFailure = { statusMessage = "Não foi possível salvar: ${it.message ?: "erro desconhecido"}" },
             )
         }
     }
@@ -401,26 +842,7 @@ fun TextCodeEditorViewer(
                 when {
                     isExternalOpen && canSaveBackToExternal -> saveBackToExternal(closeAfterSave = true)
                     isExternalOpen -> requestSaveAs(closeAfterSave = true)
-                    else -> {
-                        val ready = loadState as? EditorLoadState.Ready
-                        if (ready != null && !ready.document.truncated) {
-                            val textToSave = editorView?.text?.toString() ?: workingText
-                            scope.launch {
-                                statusMessage = "Salvando com segurança..."
-                                val result = withContext(Dispatchers.IO) {
-                                    safeWriteTextFile(file, textToSave, ready.document.encoding, ready.document.lineEnding)
-                                }
-                                result.fold(
-                                    onSuccess = {
-                                        dirty = false
-                                        editorView?.markSaved()
-                                        onClose()
-                                    },
-                                    onFailure = { statusMessage = "Não foi possível salvar: ${it.message ?: "erro desconhecido"}" },
-                                )
-                            }
-                        }
-                    }
+                    else -> saveLocalAndClose()
                 }
             },
             onSecondary = {
@@ -477,11 +899,16 @@ fun TextCodeEditorViewer(
         GoToLineDialog(
             onDismiss = { showGoToLine = false },
             onGo = { line ->
-                val view = editorView
-                if (view != null) {
-                    val actual = goToLine(view, line)
-                    metrics = view.currentMetrics()
-                    statusMessage = if (actual) "Posicionado na linha $line" else "Linha $line não existe neste arquivo"
+                val ready = loadState as? EditorLoadState.Ready
+                if (ready?.document?.isLargeFile == true) {
+                    goToLargeLine(line)
+                } else {
+                    val view = editorView
+                    if (view != null) {
+                        val actual = goToLine(view, line)
+                        metrics = view.currentMetrics()
+                        statusMessage = if (actual) "Posicionado na linha $line" else "Linha $line não existe neste arquivo"
+                    }
                 }
                 showGoToLine = false
             },
@@ -491,7 +918,7 @@ fun TextCodeEditorViewer(
     if (showMore) {
         EditorMoreDialog(
             editable = ((loadState as? EditorLoadState.Ready)?.document?.truncated == false) && !isArchivePreview,
-            supportsPreview = supportsPreview,
+            supportsPreview = supportsPreview && (loadState as? EditorLoadState.Ready)?.document?.isLargeFile != true,
             wordWrap = editorPreferences.wordWrap,
             onDismiss = { showMore = false },
             onSelectAll = { editorView?.selectAll(); showMore = false },
@@ -539,6 +966,7 @@ fun TextCodeEditorViewer(
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().background(Color.White)) {
+        val ready = loadState as? EditorLoadState.Ready
         EditorToolbar(
             dirty = dirty,
             editable = ((loadState as? EditorLoadState.Ready)?.document?.truncated == false) && !isArchivePreview,
@@ -547,7 +975,7 @@ fun TextCodeEditorViewer(
             wordWrap = editorPreferences.wordWrap,
             canUndo = historyState.canUndo,
             canRedo = historyState.canRedo,
-            supportsPreview = supportsPreview,
+            supportsPreview = supportsPreview && ready?.document?.isLargeFile != true,
             viewMode = viewMode,
             onSave = {
                 if (isExternalOpen) saveBackToExternal() else saveTo(file, switchToTarget = false)
@@ -574,7 +1002,6 @@ fun TextCodeEditorViewer(
             onMore = { showMore = true },
         )
 
-        val ready = loadState as? EditorLoadState.Ready
         val warning = when {
             statusMessage.isNotBlank() -> statusMessage
             isArchiveCachePreview -> "Pré-visualização temporária extraída do ZIP: aberto em modo somente leitura para evitar travamentos e alterações acidentais."
@@ -585,9 +1012,10 @@ fun TextCodeEditorViewer(
             externalOrigin != null ->
                 "Arquivo recebido por Abrir com: a origem não concedeu escrita. Você pode editar e usar Salvar como."
             forcedReadOnly -> "Arquivo aberto em modo somente leitura para preservar o documento original."
-            ready?.document?.truncated == true -> "Arquivo grande: aberto parcialmente e somente para leitura para evitar travamentos."
-            ready != null && file.length() > SYNTAX_HIGHLIGHT_MAX_CHARS && syntaxExtension in syntaxExtensions ->
-                "Realce de sintaxe reduzido neste arquivo para manter o editor responsivo."
+            ready?.document?.isLargeFile == true ->
+                "Modo arquivo grande: o arquivo completo permanece no disco e somente o trecho atual fica na memória."
+            ready != null && stateUsesVisibleSyntax(ready.document, syntaxExtension) ->
+                "Realce de sintaxe limitado à área visível para manter o editor responsivo."
             else -> ""
         }
         if (warning.isNotBlank()) {
@@ -605,6 +1033,24 @@ fun TextCodeEditorViewer(
             )
         }
 
+        ready?.document?.largeWindow?.let { window ->
+            LargeFileControls(
+                window = window,
+                dirty = dirty,
+                busy = operationState != null,
+                operation = operationState,
+                onPrevious = { navigateLargeFile(forward = false) },
+                onNext = { navigateLargeFile(forward = true) },
+                onGoToLine = { showGoToLine = true },
+                onCancel = {
+                    operationCancelToken?.set(true)
+                    operationCancelToken = null
+                    operationState = null
+                    statusMessage = "Operação cancelada"
+                },
+            )
+        }
+
         if (showFindPanel) {
             FindReplacePanel(
                 query = findQuery,
@@ -618,19 +1064,28 @@ fun TextCodeEditorViewer(
                 },
                 onQueryChange = { query ->
                     findQuery = query
-                    searchState = editorView?.searchState(query) ?: EditorSearchState()
+                    val largeMode = (loadState as? EditorLoadState.Ready)?.document?.isLargeFile == true
+                    searchState = if (largeMode) EditorSearchState() else editorView?.searchState(query) ?: EditorSearchState()
                 },
                 onReplacementChange = { replaceText = it },
                 onToggleReplace = { showReplaceField = !showReplaceField },
                 onPrevious = {
-                    val result = findInEditor(editorView, findQuery, forward = false)
-                    statusMessage = result.message
-                    searchState = result.state
+                    if ((loadState as? EditorLoadState.Ready)?.document?.isLargeFile == true) {
+                        searchLargeFile(forward = false)
+                    } else {
+                        val result = findInEditor(editorView, findQuery, forward = false)
+                        statusMessage = result.message
+                        searchState = result.state
+                    }
                 },
                 onNext = {
-                    val result = findInEditor(editorView, findQuery, forward = true)
-                    statusMessage = result.message
-                    searchState = result.state
+                    if ((loadState as? EditorLoadState.Ready)?.document?.isLargeFile == true) {
+                        searchLargeFile(forward = true)
+                    } else {
+                        val result = findInEditor(editorView, findQuery, forward = true)
+                        statusMessage = result.message
+                        searchState = result.state
+                    }
                 },
                 onReplace = {
                     val result = replaceCurrent(editorView, findQuery, replaceText)
@@ -639,7 +1094,8 @@ fun TextCodeEditorViewer(
                 },
                 onReplaceAll = {
                     val result = replaceAll(editorView, findQuery, replaceText)
-                    statusMessage = result.message
+                    val largeMode = (loadState as? EditorLoadState.Ready)?.document?.isLargeFile == true
+                    statusMessage = if (largeMode) "${result.message} no trecho atual" else result.message
                     searchState = result.state
                 },
                 onClose = { showFindPanel = false },
@@ -648,20 +1104,41 @@ fun TextCodeEditorViewer(
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (val state = loadState) {
-                EditorLoadState.Loading -> EditorCenteredMessage("Carregando arquivo de texto...")
+                EditorLoadState.Loading -> EditorLoadingPanel(
+                    operation = operationState,
+                    onCancel = {
+                        operationCancelToken?.set(true)
+                        operationCancelToken = null
+                        operationState = null
+                        statusMessage = "Carregamento cancelado"
+                    },
+                )
                 is EditorLoadState.Error -> EditorErrorPanel(state.message, onOpenExternal)
                 is EditorLoadState.Ready -> {
-                    key(file.absolutePath, state.document.encoding.label) {
+                    val largeWindow = state.document.largeWindow
+                    key(file.absolutePath, state.document.encoding.label, largeWindow?.startByte ?: -1L, largeWindow?.endByte ?: -1L) {
                         CodeEditorView(
                             initialText = editorView?.text?.toString() ?: workingText,
-                            readOnly = state.document.truncated || isArchivePreview,
+                            readOnly = isArchivePreview,
                             extension = syntaxExtension,
-                            syntaxHighlight = !state.document.truncated && state.document.text.length <= SYNTAX_HIGHLIGHT_MAX_CHARS,
+                            syntaxHighlight = syntaxExtension in syntaxExtensions,
                             preferences = editorPreferences,
-                            onViewReady = { editorView = it },
+                            baseLineNumber = largeWindow?.firstLine ?: 1,
+                            baseColumnNumber = largeWindow?.firstColumn ?: 1,
+                            largeFileMode = state.document.isLargeFile,
+                            onViewReady = { view ->
+                                editorView = view
+                                pendingLargeSelection?.let { pending ->
+                                    val selectionLength = if (pending.ordinal > 0) findQuery.length else 0
+                                    if (view.selectGlobalPosition(pending.line, pending.column, selectionLength)) {
+                                        metrics = view.currentMetrics()
+                                        pendingLargeSelection = null
+                                    }
+                                }
+                            },
                             onMetricsState = { updatedMetrics -> metrics = updatedMetrics },
                             onContentChanged = {
-                                if (showFindPanel && findQuery.isNotBlank()) {
+                                if (showFindPanel && findQuery.isNotBlank() && !state.document.isLargeFile) {
                                     searchState = editorView?.searchState(findQuery) ?: EditorSearchState()
                                 }
                             },
@@ -671,7 +1148,7 @@ fun TextCodeEditorViewer(
                             },
                         )
                     }
-                    if (viewMode == EditorViewMode.PREVIEW && supportsPreview && !showFullScreenPreview) {
+                    if (viewMode == EditorViewMode.PREVIEW && supportsPreview && !state.document.isLargeFile && !showFullScreenPreview) {
                         WebPreview(
                             file = file,
                             extension = extension,
@@ -693,7 +1170,7 @@ fun TextCodeEditorViewer(
             }
         }
 
-        if (viewMode == EditorViewMode.PREVIEW && supportsPreview) {
+        if (viewMode == EditorViewMode.PREVIEW && supportsPreview && ready?.document?.isLargeFile != true) {
             WebPreviewToolbar(
                 onRefresh = ::refreshPreview,
                 onFullScreen = { onFullScreenChange(true) },
@@ -776,6 +1253,90 @@ private fun EditorToolbar(
         Spacer(Modifier.width(5.dp))
         EditorButton("Mais", onClick = onMore)
     }
+}
+
+@Composable
+private fun LargeFileControls(
+    window: LargeTextFileEngine.Window,
+    dirty: Boolean,
+    busy: Boolean,
+    operation: EditorOperationState?,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onGoToLine: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF4F7FA))
+            .border(1.dp, Color(0xFFCBD5E1))
+            .padding(horizontal = 7.dp, vertical = 5.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        ) {
+            Text(
+                "Modo arquivo grande • ${formatEditorBytes(window.startByte)}–${formatEditorBytes(window.endByte)} de ${formatEditorBytes(window.fileSizeBytes)}",
+                fontSize = 10.5.sp,
+                color = XpTextSecondary,
+                maxLines = 1,
+            )
+            Spacer(Modifier.width(8.dp))
+            EditorButton("◀ Trecho", enabled = window.hasPrevious && !dirty && !busy, onClick = onPrevious)
+            Spacer(Modifier.width(4.dp))
+            EditorButton("Trecho ▶", enabled = window.hasNext && !dirty && !busy, onClick = onNext)
+            Spacer(Modifier.width(4.dp))
+            EditorButton("Ir linha", enabled = !dirty && !busy, onClick = onGoToLine)
+        }
+        if (operation != null) {
+            Spacer(Modifier.height(5.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    Text(operation.label, fontSize = 10.sp, color = Color(0xFF4A5563), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(3.dp))
+                    Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0xFFDCE3EA))) {
+                        val fraction = operation.progress?.coerceIn(0f, 1f) ?: 0.15f
+                        Box(Modifier.fillMaxWidth(fraction).height(3.dp).background(XpBlue))
+                    }
+                }
+                Spacer(Modifier.width(7.dp))
+                EditorButton("Cancelar", onClick = onCancel)
+            }
+        }
+        if (dirty) {
+            Spacer(Modifier.height(3.dp))
+            Text("Salve o trecho atual antes de navegar para outro trecho.", fontSize = 10.sp, color = Color(0xFF7A5A12))
+        }
+    }
+}
+
+@Composable
+private fun EditorLoadingPanel(operation: EditorOperationState?, onCancel: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+    ) {
+        Text(operation?.label ?: "Carregando arquivo de texto...", fontSize = 12.sp, color = XpTextSecondary)
+        if (operation != null) {
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.fillMaxWidth(0.72f).height(4.dp).background(Color(0xFFDCE3EA))) {
+                val fraction = operation.progress?.coerceIn(0f, 1f) ?: 0.15f
+                Box(Modifier.fillMaxWidth(fraction).height(4.dp).background(XpBlue))
+            }
+            Spacer(Modifier.height(10.dp))
+            EditorButton("Cancelar", onClick = onCancel)
+        }
+    }
+}
+
+private fun formatEditorBytes(bytes: Long): String = when {
+    bytes >= 1024L * 1024L * 1024L -> String.format(java.util.Locale.ROOT, "%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+    bytes >= 1024L * 1024L -> String.format(java.util.Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0))
+    bytes >= 1024L -> String.format(java.util.Locale.ROOT, "%.0f KB", bytes / 1024.0)
+    else -> "$bytes B"
 }
 
 @Composable
@@ -867,6 +1428,9 @@ private fun CodeEditorView(
     extension: String,
     syntaxHighlight: Boolean,
     preferences: EditorPreferences,
+    baseLineNumber: Int,
+    baseColumnNumber: Int,
+    largeFileMode: Boolean,
     onViewReady: (CodeEditText) -> Unit,
     onMetricsState: (EditorMetrics) -> Unit,
     onContentChanged: () -> Unit,
@@ -883,6 +1447,9 @@ private fun CodeEditorView(
                         extension = extension,
                         syntaxHighlight = syntaxHighlight,
                         preferences = preferences,
+                        baseLineNumber = baseLineNumber,
+                        baseColumnNumber = baseColumnNumber,
+                        largeFileMode = largeFileMode,
                         onMetricsState = onMetricsState,
                         onContentChanged = onContentChanged,
                         onHistoryState = onHistoryState,
@@ -950,6 +1517,9 @@ private class CodeEditText(context: Context) : EditText(context) {
     private var callbackHistoryState: ((EditorHistoryState) -> Unit)? = null
     private var sourceExtension: String = ""
     private var syntaxHighlightEnabled = false
+    private var baseLineNumber = 1
+    private var baseColumnNumber = 1
+    private var largeFileMode = false
     private val highlightHandler = Handler(Looper.getMainLooper())
     private val highlightRunnable = Runnable { applySyntaxHighlighting() }
     private val gutterBackground = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(239, 244, 249) }
@@ -969,6 +1539,9 @@ private class CodeEditText(context: Context) : EditText(context) {
         extension: String,
         syntaxHighlight: Boolean,
         preferences: EditorPreferences,
+        baseLineNumber: Int,
+        baseColumnNumber: Int,
+        largeFileMode: Boolean,
         onMetricsState: (EditorMetrics) -> Unit,
         onContentChanged: () -> Unit,
         onHistoryState: (EditorHistoryState) -> Unit,
@@ -979,6 +1552,9 @@ private class CodeEditText(context: Context) : EditText(context) {
         sourceExtension = extension
         syntaxHighlightEnabled = syntaxHighlight && extension in syntaxExtensions
         this.preferences = preferences
+        this.baseLineNumber = baseLineNumber.coerceAtLeast(1)
+        this.baseColumnNumber = baseColumnNumber.coerceAtLeast(1)
+        this.largeFileMode = largeFileMode
         setBackgroundColor(android.graphics.Color.WHITE)
         setTextColor(android.graphics.Color.rgb(32, 32, 32))
         typeface = Typeface.MONOSPACE
@@ -1251,9 +1827,31 @@ private class CodeEditText(context: Context) : EditText(context) {
     fun currentMetrics(): EditorMetrics = metricsAt(selectionStart.coerceAtLeast(0))
 
     fun goToLine(requestedLine: Int): Boolean {
-        if (requestedLine !in 1..lineStarts.size) return false
-        val target = lineStarts[requestedLine - 1].coerceIn(0, text?.length ?: 0)
+        val localLine = requestedLine - baseLineNumber + 1
+        if (localLine !in 1..lineStarts.size) return false
+        val target = lineStarts[localLine - 1].coerceIn(0, text?.length ?: 0)
         setSelection(target)
+        requestFocus()
+        return true
+    }
+
+    fun selectGlobalPosition(line: Int, column: Int, length: Int): Boolean {
+        val localLine = line - baseLineNumber
+        if (localLine !in lineStarts.indices) return false
+        val lineStart = lineStarts[localLine]
+        val lineEnd = if (localLine + 1 < lineStarts.size) {
+            (lineStarts[localLine + 1] - 1).coerceAtLeast(lineStart)
+        } else {
+            text?.length ?: lineStart
+        }
+        val offsetInLine = if (localLine == 0) {
+            (column - baseColumnNumber).coerceAtLeast(0)
+        } else {
+            (column - 1).coerceAtLeast(0)
+        }
+        val start = (lineStart + offsetInLine).coerceIn(lineStart, lineEnd)
+        val end = (start + length.coerceAtLeast(0)).coerceAtMost(text?.length ?: start)
+        setSelection(start, end)
         requestFocus()
         return true
     }
@@ -1280,13 +1878,15 @@ private class CodeEditText(context: Context) : EditText(context) {
     private fun EditOperation.historyCharCost(): Int = before.length + after.length
 
     private fun trimUndoHistory() {
-        while (undoStack.size > 1 && (undoStack.size > HISTORY_LIMIT || undoChars > HISTORY_CHAR_BUDGET)) {
+        val budget = if (largeFileMode) LARGE_FILE_HISTORY_CHAR_BUDGET else HISTORY_CHAR_BUDGET
+        while (undoStack.size > 1 && (undoStack.size > HISTORY_LIMIT || undoChars > budget)) {
             undoChars = (undoChars - undoStack.removeFirst().historyCharCost()).coerceAtLeast(0)
         }
     }
 
     private fun trimRedoHistory() {
-        while (redoStack.size > 1 && (redoStack.size > HISTORY_LIMIT || redoChars > HISTORY_CHAR_BUDGET)) {
+        val budget = if (largeFileMode) LARGE_FILE_HISTORY_CHAR_BUDGET else HISTORY_CHAR_BUDGET
+        while (redoStack.size > 1 && (redoStack.size > HISTORY_LIMIT || redoChars > budget)) {
             redoChars = (redoChars - redoStack.removeFirst().historyCharCost()).coerceAtLeast(0)
         }
     }
@@ -1310,10 +1910,11 @@ private class CodeEditText(context: Context) : EditText(context) {
         val safeCursor = cursor.coerceIn(0, text?.length ?: 0)
         val lineIndex = lineIndexForOffset(safeCursor)
         val lineStart = lineStarts.getOrElse(lineIndex) { 0 }
+        val localColumn = safeCursor - lineStart + 1
         return EditorMetrics(
-            line = lineIndex + 1,
-            column = safeCursor - lineStart + 1,
-            lineCount = lineStarts.size.coerceAtLeast(1),
+            line = baseLineNumber + lineIndex,
+            column = if (lineIndex == 0) baseColumnNumber + localColumn - 1 else localColumn,
+            lineCount = baseLineNumber + lineStarts.size.coerceAtLeast(1) - 1,
         )
     }
 
@@ -1374,20 +1975,28 @@ private class CodeEditText(context: Context) : EditText(context) {
 
     private fun scheduleHighlight() {
         highlightHandler.removeCallbacks(highlightRunnable)
-        if (syntaxHighlightEnabled && (text?.length ?: 0) <= SYNTAX_HIGHLIGHT_MAX_CHARS) {
-            highlightHandler.postDelayed(highlightRunnable, 180L)
+        if (syntaxHighlightEnabled) {
+            highlightHandler.postDelayed(highlightRunnable, if (largeFileMode) 140L else 180L)
         }
     }
 
     private fun applySyntaxHighlighting() {
         val editable = text ?: return
+        if (!syntaxHighlightEnabled || editable.isEmpty()) return
+        val visibleOnly = largeFileMode || editable.length > SYNTAX_HIGHLIGHT_MAX_CHARS
+        val range = if (visibleOnly) visibleHighlightRange(editable.length) else 0 until editable.length
+        if (range.isEmpty()) return
+
+        // Em arquivos grandes removemos somente spans existentes e recriamos uma faixa pequena
+        // ao redor da viewport. Assim regex e spans não crescem com o tamanho total do trecho.
         editable.getSpans(0, editable.length, EditorSyntaxSpan::class.java).forEach(editable::removeSpan)
-        if (!syntaxHighlightEnabled || editable.length > SYNTAX_HIGHLIGHT_MAX_CHARS) return
-        val source = editable.toString()
+        val startOffset = range.first
+        val endOffsetExclusive = range.last + 1
+        val source = editable.subSequence(startOffset, endOffsetExclusive).toString()
         syntaxPatterns(sourceExtension).forEach { spec ->
             spec.regex.findAll(source).forEach { match ->
-                val start = match.range.first
-                val end = match.range.last + 1
+                val start = startOffset + match.range.first
+                val end = startOffset + match.range.last + 1
                 if (start in 0 until end && end <= editable.length) {
                     editable.setSpan(EditorSyntaxSpan(spec.color), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
@@ -1395,8 +2004,24 @@ private class CodeEditText(context: Context) : EditText(context) {
         }
     }
 
+    private fun visibleHighlightRange(textLength: Int): IntRange {
+        val currentLayout = layout
+        if (currentLayout == null || currentLayout.lineCount <= 0) {
+            val end = textLength.coerceAtMost(SYNTAX_HIGHLIGHT_MAX_CHARS)
+            return if (end > 0) 0 until end else IntRange.EMPTY
+        }
+        val firstVisual = currentLayout.getLineForVertical(scrollY).coerceAtLeast(0)
+        val lastVisual = currentLayout.getLineForVertical(scrollY + height).coerceAtMost(currentLayout.lineCount - 1)
+        val fromLine = (firstVisual - VISIBLE_SYNTAX_MARGIN_LINES).coerceAtLeast(0)
+        val toLine = (lastVisual + VISIBLE_SYNTAX_MARGIN_LINES).coerceAtMost(currentLayout.lineCount - 1)
+        val start = currentLayout.getLineStart(fromLine).coerceIn(0, textLength)
+        val end = currentLayout.getLineEnd(toLine).coerceIn(start, textLength)
+        return if (end > start) start until end else IntRange.EMPTY
+    }
+
     private fun updateGutterPadding() {
-        val digits = max(2, lineStarts.size.coerceAtLeast(1).toString().length)
+        val lastGlobalLine = baseLineNumber + lineStarts.size.coerceAtLeast(1) - 1
+        val digits = max(2, lastGlobalLine.toString().length)
         val wanted = ((digits * 8 + 18) * resources.displayMetrics.density)
         if (kotlin.math.abs(wanted - gutterWidthPx) >= 1f || paddingLeft == 0) {
             gutterWidthPx = wanted
@@ -1418,7 +2043,7 @@ private class CodeEditText(context: Context) : EditText(context) {
                 val logicalLine = isLogicalLineStart(offset) ?: continue
                 val baseline = layout.getLineBaseline(visualLine) + totalPaddingTop
                 canvas.drawText(
-                    (logicalLine + 1).toString(),
+                    (baseLineNumber + logicalLine).toString(),
                     left + gutterWidthPx - 7f * resources.displayMetrics.density,
                     baseline.toFloat(),
                     linePaint,
@@ -1426,6 +2051,13 @@ private class CodeEditText(context: Context) : EditText(context) {
             }
         }
         super.onDraw(canvas)
+    }
+
+    override fun onScrollChanged(l: Int, t: Int, oldl: Int, oldt: Int) {
+        super.onScrollChanged(l, t, oldl, oldt)
+        if (t != oldt && syntaxHighlightEnabled && (largeFileMode || (text?.length ?: 0) > SYNTAX_HIGHLIGHT_MAX_CHARS)) {
+            scheduleHighlight()
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -1765,8 +2397,18 @@ private fun EditorStatusBar(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().height(28.dp).background(XpChrome).border(1.dp, XpChromeBorder).padding(horizontal = 8.dp),
     ) {
+        val positionLabel = if (doc?.isLargeFile == true) {
+            buildString {
+                append("Linha $line, Coluna $column")
+                doc.knownTotalLines?.let { append("  •  $it linhas") }
+                if (dirty) append("  •  não salvo")
+                append("  •  arquivo grande")
+            }
+        } else {
+            "Linha $line, Coluna $column  •  $lineCount linhas${if (dirty) "  •  não salvo" else ""}"
+        }
         Text(
-            "Linha $line, Coluna $column  •  ${if (doc?.truncated == true) "$lineCount+" else lineCount} linhas${if (dirty) "  •  não salvo" else ""}",
+            positionLabel,
             fontSize = 10.sp,
             color = Color(0xFF303030),
             maxLines = 1,
@@ -2115,6 +2757,17 @@ private fun replaceAll(view: CodeEditText?, query: String, replacement: String):
 
 private fun goToLine(view: CodeEditText, requestedLine: Int): Boolean = view.goToLine(requestedLine)
 
+private fun adjustedKnownTotalLines(
+    document: EditorDocument,
+    previousWindow: LargeTextFileEngine.Window,
+    editedText: String,
+): Int? = document.knownTotalLines?.let { known ->
+    (known + editedText.count { it == '\n' } - previousWindow.lineBreaks).coerceAtLeast(1)
+}
+
+private fun stateUsesVisibleSyntax(document: EditorDocument, extension: String): Boolean =
+    extension in syntaxExtensions && (document.isLargeFile || document.text.length > SYNTAX_HIGHLIGHT_MAX_CHARS)
+
 private fun editorSyntaxExtension(file: File): String = when (file.name.lowercase()) {
     "readme" -> "md"
     "makefile", "dockerfile" -> "sh"
@@ -2163,36 +2816,82 @@ private fun metricsForText(text: String, cursor: Int): EditorMetrics {
     )
 }
 
-private fun loadEditorDocument(file: File): EditorLoadState {
+private fun loadEditorDocument(
+    file: File,
+    onProgress: (Long, Long) -> Unit = { _, _ -> },
+    cancelled: () -> Boolean = { false },
+): EditorLoadState {
     if (!file.exists() || !file.isFile) return EditorLoadState.Error("O arquivo não existe mais ou não pode ser acessado.")
     if (!file.canRead()) return EditorLoadState.Error("O Android não permitiu a leitura deste arquivo.")
 
-    return runCatching {
+    return try {
         val fileSize = file.length()
-        val truncated = fileSize > EDITOR_EDIT_MAX_BYTES
-        val maxBytes = if (truncated) EDITOR_PREVIEW_MAX_BYTES else fileSize.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-        val bytes = FileInputStream(file).use { input ->
-            val buffer = ByteArray(maxBytes)
-            var total = 0
-            while (total < buffer.size) {
-                val read = input.read(buffer, total, buffer.size - total)
-                if (read <= 0) break
-                total += read
+        if (fileSize > EDITOR_LARGE_FILE_THRESHOLD_BYTES) {
+            val sampleSize = fileSize.coerceAtMost(64 * 1024L).toInt()
+            val sample = FileInputStream(file).use { input ->
+                val buffer = ByteArray(sampleSize)
+                var total = 0
+                while (total < buffer.size) {
+                    if (cancelled()) throw CancellationException("Carregamento cancelado")
+                    val read = input.read(buffer, total, buffer.size - total)
+                    if (read <= 0) break
+                    total += read
+                }
+                buffer.copyOf(total)
             }
-            buffer.copyOf(total)
-        }
-        val encoding = detectEncoding(bytes)
-            ?: return EditorLoadState.Error("O conteúdo parece binário ou usa uma codificação que o editor não reconheceu com segurança.", likelyBinary = true)
-        val text = decodeText(bytes, encoding, tolerateTruncated = truncated)
-        EditorLoadState.Ready(
-            EditorDocument(
-                text = text,
-                encoding = encoding,
-                truncated = truncated,
-                lineEnding = detectLineEnding(text),
+            val encoding = detectEncoding(sample)
+                ?: return EditorLoadState.Error(
+                    "O conteúdo parece binário ou usa uma codificação que o editor não reconheceu com segurança.",
+                    likelyBinary = true,
+                )
+            val window = LargeTextFileEngine.loadInitial(
+                file = file,
+                charset = encoding.charset,
+                bom = encoding.bom,
+                onProgress = onProgress,
+                cancelled = cancelled,
             )
-        )
-    }.getOrElse { error ->
+            EditorLoadState.Ready(
+                EditorDocument(
+                    text = window.text,
+                    encoding = encoding,
+                    truncated = false,
+                    lineEnding = detectLineEnding(window.text),
+                    largeWindow = window,
+                )
+            )
+        } else {
+            val maxBytes = fileSize.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            val bytes = FileInputStream(file).use { input ->
+                val buffer = ByteArray(maxBytes)
+                var total = 0
+                while (total < buffer.size) {
+                    if (cancelled()) throw CancellationException("Carregamento cancelado")
+                    val read = input.read(buffer, total, buffer.size - total)
+                    if (read <= 0) break
+                    total += read
+                    onProgress(total.toLong(), fileSize.coerceAtLeast(1L))
+                }
+                buffer.copyOf(total)
+            }
+            val encoding = detectEncoding(bytes)
+                ?: return EditorLoadState.Error(
+                    "O conteúdo parece binário ou usa uma codificação que o editor não reconheceu com segurança.",
+                    likelyBinary = true,
+                )
+            val text = decodeText(bytes, encoding, tolerateTruncated = false)
+            EditorLoadState.Ready(
+                EditorDocument(
+                    text = text,
+                    encoding = encoding,
+                    truncated = false,
+                    lineEnding = detectLineEnding(text),
+                )
+            )
+        }
+    } catch (_: CancellationException) {
+        EditorLoadState.Error("Carregamento cancelado.")
+    } catch (error: Throwable) {
         EditorLoadState.Error("Não foi possível ler o arquivo. ${error.message.orEmpty()}".trim())
     }
 }
@@ -2351,6 +3050,88 @@ private fun sha256Uri(context: Context, uri: Uri): String? = runCatching {
     } ?: return@runCatching null
     digest.digest().joinToString("") { "%02x".format(it) }
 }.getOrNull()
+
+private fun sha256File(file: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    FileInputStream(file).buffered().use { input ->
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+private fun copyUriToFile(context: Context, uri: Uri, target: File) {
+    val input = context.contentResolver.openInputStream(uri)
+        ?: error("O provedor não permitiu ler o arquivo original.")
+    input.buffered().use { source ->
+        FileOutputStream(target).buffered().use { output ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = source.read(buffer)
+                if (read <= 0) break
+                output.write(buffer, 0, read)
+            }
+            output.flush()
+        }
+    }
+}
+
+private fun writeUriFromFile(context: Context, uri: Uri, source: File) {
+    val resolver = context.contentResolver
+    val rawOutput = runCatching { resolver.openOutputStream(uri, "rwt") }.getOrNull()
+        ?: resolver.openOutputStream(uri, "w")
+        ?: error("O provedor não permitiu abrir o arquivo para escrita.")
+    FileInputStream(source).buffered().use { input ->
+        rawOutput.buffered().use { output ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read <= 0) break
+                output.write(buffer, 0, read)
+            }
+            output.flush()
+        }
+    }
+}
+
+private fun safeWriteFileUri(
+    context: Context,
+    uri: Uri,
+    source: File,
+    expectedSha256: String?,
+): Result<String> = runCatching {
+    require(source.exists() && source.isFile) { "A cópia de trabalho não está disponível." }
+    val expectedAfterWrite = sha256File(source)
+
+    if (!expectedSha256.isNullOrBlank()) {
+        val currentDigest = sha256Uri(context, uri)
+            ?: error("Não foi possível verificar o arquivo original antes de salvar.")
+        if (!currentDigest.equals(expectedSha256, ignoreCase = true)) throw ExternalContentChangedException()
+    }
+
+    // Para arquivos grandes, a recuperação também é feita em disco: nenhuma cópia completa vai para RAM.
+    val backup = if (!expectedSha256.isNullOrBlank()) {
+        File(context.cacheDir, "external-backup-${UUID.randomUUID()}.tmp").also { copyUriToFile(context, uri, it) }
+    } else null
+    try {
+        writeUriFromFile(context, uri, source)
+        val persistedDigest = sha256Uri(context, uri)
+            ?: error("O arquivo foi gravado, mas não pôde ser validado depois da escrita.")
+        check(persistedDigest.equals(expectedAfterWrite, ignoreCase = true)) {
+            "A validação do conteúdo salvo falhou."
+        }
+        expectedAfterWrite
+    } catch (error: Throwable) {
+        if (backup != null && backup.exists()) runCatching { writeUriFromFile(context, uri, backup) }
+        throw error
+    } finally {
+        backup?.delete()
+    }
+}
 
 private fun readUriBytesLimited(context: Context, uri: Uri, maxBytes: Int = 2_000_000): ByteArray? = runCatching {
     context.contentResolver.openInputStream(uri)?.buffered()?.use { input ->

@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.1.0-alpha.63
+
+- Arquivos de texto/código acima de 750 KB deixam de abrir apenas como prévia truncada: entra em ação o novo **Modo arquivo grande** paginado.
+- O arquivo completo permanece no disco e o `EditText` recebe somente uma janela-alvo de aproximadamente 384 KB, com alinhamento preferencial em quebra de linha e limite também para arquivos minificados de uma única linha.
+- Adicionada navegação **Trecho anterior / Próximo trecho** e **Ir linha**. A numeração do gutter e a indicação de linha/coluna usam posição global mesmo quando apenas um trecho está carregado.
+- O trecho atual pode ser editado normalmente com autoindentação, pares automáticos, TAB/espaços, quebra de linha, desfazer/refazer e aviso de não salvo.
+- Salvar em arquivos grandes reconstrói o arquivo por streaming em temporário, copiando prefixo e sufixo sem transformar o documento completo em `String`; `Salvar como` usa a mesma estratégia.
+- Arquivos grandes recebidos por **Abrir com** também podem ser editados na cópia de trabalho. Ao salvar no `content://`, o arquivo é enviado por streaming e a cópia de recuperação da origem fica em disco, não em RAM.
+- Localizar anterior/próxima em modo grande percorre o arquivo completo por streaming, calcula quantidade total de ocorrências e abre diretamente o trecho do resultado. A busca mostra progresso e pode ser cancelada.
+- **Substituir todos** continua disponível no trecho carregado para preservar o histórico de desfazer/refazer sem manter uma cópia completa do arquivo em memória.
+- O realce de sintaxe em documentos grandes passa a processar somente a viewport com margem de linhas, em vez de desativar o recurso para todo o trecho.
+- O orçamento de memória de desfazer/refazer é reduzido no modo grande, mantendo ao menos a operação mais recente mesmo quando uma alteração é extensa.
+- Adicionados testes do motor de arquivos grandes para UTF-8, UTF-16 LE com BOM, busca global, navegação por linha, arquivo de linha única e gravação parcial preservando o restante do arquivo.
+- Nenhuma imagem ou mockup foi criada ou modificada. `applicationId`/namespace permanecem `com.exploradorxp.app`.
+- README, tela Sobre, documentação e `github-manager.json` sincronizados.
+- Versão sincronizada para `0.1.0-alpha.63` / `versionCode 63`.
+
 ## 0.1.0-alpha.62
 
 - A quebra automática de linha deixa de ficar escondida apenas nas configurações: agora há ação direta **Quebra linha** na barra do editor/visualizador e a mesma opção também aparece em **Mais**.
