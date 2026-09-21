@@ -153,6 +153,8 @@ fun ExplorerScreen(
     onEmptyTrash: () -> Unit,
     onAnalyzeStorage: (Boolean) -> Unit,
     onCancelStorageAnalysis: () -> Unit,
+    onPauseTransfer: () -> Unit,
+    onResumeTransfer: () -> Unit,
     onCancelTransfer: () -> Unit,
     onResolveTransferConflict: (ConflictDecision, Boolean) -> Unit,
     transferConflict: StateFlow<TransferConflict?>,
@@ -502,7 +504,12 @@ fun ExplorerScreen(
             onLoadTrash()
         },
     )
-    TransferProgressHost(stateFlow = transferState, onCancel = onCancelTransfer)
+    TransferProgressHost(
+        stateFlow = transferState,
+        onPause = onPauseTransfer,
+        onResume = onResumeTransfer,
+        onCancel = onCancelTransfer,
+    )
     TransferConflictHost(
         stateFlow = transferConflict,
         onResolve = onResolveTransferConflict,
@@ -1481,10 +1488,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Cópias e movimentações mostram bytes processados, velocidade e estimativa de tempo restante.",
-                    "Conflitos de nome agora oferecem Substituir, Ignorar ou Manter ambos, com opção de aplicar a todos.",
-                    "O visualizador de imagens permite ir para a foto anterior/próxima e aceita gesto lateral.",
-                    "A galeria usa somente as imagens da pasta aberta no Explorer e respeita a ordenação atual.",
+                    "Operações longas agora podem ser pausadas e continuadas sem reiniciar o trabalho já concluído.",
+                    "Pausar funciona em copiar, mover, excluir e nas principais operações da Lixeira.",
+                    "Velocidade e tempo restante desconsideram o período em que a tarefa ficou pausada.",
+                    "Cancelar continua disponível mesmo durante a pausa.",
                 ).forEach { change ->
                     Text(
                         "• $change",
@@ -1574,14 +1581,28 @@ private fun StorageDetailsDialogHost(
 @Composable
 private fun TransferProgressHost(
     stateFlow: StateFlow<TransferState?>,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val transfer by stateFlow.collectAsStateWithLifecycle()
-    transfer?.let { TransferProgressDialog(transfer = it, onCancel = onCancel) }
+    transfer?.let {
+        TransferProgressDialog(
+            transfer = it,
+            onPause = onPause,
+            onResume = onResume,
+            onCancel = onCancel,
+        )
+    }
 }
 
 @Composable
-private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit) {
+private fun TransferProgressDialog(
+    transfer: TransferState,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onCancel: () -> Unit,
+) {
     val animatedFraction by animateFloatAsState(
         targetValue = transfer.fraction,
         animationSpec = tween(180),
@@ -1654,7 +1675,15 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
                     fontSize = 12.sp,
                     color = XpTextSecondary,
                 )
-                if (transfer.kind != TransferKind.DELETE && transfer.bytesPerSecond > 0L) {
+                if (transfer.isPaused) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Pausado • toque em Continuar para retomar",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF9A6500),
+                    )
+                } else if (transfer.kind != TransferKind.DELETE && transfer.bytesPerSecond > 0L) {
                     Spacer(Modifier.height(3.dp))
                     Text(
                         text = buildString {
@@ -1666,7 +1695,14 @@ private fun TransferProgressDialog(transfer: TransferState, onCancel: () -> Unit
                     )
                 }
                 Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    XpDialogButton(
+                        label = if (transfer.isPaused) "Continuar" else "Pausar",
+                        onClick = if (transfer.isPaused) onResume else onPause,
+                    )
                     XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
                 }
             }

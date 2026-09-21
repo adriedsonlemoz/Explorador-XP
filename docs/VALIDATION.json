@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.57",
-  "version_code": 57,
-  "manager_version": "0.1.0-alpha.57",
-  "manager_code": 57,
+  "version_build": "0.1.0-alpha.58",
+  "version_code": 58,
+  "manager_version": "0.1.0-alpha.58",
+  "manager_code": 58,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.57",
-      "code": 57
+      "version": "0.1.0-alpha.58",
+      "code": 58
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -391,9 +391,31 @@
       "generated_art_or_mockups": false,
       "full_android_build_executed": false,
       "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain."
+    },
+    "alpha58_pause_resume_transfers": {
+      "ok": true,
+      "operations": [
+        "transfer progress dialog exposes Pausar/Continuar plus Cancelar",
+        "copy/paste, move, permanent delete, trash move/restore/delete/empty share the cooperative pause gate",
+        "file copy checks pause between 256 KiB blocks",
+        "delete checks pause before each planned entry",
+        "tree planning checks pause in batches without rebuilding the plan",
+        "resume continues from already processed bytes/items instead of restarting",
+        "speed and ETA subtract accumulated paused time",
+        "a superseded canceled transfer cannot clear the state of a newer transfer"
+      ],
+      "pause_smoke": "ok: 900000-byte file paused at 262144 bytes, target stopped growing during pause, then resumed to byte-identical copy",
+      "json_parse": "3 files ok",
+      "xml_parse": "11 files ok",
+      "yaml_parse": "2 workflow files ok",
+      "image_resources_unchanged_from_alpha57": "172 image files unchanged",
+      "workflows_unchanged_from_alpha57": true,
+      "generated_art_or_mockups": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android SDK/Gradle toolchain. FileOperationPlan pause/resume was compiled and executed with kotlinc/JVM."
     }
   },
-  "validated_at_utc": "2026-09-21T13:57:25.531058+00:00",
+  "validated_at_utc": "2026-09-21T18:24:53.997803+00:00",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -740,6 +762,27 @@
       "app/src/main/java/com/exploradorxp/app/FileOperationPlan.kt",
       "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
       "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/test/java/com/exploradorxp/app/FileOperationPlanTest.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/PERFORMANCE_PROFILING.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha58_against_alpha57": {
+    "added": [
+      "docs/ALPHA58_PAUSE_RESUME_TRANSFERS.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ExplorerModels.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerViewModel.kt",
+      "app/src/main/java/com/exploradorxp/app/FileOperationPlan.kt",
+      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
       "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
       "app/src/test/java/com/exploradorxp/app/FileOperationPlanTest.kt",
       "README.md",

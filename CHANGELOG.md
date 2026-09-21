@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.58
+
+- A janela de operações agora oferece **Pausar** e **Continuar** sem cancelar ou reiniciar a tarefa em andamento.
+- A pausa é cooperativa: o planejador de árvores verifica checkpoints durante a enumeração, cópias verificam a pausa entre blocos de 256 KiB e exclusões verificam antes de cada item removido.
+- Copiar, mover, mover para a Lixeira, restaurar, apagar permanentemente e esvaziar a Lixeira compartilham o mesmo mecanismo de pausa.
+- Ao continuar, a operação retoma do ponto já processado; arquivos e bytes concluídos não são refeitos.
+- O cálculo de velocidade e tempo restante passa a descontar o período pausado, evitando que a estimativa fique artificialmente lenta após uma pausa longa.
+- **Cancelar** continua disponível durante a pausa e encerra também corrotinas paradas no gate de espera.
+- Adicionado teste de regressão para confirmar que uma cópia grande realmente para entre blocos e continua até produzir arquivo idêntico.
+- README, tela Sobre, documentação, validações e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.58` / `versionCode 58`.
+
 ## 0.1.0-alpha.57
 
 - Próxima etapa das operações de arquivos: cópia, movimentação, exclusão e Lixeira passam a transportar progresso por **bytes**, além da contagem de entradas já existente.

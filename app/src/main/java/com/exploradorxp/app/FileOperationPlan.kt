@@ -38,7 +38,10 @@ private data class PendingFileEntry(
  * Faz uma única enumeração iterativa da árvore. Além de reduzir I/O duplicado, evita uma
  * recursão profunda no stack quando existem estruturas de pastas muito aninhadas.
  */
-internal suspend fun buildFileOperationPlan(root: File): FileOperationPlan {
+internal suspend fun buildFileOperationPlan(
+    root: File,
+    awaitIfPaused: suspend () -> Unit = {},
+): FileOperationPlan {
     val pending = ArrayDeque<PendingFileEntry>()
     val entries = ArrayList<PlannedFileEntry>()
     pending.addLast(PendingFileEntry(root, ""))
@@ -46,7 +49,10 @@ internal suspend fun buildFileOperationPlan(root: File): FileOperationPlan {
     var visited = 0
 
     while (pending.isNotEmpty()) {
-        if ((visited++ and 63) == 0) coroutineContext.ensureActive()
+        if ((visited++ and 63) == 0) {
+            coroutineContext.ensureActive()
+            awaitIfPaused()
+        }
         val current = pending.removeFirst()
         val source = current.file
         val isDirectory = source.isDirectory
@@ -88,11 +94,15 @@ internal suspend fun buildFileOperationPlan(root: File): FileOperationPlan {
 internal suspend fun copyFileOperationPlan(
     plan: FileOperationPlan,
     targetRoot: File,
+    awaitIfPaused: suspend () -> Unit = {},
     onProgress: (name: String, bytesDelta: Long, entryCompleted: Boolean) -> Unit,
 ) {
     val buffer = ByteArray(COPY_BUFFER_SIZE)
     plan.entries.forEachIndexed { index, entry ->
-        if ((index and 31) == 0) coroutineContext.ensureActive()
+        if ((index and 31) == 0) {
+            coroutineContext.ensureActive()
+            awaitIfPaused()
+        }
         val target = if (entry.relativePath.isEmpty()) {
             targetRoot
         } else {
@@ -110,6 +120,7 @@ internal suspend fun copyFileOperationPlan(
                 FileOutputStream(target).use { output ->
                     while (true) {
                         coroutineContext.ensureActive()
+                        awaitIfPaused()
                         val read = input.read(buffer)
                         if (read < 0) break
                         if (read == 0) continue
@@ -130,10 +141,12 @@ internal suspend fun copyFileOperationPlan(
  */
 internal suspend fun deleteFileOperationPlan(
     plan: FileOperationPlan,
+    awaitIfPaused: suspend () -> Unit = {},
     onEntry: (PlannedFileEntry) -> Unit = {},
 ): Boolean {
     for (index in plan.entries.lastIndex downTo 0) {
-        if ((index and 31) == 0) coroutineContext.ensureActive()
+        coroutineContext.ensureActive()
+        awaitIfPaused()
         val entry = plan.entries[index]
         val source = entry.source
         val removed = source.delete() || !source.exists()

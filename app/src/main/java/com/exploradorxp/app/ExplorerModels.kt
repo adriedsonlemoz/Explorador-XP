@@ -47,6 +47,7 @@ data class TransferState(
     val bytesTotal: Long = 0L,
     val bytesPerSecond: Long = 0L,
     val etaSeconds: Long? = null,
+    val isPaused: Boolean = false,
 ) {
     val fraction: Float
         get() = if (bytesTotal > 0L) {

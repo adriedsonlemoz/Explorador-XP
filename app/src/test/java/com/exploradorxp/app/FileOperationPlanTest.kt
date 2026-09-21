@@ -1,6 +1,11 @@
 package com.exploradorxp.app
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -42,6 +47,52 @@ class FileOperationPlanTest {
             assertEquals(plan.entryCount, deleted)
             assertFalse(source.exists())
             assertTrue(target.exists())
+        } finally {
+            temp.deleteRecursively()
+        }
+    }
+
+
+    @Test
+    fun copyCanPauseBetweenBlocksAndResumeWithoutRestarting() = runBlocking {
+        val temp = Files.createTempDirectory("exploradorxp-pause-plan").toFile()
+        try {
+            val source = File(temp, "large.bin")
+            source.writeBytes(ByteArray(900_000) { index -> (index % 251).toByte() })
+            val plan = buildFileOperationPlan(source)
+            val target = File(temp, "copy.bin")
+            val resume = CompletableDeferred<Unit>()
+            var shouldPause = false
+            var pauseObserved = false
+
+            val job = async {
+                copyFileOperationPlan(
+                    plan = plan,
+                    targetRoot = target,
+                    awaitIfPaused = {
+                        if (shouldPause && !resume.isCompleted) {
+                            pauseObserved = true
+                            resume.await()
+                        }
+                    },
+                    onProgress = { _, bytesDelta, _ ->
+                        if (bytesDelta > 0L && !shouldPause) shouldPause = true
+                    },
+                )
+            }
+
+            withTimeout(2_000) {
+                while (!pauseObserved) yield()
+            }
+            val pausedLength = target.length()
+            delay(40)
+            assertFalse(job.isCompleted)
+            assertEquals(pausedLength, target.length())
+
+            resume.complete(Unit)
+            job.await()
+            assertEquals(source.length(), target.length())
+            assertTrue(source.readBytes().contentEquals(target.readBytes()))
         } finally {
             temp.deleteRecursively()
         }

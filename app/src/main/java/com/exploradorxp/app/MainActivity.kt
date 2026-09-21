@@ -342,6 +342,8 @@ private fun ExplorerApp(
         onEmptyTrash = viewModel::emptyTrash,
         onAnalyzeStorage = viewModel::analyzeStorage,
         onCancelStorageAnalysis = viewModel::cancelStorageAnalysis,
+        onPauseTransfer = viewModel::pauseTransfer,
+        onResumeTransfer = viewModel::resumeTransfer,
         onCancelTransfer = viewModel::cancelTransfer,
         onResolveTransferConflict = viewModel::resolveTransferConflict,
         transferConflict = viewModel.transferConflict,

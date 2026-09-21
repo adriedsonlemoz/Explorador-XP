@@ -81,3 +81,9 @@ Ao comparar traces novos, observar principalmente `FrameTimingMetric` durante um
 A alpha.57 mantém o `FileOperationPlan` de travessia única e passa a reportar bytes durante a própria cópia dos blocos de 256 KiB. A UI calcula velocidade média e ETA a partir desses mesmos eventos, sem reler o arquivo para medir progresso. Conflitos de destino são resolvidos antes da cópia com Substituir / Ignorar / Manter ambos e decisão opcional para todos os próximos conflitos da mesma operação.
 
 O visualizador de imagens não faz scan adicional do armazenamento: recebe do `ExplorerViewModel` a sequência de imagens derivada do snapshot já carregado da pasta atual. Assim Anterior/Próxima e gesto lateral não introduzem uma varredura global ou recursiva.
+
+## Pausar/Continuar operações — alpha.58
+
+A alpha.58 insere checkpoints cooperativos no mesmo pipeline de `FileOperationPlan`, sem criar uma segunda travessia da árvore. Cópias consultam a pausa entre blocos de 256 KiB, exclusões antes de cada item e o planejamento em lotes. O período pausado é removido da janela de tempo usada para velocidade/ETA.
+
+Nos testes de desempenho, comparar uma cópia longa sem pausa e outra com pausa intermediária. Após continuar, a taxa deve convergir para a velocidade ativa real, sem carregar o tempo ocioso da pausa para a média.

@@ -131,9 +131,13 @@ class FileRepository(
         }
     }
 
-    suspend fun delete(files: List<File>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun delete(
+        files: List<File>,
+        onProgress: (TransferProgress) -> Unit = {},
+        awaitIfPaused: suspend () -> Unit = {},
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            val plans = files.map { file -> buildFileOperationPlan(file) }
+            val plans = files.map { file -> buildFileOperationPlan(file, awaitIfPaused) }
             val ticker = ProgressTicker(
                 totalEntries = plans.sumOf { it.entryCount }.coerceAtLeast(1),
                 totalBytes = plans.sumOf { it.totalBytes },
@@ -141,20 +145,27 @@ class FileRepository(
             )
             plans.forEach { plan ->
                 coroutineContext.ensureActive()
-                check(deleteFileOperationPlan(plan) { entry ->
-                    ticker.completeEntry(entry.source.name, entry.bytes)
-                }) { "Não foi possível excluir ${plan.root.name}." }
+                awaitIfPaused()
+                check(deleteFileOperationPlan(
+                    plan = plan,
+                    onEntry = { entry -> ticker.completeEntry(entry.source.name, entry.bytes) },
+                    awaitIfPaused = awaitIfPaused,
+                )) { "Não foi possível excluir ${plan.root.name}." }
             }
             ticker.reportFinal("")
         }
     }
 
     /** Move itens para a Lixeira oculta do mesmo volume sempre que possível. */
-    suspend fun moveToTrash(files: List<File>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun moveToTrash(
+        files: List<File>,
+        onProgress: (TransferProgress) -> Unit = {},
+        awaitIfPaused: suspend () -> Unit = {},
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val validFiles = files.filter { it.exists() }
             require(validFiles.isNotEmpty()) { "Nenhum item disponível para mover para a Lixeira." }
-            val plans = validFiles.map { source -> buildFileOperationPlan(source) }
+            val plans = validFiles.map { source -> buildFileOperationPlan(source, awaitIfPaused) }
             val ticker = ProgressTicker(
                 totalEntries = plans.sumOf { it.entryCount }.coerceAtLeast(1),
                 totalBytes = plans.sumOf { it.totalBytes },
@@ -163,6 +174,7 @@ class FileRepository(
 
             plans.forEach { plan ->
                 coroutineContext.ensureActive()
+                awaitIfPaused()
                 val source = plan.root
                 require(!isInsideManagedTrash(source)) { "O item já está na Lixeira." }
                 val trashRoot = managedTrashRoot(storageRootFor(source))
@@ -184,14 +196,19 @@ class FileRepository(
                     ticker.completePlan(plan, source.name)
                 } else {
                     try {
-                        copyFileOperationPlan(plan, target) { name, bytesDelta, entryCompleted ->
-                            ticker.copyProgress(name, bytesDelta, entryCompleted)
-                        }
+                        copyFileOperationPlan(
+                            plan = plan,
+                            targetRoot = target,
+                            onProgress = { name, bytesDelta, entryCompleted ->
+                                ticker.copyProgress(name, bytesDelta, entryCompleted)
+                            },
+                            awaitIfPaused = awaitIfPaused,
+                        )
                     } catch (error: Throwable) {
                         deleteRecursively(container)
                         throw error
                     }
-                    check(deleteFileOperationPlan(plan)) {
+                    check(deleteFileOperationPlan(plan, awaitIfPaused = awaitIfPaused)) {
                         "O item foi copiado para a Lixeira, mas não foi possível remover toda a origem. A cópia foi preservada na Lixeira."
                     }
                 }
@@ -207,11 +224,15 @@ class FileRepository(
         }.sortedByDescending(TrashItem::deletedAt)
     }
 
-    suspend fun restoreTrash(items: List<TrashItem>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun restoreTrash(
+        items: List<TrashItem>,
+        onProgress: (TransferProgress) -> Unit = {},
+        awaitIfPaused: suspend () -> Unit = {},
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val existing = items.filter { it.trashedFile.exists() }
             require(existing.isNotEmpty()) { "Nenhum item disponível para restaurar." }
-            val plannedItems = existing.map { item -> item to buildFileOperationPlan(item.trashedFile) }
+            val plannedItems = existing.map { item -> item to buildFileOperationPlan(item.trashedFile, awaitIfPaused) }
             val ticker = ProgressTicker(
                 totalEntries = plannedItems.sumOf { it.second.entryCount }.coerceAtLeast(1),
                 totalBytes = plannedItems.sumOf { it.second.totalBytes },
@@ -220,6 +241,7 @@ class FileRepository(
 
             plannedItems.forEach { (item, plan) ->
                 coroutineContext.ensureActive()
+                awaitIfPaused()
                 val original = File(item.originalPath)
                 val parent = original.parentFile ?: root
                 check(parent.mkdirs() || parent.isDirectory) { "Não foi possível recriar a pasta original." }
@@ -228,14 +250,19 @@ class FileRepository(
                     ticker.completePlan(plan, target.name)
                 } else {
                     try {
-                        copyFileOperationPlan(plan, target) { name, bytesDelta, entryCompleted ->
-                            ticker.copyProgress(name, bytesDelta, entryCompleted)
-                        }
+                        copyFileOperationPlan(
+                            plan = plan,
+                            targetRoot = target,
+                            onProgress = { name, bytesDelta, entryCompleted ->
+                                ticker.copyProgress(name, bytesDelta, entryCompleted)
+                            },
+                            awaitIfPaused = awaitIfPaused,
+                        )
                     } catch (error: Throwable) {
                         deleteRecursively(target)
                         throw error
                     }
-                    check(deleteFileOperationPlan(plan)) {
+                    check(deleteFileOperationPlan(plan, awaitIfPaused = awaitIfPaused)) {
                         "O item foi restaurado, mas não foi possível limpar totalmente a cópia da Lixeira. O arquivo restaurado foi preservado."
                     }
                 }
@@ -246,10 +273,14 @@ class FileRepository(
         }
     }
 
-    suspend fun permanentlyDeleteTrash(items: List<TrashItem>, onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun permanentlyDeleteTrash(
+        items: List<TrashItem>,
+        onProgress: (TransferProgress) -> Unit = {},
+        awaitIfPaused: suspend () -> Unit = {},
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val existing = items.filter { it.trashedFile.exists() }
-            val plannedItems = existing.map { item -> item to buildFileOperationPlan(item.trashedFile) }
+            val plannedItems = existing.map { item -> item to buildFileOperationPlan(item.trashedFile, awaitIfPaused) }
             val ticker = ProgressTicker(
                 totalEntries = plannedItems.sumOf { it.second.entryCount }.coerceAtLeast(1),
                 totalBytes = plannedItems.sumOf { it.second.totalBytes },
@@ -257,9 +288,12 @@ class FileRepository(
             )
             plannedItems.forEach { (item, plan) ->
                 coroutineContext.ensureActive()
-                check(deleteFileOperationPlan(plan) { entry ->
-                    ticker.completeEntry(entry.source.name, entry.bytes)
-                }) { "Não foi possível apagar ${item.name}." }
+                awaitIfPaused()
+                check(deleteFileOperationPlan(
+                    plan = plan,
+                    onEntry = { entry -> ticker.completeEntry(entry.source.name, entry.bytes) },
+                    awaitIfPaused = awaitIfPaused,
+                )) { "Não foi possível apagar ${item.name}." }
                 item.trashedFile.parentFile?.let(::cleanupTrashContainer)
             }
             pruneEmptyManagedTrashRoots()
@@ -267,11 +301,14 @@ class FileRepository(
         }
     }
 
-    suspend fun emptyTrash(onProgress: (TransferProgress) -> Unit = {}): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun emptyTrash(
+        onProgress: (TransferProgress) -> Unit = {},
+        awaitIfPaused: suspend () -> Unit = {},
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val roots = storageLocations().map { managedTrashRoot(it.root) }.filter(File::exists)
             val entries = roots.flatMap { it.listFiles().orEmpty().toList() }
-            val plans = entries.map { entry -> buildFileOperationPlan(entry) }
+            val plans = entries.map { entry -> buildFileOperationPlan(entry, awaitIfPaused) }
             val ticker = ProgressTicker(
                 totalEntries = plans.sumOf { it.entryCount }.coerceAtLeast(1),
                 totalBytes = plans.sumOf { it.totalBytes },
@@ -279,9 +316,12 @@ class FileRepository(
             )
             plans.forEach { plan ->
                 coroutineContext.ensureActive()
-                check(deleteFileOperationPlan(plan) { entry ->
-                    ticker.completeEntry(entry.source.name, entry.bytes)
-                }) { "Não foi possível remover ${plan.root.name} da Lixeira." }
+                awaitIfPaused()
+                check(deleteFileOperationPlan(
+                    plan = plan,
+                    onEntry = { entry -> ticker.completeEntry(entry.source.name, entry.bytes) },
+                    awaitIfPaused = awaitIfPaused,
+                )) { "Não foi possível remover ${plan.root.name} da Lixeira." }
             }
             roots.forEach { root -> if (root.exists() && root.listFiles().orEmpty().isEmpty()) root.delete() }
             ticker.reportFinal("")
@@ -292,6 +332,7 @@ class FileRepository(
         clipboard: ClipboardState,
         destination: File,
         onProgress: (TransferProgress) -> Unit = {},
+        awaitIfPaused: suspend () -> Unit = {},
         onConflict: suspend (TransferConflict) -> ConflictResolution = {
             ConflictResolution(ConflictDecision.KEEP_BOTH, applyToAll = true)
         },
@@ -300,6 +341,7 @@ class FileRepository(
             val prepared = mutableListOf<FileOperationPlan>()
             clipboard.files.forEach { source ->
                 coroutineContext.ensureActive()
+                awaitIfPaused()
                 require(source.exists()) { "${source.name} não existe mais." }
                 if (clipboard.mode == ClipboardMode.CUT && sameAbsolutePath(source.parentFile, destination)) {
                     return@forEach
@@ -309,7 +351,7 @@ class FileRepository(
                     val destinationPath = normalizedAbsolutePath(destination) + File.separator
                     require(!destinationPath.startsWith(sourcePath)) { "Não é possível copiar uma pasta para dentro dela mesma." }
                 }
-                prepared += buildFileOperationPlan(source)
+                prepared += buildFileOperationPlan(source, awaitIfPaused)
             }
 
             val ticker = ProgressTicker(
@@ -321,6 +363,7 @@ class FileRepository(
 
             prepared.forEach { plan ->
                 coroutineContext.ensureActive()
+                awaitIfPaused()
                 val source = plan.root
                 val directTarget = File(destination, source.name)
                 var target = directTarget
@@ -351,8 +394,8 @@ class FileRepository(
                         }
                         ConflictDecision.KEEP_BOTH -> target = uniqueTarget(destination, source.name)
                         ConflictDecision.REPLACE -> {
-                            val targetPlan = buildFileOperationPlan(target)
-                            check(deleteFileOperationPlan(targetPlan)) { "Não foi possível substituir ${target.name}." }
+                            val targetPlan = buildFileOperationPlan(target, awaitIfPaused)
+                            check(deleteFileOperationPlan(targetPlan, awaitIfPaused = awaitIfPaused)) { "Não foi possível substituir ${target.name}." }
                         }
                     }
                 }
@@ -360,11 +403,16 @@ class FileRepository(
                 if (clipboard.mode == ClipboardMode.CUT && source.renameTo(target)) {
                     ticker.completePlan(plan, target.name)
                 } else {
-                    copyFileOperationPlan(plan, target) { name, bytesDelta, entryCompleted ->
-                        ticker.copyProgress(name, bytesDelta, entryCompleted)
-                    }
+                    copyFileOperationPlan(
+                        plan = plan,
+                        targetRoot = target,
+                        onProgress = { name, bytesDelta, entryCompleted ->
+                            ticker.copyProgress(name, bytesDelta, entryCompleted)
+                        },
+                        awaitIfPaused = awaitIfPaused,
+                    )
                     if (clipboard.mode == ClipboardMode.CUT) {
-                        check(deleteFileOperationPlan(plan)) { "O item foi copiado, mas não foi possível remover a origem." }
+                        check(deleteFileOperationPlan(plan, awaitIfPaused = awaitIfPaused)) { "O item foi copiado, mas não foi possível remover a origem." }
                     }
                 }
             }

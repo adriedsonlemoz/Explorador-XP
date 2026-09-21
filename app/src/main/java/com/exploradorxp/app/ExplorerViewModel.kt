@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -45,6 +47,12 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     val transferConflict: StateFlow<TransferConflict?> = _transferConflict.asStateFlow()
     private var transferConflictWaiter: CompletableDeferred<ConflictResolution>? = null
 
+    // Gate cooperativo de pausa. O trabalho pesado consulta este estado entre arquivos e
+    // também entre blocos de cópia, então Pausar não cancela nem reinicia a operação.
+    private val transferPaused = MutableStateFlow(false)
+    @Volatile private var transferPauseStartedAtNs: Long = 0L
+    @Volatile private var transferPausedAccumulatedNs: Long = 0L
+
     private val _trashState = MutableStateFlow(TrashUiState())
     val trashState: StateFlow<TrashUiState> = _trashState.asStateFlow()
 
@@ -57,6 +65,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     private var refreshJob: Job? = null
     private var projectionJob: Job? = null
     private var transferJob: Job? = null
+    private var transferGeneration: Long = 0L
     private var navigationJob: Job? = null
     private var storageJob: Job? = null
     private var storageAnalysisJob: Job? = null
@@ -417,6 +426,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                 clipboard = clipboard,
                 destination = destination,
                 onProgress = onProgress,
+                awaitIfPaused = ::awaitTransferResumed,
                 onConflict = ::requestTransferConflict,
             )
         }
@@ -428,7 +438,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             kind = TransferKind.DELETE,
             successMessage = "Item apagado permanentemente.",
             failureFallback = "Falha ao apagar permanentemente.",
-        ) { onProgress -> repository.delete(listOf(file), onProgress) }
+        ) { onProgress -> repository.delete(listOf(file), onProgress, ::awaitTransferResumed) }
     }
 
     fun moveFileToTrash(file: File) {
@@ -437,7 +447,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             successMessage = "Item movido para a Lixeira.",
             failureFallback = "Falha ao mover para a Lixeira.",
             refreshTrash = true,
-        ) { onProgress -> repository.moveToTrash(listOf(file), onProgress) }
+        ) { onProgress -> repository.moveToTrash(listOf(file), onProgress, ::awaitTransferResumed) }
     }
 
     fun shareFile(file: File) {
@@ -499,7 +509,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             kind = TransferKind.DELETE,
             successMessage = if (count == 1) "1 item apagado permanentemente." else "$count itens apagados permanentemente.",
             failureFallback = "Falha ao apagar permanentemente.",
-        ) { onProgress -> repository.delete(files, onProgress) }
+        ) { onProgress -> repository.delete(files, onProgress, ::awaitTransferResumed) }
     }
 
     fun moveSelectedToTrash() {
@@ -511,7 +521,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             successMessage = if (count == 1) "1 item movido para a Lixeira." else "$count itens movidos para a Lixeira.",
             failureFallback = "Falha ao mover para a Lixeira.",
             refreshTrash = true,
-        ) { onProgress -> repository.moveToTrash(files, onProgress) }
+        ) { onProgress -> repository.moveToTrash(files, onProgress, ::awaitTransferResumed) }
     }
 
     fun createFolder(name: String) {
@@ -594,7 +604,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             successMessage = "Item restaurado.",
             failureFallback = "Falha ao restaurar o item.",
             refreshTrash = true,
-        ) { onProgress -> repository.restoreTrash(listOf(item), onProgress) }
+        ) { onProgress -> repository.restoreTrash(listOf(item), onProgress, ::awaitTransferResumed) }
     }
 
     fun permanentlyDeleteTrashItem(item: TrashItem) {
@@ -603,7 +613,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             successMessage = "Item apagado permanentemente.",
             failureFallback = "Falha ao apagar o item da Lixeira.",
             refreshTrash = true,
-        ) { onProgress -> repository.permanentlyDeleteTrash(listOf(item), onProgress) }
+        ) { onProgress -> repository.permanentlyDeleteTrash(listOf(item), onProgress, ::awaitTransferResumed) }
     }
 
     fun emptyTrash() {
@@ -613,7 +623,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
             successMessage = "Lixeira esvaziada.",
             failureFallback = "Falha ao esvaziar a Lixeira.",
             refreshTrash = true,
-        ) { onProgress -> repository.emptyTrash(onProgress) }
+        ) { onProgress -> repository.emptyTrash(onProgress, ::awaitTransferResumed) }
     }
 
     fun analyzeStorage(force: Boolean = false) {
@@ -660,12 +670,40 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun fileByPath(path: String): File? = File(path)
 
+    /** Pausa cooperativamente a operação atual sem perder o ponto já processado. */
+    fun pauseTransfer() {
+        if (transferJob?.isActive != true || transferPaused.value) return
+        transferPaused.value = true
+        transferPauseStartedAtNs = System.nanoTime()
+        _transferState.update { state -> state?.copy(isPaused = true) }
+    }
+
+    /** Continua a operação exatamente do checkpoint em que ela foi pausada. */
+    fun resumeTransfer() {
+        if (!transferPaused.value) return
+        val now = System.nanoTime()
+        val started = transferPauseStartedAtNs
+        if (started > 0L) {
+            transferPausedAccumulatedNs += (now - started).coerceAtLeast(0L)
+        }
+        transferPauseStartedAtNs = 0L
+        transferPaused.value = false
+        _transferState.update { state -> state?.copy(isPaused = false) }
+    }
+
     /** Cancela a cópia/mover/exclusão em andamento, se houver. */
     fun cancelTransfer() {
         transferConflictWaiter?.cancel()
         transferConflictWaiter = null
         _transferConflict.value = null
         transferJob?.cancel()
+        transferPaused.value = false
+        transferPauseStartedAtNs = 0L
+        transferPausedAccumulatedNs = 0L
+    }
+
+    private suspend fun awaitTransferResumed() {
+        transferPaused.filter { paused -> !paused }.first()
     }
 
     fun resolveTransferConflict(decision: ConflictDecision, applyToAll: Boolean) {
@@ -700,35 +738,61 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         operation: suspend ((TransferProgress) -> Unit) -> Result<Unit>,
     ) {
         transferJob?.cancel()
+        val runId = ++transferGeneration
         transferConflictWaiter?.cancel()
         transferConflictWaiter = null
         _transferConflict.value = null
+        transferPaused.value = false
+        transferPauseStartedAtNs = 0L
+        transferPausedAccumulatedNs = 0L
         transferJob = viewModelScope.launch {
-            _transferState.value = TransferState(kind, done = 0, total = 1, currentName = "")
+            _transferState.value = TransferState(kind, done = 0, total = 1, currentName = "", isPaused = false)
             var firstByteAtNs = 0L
-            val result = operation { progress ->
-                if (progress.bytesDone > 0L && firstByteAtNs == 0L) firstByteAtNs = System.nanoTime()
-                val elapsedSeconds = if (firstByteAtNs == 0L) 0.0 else
-                    ((System.nanoTime() - firstByteAtNs).coerceAtLeast(1L) / 1_000_000_000.0)
+            var pausedAtFirstByteNs = 0L
+            val result = try {
+                operation { progress ->
+                val nowNs = System.nanoTime()
+                if (progress.bytesDone > 0L && firstByteAtNs == 0L) {
+                    firstByteAtNs = nowNs
+                    pausedAtFirstByteNs = transferPausedAccumulatedNs
+                }
+                val pausedSinceFirstByteNs =
+                    (transferPausedAccumulatedNs - pausedAtFirstByteNs).coerceAtLeast(0L)
+                val pausedNowNs = if (transferPauseStartedAtNs > firstByteAtNs && firstByteAtNs > 0L)
+                    (nowNs - transferPauseStartedAtNs).coerceAtLeast(0L) else 0L
+                val activeElapsedNs = if (firstByteAtNs == 0L) 0L else
+                    (nowNs - firstByteAtNs - pausedSinceFirstByteNs - pausedNowNs).coerceAtLeast(1L)
+                val elapsedSeconds = activeElapsedNs / 1_000_000_000.0
                 val bytesPerSecond = if (elapsedSeconds > 0.15 && progress.bytesDone > 0L)
                     (progress.bytesDone / elapsedSeconds).toLong().coerceAtLeast(0L) else 0L
                 val remainingBytes = (progress.bytesTotal - progress.bytesDone).coerceAtLeast(0L)
                 val etaSeconds = if (bytesPerSecond > 0L && remainingBytes > 0L)
                     ((remainingBytes + bytesPerSecond - 1) / bytesPerSecond) else null
-                _transferState.value = TransferState(
-                    kind = kind,
-                    done = progress.done,
-                    total = progress.total,
-                    currentName = progress.currentName,
-                    bytesDone = progress.bytesDone,
-                    bytesTotal = progress.bytesTotal,
-                    bytesPerSecond = bytesPerSecond,
-                    etaSeconds = etaSeconds,
-                )
+                    _transferState.value = TransferState(
+                        kind = kind,
+                        done = progress.done,
+                        total = progress.total,
+                        currentName = progress.currentName,
+                        bytesDone = progress.bytesDone,
+                        bytesTotal = progress.bytesTotal,
+                        bytesPerSecond = bytesPerSecond,
+                        etaSeconds = etaSeconds,
+                        isPaused = transferPaused.value,
+                    )
+                }
+            } catch (error: Throwable) {
+                Result.failure(error)
             }
+
+            // Uma operação cancelada porque outra começou não pode limpar o estado da nova.
+            if (runId != transferGeneration) return@launch
+
             transferConflictWaiter = null
             _transferConflict.value = null
             _transferState.value = null
+            transferPaused.value = false
+            transferPauseStartedAtNs = 0L
+            transferPausedAccumulatedNs = 0L
             result
                 .onSuccess {
                     invalidateAllSnapshots()
