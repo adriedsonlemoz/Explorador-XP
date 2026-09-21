@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.60` (`versionCode 60`)  
+**Versão atual:** `0.1.0-alpha.61` (`versionCode 61`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,6 +14,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.61 profissionaliza o **editor interno de texto/código** sem trocar seu componente leve: amplia o destaque de sintaxe, adiciona autoindentação e fechamento automático de pares, permite escolher TAB/espaços e quebra de linha, melhora números de linha e localizar/substituir com contagem de ocorrências, preserva desfazer/refazer e reduz varreduras/cópias de texto durante a digitação. O fluxo **Abrir com** continua seguro e somente leitura, mas agora mantém metadados da origem separados para preparar um futuro “Salvar de volta”.
 - A alpha.60 renova o **instalador/inspector de APK**: compara versão instalada × APK, valida compatibilidade de Android e ABI, compara assinatura SHA-256 quando há app instalado, lista permissões declaradas, mostra arquiteturas e bloqueia tentativas claramente incompatíveis antes de abrir o instalador do sistema.
 - A alpha.59 evolui o **navegador ZIP**: cria um índice hierárquico único com pastas implícitas, tamanho/contagem recursivos por pasta, breadcrumb clicável, pesquisa com caminho do resultado, seleção rápida com tamanho real selecionado, barra de status do nível atual e pré-visualização com progresso/cancelamento e cache temporário reutilizável.
 - A alpha.58 adiciona **Pausar / Continuar** às operações longas de copiar, mover, excluir e Lixeira. A pausa é cooperativa e acontece entre arquivos e entre blocos de 256 KiB durante cópias, sem cancelar nem reiniciar a operação; velocidade e ETA desconsideram o tempo em que a tarefa ficou pausada, e **Cancelar** continua disponível mesmo durante a pausa.

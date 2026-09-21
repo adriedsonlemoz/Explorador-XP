@@ -1488,10 +1488,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "O instalador de APK agora compara claramente a versão do arquivo com a versão instalada.",
-                    "Compatibilidade de Android e processador é verificada antes de abrir o instalador do sistema.",
-                    "Assinaturas SHA-256 do APK e do app instalado são comparadas para detectar atualizações incompatíveis.",
-                    "Permissões declaradas, arquiteturas, SDK e dados técnicos podem ser consultados antes de instalar.",
+                    "Editor de código com destaque de sintaxe ampliado, autoindentação e fechamento automático de pares.",
+                    "TAB ou espaços (2/4/8) e quebra automática de linha agora podem ser configurados e ficam salvos.",
+                    "Números de linha e linha/coluna foram otimizados; localizar/substituir mostra ocorrência atual e total.",
+                    "Abrir com mantém a origem externa separada da cópia temporária, preparando o futuro Salvar de volta com segurança.",
                 ).forEach { change ->
                     Text(
                         "• $change",

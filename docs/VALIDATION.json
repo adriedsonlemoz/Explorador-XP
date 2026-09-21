@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.60",
-  "version_code": 60,
-  "manager_version": "0.1.0-alpha.60",
-  "manager_code": 60,
+  "version_build": "0.1.0-alpha.61",
+  "version_code": 61,
+  "manager_version": "0.1.0-alpha.61",
+  "manager_code": 61,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.60",
-      "code": 60
+      "version": "0.1.0-alpha.61",
+      "code": 61
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -440,16 +440,45 @@
         "docs/ALPHA60_APK_INSTALLER.md"
       ],
       "pure_jvm_smoke": "ApkInspectorSupport.kt compiled and a synthetic APK ZIP verified version relation, signer relation, arm64-v8a/armeabi-v7a extraction, ABI compatibility and known SHA-256.",
-      "android_api_stub_compile": "ApkInspector.kt compiled with Kotlin/JVM against minimal Android API stubs including PackageInfoFlags and PermissionInfoFlags overloads.",
+      "android_api_stub_compile": "ApkInspector.kt compile-smoke atualizado contra stubs mínimos da API Android: PackageInfoFlags é usado somente nos overloads de pacote e getPermissionInfo(String, Int) é usado para permissões.",
       "internal_viewer_parser_smoke": "No expecting/unclosed/unexpected-token diagnostics; unresolved Android/Compose references are expected without Android classpath.",
       "images_created_or_modified": false,
       "image_resources_unchanged_from_alpha59": "172 image files byte-identical.",
       "apk_workflows_unchanged_from_alpha59": true,
       "full_android_build_executed": false,
       "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain."
+    },
+    "alpha61_code_editor": {
+      "ok": true,
+      "focus": [
+        "syntax highlighting for supported code/text formats",
+        "autoindent including soft-keyboard Enter",
+        "automatic (), [], {}, single-quote and double-quote pairing",
+        "persistent TAB/spaces 2/4/8 and word-wrap preferences",
+        "incremental logical-line index and optimized gutter metrics",
+        "find/replace occurrence count and previous/next navigation",
+        "undo/redo with bounded history memory",
+        "save/save-as, line/column and unsaved-change state preserved",
+        "large-file read-only/truncated protection preserved",
+        "external-open origin metadata prepared without enabling save-back"
+      ],
+      "syntax_regex_smoke": "48 syntax configurations instantiated successfully with Kotlin/JVM.",
+      "line_index_randomized_smoke": "100000 randomized replace operations matched a full line-index rebuild after every edit.",
+      "image_resources_unchanged_from_alpha60": "172 image files byte-identical.",
+      "apk_workflows_unchanged_from_alpha60": true,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "The source package has no gradlew and this environment has no configured Android SDK/Gradle Android toolchain."
+    },
+    "alpha61_ci_log58_build_fix": {
+      "ok": true,
+      "source": "Gerar-APK-58-logs.zip",
+      "reported_error": "ApkInspector.kt:157:55 Unresolved reference 'PermissionInfoFlags'.",
+      "root_cause": "PackageManager.getPermissionInfo(String, Int) does not expose a PermissionInfoFlags overload; the alpha.60 implementation referenced a nonexistent nested type.",
+      "patch": "Use pm.getPermissionInfo(name, 0) while retaining PackageInfoFlags for package-info APIs.",
+      "compile_smoke": "ApkInspector.kt + ApkInspectorSupport.kt compiled successfully against Android API stubs that intentionally provide PackageInfoFlags but only getPermissionInfo(String, Int)."
     }
   },
-  "validated_at_utc": "2026-09-21T18:38:35.899574+00:00",
+  "validated_at_utc": "2026-09-21T21:44:07Z",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -887,6 +916,26 @@
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "README.md",
       "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha61_against_alpha60": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/ExternalOpenOrigin.kt",
+      "docs/ALPHA61_CODE_EDITOR.md"
+    ],
+    "changed": [
+      "CHANGELOG.md",
+      "README.md",
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ApkInspector.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
+      "docs/ALPHA60_APK_INSTALLER.md",
       "docs/VALIDATION.json",
       "github-manager.json"
     ],

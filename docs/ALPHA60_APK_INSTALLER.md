@@ -43,7 +43,7 @@ O projeto ainda não inclui `gradlew` e o ambiente não possui Android SDK/Gradl
 - smoke test real de ZIP/APK sintético para extração de ABIs;
 - comparação de versão e assinatura;
 - SHA-256 conhecido para `abc`;
-- compilação de `ApkInspector.kt` contra stubs mínimos da API Android, incluindo os overloads API 33 de `PackageInfoFlags`/`PermissionInfoFlags`;
+- compilação de `ApkInspector.kt` contra stubs mínimos da API Android, incluindo o overload API 33 de `PackageInfoFlags` e o overload `Int` de `getPermissionInfo`;
 - parser smoke de `InternalViewer.kt` sem diagnósticos de sintaxe.
 
 Nenhum recurso de imagem foi adicionado ou alterado nesta etapa.

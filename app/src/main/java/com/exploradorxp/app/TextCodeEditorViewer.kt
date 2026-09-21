@@ -84,9 +84,20 @@ private const val EDITOR_EDIT_MAX_BYTES = 750_000L
 private const val EDITOR_PREVIEW_MAX_BYTES = 400_000
 private const val SYNTAX_HIGHLIGHT_MAX_CHARS = 140_000
 private const val HISTORY_LIMIT = 250
+private const val HISTORY_CHAR_BUDGET = 4_000_000
+private const val EDITOR_PREFERENCES = "text_code_editor"
+private const val PREF_USE_TABS = "use_tabs"
+private const val PREF_INDENT_SIZE = "indent_size"
+private const val PREF_WORD_WRAP = "word_wrap"
 
 private val webExtensions = setOf("html", "htm", "css", "js", "mjs", "cjs")
-private val syntaxExtensions = setOf("html", "htm", "css", "js", "mjs", "cjs", "json", "xml")
+private val syntaxExtensions = setOf(
+    "html", "htm", "xml", "css", "js", "mjs", "cjs", "ts", "tsx", "jsx", "json",
+    "md", "markdown", "mds", "yml", "yaml", "toml", "ini", "cfg", "conf", "properties",
+    "kt", "kts", "java", "gradle", "py", "sh", "bash", "php", "rb", "go", "rs", "swift",
+    "dart", "c", "h", "hpp", "cpp", "cc", "sql", "vue", "svelte", "bat", "cmd", "ps1",
+    "env", "tex", "csv"
+)
 
 private sealed interface EditorLoadState {
     data object Loading : EditorLoadState
@@ -110,7 +121,33 @@ private data class EditorEncoding(
 private data class EditorHistoryState(
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
+    val dirty: Boolean = false,
 )
+
+private data class EditorMetrics(
+    val line: Int = 1,
+    val column: Int = 1,
+    val lineCount: Int = 1,
+)
+
+private data class EditorSearchState(
+    val total: Int = 0,
+    val current: Int = 0,
+)
+
+private data class EditorSearchResult(
+    val message: String,
+    val state: EditorSearchState,
+)
+
+private data class EditorPreferences(
+    val useTabs: Boolean = false,
+    val indentSize: Int = 4,
+    val wordWrap: Boolean = false,
+) {
+    val indentUnit: String
+        get() = if (useTabs) "\t" else " ".repeat(indentSize.coerceIn(2, 8))
+}
 
 private enum class EditorViewMode { CODE, PREVIEW }
 
@@ -118,6 +155,7 @@ private enum class EditorViewMode { CODE, PREVIEW }
 fun TextCodeEditorViewer(
     file: File,
     forcedReadOnly: Boolean = false,
+    externalOrigin: ExternalOpenOrigin? = null,
     fullScreen: Boolean,
     onFullScreenChange: (Boolean) -> Unit,
     onClose: () -> Unit,
@@ -128,6 +166,7 @@ fun TextCodeEditorViewer(
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
     val extension = file.extension.lowercase()
+    val syntaxExtension = remember(file.name) { editorSyntaxExtension(file) }
     val supportsPreview = extension in webExtensions
     val key = "${file.absolutePath}:${file.lastModified()}:${file.length()}"
     val isArchiveCachePreview = remember(file.absolutePath) {
@@ -139,7 +178,7 @@ fun TextCodeEditorViewer(
     var editorView by remember(file.absolutePath) { mutableStateOf<CodeEditText?>(null) }
     var workingText by remember(file.absolutePath) { mutableStateOf("") }
     var dirty by remember(file.absolutePath) { mutableStateOf(false) }
-    var cursorPosition by remember(file.absolutePath) { mutableIntStateOf(0) }
+    var metrics by remember(file.absolutePath) { mutableStateOf(EditorMetrics()) }
     var historyState by remember(file.absolutePath) { mutableStateOf(EditorHistoryState()) }
     var statusMessage by remember(file.absolutePath) { mutableStateOf("") }
     var viewMode by remember(file.absolutePath) { mutableStateOf(EditorViewMode.CODE) }
@@ -153,6 +192,9 @@ fun TextCodeEditorViewer(
     var showOverwriteConfirm by remember(file.absolutePath) { mutableStateOf(false) }
     var showCloseConfirm by remember(file.absolutePath) { mutableStateOf(false) }
     var showMore by remember(file.absolutePath) { mutableStateOf(false) }
+    var showEditorSettings by remember(file.absolutePath) { mutableStateOf(false) }
+    var searchState by remember(file.absolutePath) { mutableStateOf(EditorSearchState()) }
+    var editorPreferences by remember { mutableStateOf(loadEditorPreferences(context)) }
     var previewRevision by remember(file.absolutePath) { mutableIntStateOf(0) }
     var previewSource by remember(file.absolutePath) { mutableStateOf("") }
     var previewError by remember(file.absolutePath) { mutableStateOf("") }
@@ -164,8 +206,9 @@ fun TextCodeEditorViewer(
         workingText = ready?.document?.text.orEmpty()
         previewSource = workingText
         dirty = false
-        cursorPosition = 0
+        metrics = metricsForText(workingText, 0)
         historyState = EditorHistoryState()
+        searchState = EditorSearchState()
         statusMessage = ""
         editorView = null
         viewMode = EditorViewMode.CODE
@@ -182,7 +225,9 @@ fun TextCodeEditorViewer(
     }
 
     fun refreshPreview() {
-        previewSource = editorView?.text?.toString() ?: workingText
+        val currentSource = editorView?.text?.toString() ?: workingText
+        workingText = currentSource
+        previewSource = currentSource
         previewRevision++
         previewError = ""
     }
@@ -308,7 +353,7 @@ fun TextCodeEditorViewer(
                 val view = editorView
                 if (view != null) {
                     val actual = goToLine(view, line)
-                    cursorPosition = view.selectionStart.coerceAtLeast(0)
+                    metrics = view.currentMetrics()
                     statusMessage = if (actual) "Posicionado na linha $line" else "Linha $line não existe neste arquivo"
                 }
                 showGoToLine = false
@@ -326,7 +371,13 @@ fun TextCodeEditorViewer(
             onCut = { editorView?.onTextContextMenuItem(android.R.id.cut); showMore = false },
             onPaste = { editorView?.onTextContextMenuItem(android.R.id.paste); showMore = false },
             onGoToLine = { showMore = false; showGoToLine = true },
-            onFindReplace = { showMore = false; showFindPanel = true; showReplaceField = true },
+            onFindReplace = {
+                showMore = false
+                showFindPanel = true
+                showReplaceField = true
+                searchState = editorView?.searchState(findQuery) ?: EditorSearchState()
+            },
+            onSettings = { showMore = false; showEditorSettings = true },
             onPreview = {
                 showMore = false
                 if (supportsPreview) {
@@ -337,25 +388,23 @@ fun TextCodeEditorViewer(
         )
     }
 
-    if (fullScreen && viewMode == EditorViewMode.PREVIEW) {
-        FullScreenWebPreview(
-            file = file,
-            extension = extension,
-            source = previewSource,
-            revision = previewRevision,
-            error = previewError,
-            onError = { previewError = it },
-            onRefresh = ::refreshPreview,
-            onBackToCode = {
-                onFullScreenChange(false)
-                viewMode = EditorViewMode.CODE
+
+    if (showEditorSettings) {
+        EditorSettingsDialog(
+            preferences = editorPreferences,
+            onDismiss = { showEditorSettings = false },
+            onChange = { updated ->
+                editorPreferences = updated
+                saveEditorPreferences(context, updated)
+                editorView?.updatePreferences(updated)
             },
-            onExitFullScreen = { onFullScreenChange(false) },
         )
-        return
     }
 
-    Column(Modifier.fillMaxSize().background(Color.White)) {
+    val showFullScreenPreview = fullScreen && viewMode == EditorViewMode.PREVIEW
+
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().background(Color.White)) {
         EditorToolbar(
             dirty = dirty,
             editable = ((loadState as? EditorLoadState.Ready)?.document?.truncated == false) && !isArchivePreview,
@@ -384,9 +433,10 @@ fun TextCodeEditorViewer(
         val warning = when {
             statusMessage.isNotBlank() -> statusMessage
             isArchiveCachePreview -> "Pré-visualização temporária extraída do ZIP: aberto em modo somente leitura para evitar travamentos e alterações acidentais."
+            forcedReadOnly && externalOrigin != null -> "Arquivo recebido por Abrir com: a origem foi preservada separadamente e esta cópia temporária continua somente leitura."
             forcedReadOnly -> "Arquivo aberto por outro aplicativo: modo somente leitura para preservar o documento original."
             ready?.document?.truncated == true -> "Arquivo grande: aberto parcialmente e somente para leitura para evitar travamentos."
-            ready != null && file.length() > SYNTAX_HIGHLIGHT_MAX_CHARS && extension in syntaxExtensions ->
+            ready != null && file.length() > SYNTAX_HIGHLIGHT_MAX_CHARS && syntaxExtension in syntaxExtensions ->
                 "Realce de sintaxe reduzido neste arquivo para manter o editor responsivo."
             else -> ""
         }
@@ -410,20 +460,37 @@ fun TextCodeEditorViewer(
                 query = findQuery,
                 replacement = replaceText,
                 showReplace = showReplaceField,
-                onQueryChange = { findQuery = it },
+                resultLabel = when {
+                    findQuery.isBlank() -> ""
+                    searchState.total == 0 -> "0 ocorrências"
+                    searchState.current > 0 -> "${searchState.current}/${searchState.total}"
+                    else -> "${searchState.total} ocorrências"
+                },
+                onQueryChange = { query ->
+                    findQuery = query
+                    searchState = editorView?.searchState(query) ?: EditorSearchState()
+                },
                 onReplacementChange = { replaceText = it },
                 onToggleReplace = { showReplaceField = !showReplaceField },
                 onPrevious = {
-                    statusMessage = findInEditor(editorView, findQuery, forward = false)
+                    val result = findInEditor(editorView, findQuery, forward = false)
+                    statusMessage = result.message
+                    searchState = result.state
                 },
                 onNext = {
-                    statusMessage = findInEditor(editorView, findQuery, forward = true)
+                    val result = findInEditor(editorView, findQuery, forward = true)
+                    statusMessage = result.message
+                    searchState = result.state
                 },
                 onReplace = {
-                    statusMessage = replaceCurrent(editorView, findQuery, replaceText)
+                    val result = replaceCurrent(editorView, findQuery, replaceText)
+                    statusMessage = result.message
+                    searchState = result.state
                 },
                 onReplaceAll = {
-                    statusMessage = replaceAll(editorView, findQuery, replaceText)
+                    val result = replaceAll(editorView, findQuery, replaceText)
+                    statusMessage = result.message
+                    searchState = result.state
                 },
                 onClose = { showFindPanel = false },
             )
@@ -434,7 +501,27 @@ fun TextCodeEditorViewer(
                 EditorLoadState.Loading -> EditorCenteredMessage("Carregando arquivo de texto...")
                 is EditorLoadState.Error -> EditorErrorPanel(state.message, onOpenExternal)
                 is EditorLoadState.Ready -> {
-                    if (viewMode == EditorViewMode.PREVIEW && supportsPreview) {
+                    key(file.absolutePath, state.document.encoding.label) {
+                        CodeEditorView(
+                            initialText = editorView?.text?.toString() ?: workingText,
+                            readOnly = state.document.truncated || isArchivePreview,
+                            extension = syntaxExtension,
+                            syntaxHighlight = !state.document.truncated && state.document.text.length <= SYNTAX_HIGHLIGHT_MAX_CHARS,
+                            preferences = editorPreferences,
+                            onViewReady = { editorView = it },
+                            onMetricsState = { updatedMetrics -> metrics = updatedMetrics },
+                            onContentChanged = {
+                                if (showFindPanel && findQuery.isNotBlank()) {
+                                    searchState = editorView?.searchState(findQuery) ?: EditorSearchState()
+                                }
+                            },
+                            onHistoryState = { history ->
+                                historyState = history
+                                dirty = history.dirty
+                            },
+                        )
+                    }
+                    if (viewMode == EditorViewMode.PREVIEW && supportsPreview && !showFullScreenPreview) {
                         WebPreview(
                             file = file,
                             extension = extension,
@@ -449,24 +536,6 @@ fun TextCodeEditorViewer(
                                 color = Color(0xFF8A251D),
                                 fontSize = 11.sp,
                                 modifier = Modifier.fillMaxWidth().background(Color(0xFFFFE8E5)).padding(8.dp),
-                            )
-                        }
-                    } else {
-                        key(file.absolutePath, state.document.encoding.label) {
-                            CodeEditorView(
-                                initialText = state.document.text,
-                                readOnly = state.document.truncated || isArchivePreview,
-                                extension = extension,
-                                syntaxHighlight = !state.document.truncated && state.document.text.length <= SYNTAX_HIGHLIGHT_MAX_CHARS,
-                                onViewReady = { editorView = it },
-                                onTextState = { text, cursor ->
-                                    workingText = text
-                                    cursorPosition = cursor
-                                },
-                                onHistoryState = { history ->
-                                    historyState = history
-                                    dirty = history.canUndo
-                                },
                             )
                         }
                     }
@@ -484,10 +553,28 @@ fun TextCodeEditorViewer(
 
         EditorStatusBar(
             state = loadState,
-            text = workingText,
-            cursor = cursorPosition,
+            metrics = metrics,
             dirty = dirty,
+            preferences = editorPreferences,
         )
+        }
+
+        if (showFullScreenPreview) {
+        FullScreenWebPreview(
+            file = file,
+            extension = extension,
+            source = previewSource,
+            revision = previewRevision,
+            error = previewError,
+            onError = { previewError = it },
+            onRefresh = ::refreshPreview,
+            onBackToCode = {
+                onFullScreenChange(false)
+                viewMode = EditorViewMode.CODE
+            },
+            onExitFullScreen = { onFullScreenChange(false) },
+        )
+        }
     }
 }
 
@@ -540,6 +627,7 @@ private fun FindReplacePanel(
     query: String,
     replacement: String,
     showReplace: Boolean,
+    resultLabel: String,
     onQueryChange: (String) -> Unit,
     onReplacementChange: (String) -> Unit,
     onToggleReplace: () -> Unit,
@@ -556,8 +644,15 @@ private fun FindReplacePanel(
             .border(1.dp, Color(0xFFB8C7DA))
             .padding(6.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        ) {
             EditorTextInput(query, "Localizar", onQueryChange, Modifier.widthIn(min = 130.dp, max = 260.dp))
+            if (resultLabel.isNotBlank()) {
+                Spacer(Modifier.width(6.dp))
+                Text(resultLabel, fontSize = 10.sp, color = XpTextSecondary, maxLines = 1)
+            }
             Spacer(Modifier.width(5.dp))
             EditorButton("◀", enabled = query.isNotEmpty(), onClick = onPrevious)
             Spacer(Modifier.width(3.dp))
@@ -569,7 +664,10 @@ private fun FindReplacePanel(
         }
         if (showReplace) {
             Spacer(Modifier.height(5.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            ) {
                 EditorTextInput(replacement, "Substituir por", onReplacementChange, Modifier.widthIn(min = 130.dp, max = 260.dp))
                 Spacer(Modifier.width(5.dp))
                 EditorButton("Substituir", enabled = query.isNotEmpty(), onClick = onReplace)
@@ -612,8 +710,10 @@ private fun CodeEditorView(
     readOnly: Boolean,
     extension: String,
     syntaxHighlight: Boolean,
+    preferences: EditorPreferences,
     onViewReady: (CodeEditText) -> Unit,
-    onTextState: (String, Int) -> Unit,
+    onMetricsState: (EditorMetrics) -> Unit,
+    onContentChanged: () -> Unit,
     onHistoryState: (EditorHistoryState) -> Unit,
 ) {
     AndroidView(
@@ -626,7 +726,9 @@ private fun CodeEditorView(
                         readOnly = readOnly,
                         extension = extension,
                         syntaxHighlight = syntaxHighlight,
-                        onTextState = onTextState,
+                        preferences = preferences,
+                        onMetricsState = onMetricsState,
+                        onContentChanged = onContentChanged,
                         onHistoryState = onHistoryState,
                     )
                     onViewReady(this)
@@ -646,7 +748,12 @@ private fun CodeEditorView(
                 }
             }
         },
-        update = { view -> if (view is CodeEditText) onViewReady(view) },
+        update = { view ->
+            if (view is CodeEditText) {
+                view.updatePreferences(preferences)
+                onViewReady(view)
+            }
+        },
     )
 }
 
@@ -655,20 +762,35 @@ private class CodeEditText(context: Context) : EditText(context) {
         val start: Int,
         val before: String,
         val after: String,
+        val beforeStateId: Long,
+        val afterStateId: Long,
+    )
+
+    private data class AutomaticEdit(
+        val start: Int,
+        val before: String,
+        val after: String,
+        val cursor: Int,
     )
 
     private val undoStack = ArrayDeque<EditOperation>()
     private val redoStack = ArrayDeque<EditOperation>()
+    private var undoChars = 0
+    private var redoChars = 0
+    private val lineStarts = ArrayList<Int>()
+    private var nextStateId = 0L
+    private var currentStateId = 0L
+    private var savedStateId = 0L
     private var suppressHistory = false
     private var beforeStart = 0
     private var beforeText = ""
     private var pendingInsertedLength = 0
     private var editorReadOnly = false
-    // Android/TextView pode chamar onSelectionChanged() ainda durante o construtor da superclasse,
-    // antes de os campos desta subclasse terem sido inicializados. Em builds minificados isso aparecia
-    // como uma chamada de Function2 em uma referência nula e fazia o editor cair no fallback.
-    // Mantemos os callbacks anuláveis até configure() terminar para que eventos precoces sejam ignorados.
-    private var callbackTextState: ((String, Int) -> Unit)? = null
+    private var preferences = EditorPreferences()
+    // Android/TextView pode chamar onSelectionChanged() ainda durante o construtor da superclasse.
+    // Os callbacks permanecem anuláveis até configure() terminar.
+    private var callbackMetricsState: ((EditorMetrics) -> Unit)? = null
+    private var callbackContentChanged: (() -> Unit)? = null
     private var callbackHistoryState: ((EditorHistoryState) -> Unit)? = null
     private var sourceExtension: String = ""
     private var syntaxHighlightEnabled = false
@@ -690,22 +812,24 @@ private class CodeEditText(context: Context) : EditText(context) {
         readOnly: Boolean,
         extension: String,
         syntaxHighlight: Boolean,
-        onTextState: (String, Int) -> Unit,
+        preferences: EditorPreferences,
+        onMetricsState: (EditorMetrics) -> Unit,
+        onContentChanged: () -> Unit,
         onHistoryState: (EditorHistoryState) -> Unit,
     ) {
-        callbackTextState = onTextState
+        callbackMetricsState = onMetricsState
+        callbackContentChanged = onContentChanged
         callbackHistoryState = onHistoryState
         sourceExtension = extension
         syntaxHighlightEnabled = syntaxHighlight && extension in syntaxExtensions
+        this.preferences = preferences
         setBackgroundColor(android.graphics.Color.WHITE)
         setTextColor(android.graphics.Color.rgb(32, 32, 32))
         typeface = Typeface.MONOSPACE
         textSize = 13f
         gravity = Gravity.TOP or Gravity.START
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-        setHorizontallyScrolling(true)
         isVerticalScrollBarEnabled = true
-        isHorizontalScrollBarEnabled = true
         setTextIsSelectable(true)
         editorReadOnly = readOnly
         isFocusable = true
@@ -713,15 +837,33 @@ private class CodeEditText(context: Context) : EditText(context) {
         isCursorVisible = !readOnly
         isLongClickable = true
         if (readOnly) keyListener = null
-        updateGutterPadding(initialText)
+        applyWordWrap(preferences.wordWrap)
         suppressHistory = true
         setText(initialText)
         suppressHistory = false
+        rebuildLineIndex(initialText)
+        updateGutterPadding()
         if (!readOnly) setSelection(0)
         addTextChangedListener(historyWatcher)
-        callbackTextState?.invoke(text?.toString().orEmpty(), selectionStart.coerceAtLeast(0))
+        notifyMetrics()
         notifyHistory()
         scheduleHighlight()
+    }
+
+    fun updatePreferences(updated: EditorPreferences) {
+        if (preferences == updated) return
+        val wordWrapChanged = preferences.wordWrap != updated.wordWrap
+        preferences = updated
+        if (wordWrapChanged) {
+            applyWordWrap(updated.wordWrap)
+            requestLayout()
+            invalidate()
+        }
+    }
+
+    private fun applyWordWrap(enabled: Boolean) {
+        setHorizontallyScrolling(!enabled)
+        isHorizontalScrollBarEnabled = !enabled
     }
 
     private val historyWatcher = object : TextWatcher {
@@ -735,90 +877,208 @@ private class CodeEditText(context: Context) : EditText(context) {
         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
 
         override fun afterTextChanged(s: Editable?) {
-            val current = s?.toString().orEmpty()
-            if (!suppressHistory) {
-                val insertedLength = pendingInsertedLength.coerceAtLeast(0)
-                val safeEnd = (beforeStart + insertedLength).coerceAtMost(s?.length ?: 0)
-                val afterText = s?.subSequence(beforeStart.coerceAtMost(s.length), safeEnd)?.toString().orEmpty()
-                if (beforeText != afterText) {
-                    undoStack.addLast(
-                        EditOperation(
-                            start = beforeStart,
-                            before = beforeText,
-                            after = afterText,
-                        )
-                    )
-                    while (undoStack.size > HISTORY_LIMIT) undoStack.removeFirst()
-                    redoStack.clear()
+            if (suppressHistory) return
+            val editable = s ?: return
+            val safeStart = beforeStart.coerceIn(0, editable.length)
+            val insertedEnd = (safeStart + pendingInsertedLength).coerceIn(safeStart, editable.length)
+            val inserted = editable.subSequence(safeStart, insertedEnd).toString()
+
+            var operationStart = safeStart
+            var operationBefore = beforeText
+            var operationAfter = inserted
+            var desiredCursor: Int? = null
+            if (!editorReadOnly) {
+                val automatic = applyEditorAssists(editable, safeStart, beforeText, inserted)
+                if (automatic != null) {
+                    operationStart = automatic.start
+                    operationBefore = automatic.before
+                    operationAfter = automatic.after
+                    desiredCursor = automatic.cursor
                 }
             }
-            updateGutterPadding(current)
-            callbackTextState?.invoke(current, selectionStart.coerceAtLeast(0))
+
+            if (operationBefore != operationAfter) {
+                val beforeState = currentStateId
+                val afterState = ++nextStateId
+                val operation = EditOperation(
+                    start = operationStart,
+                    before = operationBefore,
+                    after = operationAfter,
+                    beforeStateId = beforeState,
+                    afterStateId = afterState,
+                )
+                currentStateId = afterState
+                undoStack.addLast(operation)
+                undoChars += operation.historyCharCost()
+                trimUndoHistory()
+                redoStack.clear()
+                redoChars = 0
+                updateLineIndex(operation.start, operation.before, operation.after)
+                callbackContentChanged?.invoke()
+            }
+
+            desiredCursor?.let { cursor ->
+                val target = cursor.coerceIn(0, editable.length)
+                if (selectionStart != target || selectionEnd != target) setSelection(target)
+            }
+            updateGutterPadding()
+            notifyMetrics()
             notifyHistory()
             scheduleHighlight()
             invalidate()
         }
     }
 
+    private fun applyEditorAssists(
+        editable: Editable,
+        start: Int,
+        replacedText: String,
+        insertedText: String,
+    ): AutomaticEdit? {
+        if (insertedText.length != 1) return null
+        val typed = insertedText[0]
+        val initialEnd = (start + 1).coerceAtMost(editable.length)
+        val next = editable.getOrNull(initialEnd)
+
+        // Se o par de fechamento já está à frente do cursor, apenas avança sobre ele.
+        if (replacedText.isEmpty() && typed in ")]}'\"" && next == typed) {
+            suppressHistory = true
+            editable.delete(start, initialEnd)
+            suppressHistory = false
+            return AutomaticEdit(start, "", "", start + 1)
+        }
+
+        if (typed == '\n') {
+            val previousBreak = if (start <= 0) -1 else editable.lastIndexOf('\n', start - 1)
+            val previousLineStart = if (previousBreak < 0) 0 else previousBreak + 1
+            val previousLine = editable.subSequence(previousLineStart, start).toString()
+            val baseIndent = previousLine.takeWhile { it == ' ' || it == '\t' }
+            val trimmed = previousLine.trimEnd()
+            val lastMeaningful = trimmed.lastOrNull()
+            val increaseIndent = when {
+                lastMeaningful in setOf('{', '[', '(') -> true
+                sourceExtension == "py" && trimmed.endsWith(':') -> true
+                sourceExtension in setOf("yml", "yaml") && trimmed.endsWith(':') -> true
+                else -> false
+            }
+            val indent = baseIndent + if (increaseIndent) preferences.indentUnit else ""
+            val matchingClose = when (lastMeaningful) {
+                '{' -> '}'
+                '[' -> ']'
+                '(' -> ')'
+                else -> null
+            }
+            val after = if (matchingClose != null && next == matchingClose) {
+                "\n$indent\n$baseIndent"
+            } else {
+                "\n$indent"
+            }
+            if (after != insertedText) {
+                suppressHistory = true
+                editable.replace(start, initialEnd, after)
+                suppressHistory = false
+                val cursor = start + 1 + indent.length
+                return AutomaticEdit(start, replacedText, after, cursor)
+            }
+            return null
+        }
+
+        val close = when (typed) {
+            '(' -> ')'
+            '[' -> ']'
+            '{' -> '}'
+            '\'' -> '\''
+            '"' -> '"'
+            else -> null
+        } ?: return null
+
+        if ((typed == '\'' || typed == '"') && isEscapedAt(editable, start)) return null
+        if (typed == '\'' && replacedText.isEmpty()) {
+            val previous = editable.getOrNull(start - 1)
+            val following = editable.getOrNull(start + 1)
+            if (previous?.isLetterOrDigit() == true && following?.isLetterOrDigit() == true) return null
+        }
+
+        val paired = if (replacedText.isNotEmpty()) "$typed$replacedText$close" else "$typed$close"
+        suppressHistory = true
+        editable.replace(start, initialEnd, paired)
+        suppressHistory = false
+        val cursor = if (replacedText.isNotEmpty()) start + paired.length else start + 1
+        return AutomaticEdit(start, replacedText, paired, cursor)
+    }
+
+    private fun isEscapedAt(text: CharSequence, position: Int): Boolean {
+        var slashes = 0
+        var index = position - 1
+        while (index >= 0 && text[index] == '\\') {
+            slashes++
+            index--
+        }
+        return slashes % 2 == 1
+    }
 
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
-        callbackTextState?.invoke(text?.toString().orEmpty(), selStart.coerceAtLeast(0))
+        if (!suppressHistory) notifyMetrics()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_TAB && !editorReadOnly) {
-            text?.replace(selectionStart.coerceAtLeast(0), selectionEnd.coerceAtLeast(0), "    ")
+            val editable = text ?: return super.onKeyDown(keyCode, event)
+            val start = selectionStart.coerceAtLeast(0)
+            val end = selectionEnd.coerceAtLeast(start)
+            editable.replace(start, end, preferences.indentUnit)
             return true
-        }
-        if (keyCode == KeyEvent.KEYCODE_ENTER && !editorReadOnly) {
-            val current = text?.toString().orEmpty()
-            val cursor = selectionStart.coerceAtLeast(0)
-            val lineStart = current.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
-            val indent = current.substring(lineStart, cursor.coerceAtMost(current.length)).takeWhile { it == ' ' || it == '\t' }
-            if (indent.isNotEmpty()) {
-                text?.replace(selectionStart.coerceAtLeast(0), selectionEnd.coerceAtLeast(0), "\n$indent")
-                return true
-            }
         }
         return super.onKeyDown(keyCode, event)
     }
 
     fun undoEdit() {
         val op = undoStack.removeLastOrNull() ?: return
+        undoChars = (undoChars - op.historyCharCost()).coerceAtLeast(0)
         applyOperation(op, undo = true)
+        currentStateId = op.beforeStateId
         redoStack.addLast(op)
+        redoChars += op.historyCharCost()
+        trimRedoHistory()
         notifyHistory()
     }
 
     fun redoEdit() {
         val op = redoStack.removeLastOrNull() ?: return
+        redoChars = (redoChars - op.historyCharCost()).coerceAtLeast(0)
         applyOperation(op, undo = false)
+        currentStateId = op.afterStateId
         undoStack.addLast(op)
+        undoChars += op.historyCharCost()
+        trimUndoHistory()
         notifyHistory()
     }
 
     private fun applyOperation(op: EditOperation, undo: Boolean) {
         val editable = text ?: return
+        val before = if (undo) op.after else op.before
+        val after = if (undo) op.before else op.after
         suppressHistory = true
-        if (undo) {
-            val end = (op.start + op.after.length).coerceAtMost(editable.length)
-            editable.replace(op.start.coerceAtMost(editable.length), end, op.before)
-            setSelection((op.start + op.before.length).coerceIn(0, editable.length))
-        } else {
-            val end = (op.start + op.before.length).coerceAtMost(editable.length)
-            editable.replace(op.start.coerceAtMost(editable.length), end, op.after)
-            setSelection((op.start + op.after.length).coerceIn(0, editable.length))
-        }
+        val end = (op.start + before.length).coerceAtMost(editable.length)
+        editable.replace(op.start.coerceAtMost(editable.length), end, after)
+        updateLineIndex(op.start, before, after)
+        val cursor = (op.start + after.length).coerceIn(0, editable.length)
+        setSelection(cursor)
         suppressHistory = false
-        callbackTextState?.invoke(editable.toString(), selectionStart.coerceAtLeast(0))
+        callbackContentChanged?.invoke()
+        updateGutterPadding()
+        notifyMetrics()
         scheduleHighlight()
         invalidate()
     }
 
     fun markSaved() {
+        savedStateId = currentStateId
         undoStack.clear()
         redoStack.clear()
+        undoChars = 0
+        redoChars = 0
         notifyHistory()
     }
 
@@ -830,8 +1090,128 @@ private class CodeEditText(context: Context) : EditText(context) {
 
     fun isReadOnlyMode(): Boolean = editorReadOnly
 
+    fun currentMetrics(): EditorMetrics = metricsAt(selectionStart.coerceAtLeast(0))
+
+    fun goToLine(requestedLine: Int): Boolean {
+        if (requestedLine !in 1..lineStarts.size) return false
+        val target = lineStarts[requestedLine - 1].coerceIn(0, text?.length ?: 0)
+        setSelection(target)
+        requestFocus()
+        return true
+    }
+
+    fun searchState(query: String): EditorSearchState {
+        if (query.isBlank()) return EditorSearchState()
+        val source = text?.toString().orEmpty()
+        if (source.isEmpty()) return EditorSearchState()
+        var total = 0
+        var current = 0
+        var index = 0
+        val selectedStart = selectionStart.coerceAtLeast(0)
+        val selectedEnd = selectionEnd.coerceAtLeast(selectedStart)
+        while (index <= source.length - query.length) {
+            val found = source.indexOf(query, startIndex = index, ignoreCase = true)
+            if (found < 0) break
+            total++
+            if (found == selectedStart && found + query.length == selectedEnd) current = total
+            index = found + query.length.coerceAtLeast(1)
+        }
+        return EditorSearchState(total = total, current = current)
+    }
+
+    private fun EditOperation.historyCharCost(): Int = before.length + after.length
+
+    private fun trimUndoHistory() {
+        while (undoStack.size > 1 && (undoStack.size > HISTORY_LIMIT || undoChars > HISTORY_CHAR_BUDGET)) {
+            undoChars = (undoChars - undoStack.removeFirst().historyCharCost()).coerceAtLeast(0)
+        }
+    }
+
+    private fun trimRedoHistory() {
+        while (redoStack.size > 1 && (redoStack.size > HISTORY_LIMIT || redoChars > HISTORY_CHAR_BUDGET)) {
+            redoChars = (redoChars - redoStack.removeFirst().historyCharCost()).coerceAtLeast(0)
+        }
+    }
+
     private fun notifyHistory() {
-        callbackHistoryState?.invoke(EditorHistoryState(undoStack.isNotEmpty(), redoStack.isNotEmpty()))
+        callbackHistoryState?.invoke(
+            EditorHistoryState(
+                canUndo = undoStack.isNotEmpty(),
+                canRedo = redoStack.isNotEmpty(),
+                dirty = currentStateId != savedStateId,
+            )
+        )
+    }
+
+    private fun notifyMetrics() {
+        callbackMetricsState?.invoke(metricsAt(selectionStart.coerceAtLeast(0)))
+    }
+
+    private fun metricsAt(cursor: Int): EditorMetrics {
+        if (lineStarts.isEmpty()) return EditorMetrics()
+        val safeCursor = cursor.coerceIn(0, text?.length ?: 0)
+        val lineIndex = lineIndexForOffset(safeCursor)
+        val lineStart = lineStarts.getOrElse(lineIndex) { 0 }
+        return EditorMetrics(
+            line = lineIndex + 1,
+            column = safeCursor - lineStart + 1,
+            lineCount = lineStarts.size.coerceAtLeast(1),
+        )
+    }
+
+    private fun rebuildLineIndex(source: CharSequence) {
+        lineStarts.clear()
+        lineStarts.add(0)
+        source.forEachIndexed { index, c -> if (c == '\n') lineStarts.add(index + 1) }
+    }
+
+    private fun updateLineIndex(start: Int, before: String, after: String) {
+        if (lineStarts.isEmpty()) lineStarts.add(0)
+        val oldEnd = start + before.length
+        val delta = after.length - before.length
+
+        var index = lineStarts.size - 1
+        while (index > 0) {
+            val value = lineStarts[index]
+            when {
+                value > oldEnd -> lineStarts[index] = value + delta
+                value > start && value <= oldEnd -> lineStarts.removeAt(index)
+            }
+            index--
+        }
+
+        val additions = ArrayList<Int>()
+        after.forEachIndexed { relative, c -> if (c == '\n') additions.add(start + relative + 1) }
+        if (additions.isNotEmpty()) {
+            var insertAt = lineStarts.binarySearch(start + 1).let { if (it >= 0) it else -it - 1 }
+            additions.forEach { value ->
+                while (insertAt < lineStarts.size && lineStarts[insertAt] < value) insertAt++
+                lineStarts.add(insertAt, value)
+                insertAt++
+            }
+        }
+    }
+
+    private fun lineIndexForOffset(offset: Int): Int {
+        if (lineStarts.isEmpty()) return 0
+        var low = 0
+        var high = lineStarts.lastIndex
+        var answer = 0
+        while (low <= high) {
+            val mid = (low + high) ushr 1
+            if (lineStarts[mid] <= offset) {
+                answer = mid
+                low = mid + 1
+            } else {
+                high = mid - 1
+            }
+        }
+        return answer
+    }
+
+    private fun isLogicalLineStart(offset: Int): Int? {
+        val index = lineStarts.binarySearch(offset)
+        return index.takeIf { it >= 0 }
     }
 
     private fun scheduleHighlight() {
@@ -846,8 +1226,7 @@ private class CodeEditText(context: Context) : EditText(context) {
         editable.getSpans(0, editable.length, EditorSyntaxSpan::class.java).forEach(editable::removeSpan)
         if (!syntaxHighlightEnabled || editable.length > SYNTAX_HIGHLIGHT_MAX_CHARS) return
         val source = editable.toString()
-        val specs = syntaxPatterns(sourceExtension)
-        specs.forEach { spec ->
+        syntaxPatterns(sourceExtension).forEach { spec ->
             spec.regex.findAll(source).forEach { match ->
                 val start = match.range.first
                 val end = match.range.last + 1
@@ -858,9 +1237,8 @@ private class CodeEditText(context: Context) : EditText(context) {
         }
     }
 
-    private fun updateGutterPadding(text: String) {
-        val lines = text.count { it == '\n' } + 1
-        val digits = max(2, lines.toString().length)
+    private fun updateGutterPadding() {
+        val digits = max(2, lineStarts.size.coerceAtLeast(1).toString().length)
         val wanted = ((digits * 8 + 18) * resources.displayMetrics.density)
         if (kotlin.math.abs(wanted - gutterWidthPx) >= 1f || paddingLeft == 0) {
             gutterWidthPx = wanted
@@ -875,11 +1253,18 @@ private class CodeEditText(context: Context) : EditText(context) {
             val top = scrollY.toFloat()
             canvas.drawRect(left, top, left + gutterWidthPx, top + height, gutterBackground)
             canvas.drawLine(left + gutterWidthPx - 1f, top, left + gutterWidthPx - 1f, top + height, gutterDivider)
-            val firstLine = layout.getLineForVertical(scrollY)
-            val lastLine = layout.getLineForVertical(scrollY + height)
-            for (line in firstLine..lastLine.coerceAtMost(layout.lineCount - 1)) {
-                val baseline = layout.getLineBaseline(line) + totalPaddingTop
-                canvas.drawText((line + 1).toString(), left + gutterWidthPx - 7f * resources.displayMetrics.density, baseline.toFloat(), linePaint)
+            val firstVisualLine = layout.getLineForVertical(scrollY)
+            val lastVisualLine = layout.getLineForVertical(scrollY + height)
+            for (visualLine in firstVisualLine..lastVisualLine.coerceAtMost(layout.lineCount - 1)) {
+                val offset = layout.getLineStart(visualLine)
+                val logicalLine = isLogicalLineStart(offset) ?: continue
+                val baseline = layout.getLineBaseline(visualLine) + totalPaddingTop
+                canvas.drawText(
+                    (logicalLine + 1).toString(),
+                    left + gutterWidthPx - 7f * resources.displayMetrics.density,
+                    baseline.toFloat(),
+                    linePaint,
+                )
             }
         }
         super.onDraw(canvas)
@@ -893,36 +1278,190 @@ private class CodeEditText(context: Context) : EditText(context) {
 
 private data class SyntaxPattern(val regex: Regex, val color: Int)
 
-private fun syntaxPatterns(extension: String): List<SyntaxPattern> {
+private val syntaxPatternCache = HashMap<String, List<SyntaxPattern>>()
+
+private fun syntaxPatterns(extension: String): List<SyntaxPattern> =
+    syntaxPatternCache.getOrPut(extension) { buildSyntaxPatterns(extension) }
+
+private fun buildSyntaxPatterns(extension: String): List<SyntaxPattern> {
     val comment = android.graphics.Color.rgb(75, 132, 73)
     val keyword = android.graphics.Color.rgb(38, 72, 150)
     val string = android.graphics.Color.rgb(155, 57, 42)
     val number = android.graphics.Color.rgb(112, 59, 150)
     val tag = android.graphics.Color.rgb(28, 101, 129)
+    val accent = android.graphics.Color.rgb(132, 75, 24)
+
+    val quotedStrings = SyntaxPattern(
+        Regex("\\\"(?:\\\\.|[^\\\"\\\\])*\\\"|'(?:\\\\.|[^'\\\\])*'"),
+        string,
+    )
+    val cComments = SyntaxPattern(
+        Regex("//.*?$|/\\*.*?\\*/", setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL)),
+        comment,
+    )
+    val hashComments = SyntaxPattern(Regex("#.*?$", RegexOption.MULTILINE), comment)
+    val commonNumbers = SyntaxPattern(
+        Regex("(?<![A-Za-z_])[-+]?\\b(?:0x[0-9A-Fa-f]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b"),
+        number,
+    )
+
     return when (extension) {
-        "html", "htm", "xml" -> listOf(
-            SyntaxPattern(Regex("<!--.*?-->", setOf(RegexOption.DOT_MATCHES_ALL)), comment),
+        "html", "htm", "xml", "vue", "svelte" -> listOf(
+            SyntaxPattern(Regex("<!DOCTYPE[^>]*>", RegexOption.IGNORE_CASE), keyword),
             SyntaxPattern(Regex("</?[A-Za-z][^>]*>"), tag),
-            SyntaxPattern(Regex("\\\"(?:\\\\.|[^\\\"\\\\])*\\\"|'(?:\\\\.|[^'\\\\])*'"), string),
+            SyntaxPattern(Regex("&[A-Za-z0-9#]+;"), accent),
+            quotedStrings,
+            SyntaxPattern(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), comment),
         )
+
         "css" -> listOf(
-            SyntaxPattern(Regex("/\\*.*?\\*/", setOf(RegexOption.DOT_MATCHES_ALL)), comment),
             SyntaxPattern(Regex("@[A-Za-z-]+|[A-Za-z-]+(?=\\s*:)", RegexOption.IGNORE_CASE), keyword),
-            SyntaxPattern(Regex("#[0-9A-Fa-f]{3,8}|\\b\\d+(?:\\.\\d+)?(?:px|em|rem|%|vh|vw|s|ms)?\\b"), number),
-            SyntaxPattern(Regex("\\\"(?:\\\\.|[^\\\"\\\\])*\\\"|'(?:\\\\.|[^'\\\\])*'"), string),
+            SyntaxPattern(Regex("#[0-9A-Fa-f]{3,8}|\\b\\d+(?:\\.\\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|s|ms|deg)?\\b"), number),
+            SyntaxPattern(Regex("[.#]?[A-Za-z_][A-Za-z0-9_-]*(?=\\s*[,{])"), tag),
+            quotedStrings,
+            SyntaxPattern(Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL), comment),
         )
-        "js", "mjs", "cjs" -> listOf(
-            SyntaxPattern(Regex("//.*?$|/\\*.*?\\*/", setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL)), comment),
-            SyntaxPattern(Regex("\\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|class|extends|new|this|async|await|try|catch|finally|throw|import|export|from|default|typeof|instanceof|in|of|null|undefined|true|false)\\b"), keyword),
-            SyntaxPattern(Regex("\\\"(?:\\\\.|[^\\\"\\\\])*\\\"|'(?:\\\\.|[^'\\\\])*'|`(?:\\\\.|[^`\\\\])*`", RegexOption.DOT_MATCHES_ALL), string),
-            SyntaxPattern(Regex("\\b\\d+(?:\\.\\d+)?\\b"), number),
+
+        "js", "mjs", "cjs", "ts", "tsx", "jsx" -> listOf(
+            SyntaxPattern(
+                Regex("\\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|class|extends|new|this|super|async|await|try|catch|finally|throw|import|export|from|default|typeof|instanceof|in|of|interface|type|enum|implements|public|private|protected|readonly|static|yield|null|undefined|true|false)\\b"),
+                keyword,
+            ),
+            SyntaxPattern(Regex("@[A-Za-z_][A-Za-z0-9_]*"), accent),
+            SyntaxPattern(Regex("`(?:\\\\.|[^`\\\\])*`", RegexOption.DOT_MATCHES_ALL), string),
+            quotedStrings,
+            commonNumbers,
+            cComments,
         )
+
         "json" -> listOf(
             SyntaxPattern(Regex("\\\"(?:\\\\.|[^\\\"\\\\])*\\\"(?=\\s*:)", RegexOption.DOT_MATCHES_ALL), keyword),
             SyntaxPattern(Regex("\\\"(?:\\\\.|[^\\\"\\\\])*\\\"", RegexOption.DOT_MATCHES_ALL), string),
             SyntaxPattern(Regex("\\b(true|false|null)\\b"), keyword),
-            SyntaxPattern(Regex("-?\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b"), number),
+            commonNumbers,
         )
+
+        "md", "markdown", "mds" -> listOf(
+            SyntaxPattern(Regex("^#{1,6}\\s+.*$", RegexOption.MULTILINE), keyword),
+            SyntaxPattern(Regex("^>\\s?.*$", RegexOption.MULTILINE), comment),
+            SyntaxPattern(Regex("\\[[^]]+]\\([^)]+\\)"), tag),
+            SyntaxPattern(Regex("`[^`]+`"), string),
+            SyntaxPattern(Regex("(?:\\*\\*|__)[^\\n]+?(?:\\*\\*|__)"), accent),
+            SyntaxPattern(Regex("^\\s*[-*+]\\s+|^\\s*\\d+\\.\\s+", RegexOption.MULTILINE), number),
+            SyntaxPattern(Regex("^```.*$", RegexOption.MULTILINE), comment),
+        )
+
+        "yml", "yaml" -> listOf(
+            SyntaxPattern(Regex("^[ \\t-]*[A-Za-z0-9_.\\\"']+(?=\\s*:)", RegexOption.MULTILINE), keyword),
+            SyntaxPattern(Regex("\\b(true|false|null|yes|no|on|off)\\b", RegexOption.IGNORE_CASE), keyword),
+            quotedStrings,
+            commonNumbers,
+            hashComments,
+        )
+
+        "toml", "ini", "cfg", "conf", "properties", "env" -> listOf(
+            SyntaxPattern(Regex("^\\s*\\[[^]]+]\\s*$", RegexOption.MULTILINE), tag),
+            SyntaxPattern(Regex("^[ \\t]*[A-Za-z0-9_.-]+(?=\\s*[=:])", RegexOption.MULTILINE), keyword),
+            quotedStrings,
+            commonNumbers,
+            SyntaxPattern(Regex("^[ \\t]*[#!;].*$", RegexOption.MULTILINE), comment),
+        )
+
+        "kt", "kts", "java", "gradle" -> listOf(
+            SyntaxPattern(
+                Regex("\\b(package|import|class|interface|object|enum|data|sealed|open|abstract|final|public|private|protected|internal|static|override|fun|val|var|const|lateinit|companion|constructor|init|this|super|new|return|if|else|when|switch|case|for|while|do|break|continue|try|catch|finally|throw|throws|in|is|as|typeof|void|boolean|byte|short|int|long|float|double|char|String|true|false|null)\\b"),
+                keyword,
+            ),
+            SyntaxPattern(Regex("@[A-Za-z_][A-Za-z0-9_.]*"), accent),
+            quotedStrings,
+            commonNumbers,
+            cComments,
+        )
+
+        "py" -> listOf(
+            SyntaxPattern(
+                Regex("\\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\\b"),
+                keyword,
+            ),
+            SyntaxPattern(Regex("@[A-Za-z_][A-Za-z0-9_.]*"), accent),
+            quotedStrings,
+            commonNumbers,
+            hashComments,
+        )
+
+        "sh", "bash" -> listOf(
+            SyntaxPattern(Regex("\\b(if|then|else|elif|fi|for|while|until|do|done|case|esac|function|in|select|time)\\b"), keyword),
+            SyntaxPattern(Regex("\\$\\{?[A-Za-z_][A-Za-z0-9_]*}?"), accent),
+            quotedStrings,
+            commonNumbers,
+            hashComments,
+        )
+
+        "bat", "cmd" -> listOf(
+            SyntaxPattern(Regex("\\b(if|else|for|in|do|goto|call|set|setlocal|endlocal|shift|exit|echo|pause|start|title|color|choice|errorlevel|exist|defined|not)\\b", RegexOption.IGNORE_CASE), keyword),
+            SyntaxPattern(Regex("%[A-Za-z0-9_]+%|%[0-9*~][A-Za-z0-9_:~,.=-]*"), accent),
+            quotedStrings,
+            commonNumbers,
+            SyntaxPattern(Regex("^[ \t]*(?:rem\\b|::).*$", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE)), comment),
+        )
+
+        "ps1" -> listOf(
+            SyntaxPattern(Regex("\\b(function|filter|param|begin|process|end|if|elseif|else|switch|foreach|for|while|do|until|break|continue|return|throw|try|catch|finally|class|enum|using|in)\\b", RegexOption.IGNORE_CASE), keyword),
+            SyntaxPattern(Regex("\\$[A-Za-z_][A-Za-z0-9_:]*"), accent),
+            quotedStrings,
+            commonNumbers,
+            hashComments,
+        )
+
+        "php" -> listOf(
+            SyntaxPattern(Regex("<\\?php|\\?>"), tag),
+            SyntaxPattern(Regex("\\b(function|class|interface|trait|namespace|use|public|private|protected|static|final|abstract|if|else|elseif|foreach|for|while|do|switch|case|return|new|throw|try|catch|finally|true|false|null)\\b", RegexOption.IGNORE_CASE), keyword),
+            SyntaxPattern(Regex("\\$[A-Za-z_][A-Za-z0-9_]*"), accent),
+            quotedStrings,
+            commonNumbers,
+            cComments,
+            hashComments,
+        )
+
+        "rb" -> listOf(
+            SyntaxPattern(Regex("\\b(class|module|def|end|if|elsif|else|unless|case|when|while|until|for|do|begin|rescue|ensure|return|yield|require|include|extend|attr_reader|attr_writer|attr_accessor|true|false|nil)\\b"), keyword),
+            SyntaxPattern(Regex("@[A-Za-z_][A-Za-z0-9_]*|:[A-Za-z_][A-Za-z0-9_]*"), accent),
+            quotedStrings,
+            commonNumbers,
+            hashComments,
+        )
+
+        "c", "h", "hpp", "cpp", "cc", "go", "rs", "swift", "dart" -> listOf(
+            SyntaxPattern(
+                Regex("\\b(auto|break|case|char|class|const|continue|default|defer|do|double|else|enum|extern|false|final|float|for|func|function|if|impl|import|in|int|interface|let|long|match|mut|namespace|new|null|nullptr|override|package|private|protected|public|return|short|sizeof|static|string|struct|super|switch|this|throw|trait|true|try|type|typedef|union|unsigned|use|var|void|while|with|yield)\\b"),
+                keyword,
+            ),
+            SyntaxPattern(Regex("#[A-Za-z_][A-Za-z0-9_]*|@[A-Za-z_][A-Za-z0-9_]*"), accent),
+            quotedStrings,
+            commonNumbers,
+            cComments,
+        )
+
+        "sql" -> listOf(
+            SyntaxPattern(Regex("\\b(select|from|where|join|left|right|inner|outer|on|group|by|order|having|limit|offset|insert|into|values|update|set|delete|create|alter|drop|table|view|index|primary|key|foreign|references|constraint|distinct|as|and|or|not|null|is|in|exists|case|when|then|else|end|union|all)\\b", RegexOption.IGNORE_CASE), keyword),
+            quotedStrings,
+            commonNumbers,
+            SyntaxPattern(Regex("--.*?$|/\\*.*?\\*/", setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL)), comment),
+        )
+
+        "tex" -> listOf(
+            SyntaxPattern(Regex("\\\\[A-Za-z@]+\\*?"), keyword),
+            SyntaxPattern(Regex("\\\\(?:begin|end)\\{[^}]+}"), tag),
+            SyntaxPattern(Regex("\\$\\$?.*?\\$\\$?"), accent),
+            commonNumbers,
+            SyntaxPattern(Regex("(?<!\\\\)%.*?$", RegexOption.MULTILINE), comment),
+        )
+
+        "csv" -> listOf(
+            SyntaxPattern(Regex("\"(?:\"\"|[^\"])*\""), string),
+            commonNumbers,
+        )
+
         else -> emptyList()
     }
 }
@@ -1054,13 +1593,16 @@ private fun FullScreenWebPreview(
 }
 
 @Composable
-private fun EditorStatusBar(state: EditorLoadState, text: String, cursor: Int, dirty: Boolean) {
+private fun EditorStatusBar(
+    state: EditorLoadState,
+    metrics: EditorMetrics,
+    dirty: Boolean,
+    preferences: EditorPreferences,
+) {
     val doc = (state as? EditorLoadState.Ready)?.document
-    val safeCursor = cursor.coerceIn(0, text.length)
-    val line = text.take(safeCursor).count { it == '\n' } + 1
-    val lastBreak = if (safeCursor <= 0) -1 else text.lastIndexOf('\n', safeCursor - 1)
-    val column = if (lastBreak < 0) safeCursor + 1 else safeCursor - lastBreak
-    val lineCount = text.count { it == '\n' } + 1
+    val line = metrics.line
+    val column = metrics.column
+    val lineCount = metrics.lineCount
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().height(28.dp).background(XpChrome).border(1.dp, XpChromeBorder).padding(horizontal = 8.dp),
@@ -1073,7 +1615,17 @@ private fun EditorStatusBar(state: EditorLoadState, text: String, cursor: Int, d
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Text(doc?.encoding?.label ?: "—", fontSize = 10.sp, color = XpTextSecondary)
+        Text(
+            buildString {
+                append(doc?.encoding?.label ?: "—")
+                append("  •  ")
+                append(if (preferences.useTabs) "TAB" else "${preferences.indentSize} esp.")
+                if (preferences.wordWrap) append("  •  quebra")
+            },
+            fontSize = 10.sp,
+            color = XpTextSecondary,
+            maxLines = 1,
+        )
     }
 }
 
@@ -1184,6 +1736,62 @@ private fun GoToLineDialog(onDismiss: () -> Unit, onGo: (Int) -> Unit) {
 }
 
 @Composable
+private fun EditorSettingsDialog(
+    preferences: EditorPreferences,
+    onDismiss: () -> Unit,
+    onChange: (EditorPreferences) -> Unit,
+) {
+    SafeEditorDialog(onDismiss) {
+        EditorDialogSurface("Configurações do editor") {
+            Text("Indentação", fontSize = 11.sp, color = XpTextSecondary, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                EditorButton(if (!preferences.useTabs) "✓ Espaços" else "Espaços") {
+                    onChange(preferences.copy(useTabs = false))
+                }
+                Spacer(Modifier.width(5.dp))
+                EditorButton(if (preferences.useTabs) "✓ TAB" else "TAB") {
+                    onChange(preferences.copy(useTabs = true))
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text("Espaços por nível", fontSize = 11.sp, color = XpTextSecondary, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                listOf(2, 4, 8).forEachIndexed { index, size ->
+                    if (index > 0) Spacer(Modifier.width(5.dp))
+                    EditorButton(if (!preferences.useTabs && preferences.indentSize == size) "✓ $size" else "$size") {
+                        onChange(preferences.copy(useTabs = false, indentSize = size))
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            EditorMenuRow(
+                label = "Quebra automática de linha: ${if (preferences.wordWrap) "ativada" else "desativada"}",
+                enabled = true,
+                onClick = { onChange(preferences.copy(wordWrap = !preferences.wordWrap)) },
+            )
+            Text(
+                "As opções são salvas para os próximos arquivos. Autoindentação e fechamento de pares permanecem ativos.",
+                fontSize = 10.sp,
+                color = XpTextSecondary,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                EditorButton("Fechar", onClick = onDismiss)
+            }
+        }
+    }
+}
+
+@Composable
 private fun EditorMoreDialog(
     editable: Boolean,
     supportsPreview: Boolean,
@@ -1194,6 +1802,7 @@ private fun EditorMoreDialog(
     onPaste: () -> Unit,
     onGoToLine: () -> Unit,
     onFindReplace: () -> Unit,
+    onSettings: () -> Unit,
     onPreview: () -> Unit,
 ) {
     SafeEditorDialog(onDismiss) {
@@ -1205,6 +1814,7 @@ private fun EditorMoreDialog(
             HorizontalDivider(color = Color(0xFFD3DCE6), modifier = Modifier.padding(vertical = 4.dp))
             EditorMenuRow("Localizar e substituir", true, onFindReplace)
             EditorMenuRow("Ir para linha", true, onGoToLine)
+            EditorMenuRow("Configurações do editor", true, onSettings)
             if (supportsPreview) EditorMenuRow("Visualizar preview", true, onPreview)
         }
     }
@@ -1285,10 +1895,10 @@ private fun EditorDialogSurface(title: String, content: @Composable () -> Unit) 
     }
 }
 
-private fun findInEditor(view: CodeEditText?, query: String, forward: Boolean): String {
-    if (view == null || query.isBlank()) return "Digite um texto para localizar"
+private fun findInEditor(view: CodeEditText?, query: String, forward: Boolean): EditorSearchResult {
+    if (view == null || query.isBlank()) return EditorSearchResult("Digite um texto para localizar", EditorSearchState())
     val source = view.text?.toString().orEmpty()
-    if (source.isEmpty()) return "Arquivo vazio"
+    if (source.isEmpty()) return EditorSearchResult("Arquivo vazio", EditorSearchState())
     val selectionStart = view.selectionStart.coerceAtLeast(0)
     val selectionEnd = view.selectionEnd.coerceAtLeast(selectionStart)
     val found = if (forward) {
@@ -1296,65 +1906,100 @@ private fun findInEditor(view: CodeEditText?, query: String, forward: Boolean): 
         source.indexOf(query, startIndex = start, ignoreCase = true).takeIf { it >= 0 }
             ?: source.indexOf(query, startIndex = 0, ignoreCase = true).takeIf { it >= 0 }
     } else {
-        val start = (selectionStart - 1).coerceAtLeast(0)
+        val start = if (selectionStart > 0) selectionStart - 1 else source.length
         source.lastIndexOf(query, startIndex = start, ignoreCase = true).takeIf { it >= 0 }
             ?: source.lastIndexOf(query, startIndex = source.length, ignoreCase = true).takeIf { it >= 0 }
     }
-    return if (found != null) {
-        view.requestFocus()
-        view.setSelection(found, found + query.length)
-        "Encontrado"
-    } else {
-        "Texto não encontrado"
+    if (found == null) {
+        return EditorSearchResult("Texto não encontrado", view.searchState(query))
     }
+    view.requestFocus()
+    view.setSelection(found, found + query.length)
+    val state = view.searchState(query)
+    val label = if (state.total == 1) "1 ocorrência" else "Ocorrência ${state.current} de ${state.total}"
+    return EditorSearchResult(label, state)
 }
 
-private fun replaceCurrent(view: CodeEditText?, query: String, replacement: String): String {
-    if (view == null || query.isBlank()) return "Digite um texto para localizar"
-    if (view.isReadOnlyMode()) return "Arquivo em modo somente leitura"
+private fun replaceCurrent(view: CodeEditText?, query: String, replacement: String): EditorSearchResult {
+    if (view == null || query.isBlank()) return EditorSearchResult("Digite um texto para localizar", EditorSearchState())
+    if (view.isReadOnlyMode()) return EditorSearchResult("Arquivo em modo somente leitura", view.searchState(query))
     val start = view.selectionStart.coerceAtLeast(0)
     val end = view.selectionEnd.coerceAtLeast(start)
     val selected = view.text?.subSequence(start, end)?.toString().orEmpty()
-    return if (selected.equals(query, ignoreCase = true)) {
-        view.text?.replace(start, end, replacement)
-        view.setSelection((start + replacement.length).coerceAtMost(view.text?.length ?: 0))
-        "Ocorrência substituída"
+    if (!selected.equals(query, ignoreCase = true)) return findInEditor(view, query, forward = true)
+
+    view.text?.replace(start, end, replacement)
+    view.setSelection((start + replacement.length).coerceAtMost(view.text?.length ?: 0))
+    val next = findInEditor(view, query, forward = true)
+    return if (next.state.total == 0) {
+        EditorSearchResult("Ocorrência substituída; não restam resultados", next.state)
     } else {
-        findInEditor(view, query, forward = true)
+        EditorSearchResult("Ocorrência substituída • ${next.state.current}/${next.state.total}", next.state)
     }
 }
 
-private fun replaceAll(view: CodeEditText?, query: String, replacement: String): String {
-    if (view == null || query.isBlank()) return "Digite um texto para localizar"
-    if (view.isReadOnlyMode()) return "Arquivo em modo somente leitura"
+private fun replaceAll(view: CodeEditText?, query: String, replacement: String): EditorSearchResult {
+    if (view == null || query.isBlank()) return EditorSearchResult("Digite um texto para localizar", EditorSearchState())
+    if (view.isReadOnlyMode()) return EditorSearchResult("Arquivo em modo somente leitura", view.searchState(query))
     val source = view.text?.toString().orEmpty()
     val regex = Regex(Regex.escape(query), RegexOption.IGNORE_CASE)
     val count = regex.findAll(source).count()
-    if (count == 0) return "Nenhuma ocorrência encontrada"
-    view.replaceWholeText(regex.replace(source, replacement))
-    return if (count == 1) "1 ocorrência substituída" else "$count ocorrências substituídas"
+    if (count == 0) return EditorSearchResult("Nenhuma ocorrência encontrada", EditorSearchState())
+    view.replaceWholeText(regex.replace(source) { replacement })
+    return EditorSearchResult(
+        if (count == 1) "1 ocorrência substituída" else "$count ocorrências substituídas",
+        view.searchState(query),
+    )
 }
 
-private fun goToLine(view: CodeEditText, requestedLine: Int): Boolean {
-    if (requestedLine <= 0) return false
-    val source = view.text?.toString().orEmpty()
-    if (requestedLine == 1) {
-        view.setSelection(0)
-        view.requestFocus()
-        return true
-    }
+private fun goToLine(view: CodeEditText, requestedLine: Int): Boolean = view.goToLine(requestedLine)
+
+private fun editorSyntaxExtension(file: File): String = when (file.name.lowercase()) {
+    "readme" -> "md"
+    "makefile", "dockerfile" -> "sh"
+    ".gitignore", ".gitattributes" -> "conf"
+    ".editorconfig" -> "ini"
+    else -> file.extension.lowercase()
+}
+
+private fun loadEditorPreferences(context: Context): EditorPreferences {
+    val prefs = context.getSharedPreferences(EDITOR_PREFERENCES, Context.MODE_PRIVATE)
+    val indentSize = prefs.getInt(PREF_INDENT_SIZE, 4).takeIf { it in setOf(2, 4, 8) } ?: 4
+    return EditorPreferences(
+        useTabs = prefs.getBoolean(PREF_USE_TABS, false),
+        indentSize = indentSize,
+        wordWrap = prefs.getBoolean(PREF_WORD_WRAP, false),
+    )
+}
+
+private fun saveEditorPreferences(context: Context, preferences: EditorPreferences) {
+    context.getSharedPreferences(EDITOR_PREFERENCES, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(PREF_USE_TABS, preferences.useTabs)
+        .putInt(PREF_INDENT_SIZE, preferences.indentSize)
+        .putBoolean(PREF_WORD_WRAP, preferences.wordWrap)
+        .apply()
+}
+
+private fun metricsForText(text: String, cursor: Int): EditorMetrics {
+    val safeCursor = cursor.coerceIn(0, text.length)
     var line = 1
-    source.forEachIndexed { index, c ->
+    var lineStart = 0
+    var lineCount = 1
+    text.forEachIndexed { index, c ->
         if (c == '\n') {
-            line++
-            if (line == requestedLine) {
-                view.setSelection((index + 1).coerceAtMost(source.length))
-                view.requestFocus()
-                return true
+            lineCount++
+            if (index < safeCursor) {
+                line++
+                lineStart = index + 1
             }
         }
     }
-    return false
+    return EditorMetrics(
+        line = line,
+        column = safeCursor - lineStart + 1,
+        lineCount = lineCount,
+    )
 }
 
 private fun loadEditorDocument(file: File): EditorLoadState {

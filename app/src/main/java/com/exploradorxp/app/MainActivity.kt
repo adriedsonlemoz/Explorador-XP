@@ -59,12 +59,14 @@ private data class ExternalOpenRequest(
     val id: Int,
     val uri: Uri,
     val mimeType: String?,
+    val flags: Int,
 )
 
 private data class PreparedExternalFile(
     val file: File,
     val mimeType: String?,
     val cleanupDirectory: File,
+    val origin: ExternalOpenOrigin,
 )
 
 class MainActivity : ComponentActivity() {
@@ -120,6 +122,7 @@ class MainActivity : ComponentActivity() {
             id = externalOpenSequence,
             uri = uri,
             mimeType = sourceIntent.type,
+            flags = sourceIntent.flags,
         )
     }
 }
@@ -138,6 +141,7 @@ private fun ExplorerApp(
     var viewerMimeType by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerForcedReadOnly by rememberSaveable { mutableStateOf(false) }
     var viewerCleanupDirectory by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewerExternalOrigin by rememberSaveable { mutableStateOf<ExternalOpenOrigin?>(null) }
     var viewerFolderImagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     var externalOpenLoading by remember(externalOpenRequest?.id) { mutableStateOf(externalOpenRequest != null) }
     var initialDirectoryHandled by remember(initialDirectoryPath) { mutableStateOf(false) }
@@ -181,6 +185,7 @@ private fun ExplorerApp(
                         viewerCleanupDirectory = null
                         viewerMimeType = null
                         viewerForcedReadOnly = false
+                        viewerExternalOrigin = null
                         viewerFolderImagePaths = event.folderImages.map { it.absolutePath }
                         viewerFilePath = event.file.absolutePath
                     } else openFile(context, event.file)
@@ -215,6 +220,7 @@ private fun ExplorerApp(
         viewerFolderImagePaths = emptyList()
         viewerMimeType = prepared.mimeType
         viewerForcedReadOnly = true
+        viewerExternalOrigin = prepared.origin
         viewerCleanupDirectory = prepared.cleanupDirectory.absolutePath
         externalOpenLoading = false
     }
@@ -259,6 +265,7 @@ private fun ExplorerApp(
             file = activeViewer,
             externalMimeType = viewerMimeType,
             forcedReadOnly = viewerForcedReadOnly,
+            externalOrigin = viewerExternalOrigin,
             folderImages = viewerFolderImagePaths.map(::File),
             onClose = {
                 val cleanup = viewerCleanupDirectory
@@ -266,6 +273,7 @@ private fun ExplorerApp(
                 viewerFilePath = null
                 viewerMimeType = null
                 viewerForcedReadOnly = false
+                viewerExternalOrigin = null
                 viewerCleanupDirectory = null
                 viewerFolderImagePaths = emptyList()
                 cleanup?.let { File(it).deleteRecursively() }
@@ -281,6 +289,7 @@ private fun ExplorerApp(
                 viewerFilePath = null
                 viewerMimeType = null
                 viewerForcedReadOnly = false
+                viewerExternalOrigin = null
                 viewerCleanupDirectory = null
                 viewerFolderImagePaths = emptyList()
                 cleanup?.let { File(it).deleteRecursively() }
@@ -413,6 +422,14 @@ private suspend fun prepareExternalFile(context: Context, request: ExternalOpenR
             file = destination,
             mimeType = resolvedMime,
             cleanupDirectory = requestDir,
+            origin = ExternalOpenOrigin(
+                uri = request.uri.toString(),
+                mimeType = resolvedMime,
+                displayName = displayName,
+                grantReadPermission = request.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0,
+                grantWritePermission = request.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION != 0,
+                grantPersistablePermission = request.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION != 0,
+            ),
         )
     }
 

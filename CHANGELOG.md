@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.1.0-alpha.61
+
+- Corrigida falha de compilação no inspetor de APK: `getPermissionInfo()` volta a usar o overload compatível com `Int`, removendo a referência inválida a `PackageManager.PermissionInfoFlags`.
+- O editor interno recebeu destaque de sintaxe ampliado para HTML/XML, CSS, JavaScript/TypeScript, JSON, Markdown, YAML, TOML/INI/properties/.env, Kotlin/Java/Gradle, Python, Shell, BAT/CMD, PowerShell, PHP, Ruby, C/C++, Go, Rust, Swift, Dart, SQL, Vue/Svelte, TeX e CSV.
+- Adicionadas autoindentação e continuação inteligente após blocos, inclusive para Enter vindo do teclado virtual, além de fechamento automático de `()`, `[]`, `{}`, aspas simples e duplas.
+- Nova configuração persistente do editor permite escolher TAB ou espaços (2/4/8) e ativar/desativar quebra automática de linha.
+- Números de linha passam a usar um índice incremental, com gutter dimensionado pela quantidade de linhas e numeração correta mesmo com quebra visual; linha/coluna também deixam de depender de varredura completa a cada tecla.
+- Localizar/substituir agora mostra total de ocorrências e posição atual, navega anterior/próxima com retorno circular e preserva substituições literais como `$` e `\`.
+- Desfazer/refazer foi preservado e o estado “não salvo” passou a usar IDs de revisão independentes do limite do histórico, evitando falsos estados de salvo após muitas edições.
+- Preview web mantém o editor vivo por baixo, preservando histórico, seleção lógica e alterações ainda não salvas ao alternar Código/Preview/tela cheia.
+- Arquivos maiores continuam protegidos; destaque completo é limitado em documentos grandes, regex de sintaxe são reutilizados em cache e o histórico passa a ter orçamento de memória além do limite de operações, mantendo a edição responsiva sem remover desfazer/refazer da operação mais recente.
+- O fluxo **Abrir com** continua copiando para cache e sem “Salvar de volta” nesta etapa, mas agora mantém URI, MIME, nome e permissões da origem em uma estrutura separada, preparando a próxima evolução com segurança.
+- Nenhuma imagem ou mockup foi criada ou modificada.
+- README, tela Sobre, documentação, validações e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.61` / `versionCode 61`.
+
 ## 0.1.0-alpha.60
 
 - Renovado o visualizador/instalador de APK para fazer uma inspeção mais completa antes de chamar o instalador do Android.

@@ -152,13 +152,9 @@ private fun signingDigests(info: PackageInfo): List<String> {
 
 @Suppress("DEPRECATION")
 private fun describePermission(pm: PackageManager, name: String): ApkPermission {
-    val info = runCatching {
-        if (Build.VERSION.SDK_INT >= 33) {
-            pm.getPermissionInfo(name, PackageManager.PermissionInfoFlags.of(0))
-        } else {
-            pm.getPermissionInfo(name, 0)
-        }
-    }.getOrNull()
+    // getPermissionInfo() still exposes the Int flags overload on current Android SDKs.
+    // Unlike package-info APIs, this permission lookup still accepts Int flags.
+    val info = runCatching { pm.getPermissionInfo(name, 0) }.getOrNull()
     val label = runCatching { info?.loadLabel(pm)?.toString() }.getOrNull()
         .orEmpty()
         .ifBlank { name.removePrefix("android.permission.").replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() } }

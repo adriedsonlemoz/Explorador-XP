@@ -110,6 +110,7 @@ fun InternalViewerScreen(
     file: File,
     externalMimeType: String? = null,
     forcedReadOnly: Boolean = false,
+    externalOrigin: ExternalOpenOrigin? = null,
     folderImages: List<File> = emptyList(),
     onClose: () -> Unit,
     onOpenExternal: (File) -> Unit,
@@ -180,6 +181,7 @@ fun InternalViewerScreen(
                 "html", "htm" -> TextCodeEditorViewer(
                     file = activeFile,
                     forcedReadOnly = isArchivePreview || forcedReadOnly,
+                    externalOrigin = externalOrigin,
                     fullScreen = contentFullScreen,
                     onFullScreenChange = { contentFullScreen = it },
                     onClose = onClose,
@@ -201,6 +203,7 @@ fun InternalViewerScreen(
                 in textExtensions -> TextCodeEditorViewer(
                     file = activeFile,
                     forcedReadOnly = isArchivePreview || forcedReadOnly,
+                    externalOrigin = externalOrigin,
                     fullScreen = contentFullScreen,
                     onFullScreenChange = { contentFullScreen = it },
                     onClose = onClose,
@@ -212,6 +215,7 @@ fun InternalViewerScreen(
                     TextCodeEditorViewer(
                         file = activeFile,
                         forcedReadOnly = isArchivePreview || forcedReadOnly,
+                        externalOrigin = externalOrigin,
                         fullScreen = contentFullScreen,
                         onFullScreenChange = { contentFullScreen = it },
                         onClose = onClose,
