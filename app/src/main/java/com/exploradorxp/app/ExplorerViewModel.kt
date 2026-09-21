@@ -102,6 +102,11 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         ensureStorageMetadata(stateAtStart)
 
         refreshJob = viewModelScope.launch {
+            // Ao voltar/avançar, o LRU já colocou a pasta na tela. Aguarda um instante antes
+            // de reler o armazenamento: navegações rápidas cancelam este job antes de gerar
+            // I/O inútil, enquanto Atualizar (sem cache) continua imediato.
+            if (cached != null) delay(220L)
+
             val snapshot = try {
                 when (stateAtStart.tab) {
                     ExplorerTab.FILES,

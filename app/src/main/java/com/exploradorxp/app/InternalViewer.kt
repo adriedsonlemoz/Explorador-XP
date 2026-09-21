@@ -910,13 +910,37 @@ private data class ApkInfo(
     val iconBitmap: Bitmap?,
 )
 
+@Suppress("DEPRECATION")
 private fun apkInstallerIntent(context: Context, file: File): Intent {
     require(file.exists() && file.isFile) { "O APK não existe mais." }
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    return Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, "application/vnd.android.package-archive")
+    val mime = "application/vnd.android.package-archive"
+
+    // ACTION_VIEW passou a ser também uma entrada do próprio Explorador XP na alpha.51.
+    // Para instalar, use uma ação específica que não casa com o intent-filter "Abrir com".
+    val installIntent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+        setDataAndType(uri, mime)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        putExtra(Intent.EXTRA_RETURN_RESULT, true)
+    }
+    if (installIntent.resolveActivity(context.packageManager) != null) return installIntent
+
+    // Fallback para ROMs que não publicam ACTION_INSTALL_PACKAGE: escolhe explicitamente um
+    // manipulador externo de APK e nunca devolve a intenção ao próprio Explorador XP.
+    val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, mime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
+    val handlers = context.packageManager.queryIntentActivities(viewIntent, PackageManager.MATCH_DEFAULT_ONLY)
+    val external = handlers.firstOrNull { candidate ->
+        candidate.activityInfo?.packageName != context.packageName &&
+            ((candidate.activityInfo?.applicationInfo?.flags ?: 0) and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+    } ?: handlers.firstOrNull { candidate -> candidate.activityInfo?.packageName != context.packageName }
+
+    external?.activityInfo?.let { info ->
+        viewIntent.setClassName(info.packageName, info.name)
+    }
+    return viewIntent
 }
 
 private fun renderPdfPage(file: File, pageIndex: Int): PdfPageData {

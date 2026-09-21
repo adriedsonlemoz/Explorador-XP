@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.52",
-  "version_code": 52,
-  "manager_version": "0.1.0-alpha.52",
-  "manager_code": 52,
+  "version_build": "0.1.0-alpha.53",
+  "version_code": 53,
+  "manager_version": "0.1.0-alpha.53",
+  "manager_code": 53,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.52",
-      "code": 52
+      "version": "0.1.0-alpha.53",
+      "code": 53
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -291,6 +291,29 @@
       ],
       "full_android_build_executed": false,
       "full_android_build_reason": "Project still has no gradlew and this environment has no Android Gradle toolchain configured."
+    },
+    "alpha53_performance_icons_apk_install": {
+      "ok": true,
+      "scope": "First performance pass plus icon fit and APK installer regression fix.",
+      "performance_changes": [
+        "directorySnapshot checks coroutine cancellation every 64 entries",
+        "cached navigation waits 220 ms before background filesystem refresh so rapid navigation cancels obsolete I/O",
+        "recursive folder status uses short LRU cache, one scanner and delayed low-priority start",
+        "search/sort projection no longer changes recursive scan revision",
+        "image/video thumbnails do not start while list/grid is scrolling",
+        "video thumbnail decoding limited to one concurrent MediaMetadataRetriever",
+        "resource icon prewarm reduced from first 32 items to first 18 items"
+      ],
+      "icon_fit": "FileVisual keeps the requested outer slot and renders XP resource icons at 86% in a centered safe area with ContentScale.Fit.",
+      "apk_install": "Install/Update/Reinstall uses ACTION_INSTALL_PACKAGE first; fallback ACTION_VIEW is explicitly targeted to an external handler and excludes the Explorador XP package.",
+      "images_created_or_modified": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain.",
+      "version_sync": "0.1.0-alpha.53 / 53 in app/build.gradle.kts, github-manager.json, README and CHANGELOG",
+      "json_parse": "3 files ok",
+      "xml_parse": "12 files ok",
+      "kotlin_parser_smoke": "Changed Kotlin files produced no expecting/unclosed/unexpected-token diagnostics; unresolved Android/Compose references are expected without Android classpath.",
+      "image_resources_unchanged_from_alpha52": "172 image files unchanged"
     }
   },
   "validated_at_utc": "2026-09-21T13:57:25.531058+00:00",
@@ -523,6 +546,24 @@
       "app/build.gradle.kts",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "app/src/main/java/com/exploradorxp/app/DeviceInfoScreen.kt",
+      "README.md",
+      "CHANGELOG.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha53_against_alpha52": {
+    "added": [
+      "docs/PERFORMANCE_ALPHA53.md"
+    ],
+    "changed": [
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerViewModel.kt",
+      "app/src/main/java/com/exploradorxp/app/FileRepository.kt",
+      "app/src/main/java/com/exploradorxp/app/FileThumbnail.kt",
+      "app/src/main/java/com/exploradorxp/app/InternalViewer.kt",
       "README.md",
       "CHANGELOG.md",
       "docs/VALIDATION.json",

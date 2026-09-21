@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -40,7 +41,8 @@ private val thumbnailVideoExtensions = setOf("mp4", "m4v", "3gp", "webm", "mkv",
 
 private object FileThumbnailCache {
     private const val MAX_CACHE_BYTES = 18 * 1024 * 1024
-    private val slots = Semaphore(permits = 2)
+    private val imageSlots = Semaphore(permits = 2)
+    private val videoSlots = Semaphore(permits = 1)
     private val cache = object : LruCache<String, Bitmap>(MAX_CACHE_BYTES) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
     }
@@ -51,7 +53,8 @@ private object FileThumbnailCache {
         val key = "${file.absolutePath}:${file.lastModified()}:$targetPx:${if (isVideo) 1 else 0}"
         peek(key)?.let { return it }
         val decoded = withContext(Dispatchers.IO) {
-            slots.withPermit {
+            val gate = if (isVideo) videoSlots else imageSlots
+            gate.withPermit {
                 if (isVideo) decodeVideoThumbnail(file, targetPx) else decodeImageThumbnail(file, targetPx)
             }
         }
@@ -65,6 +68,7 @@ fun FileVisual(
     item: FileItem,
     size: Dp,
     modifier: Modifier = Modifier,
+    loadThumbnail: Boolean = true,
 ) {
     val extension = item.extension.lowercase()
     val isVideo = !item.isDirectory && extension in thumbnailVideoExtensions
@@ -75,8 +79,12 @@ fun FileVisual(
     }
     var bitmap by remember(cacheKey) { mutableStateOf(FileThumbnailCache.peek(cacheKey)) }
 
-    if (supportsThumbnail) {
-        LaunchedEffect(cacheKey) {
+    if (supportsThumbnail && loadThumbnail) {
+        LaunchedEffect(cacheKey, loadThumbnail) {
+            // Evita iniciar decodificação cara para itens que só passaram rapidamente pela
+            // viewport. Se a rolagem começar, o efeito é cancelado e o trabalho não disputa
+            // I/O/CPU com a navegação.
+            delay(if (isVideo) 140L else 55L)
             bitmap = FileThumbnailCache.load(item.file, targetPx, isVideo)
         }
     }
@@ -109,12 +117,20 @@ fun FileVisual(
             }
         }
     } else {
-        CachedResourceIcon(
-            resId = item.iconRes,
-            contentDescription = item.name,
+        // Os PNGs XP têm proporções e margens internas diferentes (Movies/Music são os casos
+        // mais perceptíveis). Mantém uma caixa externa estável e aplica uma área segura ao
+        // desenho para impedir corte/encosto nas bordas sem deformar o recurso original.
+        Box(
+            contentAlignment = Alignment.Center,
             modifier = modifier.size(size),
-            contentScale = ContentScale.Fit,
-        )
+        ) {
+            CachedResourceIcon(
+                resId = item.iconRes,
+                contentDescription = item.name,
+                modifier = Modifier.size((size.value * 0.86f).dp.coerceAtLeast(16.dp)),
+                contentScale = ContentScale.Fit,
+            )
+        }
     }
 }
 

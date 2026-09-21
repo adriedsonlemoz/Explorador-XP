@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.53
+
+- Iniciada a primeira etapa da grande melhoria de desempenho, priorizando navegação e rolagem antes das próximas evoluções funcionais.
+- Listagem de diretórios muito grandes agora verifica cancelamento em lotes, evitando que uma pasta anterior continue lendo metadados depois que o usuário já navegou para outro local.
+- Voltar/Avançar reaproveita o snapshot LRU imediatamente e adia por 220 ms a releitura em background; navegações rápidas cancelam essa releitura antes de gerar I/O desnecessário.
+- Estatísticas recursivas da barra inferior continuam somando arquivos, subpastas e tamanho, mas agora usam cache curto LRU, scanner único e atraso de baixa prioridade para não competir com a abertura da pasta.
+- Miniaturas de imagens/vídeos deixam de iniciar decodificação enquanto lista/grade está rolando; vídeos recebem um pequeno atraso adicional e trabalhos são cancelados quando a rolagem recomeça.
+- Ícones XP de arquivos/pastas passam a usar uma área segura interna mantendo proporção e `ContentScale.Fit`, corrigindo o corte visual mais perceptível em **Movies** e **Music** sem trocar os recursos originais.
+- Corrigido o botão **Instalar/Atualizar/Reinstalar APK**: o fluxo principal usa `ACTION_INSTALL_PACKAGE`, que não é capturado pelo `ACTION_VIEW` registrado para **Abrir com**. Há fallback explícito para um instalador externo em ROMs que não expõem a ação específica.
+- Tela **Sobre**, README, CHANGELOG e `github-manager.json` atualizados; assinatura permanente e `applicationId` preservados.
+- Versão sincronizada para `0.1.0-alpha.53` / `versionCode 53`.
+
 ## 0.1.0-alpha.52
 
 - Criado um contêiner modal reutilizável para as janelas grandes do Explorador XP, com centralização real dentro da área segura, largura limitada e altura proporcional à tela.

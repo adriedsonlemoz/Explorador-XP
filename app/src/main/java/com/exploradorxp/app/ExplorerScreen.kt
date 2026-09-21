@@ -45,6 +45,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,9 +74,12 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -1469,10 +1473,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Janelas principais agora têm altura limitada, centralização real e margens seguras em cima e embaixo.",
-                    "Ajuda, Sobre, Lixeira e Informações do dispositivo usam conteúdo rolável dentro da janela, sem crescer até a barra de navegação.",
-                    "Foi adicionado rodapé fixo e divisões visuais para deixar claro onde a janela termina.",
-                    "O Explorador XP continua aparecendo em Abrir com somente para formatos compatíveis.",
+                    "Primeira etapa de desempenho reduz varreduras repetidas ao navegar e cancela leituras antigas mais cedo.",
+                    "Miniaturas pesadas deixam de ser iniciadas durante a rolagem e retomam quando a lista para.",
+                    "Ícones de pastas especiais agora usam uma área segura para evitar cortes em Movies, Music e outros recursos.",
+                    "O botão Instalar usa o fluxo do instalador Android sem ser capturado pelo próprio Abrir com do Explorador XP.",
                 ).forEach { change ->
                     Text(
                         "• $change",
@@ -2678,12 +2682,15 @@ private fun FileList(
     onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
-    val iconsToWarm = remember(items) { items.asSequence().take(32).map { it.iconRes }.distinct().toList() }
+    val iconsToWarm = remember(items) { items.asSequence().take(18).map { it.iconRes }.distinct().toList() }
     PreloadResourceIcons(iconsToWarm)
 
     // Estado de rolagem próprio por pasta/aba: reinicia no topo ao navegar,
     // em vez de manter a posição da listagem anterior.
     val listState = remember(scrollKey) { LazyListState() }
+    val loadThumbnails by remember(listState) {
+        derivedStateOf { !listState.isScrollInProgress }
+    }
     LazyColumn(
         state = listState,
         modifier = Modifier
@@ -2698,6 +2705,7 @@ private fun FileList(
             FileListRow(
                 item = item,
                 selected = item.path in selectedPaths,
+                loadThumbnail = loadThumbnails,
                 onClick = { onItemClick(item) },
                 onLongSelect = { onLongSelect(item) },
                 onMenuAction = { action -> onMenuAction(item, action) },
@@ -2712,6 +2720,7 @@ private fun FileList(
 private fun FileListRow(
     item: FileItem,
     selected: Boolean,
+    loadThumbnail: Boolean,
     onClick: () -> Unit,
     onLongSelect: () -> Unit,
     onMenuAction: (FileMenuAction) -> Unit,
@@ -2727,7 +2736,7 @@ private fun FileListRow(
             .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(42.dp)) {
-            FileVisual(item = item, size = 38.dp)
+            FileVisual(item = item, size = 38.dp, loadThumbnail = loadThumbnail)
             if (selected) {
                 androidx.compose.foundation.Image(
                     painter = painterResource(R.drawable.check),
@@ -2796,10 +2805,13 @@ private fun FileGrid(
     onLongSelect: (FileItem) -> Unit,
     onBlankLongPress: () -> Unit,
 ) {
-    val iconsToWarm = remember(items) { items.asSequence().take(32).map { it.iconRes }.distinct().toList() }
+    val iconsToWarm = remember(items) { items.asSequence().take(18).map { it.iconRes }.distinct().toList() }
     PreloadResourceIcons(iconsToWarm)
 
     val gridState = remember(scrollKey) { LazyGridState() }
+    val loadThumbnails by remember(gridState) {
+        derivedStateOf { !gridState.isScrollInProgress }
+    }
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Adaptive(minSize = 110.dp),
@@ -2829,7 +2841,7 @@ private fun FileGrid(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
                 ) {
-                    FileVisual(item = item, size = 62.dp)
+                    FileVisual(item = item, size = 62.dp, loadThumbnail = loadThumbnails)
                     Spacer(Modifier.height(7.dp))
                     Text(
                         item.name,
@@ -2908,21 +2920,35 @@ private fun ExplorerStatusBar(
             bytes = items.asSequence().filterNot { it.isDirectory }.sumOf { it.size },
         )
     }
-    var folderStats by remember(currentDir.absolutePath, recursiveFolderStats) { mutableStateOf(directStats) }
-    var folderStatsLoading by remember(currentDir.absolutePath, recursiveFolderStats) { mutableStateOf(false) }
-    val contentRevision = remember(items) {
-        items.fold(17L) { acc, item ->
-            (acc * 31L) xor item.modifiedAt xor item.size xor item.name.hashCode().toLong()
-        }
+    // A revisão do diretório não depende da lista projetada (busca/ordenação), portanto
+    // digitar na pesquisa não dispara uma nova varredura recursiva nem um O(n) na UI.
+    val contentRevision = remember(currentDir.absolutePath, items) {
+        runCatching { currentDir.lastModified() }.getOrDefault(0L)
+    }
+    val cachedFolderStats = remember(currentDir.absolutePath, contentRevision) {
+        FolderTreeStatsCache.peek(currentDir, contentRevision)
+    }
+    var folderStats by remember(currentDir.absolutePath, contentRevision, recursiveFolderStats) {
+        mutableStateOf(cachedFolderStats ?: directStats)
+    }
+    var folderStatsLoading by remember(currentDir.absolutePath, contentRevision, recursiveFolderStats) {
+        mutableStateOf(recursiveFolderStats && cachedFolderStats == null)
     }
     LaunchedEffect(currentDir.absolutePath, contentRevision, recursiveFolderStats) {
-        folderStats = directStats
+        val cached = FolderTreeStatsCache.peek(currentDir, contentRevision)
+        folderStats = cached ?: directStats
+        folderStatsLoading = recursiveFolderStats && cached == null
         if (recursiveFolderStats && currentDir.exists() && currentDir.isDirectory) {
-            folderStatsLoading = true
-            try {
-                folderStats = scanFolderTreeStats(currentDir)
-            } finally {
-                folderStatsLoading = false
+            if (cached == null) {
+                // A lista aparece primeiro. Em navegação rápida o efeito é cancelado antes de
+                // iniciar a varredura recursiva, evitando competir com a abertura da pasta.
+                delay(260L)
+                folderStatsLoading = true
+                try {
+                    folderStats = FolderTreeStatsCache.load(currentDir, contentRevision)
+                } finally {
+                    folderStatsLoading = false
+                }
             }
         } else {
             folderStatsLoading = false
@@ -2930,9 +2956,17 @@ private fun ExplorerStatusBar(
     }
 
     val selectedDirectory = single?.file?.takeIf { it.isDirectory }
-    var selectedDirectoryStats by remember(selectedDirectory?.absolutePath) { mutableStateOf<FolderTreeStats?>(null) }
-    LaunchedEffect(selectedDirectory?.absolutePath, selectedDirectory?.lastModified()) {
-        selectedDirectoryStats = selectedDirectory?.let { scanFolderTreeStats(it) }
+    val selectedRevision = selectedDirectory?.lastModified() ?: 0L
+    var selectedDirectoryStats by remember(selectedDirectory?.absolutePath, selectedRevision) {
+        mutableStateOf(selectedDirectory?.let { FolderTreeStatsCache.peek(it, selectedRevision) })
+    }
+    LaunchedEffect(selectedDirectory?.absolutePath, selectedRevision) {
+        selectedDirectoryStats = selectedDirectory?.let {
+            FolderTreeStatsCache.peek(it, selectedRevision) ?: run {
+                delay(140L)
+                FolderTreeStatsCache.load(it, selectedRevision)
+            }
+        }
     }
 
     Row(
@@ -3019,6 +3053,45 @@ private data class FolderTreeStats(
     val bytes: Long,
 )
 
+/**
+ * Cache curto das estatísticas recursivas exibidas na barra inferior. O recurso continua
+ * somando todo o conteúdo da pasta, porém voltar/avançar não refaz imediatamente milhares de
+ * acessos ao armazenamento. Um único scanner também evita duas varreduras concorrentes.
+ */
+private object FolderTreeStatsCache {
+    private const val MAX_ENTRIES = 20
+    private const val MAX_AGE_MS = 15_000L
+    private data class CacheEntry(val stats: FolderTreeStats, val storedAtMs: Long)
+
+    private val scanGate = Semaphore(1)
+    private val cache = object : LinkedHashMap<String, CacheEntry>(MAX_ENTRIES, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CacheEntry>?): Boolean =
+            size > MAX_ENTRIES
+    }
+
+    private fun key(root: File, revision: Long): String = "${root.absolutePath}:$revision"
+
+    fun peek(root: File, revision: Long): FolderTreeStats? = synchronized(cache) {
+        val entry = cache[key(root, revision)] ?: return@synchronized null
+        if (System.currentTimeMillis() - entry.storedAtMs > MAX_AGE_MS) {
+            cache.remove(key(root, revision))
+            null
+        } else entry.stats
+    }
+
+    suspend fun load(root: File, revision: Long): FolderTreeStats {
+        peek(root, revision)?.let { return it }
+        return scanGate.withPermit {
+            peek(root, revision)?.let { return@withPermit it }
+            val stats = scanFolderTreeStats(root)
+            synchronized(cache) {
+                cache[key(root, revision)] = CacheEntry(stats, System.currentTimeMillis())
+            }
+            stats
+        }
+    }
+}
+
 private suspend fun scanFolderTreeStats(root: File): FolderTreeStats = withContext(Dispatchers.IO) {
     var files = 0
     var folders = 0
@@ -3028,7 +3101,8 @@ private suspend fun scanFolderTreeStats(root: File): FolderTreeStats = withConte
     var visited = 0
 
     while (pending.isNotEmpty()) {
-        if ((visited++ and 127) == 0) currentCoroutineContext().ensureActive()
+        // Cancelamento mais frequente deixa a navegação responsiva em árvores muito grandes.
+        if ((visited++ and 31) == 0) currentCoroutineContext().ensureActive()
         val entry = pending.removeLast()
         if (entry.isDirectory) {
             if (entry.name == ".ExploradorXP_Lixeira") continue

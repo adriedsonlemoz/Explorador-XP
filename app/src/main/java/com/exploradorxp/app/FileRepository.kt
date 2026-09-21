@@ -32,10 +32,18 @@ class FileRepository(
     suspend fun directorySnapshot(directory: File): List<FileItem> = withContext(Dispatchers.IO) {
         require(directory.exists() && directory.isDirectory) { "A pasta não está mais disponível." }
         val favorites = prefs.favorites()
-        directory.listFiles()
-            .orEmpty()
-            .filterNot(::isInternalTrashArtifact)
-            .map { file -> toFileItem(file, file.absolutePath in favorites) }
+        val children = directory.listFiles().orEmpty()
+        buildList(children.size) {
+            children.forEachIndexed { index, file ->
+                // listFiles()/metadados são I/O bloqueante. Em pastas muito grandes, checar o
+                // cancelamento em lotes evita que uma navegação antiga continue competindo com
+                // a pasta que o usuário acabou de abrir.
+                if ((index and 63) == 0) coroutineContext.ensureActive()
+                if (!isInternalTrashArtifact(file)) {
+                    add(toFileItem(file, file.absolutePath in favorites))
+                }
+            }
+        }
     }
 
     /** Snapshot dos favoritos ainda existentes. Também captura metadados fora da UI. */
