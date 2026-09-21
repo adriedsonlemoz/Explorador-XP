@@ -34,6 +34,18 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     )
     val uiState: StateFlow<ExplorerUiState> = _uiState.asStateFlow()
 
+
+    // Estados de alta frequência ficam fora do ExplorerUiState principal. Assim, progresso de
+    // transferência/análise e atualização da Lixeira não recompõem a árvore inteira do Explorer.
+    private val _transferState = MutableStateFlow<TransferState?>(null)
+    val transferState: StateFlow<TransferState?> = _transferState.asStateFlow()
+
+    private val _trashState = MutableStateFlow(TrashUiState())
+    val trashState: StateFlow<TrashUiState> = _trashState.asStateFlow()
+
+    private val _storageScanState = MutableStateFlow(StorageScanState())
+    val storageScanState: StateFlow<StorageScanState> = _storageScanState.asStateFlow()
+
     private val _events = MutableSharedFlow<ExplorerEvent>(extraBufferCapacity = 8)
     val events: SharedFlow<ExplorerEvent> = _events.asSharedFlow()
 
@@ -531,11 +543,11 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         if (!hasFileAccess(getApplication())) return
         trashJob?.cancel()
         trashJob = viewModelScope.launch {
-            _uiState.update { it.copy(trashLoading = true) }
+            _trashState.update { it.copy(loading = true) }
             val items = runCatching { repository.trashSnapshot() }
                 .onFailure { _events.tryEmit(ExplorerEvent.ShowMessage(it.message ?: "Não foi possível abrir a Lixeira.")) }
                 .getOrDefault(emptyList())
-            _uiState.update { it.copy(trashItems = items, trashLoading = false, trashHasItems = items.isNotEmpty()) }
+            _trashState.value = TrashUiState(items = items, loading = false)
         }
     }
 
@@ -558,7 +570,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun emptyTrash() {
-        if (_uiState.value.trashItems.isEmpty()) return
+        if (_trashState.value.items.isEmpty()) return
         runTransfer(
             kind = TransferKind.DELETE,
             successMessage = "Lixeira esvaziada.",
@@ -569,27 +581,27 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun analyzeStorage(force: Boolean = false) {
         if (!hasFileAccess(getApplication())) return
-        val current = _uiState.value.storageScan
+        val current = _storageScanState.value
         if (!force && current.analysis != null && !current.analyzing) return
         storageAnalysisJob?.cancel()
         val locations = _uiState.value.storageLocations
         val target = locations.firstOrNull { !it.removable }?.root ?: repository.root
         storageAnalysisJob = viewModelScope.launch {
-            _uiState.update { it.copy(storageScan = StorageScanState(analyzing = true)) }
+            _storageScanState.value = StorageScanState(analyzing = true)
             val result = repository.analyzeStorage(target) { count ->
-                _uiState.update { state ->
-                    state.copy(storageScan = state.storageScan.copy(analyzing = true, scannedFiles = count, error = null))
+                _storageScanState.update { state ->
+                    state.copy(analyzing = true, scannedFiles = count, error = null)
                 }
             }
             result
                 .onSuccess { analysis ->
-                    _uiState.update { it.copy(storageScan = StorageScanState(analyzing = false, scannedFiles = analysis.scannedFiles, analysis = analysis)) }
+                    _storageScanState.value = StorageScanState(analyzing = false, scannedFiles = analysis.scannedFiles, analysis = analysis)
                 }
                 .onFailure { error ->
                     if (error is CancellationException) {
-                        _uiState.update { it.copy(storageScan = it.storageScan.copy(analyzing = false)) }
+                        _storageScanState.update { it.copy(analyzing = false) }
                     } else {
-                        _uiState.update { it.copy(storageScan = StorageScanState(analyzing = false, error = error.message ?: "Falha ao analisar o armazenamento.")) }
+                        _storageScanState.value = StorageScanState(analyzing = false, error = error.message ?: "Falha ao analisar o armazenamento.")
                     }
                 }
         }
@@ -617,7 +629,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Executa uma cópia/mover/exclusão relatando progresso no [ExplorerUiState.transfer],
+     * Executa uma cópia/mover/exclusão relatando progresso em [transferState],
      * cancelável a qualquer momento via [cancelTransfer]. Uma transferência nova cancela
      * automaticamente qualquer uma ainda em andamento.
      */
@@ -630,13 +642,11 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     ) {
         transferJob?.cancel()
         transferJob = viewModelScope.launch {
-            _uiState.update { it.copy(transfer = TransferState(kind, done = 0, total = 1, currentName = "")) }
+            _transferState.value = TransferState(kind, done = 0, total = 1, currentName = "")
             val result = operation { progress ->
-                _uiState.update {
-                    it.copy(transfer = TransferState(kind, progress.done, progress.total, progress.currentName))
-                }
+                _transferState.value = TransferState(kind, progress.done, progress.total, progress.currentName)
             }
-            _uiState.update { it.copy(transfer = null) }
+            _transferState.value = null
             result
                 .onSuccess {
                     invalidateAllSnapshots()

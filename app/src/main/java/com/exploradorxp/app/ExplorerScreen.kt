@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -76,6 +77,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -151,6 +153,9 @@ fun ExplorerScreen(
     onAnalyzeStorage: (Boolean) -> Unit,
     onCancelStorageAnalysis: () -> Unit,
     onCancelTransfer: () -> Unit,
+    trashState: StateFlow<TrashUiState>,
+    storageScanState: StateFlow<StorageScanState>,
+    transferState: StateFlow<TransferState?>,
     modifier: Modifier = Modifier,
 ) {
     var showNewFolder by remember { mutableStateOf(false) }
@@ -230,7 +235,7 @@ fun ExplorerScreen(
             onOpenExternalSelectedArchive = { target -> onClearSelection(); onOpenExternalTarget(target) },
             onExtractHereSelectedArchive = { target -> onClearSelection(); archiveExtractTarget = target to true },
             onExtractToSelectedArchive = { target -> onClearSelection(); archiveExtractTarget = target to false },
-            trashHasItems = state.trashHasItems,
+            trashState = trashState,
             onOpenTrash = {
                 showTrash = true
                 onLoadTrash()
@@ -461,46 +466,40 @@ fun ExplorerScreen(
         onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
     )
     if (showDeviceInfo) DeviceInfoDialog(onDismiss = { showDeviceInfo = false })
-    if (showTrash) {
-        TrashDialog(
-            items = state.trashItems,
-            loading = state.trashLoading,
-            onDismiss = { showTrash = false },
-            onRefresh = onLoadTrash,
-            onRestore = onRestoreTrashItem,
-            onDeletePermanently = onDeleteTrashItem,
-            onEmpty = onEmptyTrash,
-        )
-    }
-    if (showStorageDetails) {
-        StorageDetailsDialog(
-            state = state.storageScan,
-            fallbackInfo = state.storageInfo,
-            onDismiss = {
-                if (state.storageScan.analyzing) onCancelStorageAnalysis()
-                showStorageDetails = false
-            },
-            onRefresh = { onAnalyzeStorage(true) },
-            onCancel = onCancelStorageAnalysis,
-            onOpenFolder = { folder ->
-                showStorageDetails = false
-                onNavigateTo(folder)
-            },
-            onOpenFile = { file ->
-                showStorageDetails = false
-                onOpenTarget(file)
-            },
-            onOpenTrash = {
-                showStorageDetails = false
-                showTrash = true
-                onLoadTrash()
-            },
-        )
-    }
-
-    state.transfer?.let { transfer ->
-        TransferProgressDialog(transfer = transfer, onCancel = onCancelTransfer)
-    }
+    TrashDialogHost(
+        visible = showTrash,
+        stateFlow = trashState,
+        onDismiss = { showTrash = false },
+        onRefresh = onLoadTrash,
+        onRestore = onRestoreTrashItem,
+        onDeletePermanently = onDeleteTrashItem,
+        onEmpty = onEmptyTrash,
+    )
+    StorageDetailsDialogHost(
+        visible = showStorageDetails,
+        stateFlow = storageScanState,
+        fallbackInfo = state.storageInfo,
+        onDismiss = { analyzing ->
+            if (analyzing) onCancelStorageAnalysis()
+            showStorageDetails = false
+        },
+        onRefresh = { onAnalyzeStorage(true) },
+        onCancel = onCancelStorageAnalysis,
+        onOpenFolder = { folder ->
+            showStorageDetails = false
+            onNavigateTo(folder)
+        },
+        onOpenFile = { file ->
+            showStorageDetails = false
+            onOpenTarget(file)
+        },
+        onOpenTrash = {
+            showStorageDetails = false
+            showTrash = true
+            onLoadTrash()
+        },
+    )
+    TransferProgressHost(stateFlow = transferState, onCancel = onCancelTransfer)
 
 }
 
@@ -553,7 +552,7 @@ private fun XpHeader(
     onOpenExternalSelectedArchive: (File) -> Unit,
     onExtractHereSelectedArchive: (File) -> Unit,
     onExtractToSelectedArchive: (File) -> Unit,
-    trashHasItems: Boolean,
+    trashState: StateFlow<TrashUiState>,
     onOpenTrash: () -> Unit,
 ) {
     var fileMenu by remember { mutableStateOf(false) }
@@ -566,6 +565,8 @@ private fun XpHeader(
     var addressMenu by remember { mutableStateOf(false) }
     var selectionMoreMenu by remember { mutableStateOf(false) }
     var newMenu by remember { mutableStateOf(false) }
+    val trashUiState by trashState.collectAsStateWithLifecycle()
+    val trashHasItems = trashUiState.hasItems
 
     val fallbackRoot = android.os.Environment.getExternalStorageDirectory()
     val effectiveLocations = storageLocations.ifEmpty {
@@ -1472,10 +1473,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Janelas grandes e diálogos agora ficam centralizados de forma simétrica na área útil do aplicativo.",
-                    "Removido o inset duplicado que deslocava Sobre, Ajuda, Lixeira e outras janelas para baixo.",
-                    "Ícones de Movies, Music e Pictures/DCIM foram corrigidos na origem, sem partes cortadas nas bordas.",
-                    "Mantida a área segura dos ícones e o enquadramento proporcional na lista e na grade.",
+                    "Progresso de copiar/mover/excluir e análise de armazenamento não recompõem mais toda a tela principal.",
+                    "Metadados já formatados de arquivos são reutilizados por cache quando o item não mudou.",
+                    "Lista, grade e seleção ficaram mais leves em pastas com muitos itens.",
+                    "A análise de armazenamento reaproveita o tamanho já salvo das novas entradas da Lixeira.",
                 ).forEach { change ->
                     Text(
                         "• $change",
@@ -1511,6 +1512,64 @@ private fun AboutSectionCard(
         Spacer(Modifier.height(7.dp))
         content()
     }
+}
+
+@Composable
+private fun TrashDialogHost(
+    visible: Boolean,
+    stateFlow: StateFlow<TrashUiState>,
+    onDismiss: () -> Unit,
+    onRefresh: () -> Unit,
+    onRestore: (TrashItem) -> Unit,
+    onDeletePermanently: (TrashItem) -> Unit,
+    onEmpty: () -> Unit,
+) {
+    if (!visible) return
+    val state by stateFlow.collectAsStateWithLifecycle()
+    TrashDialog(
+        items = state.items,
+        loading = state.loading,
+        onDismiss = onDismiss,
+        onRefresh = onRefresh,
+        onRestore = onRestore,
+        onDeletePermanently = onDeletePermanently,
+        onEmpty = onEmpty,
+    )
+}
+
+@Composable
+private fun StorageDetailsDialogHost(
+    visible: Boolean,
+    stateFlow: StateFlow<StorageScanState>,
+    fallbackInfo: StorageInfo,
+    onDismiss: (Boolean) -> Unit,
+    onRefresh: () -> Unit,
+    onCancel: () -> Unit,
+    onOpenFolder: (File) -> Unit,
+    onOpenFile: (File) -> Unit,
+    onOpenTrash: () -> Unit,
+) {
+    if (!visible) return
+    val state by stateFlow.collectAsStateWithLifecycle()
+    StorageDetailsDialog(
+        state = state,
+        fallbackInfo = fallbackInfo,
+        onDismiss = { onDismiss(state.analyzing) },
+        onRefresh = onRefresh,
+        onCancel = onCancel,
+        onOpenFolder = onOpenFolder,
+        onOpenFile = onOpenFile,
+        onOpenTrash = onOpenTrash,
+    )
+}
+
+@Composable
+private fun TransferProgressHost(
+    stateFlow: StateFlow<TransferState?>,
+    onCancel: () -> Unit,
+) {
+    val transfer by stateFlow.collectAsStateWithLifecycle()
+    transfer?.let { TransferProgressDialog(transfer = it, onCancel = onCancel) }
 }
 
 @Composable
@@ -2701,7 +2760,11 @@ private fun FileList(
             .border(1.dp, XpBorder, RoundedCornerShape(5.dp))
             .combinedClickable(onClick = {}, onLongClick = onBlankLongPress)
     ) {
-        items(items, key = { it.path }) { item ->
+        items(
+            items = items,
+            key = { it.path },
+            contentType = { if (it.isDirectory) "folder" else "file" },
+        ) { item ->
             FileListRow(
                 item = item,
                 selected = item.path in selectedPaths,
@@ -2822,7 +2885,11 @@ private fun FileGrid(
             .padding(7.dp)
             .combinedClickable(onClick = {}, onLongClick = onBlankLongPress),
     ) {
-        items(items, key = { it.path }) { item ->
+        items(
+            items = items,
+            key = { it.path },
+            contentType = { if (it.isDirectory) "folder" else "file" },
+        ) { item ->
             val selected = item.path in selectedPaths
             var menuExpanded by remember(item.path) { mutableStateOf(false) }
             Box(
@@ -2902,10 +2969,15 @@ private fun ExplorerStatusBar(
     storageInfo: StorageInfo,
     onStorageClick: () -> Unit,
 ) {
-    val selectedItems = remember(items, selectedPaths) { items.filter { it.path in selectedPaths } }
+    // Indexa a lista uma única vez; selecionar/desmarcar não precisa mais filtrar milhares
+    // de itens da pasta inteira em cada toque.
+    val itemByPath = remember(items) { items.associateBy(FileItem::path) }
+    val selectedItems = remember(itemByPath, selectedPaths) { selectedPaths.mapNotNull(itemByPath::get) }
     val sizeBytes = remember(items, selectedItems) {
         val shownItems = if (selectedItems.isNotEmpty()) selectedItems else items
-        shownItems.asSequence().filterNot { it.isDirectory }.sumOf { it.size }
+        var total = 0L
+        shownItems.forEach { if (!it.isDirectory) total += it.size }
+        total
     }
     val formattedSize = remember(sizeBytes) { formatBytes(sizeBytes) }
     val single = selectedItems.singleOrNull()
@@ -2914,11 +2986,16 @@ private fun ExplorerStatusBar(
     }
     val freeText = remember(storageInfo.freeBytes) { formatBytes(storageInfo.freeBytes) }
     val directStats = remember(items) {
-        FolderTreeStats(
-            files = items.count { !it.isDirectory },
-            folders = items.count { it.isDirectory },
-            bytes = items.asSequence().filterNot { it.isDirectory }.sumOf { it.size },
-        )
+        var files = 0
+        var folders = 0
+        var bytes = 0L
+        items.forEach { item ->
+            if (item.isDirectory) folders++ else {
+                files++
+                bytes += item.size
+            }
+        }
+        FolderTreeStats(files = files, folders = folders, bytes = bytes)
     }
     // A revisão do diretório não depende da lista projetada (busca/ordenação), portanto
     // digitar na pesquisa não dispara uma nova varredura recursiva nem um O(n) na UI.

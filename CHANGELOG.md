@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.1.0-alpha.56
+
+- Terceira etapa da otimização estrutural de desempenho, focada em **recomposição do Compose, metadados e análise de armazenamento**.
+- `TransferState`, `StorageScanState` e o estado da Lixeira foram retirados do `ExplorerUiState` principal e expostos em `StateFlow`s independentes; atualizações frequentes de progresso deixam de invalidar a árvore inteira da tela principal.
+- Hosts pequenos coletam esses fluxos somente onde são necessários: diálogo de transferência, janela de armazenamento, Lixeira e indicador do cabeçalho.
+- `FileItem` ganha cache LRU por caminho/assinatura para reutilizar ícone, classificação e textos formatados quando tipo, tamanho, data e favorito não mudaram.
+- Removida a consulta extra `File.isHidden` por item; no armazenamento Android/Linux o prefixo `.` já representa o caso relevante para a navegação do app.
+- `LazyColumn` e `LazyVerticalGrid` passam `contentType` para pastas/arquivos, ajudando o Compose a reutilizar composição de células compatíveis.
+- A barra inferior indexa os itens por caminho uma vez; selecionar/desmarcar deixa de filtrar toda a pasta em cada toque e a contagem direta passa a usar uma única travessia da lista.
+- A análise de armazenamento reaproveita `treeSize` persistido pelas novas entradas da Lixeira, evitando uma travessia recursiva adicional ao final da análise. Entradas antigas mantêm fallback compatível.
+- Estados de UI de alta frequência foram marcados como imutáveis para melhorar a capacidade de skipping do Compose.
+- README, CHANGELOG, validações, tela Sobre e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.56` / `versionCode 56`.
+
 ## 0.1.0-alpha.55
 
 - Corrigida a centralização vertical das janelas modais: o `Dialog` do Android já entrega uma área útil ajustada às barras do sistema, e o app reaplicava `safeDrawingPadding()`, criando um segundo inset e deslocando visualmente as janelas para baixo.

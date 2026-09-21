@@ -337,6 +337,9 @@ private fun ExplorerApp(
         onAnalyzeStorage = viewModel::analyzeStorage,
         onCancelStorageAnalysis = viewModel::cancelStorageAnalysis,
         onCancelTransfer = viewModel::cancelTransfer,
+        trashState = viewModel.trashState,
+        storageScanState = viewModel.storageScanState,
+        transferState = viewModel.transferState,
         modifier = modifier,
     )
 }

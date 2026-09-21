@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.55",
-  "version_code": 55,
-  "manager_version": "0.1.0-alpha.55",
-  "manager_code": 55,
+  "version_build": "0.1.0-alpha.56",
+  "version_code": 56,
+  "manager_version": "0.1.0-alpha.56",
+  "manager_code": 56,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.55",
-      "code": 55
+      "version": "0.1.0-alpha.56",
+      "code": 56
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -79,7 +79,7 @@
     "full_gradle_android_build": {
       "ok": false,
       "executed": false,
-      "reason": "O ambiente local não possui Gradle/Android SDK configurados e o projeto não inclui gradlew. A correção foi guiada pelos erros exatos do CI e validada estruturalmente."
+      "reason": "O ambiente local não possui Gradle/Android SDK configurados e o projeto não inclui gradlew. Foram executados compile-smokes Kotlin direcionados e validações estruturais."
     },
     "trash_ui_refinement": {
       "ok": true,
@@ -314,6 +314,50 @@
       "xml_parse": "12 files ok",
       "kotlin_parser_smoke": "Changed Kotlin files produced no expecting/unclosed/unexpected-token diagnostics; unresolved Android/Compose references are expected without Android classpath.",
       "image_resources_unchanged_from_alpha52": "172 image files unchanged"
+    },
+    "alpha56_performance_state_isolation": {
+      "ok": true,
+      "changes": [
+        "transfer/storage-scan/trash StateFlows separated from ExplorerUiState",
+        "dialog hosts collect high-frequency flows locally",
+        "FileItem metadata LRU cache limited to 2048 entries",
+        "Lazy list/grid contentType added",
+        "status-bar selection indexed by path",
+        "storage analysis reuses persisted trash treeSize"
+      ],
+      "images_created_or_modified": false
+    },
+    "alpha56_models_compile_smoke": {
+      "ok": true,
+      "result": "ExplorerModels.kt compiled with a minimal androidx.compose.runtime.Immutable stub."
+    },
+    "alpha56_viewmodel_compile_smoke": {
+      "ok": true,
+      "result": "ExplorerViewModel.kt compiled against Android/Lifecycle/Repository stubs and kotlinx-coroutines; separated StateFlows type-check."
+    },
+    "alpha56_repository_compile_smoke": {
+      "ok": true,
+      "result": "FileRepository.kt and FileOperationPlan.kt compiled against Android/JSON stubs and kotlinx-coroutines."
+    },
+    "alpha56_structural_validation": {
+      "ok": true,
+      "json_files": 3,
+      "xml_files": 12,
+      "yaml_files": 2,
+      "drawable_references": 127,
+      "drawable_resource_names": 157,
+      "missing_drawables": [],
+      "images_unchanged_from_alpha55": true,
+      "image_count": 172,
+      "workflows_unchanged_from_alpha55": true
+    },
+    "alpha56_architecture_test_added": {
+      "ok": true,
+      "file": "PerformanceStateIsolationTest.kt",
+      "guards": [
+        "high-frequency fields remain outside ExplorerUiState",
+        "TrashUiState.hasItems behavior"
+      ]
     }
   },
   "validated_at_utc": "2026-09-21T13:57:25.531058+00:00",

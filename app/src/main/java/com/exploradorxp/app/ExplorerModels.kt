@@ -1,5 +1,6 @@
 package com.exploradorxp.app
 
+import androidx.compose.runtime.Immutable
 import java.io.File
 
 enum class ViewMode { LIST, GRID }
@@ -16,6 +17,7 @@ data class TransferProgress(
 )
 
 /** Estado exibido na UI enquanto uma transferência está em andamento. */
+@Immutable
 data class TransferState(
     val kind: TransferKind,
     val done: Int,
@@ -25,6 +27,7 @@ data class TransferState(
     val fraction: Float get() = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
 }
 
+@Immutable
 data class FileItem(
     val file: File,
     val iconRes: Int,
@@ -57,6 +60,7 @@ data class StorageLocation(
     val removable: Boolean = false,
 )
 
+@Immutable
 data class StorageInfo(
     val totalBytes: Long = 0L,
     val freeBytes: Long = 0L,
@@ -80,6 +84,15 @@ data class TrashItem(
 ) {
     val name: String
         get() = originalName.ifBlank { File(originalPath).name }.ifBlank { trashedFile.name }
+}
+
+
+@Immutable
+data class TrashUiState(
+    val items: List<TrashItem> = emptyList(),
+    val loading: Boolean = false,
+) {
+    val hasItems: Boolean get() = items.isNotEmpty()
 }
 
 data class StorageCategorySummary(
@@ -114,6 +127,7 @@ data class StorageAnalysis(
     val completedAt: Long,
 )
 
+@Immutable
 data class StorageScanState(
     val analyzing: Boolean = false,
     val scannedFiles: Int = 0,
@@ -121,6 +135,7 @@ data class StorageScanState(
     val error: String? = null,
 )
 
+@Immutable
 data class ExplorerUiState(
     val currentDir: File,
     val items: List<FileItem> = emptyList(),
@@ -133,16 +148,11 @@ data class ExplorerUiState(
     val tab: ExplorerTab = ExplorerTab.FILES,
     val selectedPaths: Set<String> = emptySet(),
     val clipboard: ClipboardState? = null,
-    val transfer: TransferState? = null,
     val canGoBack: Boolean = false,
     val canGoForward: Boolean = false,
     val showHidden: Boolean = false,
     val storageInfo: StorageInfo = StorageInfo(),
     val storageLocations: List<StorageLocation> = emptyList(),
-    val trashItems: List<TrashItem> = emptyList(),
-    val trashLoading: Boolean = false,
-    val trashHasItems: Boolean = false,
-    val storageScan: StorageScanState = StorageScanState(),
 )
 
 sealed interface ExplorerEvent {

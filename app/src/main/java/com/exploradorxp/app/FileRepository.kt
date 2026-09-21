@@ -23,6 +23,27 @@ class FileRepository(
     @Volatile
     private var cachedStorageLocations: List<StorageLocation>? = null
 
+
+    // Cache de metadados já formatados. O sistema de arquivos ainda é consultado para a
+    // assinatura mínima (tipo/tamanho/data), mas classificação, ícone e textos não são
+    // reconstruídos a cada Voltar/Avançar/Atualizar quando o item permaneceu igual.
+    private data class FileItemSignature(
+        val directory: Boolean,
+        val size: Long,
+        val modifiedAt: Long,
+        val favorite: Boolean,
+    )
+
+    private data class CachedFileItem(
+        val signature: FileItemSignature,
+        val item: FileItem,
+    )
+
+    private val fileItemCache = object : LinkedHashMap<String, CachedFileItem>(512, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CachedFileItem>?): Boolean =
+            size > FILE_ITEM_CACHE_LIMIT
+    }
+
     /**
      * Lê o diretório apenas uma vez e captura todos os metadados necessários para a UI.
      * A pasta interna da Lixeira nunca é exposta na navegação, mesmo com ocultos visíveis.
@@ -425,9 +446,16 @@ class FileRepository(
             }
             onProgress(scannedFiles)
 
+            // As entradas novas da Lixeira já carregam treeSize no .trashinfo.json. Reusar esse
+            // metadado evita uma segunda travessia completa justamente ao fim da análise.
+            // Entradas legadas continuam funcionando pelo fallback de readTrashItem().
             val managedTrash = managedTrashRoot(storageRoot)
-            val trashItems = managedTrash.listFiles().orEmpty().filter(File::isDirectory)
-            val trashBytes = trashItems.sumOf { directorySizeBytes(it) }
+            val trashItems = managedTrash.listFiles().orEmpty()
+                .asSequence()
+                .filter(File::isDirectory)
+                .mapNotNull(::readTrashItem)
+                .toList()
+            val trashBytes = trashItems.sumOf(TrashItem::size)
 
             StorageAnalysis(
                 root = storageRoot,
@@ -522,12 +550,26 @@ class FileRepository(
     private fun toFileItem(file: File, favorite: Boolean): FileItem {
         val isDirectory = file.isDirectory
         val name = file.name.ifBlank { file.absolutePath }
-        val extension = if (isDirectory) "" else file.extension.lowercase()
-        val size = if (isDirectory) 0L else file.length()
+        val size = if (isDirectory) 0L else file.length().coerceAtLeast(0L)
         val modifiedAt = file.lastModified()
-        val hidden = name.startsWith('.') || runCatching { file.isHidden }.getOrDefault(false)
+        val signature = FileItemSignature(
+            directory = isDirectory,
+            size = size,
+            modifiedAt = modifiedAt,
+            favorite = favorite,
+        )
+        val path = file.absolutePath
+
+        synchronized(fileItemCache) {
+            fileItemCache[path]?.takeIf { it.signature == signature }?.let { return it.item }
+        }
+
+        val extension = if (isDirectory) "" else file.extension.lowercase()
+        // Em Android/Linux, arquivos ocultos do armazenamento compartilhado seguem o prefixo
+        // '.'. Evitar File.isHidden aqui remove uma consulta extra por item em pastas grandes.
+        val hidden = name.startsWith('.')
         val typeLabel = FileTypeClassifier.labelFor(file, isDirectory)
-        return FileItem(
+        val item = FileItem(
             file = file,
             iconRes = FileIconMapper.iconFor(file, isDirectory),
             name = name,
@@ -541,6 +583,8 @@ class FileRepository(
             gridDetailText = FileDisplayFormatter.gridDetail(size, isDirectory, extension),
             isFavorite = favorite,
         )
+        synchronized(fileItemCache) { fileItemCache[path] = CachedFileItem(signature, item) }
+        return item
     }
 
     private fun uniqueTarget(parent: File, originalName: String): File {
@@ -631,5 +675,6 @@ class FileRepository(
         private const val TRASH_DIR_NAME = ".ExploradorXP_Lixeira"
         private const val TRASH_INFO_FILE = ".trashinfo.json"
         private const val LARGE_FILE_LIMIT = 20
+        private const val FILE_ITEM_CACHE_LIMIT = 2_048
     }
 }

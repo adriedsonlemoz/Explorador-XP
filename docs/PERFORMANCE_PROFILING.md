@@ -69,3 +69,9 @@ A validação recomendada é comparar o `FrameTimingMetric` da alpha.23 com a li
 ## Rollback de ícones — alpha.28
 
 A alpha.27 testou substituir os ícones XP por vetores/categorias genéricas. No teste real em aparelho não houve melhora perceptível de fluidez e o visual anterior foi preferido. A alpha.28 restaura o pipeline da alpha.23/26: PNGs 192×192 em `drawable-xxxhdpi`, `CachedResourceIcon`, decodificação em `Dispatchers.IO`, limite de concorrência e cache LRU. A otimização de ícones volta a priorizar fidelidade visual sem executar decodificação pesada na thread principal.
+
+## Recomposição e metadados — alpha.56
+
+A alpha.56 separa progresso de transferência, análise de armazenamento e Lixeira do `ExplorerUiState` principal. Isso reduz o escopo de recomposição durante operações longas. A listagem também reutiliza `FileItem`s já formatados por um cache LRU e informa `contentType` à lista/grade.
+
+Ao comparar traces novos, observar principalmente `FrameTimingMetric` durante uma transferência em paralelo com rolagem e durante seleção múltipla em pastas grandes. A expectativa é reduzir trabalho de composição sem alterar o resultado funcional das operações.
