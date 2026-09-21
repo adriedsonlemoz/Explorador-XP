@@ -1488,10 +1488,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Editor de código com destaque de sintaxe ampliado, autoindentação e fechamento automático de pares.",
-                    "TAB ou espaços (2/4/8) e quebra automática de linha agora podem ser configurados e ficam salvos.",
-                    "Números de linha e linha/coluna foram otimizados; localizar/substituir mostra ocorrência atual e total.",
-                    "Abrir com mantém a origem externa separada da cópia temporária, preparando o futuro Salvar de volta com segurança.",
+                    "Quebra de linha agora tem botão direto na barra e opção em Mais, inclusive durante a visualização somente leitura.",
+                    "Arquivos de texto recebidos por Abrir com podem ser editados em uma cópia segura.",
+                    "Salvar original grava de volta quando a origem concede escrita; sem permissão, Salvar como usa o seletor do Android.",
+                    "Antes de sobrescrever um arquivo externo, o app detecta alterações feitas por outro aplicativo para evitar perda de dados.",
                 ).forEach { change ->
                     Text(
                         "• $change",

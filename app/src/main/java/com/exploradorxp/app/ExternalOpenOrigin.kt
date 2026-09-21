@@ -3,9 +3,10 @@ package com.exploradorxp.app
 /**
  * Metadados do arquivo recebido via ACTION_VIEW.
  *
- * Nesta versão o conteúdo ainda é copiado para o cache e aberto em modo somente leitura.
- * A origem é mantida separada do arquivo temporário para permitir que uma versão futura
- * implemente "Salvar de volta" de forma explícita e segura, sem confundir cache com origem.
+ * O conteúdo é aberto a partir de uma cópia de trabalho no cache. A URI original e as
+ * permissões concedidas pelo aplicativo de origem permanecem separadas para que o editor
+ * possa salvar de volta explicitamente quando houver permissão de escrita. O hash registra
+ * a versão da origem copiada e permite detectar alterações externas antes de sobrescrever.
  */
 data class ExternalOpenOrigin(
     val uri: String,
@@ -14,4 +15,5 @@ data class ExternalOpenOrigin(
     val grantReadPermission: Boolean,
     val grantWritePermission: Boolean,
     val grantPersistablePermission: Boolean,
+    val sourceSha256: String? = null,
 ) : java.io.Serializable

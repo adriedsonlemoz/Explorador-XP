@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
@@ -20,6 +21,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -77,6 +80,7 @@ import java.nio.charset.CodingErrorAction
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.util.UUID
 import kotlin.math.max
 
@@ -172,7 +176,10 @@ fun TextCodeEditorViewer(
     val isArchiveCachePreview = remember(file.absolutePath) {
         file.absolutePath.startsWith(File(context.cacheDir, "archive-preview").absolutePath)
     }
-    val isArchivePreview = forcedReadOnly || isArchiveCachePreview
+    val isExternalOpen = externalOrigin != null
+    val isArchivePreview = isArchiveCachePreview || (forcedReadOnly && !isExternalOpen)
+    val hasExternalWriteGrant = externalOrigin?.grantWritePermission == true
+    val canSaveBackToExternal = hasExternalWriteGrant && !externalOrigin?.sourceSha256.isNullOrBlank()
 
     var loadState by remember(key) { mutableStateOf<EditorLoadState>(EditorLoadState.Loading) }
     var editorView by remember(file.absolutePath) { mutableStateOf<CodeEditText?>(null) }
@@ -198,6 +205,58 @@ fun TextCodeEditorViewer(
     var previewRevision by remember(file.absolutePath) { mutableIntStateOf(0) }
     var previewSource by remember(file.absolutePath) { mutableStateOf("") }
     var previewError by remember(file.absolutePath) { mutableStateOf("") }
+    var expectedExternalDigest by remember(file.absolutePath, externalOrigin?.uri) {
+        mutableStateOf(externalOrigin?.sourceSha256)
+    }
+    var closeAfterExternalSaveAs by remember(file.absolutePath) { mutableStateOf(false) }
+
+    val externalSaveAsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(externalOrigin?.mimeType ?: "text/plain"),
+    ) { uri ->
+        if (uri == null) {
+            closeAfterExternalSaveAs = false
+            statusMessage = "Salvar como cancelado"
+            return@rememberLauncherForActivityResult
+        }
+        val ready = loadState as? EditorLoadState.Ready
+        if (ready == null || ready.document.truncated) {
+            closeAfterExternalSaveAs = false
+            statusMessage = "Este arquivo não pode ser salvo neste modo."
+            return@rememberLauncherForActivityResult
+        }
+        val textToSave = editorView?.text?.toString() ?: workingText
+        scope.launch {
+            statusMessage = "Salvando cópia..."
+            val result = withContext(Dispatchers.IO) {
+                safeWriteTextUri(
+                    context = context,
+                    uri = uri,
+                    text = textToSave,
+                    encoding = ready.document.encoding,
+                    preferredLineEnding = ready.document.lineEnding,
+                    expectedSha256 = null,
+                )
+            }
+            result.fold(
+                onSuccess = {
+                    workingText = textToSave
+                    dirty = false
+                    editorView?.markSaved()
+                    historyState = EditorHistoryState()
+                    statusMessage = "Cópia salva com sucesso"
+                    previewSource = textToSave
+                    previewRevision++
+                    val shouldClose = closeAfterExternalSaveAs
+                    closeAfterExternalSaveAs = false
+                    if (shouldClose) onClose()
+                },
+                onFailure = { error ->
+                    closeAfterExternalSaveAs = false
+                    statusMessage = "Não foi possível salvar a cópia: ${error.message ?: "erro desconhecido"}"
+                },
+            )
+        }
+    }
 
     LaunchedEffect(key) {
         loadState = EditorLoadState.Loading
@@ -210,6 +269,7 @@ fun TextCodeEditorViewer(
         historyState = EditorHistoryState()
         searchState = EditorSearchState()
         statusMessage = ""
+        expectedExternalDigest = externalOrigin?.sourceSha256
         editorView = null
         viewMode = EditorViewMode.CODE
         onFullScreenChange(false)
@@ -267,32 +327,99 @@ fun TextCodeEditorViewer(
         }
     }
 
+    fun saveBackToExternal(closeAfterSave: Boolean = false) {
+        val ready = loadState as? EditorLoadState.Ready ?: return
+        val origin = externalOrigin ?: return
+        if (!origin.grantWritePermission) {
+            statusMessage = "O aplicativo de origem não concedeu permissão para gravar neste arquivo. Use Salvar como."
+            return
+        }
+        if (!canSaveBackToExternal || expectedExternalDigest.isNullOrBlank()) {
+            statusMessage = "Não foi possível validar com segurança a versão original deste arquivo. Use Salvar como."
+            return
+        }
+        if (ready.document.truncated) {
+            statusMessage = "Este arquivo está em modo somente leitura porque é muito grande."
+            return
+        }
+        val textToSave = editorView?.text?.toString() ?: workingText
+        scope.launch {
+            statusMessage = "Verificando e salvando no arquivo original..."
+            val result = withContext(Dispatchers.IO) {
+                safeWriteTextUri(
+                    context = context,
+                    uri = Uri.parse(origin.uri),
+                    text = textToSave,
+                    encoding = ready.document.encoding,
+                    preferredLineEnding = ready.document.lineEnding,
+                    expectedSha256 = expectedExternalDigest,
+                )
+            }
+            result.fold(
+                onSuccess = { newDigest ->
+                    expectedExternalDigest = newDigest
+                    workingText = textToSave
+                    dirty = false
+                    editorView?.markSaved()
+                    historyState = EditorHistoryState()
+                    statusMessage = "Arquivo original salvo"
+                    previewSource = textToSave
+                    previewRevision++
+                    if (closeAfterSave) onClose()
+                },
+                onFailure = { error ->
+                    statusMessage = when (error) {
+                        is ExternalContentChangedException ->
+                            "O arquivo original foi alterado por outro aplicativo desde que foi aberto. Use Salvar como para não sobrescrever essas mudanças."
+                        else -> "Não foi possível salvar no original: ${error.message ?: "erro desconhecido"}"
+                    }
+                },
+            )
+        }
+    }
+
+    fun requestSaveAs(closeAfterSave: Boolean = false) {
+        if (isExternalOpen) {
+            closeAfterExternalSaveAs = closeAfterSave
+            externalSaveAsLauncher.launch(externalOrigin?.displayName ?: file.name)
+        } else {
+            closeAfterExternalSaveAs = false
+            showSaveAs = true
+        }
+    }
+
     if (showCloseConfirm) {
         EditorChoiceDialog(
             title = "Alterações não salvas",
             message = "Há alterações que ainda não foram salvas em ${file.name}. O que deseja fazer?",
-            primaryLabel = "Salvar e sair",
+            primaryLabel = if (isExternalOpen && !canSaveBackToExternal) "Salvar como e sair" else "Salvar e sair",
             secondaryLabel = "Sair sem salvar",
             cancelLabel = "Cancelar",
             destructiveSecondary = true,
             onPrimary = {
                 showCloseConfirm = false
-                val ready = loadState as? EditorLoadState.Ready
-                if (ready != null && !ready.document.truncated) {
-                    val textToSave = editorView?.text?.toString() ?: workingText
-                    scope.launch {
-                        statusMessage = "Salvando com segurança..."
-                        val result = withContext(Dispatchers.IO) {
-                            safeWriteTextFile(file, textToSave, ready.document.encoding, ready.document.lineEnding)
+                when {
+                    isExternalOpen && canSaveBackToExternal -> saveBackToExternal(closeAfterSave = true)
+                    isExternalOpen -> requestSaveAs(closeAfterSave = true)
+                    else -> {
+                        val ready = loadState as? EditorLoadState.Ready
+                        if (ready != null && !ready.document.truncated) {
+                            val textToSave = editorView?.text?.toString() ?: workingText
+                            scope.launch {
+                                statusMessage = "Salvando com segurança..."
+                                val result = withContext(Dispatchers.IO) {
+                                    safeWriteTextFile(file, textToSave, ready.document.encoding, ready.document.lineEnding)
+                                }
+                                result.fold(
+                                    onSuccess = {
+                                        dirty = false
+                                        editorView?.markSaved()
+                                        onClose()
+                                    },
+                                    onFailure = { statusMessage = "Não foi possível salvar: ${it.message ?: "erro desconhecido"}" },
+                                )
+                            }
                         }
-                        result.fold(
-                            onSuccess = {
-                                dirty = false
-                                editorView?.markSaved()
-                                onClose()
-                            },
-                            onFailure = { statusMessage = "Não foi possível salvar: ${it.message ?: "erro desconhecido"}" },
-                        )
                     }
                 }
             },
@@ -365,6 +492,7 @@ fun TextCodeEditorViewer(
         EditorMoreDialog(
             editable = ((loadState as? EditorLoadState.Ready)?.document?.truncated == false) && !isArchivePreview,
             supportsPreview = supportsPreview,
+            wordWrap = editorPreferences.wordWrap,
             onDismiss = { showMore = false },
             onSelectAll = { editorView?.selectAll(); showMore = false },
             onCopy = { editorView?.onTextContextMenuItem(android.R.id.copy); showMore = false },
@@ -376,6 +504,12 @@ fun TextCodeEditorViewer(
                 showFindPanel = true
                 showReplaceField = true
                 searchState = editorView?.searchState(findQuery) ?: EditorSearchState()
+            },
+            onToggleWordWrap = {
+                val updated = editorPreferences.copy(wordWrap = !editorPreferences.wordWrap)
+                editorPreferences = updated
+                saveEditorPreferences(context, updated)
+                editorView?.updatePreferences(updated)
             },
             onSettings = { showMore = false; showEditorSettings = true },
             onPreview = {
@@ -408,15 +542,26 @@ fun TextCodeEditorViewer(
         EditorToolbar(
             dirty = dirty,
             editable = ((loadState as? EditorLoadState.Ready)?.document?.truncated == false) && !isArchivePreview,
+            saveEnabled = !isExternalOpen || canSaveBackToExternal,
+            saveLabel = if (isExternalOpen) "Salvar original" else "Salvar",
+            wordWrap = editorPreferences.wordWrap,
             canUndo = historyState.canUndo,
             canRedo = historyState.canRedo,
             supportsPreview = supportsPreview,
             viewMode = viewMode,
-            onSave = { saveTo(file, switchToTarget = false) },
-            onSaveAs = { showSaveAs = true },
+            onSave = {
+                if (isExternalOpen) saveBackToExternal() else saveTo(file, switchToTarget = false)
+            },
+            onSaveAs = { requestSaveAs() },
             onUndo = { editorView?.undoEdit() },
             onRedo = { editorView?.redoEdit() },
             onFind = { showFindPanel = !showFindPanel },
+            onToggleWordWrap = {
+                val updated = editorPreferences.copy(wordWrap = !editorPreferences.wordWrap)
+                editorPreferences = updated
+                saveEditorPreferences(context, updated)
+                editorView?.updatePreferences(updated)
+            },
             onTogglePreview = {
                 if (viewMode == EditorViewMode.CODE) {
                     refreshPreview()
@@ -433,8 +578,13 @@ fun TextCodeEditorViewer(
         val warning = when {
             statusMessage.isNotBlank() -> statusMessage
             isArchiveCachePreview -> "Pré-visualização temporária extraída do ZIP: aberto em modo somente leitura para evitar travamentos e alterações acidentais."
-            forcedReadOnly && externalOrigin != null -> "Arquivo recebido por Abrir com: a origem foi preservada separadamente e esta cópia temporária continua somente leitura."
-            forcedReadOnly -> "Arquivo aberto por outro aplicativo: modo somente leitura para preservar o documento original."
+            externalOrigin != null && canSaveBackToExternal ->
+                "Arquivo recebido por Abrir com: edite na cópia segura e use Salvar original para gravar de volta."
+            externalOrigin != null && hasExternalWriteGrant ->
+                "Arquivo recebido por Abrir com: não foi possível validar a versão original com segurança. Use Salvar como."
+            externalOrigin != null ->
+                "Arquivo recebido por Abrir com: a origem não concedeu escrita. Você pode editar e usar Salvar como."
+            forcedReadOnly -> "Arquivo aberto em modo somente leitura para preservar o documento original."
             ready?.document?.truncated == true -> "Arquivo grande: aberto parcialmente e somente para leitura para evitar travamentos."
             ready != null && file.length() > SYNTAX_HIGHLIGHT_MAX_CHARS && syntaxExtension in syntaxExtensions ->
                 "Realce de sintaxe reduzido neste arquivo para manter o editor responsivo."
@@ -582,6 +732,9 @@ fun TextCodeEditorViewer(
 private fun EditorToolbar(
     dirty: Boolean,
     editable: Boolean,
+    saveEnabled: Boolean,
+    saveLabel: String,
+    wordWrap: Boolean,
     canUndo: Boolean,
     canRedo: Boolean,
     supportsPreview: Boolean,
@@ -591,6 +744,7 @@ private fun EditorToolbar(
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onFind: () -> Unit,
+    onToggleWordWrap: () -> Unit,
     onTogglePreview: () -> Unit,
     onMore: () -> Unit,
 ) {
@@ -604,7 +758,9 @@ private fun EditorToolbar(
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 6.dp),
     ) {
-        EditorButton(if (dirty) "Salvar *" else "Salvar", enabled = editable && dirty, onClick = onSave)
+        EditorButton(if (wordWrap) "Quebra ✓" else "Quebra linha", onClick = onToggleWordWrap)
+        Spacer(Modifier.width(8.dp))
+        EditorButton(if (dirty) "$saveLabel *" else saveLabel, enabled = editable && saveEnabled && dirty, onClick = onSave)
         Spacer(Modifier.width(5.dp))
         EditorButton("Salvar como", enabled = editable, onClick = onSaveAs)
         Spacer(Modifier.width(8.dp))
@@ -862,8 +1018,10 @@ private class CodeEditText(context: Context) : EditText(context) {
     }
 
     private fun applyWordWrap(enabled: Boolean) {
+        setSingleLine(false)
         setHorizontallyScrolling(!enabled)
         isHorizontalScrollBarEnabled = !enabled
+        if (enabled && scrollX != 0) scrollTo(0, scrollY)
     }
 
     private val historyWatcher = object : TextWatcher {
@@ -1795,6 +1953,7 @@ private fun EditorSettingsDialog(
 private fun EditorMoreDialog(
     editable: Boolean,
     supportsPreview: Boolean,
+    wordWrap: Boolean,
     onDismiss: () -> Unit,
     onSelectAll: () -> Unit,
     onCopy: () -> Unit,
@@ -1802,6 +1961,7 @@ private fun EditorMoreDialog(
     onPaste: () -> Unit,
     onGoToLine: () -> Unit,
     onFindReplace: () -> Unit,
+    onToggleWordWrap: () -> Unit,
     onSettings: () -> Unit,
     onPreview: () -> Unit,
 ) {
@@ -1814,6 +1974,7 @@ private fun EditorMoreDialog(
             HorizontalDivider(color = Color(0xFFD3DCE6), modifier = Modifier.padding(vertical = 4.dp))
             EditorMenuRow("Localizar e substituir", true, onFindReplace)
             EditorMenuRow("Ir para linha", true, onGoToLine)
+            EditorMenuRow("Quebra automática de linha: ${if (wordWrap) "ativada" else "desativada"}", true, onToggleWordWrap)
             EditorMenuRow("Configurações do editor", true, onSettings)
             if (supportsPreview) EditorMenuRow("Visualizar preview", true, onPreview)
         }
@@ -2158,6 +2319,100 @@ private fun safeWriteTextFile(
         }
     } finally {
         if (temp.exists()) temp.delete()
+    }
+}
+
+private class ExternalContentChangedException : IllegalStateException()
+
+private fun encodeEditorText(
+    text: String,
+    encoding: EditorEncoding,
+    preferredLineEnding: String,
+): ByteArray {
+    val normalized = normalizeLineEndings(text, preferredLineEnding)
+    val body = normalized.toByteArray(encoding.charset)
+    return if (encoding.bom.isEmpty()) body else encoding.bom + body
+}
+
+private fun sha256Bytes(bytes: ByteArray): String =
+    MessageDigest.getInstance("SHA-256")
+        .digest(bytes)
+        .joinToString("") { "%02x".format(it) }
+
+private fun sha256Uri(context: Context, uri: Uri): String? = runCatching {
+    val digest = MessageDigest.getInstance("SHA-256")
+    context.contentResolver.openInputStream(uri)?.buffered()?.use { input ->
+        val buffer = ByteArray(32 * 1024)
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+        }
+    } ?: return@runCatching null
+    digest.digest().joinToString("") { "%02x".format(it) }
+}.getOrNull()
+
+private fun readUriBytesLimited(context: Context, uri: Uri, maxBytes: Int = 2_000_000): ByteArray? = runCatching {
+    context.contentResolver.openInputStream(uri)?.buffered()?.use { input ->
+        val output = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(32 * 1024)
+        var total = 0
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            total += read
+            if (total > maxBytes) return@runCatching null
+            output.write(buffer, 0, read)
+        }
+        output.toByteArray()
+    }
+}.getOrNull()
+
+private fun writeUriBytes(context: Context, uri: Uri, bytes: ByteArray) {
+    val resolver = context.contentResolver
+    val output = runCatching { resolver.openOutputStream(uri, "rwt") }.getOrNull()
+        ?: resolver.openOutputStream(uri, "w")
+        ?: error("O provedor não permitiu abrir o arquivo para escrita.")
+    output.buffered().use { stream ->
+        stream.write(bytes)
+        stream.flush()
+    }
+}
+
+private fun safeWriteTextUri(
+    context: Context,
+    uri: Uri,
+    text: String,
+    encoding: EditorEncoding,
+    preferredLineEnding: String,
+    expectedSha256: String?,
+): Result<String> = runCatching {
+    val bytes = encodeEditorText(text, encoding, preferredLineEnding)
+    val expectedAfterWrite = sha256Bytes(bytes)
+
+    if (!expectedSha256.isNullOrBlank()) {
+        val currentDigest = sha256Uri(context, uri)
+            ?: error("Não foi possível verificar o arquivo original antes de salvar.")
+        if (!currentDigest.equals(expectedSha256, ignoreCase = true)) {
+            throw ExternalContentChangedException()
+        }
+    }
+
+    // Mantém uma cópia curta do conteúdo anterior para tentar restaurar a origem caso
+    // o provedor falhe depois de começar a sobrescrita. Arquivos editáveis são limitados
+    // pelo próprio editor, portanto essa proteção não aumenta o consumo de memória sem limite.
+    val backup = readUriBytesLimited(context, uri)
+    try {
+        writeUriBytes(context, uri, bytes)
+        val persistedDigest = sha256Uri(context, uri)
+            ?: error("O arquivo foi gravado, mas não pôde ser validado depois da escrita.")
+        check(persistedDigest.equals(expectedAfterWrite, ignoreCase = true)) {
+            "A validação do conteúdo salvo falhou."
+        }
+        expectedAfterWrite
+    } catch (error: Throwable) {
+        if (backup != null) runCatching { writeUriBytes(context, uri, backup) }
+        throw error
     }
 }
 

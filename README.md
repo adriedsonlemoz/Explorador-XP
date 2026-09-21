@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.61` (`versionCode 61`)  
+**Versão atual:** `0.1.0-alpha.62` (`versionCode 62`)  
 
 ### Assinatura permanente dos APKs
 
@@ -14,6 +14,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 
 ## O que já está implementado
 
+- A alpha.62 torna a **quebra automática de linha** visível na barra e no menu do editor/visualizador, mantendo a preferência salva. Arquivos de texto recebidos por **Abrir com** agora podem ser editados sobre uma cópia de trabalho: quando a origem concede escrita, **Salvar original** grava de volta no `content://`; sem escrita, **Salvar como** usa o seletor de documentos do Android. Antes de sobrescrever a origem, o editor compara SHA-256 para detectar alterações feitas por outro aplicativo e evita perda silenciosa de dados.
 - A alpha.61 profissionaliza o **editor interno de texto/código** sem trocar seu componente leve: amplia o destaque de sintaxe, adiciona autoindentação e fechamento automático de pares, permite escolher TAB/espaços e quebra de linha, melhora números de linha e localizar/substituir com contagem de ocorrências, preserva desfazer/refazer e reduz varreduras/cópias de texto durante a digitação. O fluxo **Abrir com** continua seguro e somente leitura, mas agora mantém metadados da origem separados para preparar um futuro “Salvar de volta”.
 - A alpha.60 renova o **instalador/inspector de APK**: compara versão instalada × APK, valida compatibilidade de Android e ABI, compara assinatura SHA-256 quando há app instalado, lista permissões declaradas, mostra arquiteturas e bloqueia tentativas claramente incompatíveis antes de abrir o instalador do sistema.
 - A alpha.59 evolui o **navegador ZIP**: cria um índice hierárquico único com pastas implícitas, tamanho/contagem recursivos por pasta, breadcrumb clicável, pesquisa com caminho do resultado, seleção rápida com tamanho real selecionado, barra de status do nível atual e pré-visualização com progresso/cancelamento e cache temporário reutilizável.

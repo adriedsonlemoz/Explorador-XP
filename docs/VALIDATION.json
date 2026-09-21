@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.61",
-  "version_code": 61,
-  "manager_version": "0.1.0-alpha.61",
-  "manager_code": 61,
+  "version_build": "0.1.0-alpha.62",
+  "version_code": 62,
+  "manager_version": "0.1.0-alpha.62",
+  "manager_code": 62,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.61",
-      "code": 61
+      "version": "0.1.0-alpha.62",
+      "code": 62
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -45,20 +45,19 @@
     },
     "drawable_references": {
       "ok": true,
-      "references": 222,
+      "references": 133,
       "resource_names": 157,
       "missing": []
     },
     "kotlin_static_parser": {
       "ok": true,
       "syntax_markers": [],
-      "prior_ci_diagnostics_absent_after_patch": true,
-      "note": "kotlinc local foi executado sem Android/Compose/Media3 no classpath; referências Android ficam irresolvidas, mas não houve erro de parser nem reapareceram os dois diagnósticos reportados pelo CI."
+      "note": "TextCodeEditorViewer.kt e MainActivity.kt passaram pelo parser do kotlinc sem diagnósticos expecting/unclosed/unexpected-token. Referências Android/Compose ficam irresolvidas localmente porque o ambiente não possui Android SDK/classpath."
     },
     "image_resources_unchanged": {
       "ok": true,
       "current": 172,
-      "alpha36": 172,
+      "alpha61": 172,
       "added": [],
       "removed": [],
       "changed": []
@@ -79,7 +78,7 @@
     "full_gradle_android_build": {
       "ok": false,
       "executed": false,
-      "reason": "O ambiente local não possui Gradle/Android SDK configurados e o projeto não inclui gradlew. Foram executados compile-smokes Kotlin direcionados e validações estruturais."
+      "reason": "O projeto não inclui gradlew e este ambiente não possui Android SDK/Gradle Android configurados. Foram executados compile-smokes Kotlin direcionados e validações estruturais."
     },
     "trash_ui_refinement": {
       "ok": true,
@@ -478,7 +477,7 @@
       "compile_smoke": "ApkInspector.kt + ApkInspectorSupport.kt compiled successfully against Android API stubs that intentionally provide PackageInfoFlags but only getPermissionInfo(String, Int)."
     }
   },
-  "validated_at_utc": "2026-09-21T21:44:07Z",
+  "validated_at_utc": "2026-09-21T22:25:51Z",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -750,6 +749,31 @@
       "archive_viewer_parser_smoke": "No expecting/unclosed/unexpected-token diagnostics from kotlinc parser pass; unresolved Android/Compose symbols are expected without Android classpath.",
       "json_xml_parse": "3 JSON files and 12 XML files parsed successfully.",
       "image_resources_unchanged_from_alpha58": "165 image files byte-identical."
+    },
+    "alpha62_external_editing_and_word_wrap": {
+      "ok": true,
+      "focus": [
+        "word-wrap action visible directly in editor/viewer toolbar",
+        "word-wrap action also exposed in More and retained in editor settings",
+        "external ACTION_VIEW text files editable through cache working copy",
+        "save-back to original content URI only when write grant is present",
+        "CreateDocument fallback for external Save as",
+        "SHA-256 conflict detection before overwriting original URI",
+        "post-write SHA-256 verification and best-effort restore on provider failure",
+        "persistable URI grant retained when provider offers it"
+      ],
+      "external_uri_save_smoke": "Kotlin/JVM fake content-provider smoke passed: normal save, external-change conflict protection and Save-as/no-expected-hash path.",
+      "syntax_regex_smoke": "48 syntax configurations instantiated successfully with Kotlin/JVM.",
+      "line_index_randomized_smoke": "100000 randomized replace operations matched a full line-index rebuild after every edit.",
+      "kotlin_parser_smoke": "No expecting/unclosed/unexpected-token diagnostics in changed editor/activity files; unresolved Android/Compose symbols are expected without Android classpath.",
+      "json_parse": "3 files ok",
+      "xml_parse": "12 files ok",
+      "yaml_parse": "2 workflow files ok",
+      "image_resources_unchanged_from_alpha61": "172 image files byte-identical.",
+      "apk_workflows_unchanged_from_alpha61": true,
+      "generated_art_or_mockups": false,
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android SDK/Gradle Android toolchain."
     }
   },
   "source_diff_alpha51_against_alpha50": {
@@ -936,6 +960,23 @@
       "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
       "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
       "docs/ALPHA60_APK_INSTALLER.md",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha62_against_alpha61": {
+    "added": [
+      "docs/ALPHA62_EXTERNAL_EDITING_AND_WRAP.md"
+    ],
+    "changed": [
+      "CHANGELOG.md",
+      "README.md",
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/ExternalOpenOrigin.kt",
+      "app/src/main/java/com/exploradorxp/app/MainActivity.kt",
+      "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
       "docs/VALIDATION.json",
       "github-manager.json"
     ],

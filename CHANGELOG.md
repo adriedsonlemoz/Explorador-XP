@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.1.0-alpha.62
+
+- A quebra automática de linha deixa de ficar escondida apenas nas configurações: agora há ação direta **Quebra linha** na barra do editor/visualizador e a mesma opção também aparece em **Mais**.
+- O estado da quebra de linha continua persistente entre arquivos e funciona também em modo somente leitura, eliminando a necessidade de rolagem horizontal quando ativado.
+- Arquivos de texto/código recebidos por **Abrir com** passam a permitir edição sobre a cópia segura do cache.
+- Quando o aplicativo de origem concede `FLAG_GRANT_WRITE_URI_PERMISSION`, a ação **Salvar original** grava explicitamente de volta na URI recebida; sem essa permissão, o botão não tenta sobrescrever a origem.
+- **Salvar como** para arquivos recebidos externamente passa a usar o seletor `CreateDocument` do Android, evitando salvar uma cópia dentro do cache temporário que seria apagado ao fechar.
+- A versão original do arquivo externo recebe um SHA-256 ao ser aberta. Antes de **Salvar original**, o conteúdo atual da URI é comparado com esse hash; se outro aplicativo alterou o arquivo, o Explorador XP interrompe a sobrescrita e orienta usar **Salvar como**.
+- A gravação em `content://` valida o SHA-256 após escrever e tenta restaurar uma cópia curta do conteúdo anterior se o provedor falhar durante a sobrescrita.
+- Permissões persistíveis oferecidas pelo provedor são conservadas quando disponíveis, sem alterar a identidade do aplicativo.
+- Mantidos destaque de sintaxe, autoindentação, pares automáticos, números de linha, localizar/substituir, desfazer/refazer, UTF-8 e proteções para arquivos grandes da alpha.61.
+- Nenhuma imagem ou mockup foi criada ou modificada.
+- README, tela Sobre, documentação, validações e `github-manager.json` atualizados.
+- Versão sincronizada para `0.1.0-alpha.62` / `versionCode 62`.
+
 ## 0.1.0-alpha.61
 
 - Corrigida falha de compilação no inspetor de APK: `getPermissionInfo()` volta a usar o overload compatível com `Int`, removendo a referência inválida a `PackageManager.PermissionInfoFlags`.

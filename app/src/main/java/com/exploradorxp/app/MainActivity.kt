@@ -52,6 +52,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.security.MessageDigest
 
 private const val EXTRA_PERFORMANCE_START_PATH = "com.exploradorxp.app.extra.PERFORMANCE_START_PATH"
 
@@ -117,6 +118,13 @@ class MainActivity : ComponentActivity() {
     private fun updateExternalOpenRequest(sourceIntent: Intent?) {
         if (sourceIntent?.action != Intent.ACTION_VIEW) return
         val uri = sourceIntent.data ?: return
+        if (sourceIntent.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION != 0) {
+            val takeFlags = sourceIntent.flags and
+                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            if (takeFlags != 0) {
+                runCatching { contentResolver.takePersistableUriPermission(uri, takeFlags) }
+            }
+        }
         externalOpenSequence += 1
         externalOpenRequest = ExternalOpenRequest(
             id = externalOpenSequence,
@@ -429,8 +437,22 @@ private suspend fun prepareExternalFile(context: Context, request: ExternalOpenR
                 grantReadPermission = request.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0,
                 grantWritePermission = request.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION != 0,
                 grantPersistablePermission = request.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION != 0,
+                sourceSha256 = sha256File(destination),
             ),
         )
+    }
+
+private fun sha256File(file: File): String =
+    MessageDigest.getInstance("SHA-256").let { digest ->
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(32 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read <= 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        digest.digest().joinToString("") { "%02x".format(it) }
     }
 
 private fun queryDisplayName(context: Context, uri: Uri): String? = runCatching {
