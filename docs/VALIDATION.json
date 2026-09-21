@@ -293,7 +293,7 @@
       "full_android_build_reason": "Project still has no gradlew and this environment has no Android Gradle toolchain configured."
     }
   },
-  "validated_at_utc": "2026-09-20T04:51:20.022734+00:00",
+  "validated_at_utc": "2026-09-21T12:57:49.458734+00:00",
   "source_diff_against_alpha36": {
     "added": [
       "docs/ALPHA37_BUILD_FIX_NOTES.md",
@@ -381,5 +381,38 @@
       "github-manager.json"
     ],
     "removed": []
+  },
+  "validations": {
+    "alpha50_text_editor_init_fix": {
+      "ok": true,
+      "root_cause": "CodeEditText.onSelectionChanged can be called from the Android TextView/EditText superclass constructor before Kotlin subclass fields are initialized; direct invocation of callbackTextState could therefore dereference null in minified builds.",
+      "fix": [
+        "callbackTextState and callbackHistoryState nullable until configure()",
+        "all callback invocations use safe ?.invoke",
+        "editor features preserved"
+      ],
+      "affected_formats": [
+        "md",
+        "txt",
+        "log",
+        "html",
+        "htm",
+        "css",
+        "js",
+        "json",
+        "xml",
+        "yaml",
+        "yml",
+        "csv",
+        "ini",
+        "properties",
+        "kt",
+        "java"
+      ],
+      "full_android_build_executed": false,
+      "full_android_build_reason": "Project has no gradlew and this environment has no configured Android Gradle toolchain.",
+      "jvm_super_constructor_dispatch_smoke": "Pure Kotlin smoke reproduced the pre-initialization callback NPE with a non-null Function2 field and passed with the nullable safe-invoke pattern used by alpha.50.",
+      "kotlin_parser_smoke": "TextCodeEditorViewer.kt produced only expected unresolved Android/Compose references without an Android classpath; no parser diagnostics were found."
+    }
   }
 }

@@ -663,8 +663,12 @@ private class CodeEditText(context: Context) : EditText(context) {
     private var beforeText = ""
     private var pendingInsertedLength = 0
     private var editorReadOnly = false
-    private var callbackTextState: (String, Int) -> Unit = { _, _ -> }
-    private var callbackHistoryState: (EditorHistoryState) -> Unit = {}
+    // Android/TextView pode chamar onSelectionChanged() ainda durante o construtor da superclasse,
+    // antes de os campos desta subclasse terem sido inicializados. Em builds minificados isso aparecia
+    // como uma chamada de Function2 em uma referência nula e fazia o editor cair no fallback.
+    // Mantemos os callbacks anuláveis até configure() terminar para que eventos precoces sejam ignorados.
+    private var callbackTextState: ((String, Int) -> Unit)? = null
+    private var callbackHistoryState: ((EditorHistoryState) -> Unit)? = null
     private var sourceExtension: String = ""
     private var syntaxHighlightEnabled = false
     private val highlightHandler = Handler(Looper.getMainLooper())
@@ -714,7 +718,7 @@ private class CodeEditText(context: Context) : EditText(context) {
         suppressHistory = false
         if (!readOnly) setSelection(0)
         addTextChangedListener(historyWatcher)
-        callbackTextState(text?.toString().orEmpty(), selectionStart.coerceAtLeast(0))
+        callbackTextState?.invoke(text?.toString().orEmpty(), selectionStart.coerceAtLeast(0))
         notifyHistory()
         scheduleHighlight()
     }
@@ -748,7 +752,7 @@ private class CodeEditText(context: Context) : EditText(context) {
                 }
             }
             updateGutterPadding(current)
-            callbackTextState(current, selectionStart.coerceAtLeast(0))
+            callbackTextState?.invoke(current, selectionStart.coerceAtLeast(0))
             notifyHistory()
             scheduleHighlight()
             invalidate()
@@ -758,7 +762,7 @@ private class CodeEditText(context: Context) : EditText(context) {
 
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
-        callbackTextState(text?.toString().orEmpty(), selStart.coerceAtLeast(0))
+        callbackTextState?.invoke(text?.toString().orEmpty(), selStart.coerceAtLeast(0))
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -806,7 +810,7 @@ private class CodeEditText(context: Context) : EditText(context) {
             setSelection((op.start + op.after.length).coerceIn(0, editable.length))
         }
         suppressHistory = false
-        callbackTextState(editable.toString(), selectionStart.coerceAtLeast(0))
+        callbackTextState?.invoke(editable.toString(), selectionStart.coerceAtLeast(0))
         scheduleHighlight()
         invalidate()
     }
@@ -826,7 +830,7 @@ private class CodeEditText(context: Context) : EditText(context) {
     fun isReadOnlyMode(): Boolean = editorReadOnly
 
     private fun notifyHistory() {
-        callbackHistoryState(EditorHistoryState(undoStack.isNotEmpty(), redoStack.isNotEmpty()))
+        callbackHistoryState?.invoke(EditorHistoryState(undoStack.isNotEmpty(), redoStack.isNotEmpty()))
     }
 
     private fun scheduleHighlight() {

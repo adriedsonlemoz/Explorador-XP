@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.1.0-alpha.50
+
+- Corrigida a falha ao abrir arquivos Markdown e outros textos no editor interno, exibida como `Attempt to invoke interface method ... on a null object reference`.
+- A causa era um callback Kotlin do `CodeEditText` acessado por `onSelectionChanged()` durante a construção do `EditText`, antes da inicialização dos campos da subclasse; em builds minificados a interface aparecia com nome obfuscado.
+- Callbacks de texto/histórico agora são anuláveis durante a construção e só são invocados com segurança após `configure()`, evitando o fallback de erro sem alterar os recursos do editor.
+- Versão sincronizada para `0.1.0-alpha.50` / `versionCode 50`.
+
 ## 0.1.0-alpha.49
 
 - Visualizador de APK redesenhado com card de identidade do aplicativo, status de instalação mais claro e painel de informações com separadores.

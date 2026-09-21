@@ -1455,10 +1455,10 @@ private fun AboutDialog(
                     Spacer(Modifier.height(10.dp))
                     AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                         listOf(
-                            "Atualizar saiu da barra de ícones e agora fica no menu Exibir, liberando espaço no topo.",
-                            "A barra inferior ganhou uma área maior para armazenamento e mostra livre + percentual usado em uma única linha.",
-                            "A contagem da pasta agora soma arquivos, subpastas e tamanho também dentro das subpastas, sem travar a interface.",
-                            "O visualizador APK corrige a detecção de apps instalados e abre diretamente o instalador do Android, incluindo a permissão para instalar desta fonte.",
+                            "Corrigida a abertura de Markdown e outros arquivos de texto/código no editor interno.",
+                            "O editor agora ignora eventos de seleção disparados cedo demais pelo Android durante sua própria inicialização.",
+                            "Edição, números de linha, localizar/substituir, desfazer/refazer e salvamento seguro foram preservados.",
+                            "O fallback de erro continua disponível apenas para falhas reais de inicialização, sem fechar o aplicativo.",
                         ).forEach { change ->
                             Text("• $change", fontSize = 11.5.sp, color = Color(0xFF303030), lineHeight = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
                         }
