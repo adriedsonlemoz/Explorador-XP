@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.64",
-  "version_code": 64,
-  "manager_version": "0.1.0-alpha.64",
-  "manager_code": 64,
+  "version_build": "0.1.0-alpha.65",
+  "version_code": 65,
+  "manager_version": "0.1.0-alpha.65",
+  "manager_code": 65,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.64",
-      "code": 64
+      "version": "0.1.0-alpha.65",
+      "code": 65
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -57,7 +57,7 @@
     "image_resources_unchanged": {
       "ok": true,
       "current": 172,
-      "alpha61": 172,
+      "alpha64": 172,
       "added": [],
       "removed": [],
       "changed": []
@@ -66,11 +66,11 @@
       "ok": true,
       "workflows": [
         {
-          "file": ".github/workflows/desempenho.yml",
+          "file": ".github/workflows/gerar-apk.yml",
           "unchanged": true
         },
         {
-          "file": ".github/workflows/gerar-apk.yml",
+          "file": ".github/workflows/desempenho.yml",
           "unchanged": true
         }
       ]
@@ -78,7 +78,7 @@
     "full_gradle_android_build": {
       "ok": false,
       "executed": false,
-      "reason": "O projeto nao inclui gradlew e este ambiente nao possui Gradle/Android SDK configurados. O log do GitHub Actions fornecido confirma compileDebugKotlin e testDebugUnitTest bem-sucedidos na alpha.63; a alpha.64 altera apenas o uso das flags persistiveis e metadados."
+      "reason": "O projeto não inclui gradlew e este ambiente não possui Gradle/Android SDK configurados. A nova lógica de detecção foi compilada e executada isoladamente com kotlinc/JVM; os arquivos Android alterados passaram por varredura sintática sem marcadores de erro."
     },
     "trash_ui_refinement": {
       "ok": true,
@@ -541,6 +541,23 @@
       },
       "application_id": "com.exploradorxp.app",
       "wrongconstant_suppression_used": false
+    },
+    "alpha65_content_detection": {
+      "ok": true,
+      "reference_file": "EditaAi-0.1.0-alpha.3",
+      "reference_detected_as": "zip",
+      "contained_entry": "EditaAi-0.1.0-alpha.3.apk",
+      "smoke_tests": [
+        "extensionless ZIP",
+        "extensionless APK",
+        "PDF signature",
+        "PNG signature",
+        "text heuristic",
+        "binary rejection",
+        "DOCX guard"
+      ],
+      "main_thread_guard": "normal OpenFile flow resolves support in Dispatchers.IO",
+      "cache": "path + size + lastModified, bounded by periodic clear"
     }
   },
   "validated_at_utc": "2026-09-21T22:25:51Z",

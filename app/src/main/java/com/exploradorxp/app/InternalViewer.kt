@@ -100,9 +100,13 @@ private sealed interface ViewerLoadState<out T> {
 
 fun supportsInternalViewer(file: File): Boolean {
     val ext = file.extension.lowercase()
-    return ext in imageExtensions || ext in videoExtensions || ext in audioExtensions ||
+    if (ext in imageExtensions || ext in videoExtensions || ext in audioExtensions ||
         ext in textExtensions || ext in setOf("html", "htm", "pdf", "zip", "apk") ||
         file.name.lowercase() in textFileNames
+    ) return true
+
+    if (!FileContentDetector.needsContentDetection(file)) return false
+    return FileContentDetector.detectExtension(file) != null
 }
 
 @Composable
@@ -119,7 +123,15 @@ fun InternalViewerScreen(
     var activeFilePath by rememberSaveable(file.absolutePath) { mutableStateOf(file.absolutePath) }
     var returnToArchivePath by rememberSaveable(file.absolutePath) { mutableStateOf<String?>(null) }
     val activeFile = remember(activeFilePath) { File(activeFilePath) }
-    val extension = activeFile.extension.lowercase()
+    val physicalExtension = activeFile.extension.lowercase()
+    val extension = remember(activeFilePath, activeFile.length(), activeFile.lastModified()) {
+        if (FileContentDetector.needsContentDetection(activeFile)) {
+            FileContentDetector.detectExtension(activeFile) ?: physicalExtension
+        } else {
+            physicalExtension
+        }
+    }
+    val typeDetectedFromContent = extension.isNotBlank() && extension != physicalExtension
     val isVideo = extension in videoExtensions
     val isExternalText = remember(externalMimeType) {
         ExternalOpenSupport.normalizeMime(externalMimeType).startsWith("text/")
@@ -159,8 +171,8 @@ fun InternalViewerScreen(
             .background(if (isVideo) Color.Black else Color(0xFFF6F2E8))
     ) {
         if (!contentFullScreen) {
-            ViewerTitleBar(activeFile, requestClose)
-            ViewerToolbar(activeFile) { onOpenExternal(activeFile) }
+            ViewerTitleBar(activeFile, extension, requestClose)
+            ViewerToolbar(activeFile, extension, typeDetectedFromContent) { onOpenExternal(activeFile) }
             HorizontalDivider(color = Color(0xFFB8C7DA))
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -228,12 +240,12 @@ fun InternalViewerScreen(
                 }
             }
         }
-        if (!contentFullScreen) ViewerStatusBar(activeFile)
+        if (!contentFullScreen) ViewerStatusBar(activeFile, extension, typeDetectedFromContent)
     }
 }
 
 @Composable
-private fun ViewerTitleBar(file: File, onClose: () -> Unit) {
+private fun ViewerTitleBar(file: File, resolvedExtension: String, onClose: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -243,7 +255,7 @@ private fun ViewerTitleBar(file: File, onClose: () -> Unit) {
             .padding(horizontal = 7.dp)
     ) {
         CachedResourceIcon(
-            resId = FileIconMapper.iconFor(file),
+            resId = FileIconMapper.iconForResolvedExtension(file, resolvedExtension),
             contentDescription = null,
             modifier = Modifier.size(25.dp),
             contentScale = ContentScale.Fit,
@@ -272,8 +284,20 @@ private fun ViewerTitleBar(file: File, onClose: () -> Unit) {
 }
 
 @Composable
-private fun ViewerToolbar(file: File, onOpenExternal: () -> Unit) {
-    val typeLabel = remember(file.absolutePath) { FileTypeClassifier.labelFor(file, false) }
+private fun ViewerToolbar(
+    file: File,
+    resolvedExtension: String,
+    detectedFromContent: Boolean,
+    onOpenExternal: () -> Unit,
+) {
+    val typeLabel = remember(file.absolutePath, resolvedExtension, detectedFromContent) {
+        val base = if (resolvedExtension.isBlank()) {
+            FileTypeClassifier.labelFor(file, false)
+        } else {
+            FileTypeClassifier.labelForExtension(resolvedExtension)
+        }
+        if (detectedFromContent) "$base • detectado pelo conteúdo" else base
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -1170,8 +1194,15 @@ private fun UnsupportedMessage(message: String) {
 }
 
 @Composable
-private fun ViewerStatusBar(file: File) {
-    val extension = remember(file.absolutePath) { FileTypeClassifier.labelFor(file, false) }
+private fun ViewerStatusBar(file: File, resolvedExtension: String, detectedFromContent: Boolean) {
+    val extension = remember(file.absolutePath, resolvedExtension, detectedFromContent) {
+        val base = if (resolvedExtension.isBlank()) {
+            FileTypeClassifier.labelFor(file, false)
+        } else {
+            FileTypeClassifier.labelForExtension(resolvedExtension)
+        }
+        if (detectedFromContent) "$base (detectado)" else base
+    }
     val size = remember(file.absolutePath, file.lastModified()) { file.length() }
     val parent = remember(file.absolutePath) { file.parentFile?.name.orEmpty() }
     Row(

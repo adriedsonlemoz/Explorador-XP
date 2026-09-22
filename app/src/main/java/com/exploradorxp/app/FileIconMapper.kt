@@ -90,8 +90,16 @@ object FileIconMapper {
 
     fun iconFor(file: File, isDirectory: Boolean): Int {
         if (isDirectory) return folderIconFor(file.name)
-        return extensionMap[file.extension.lowercase()] ?: R.drawable.file_unknown
+        return iconForExtension(file.extension)
     }
+
+    fun iconForResolvedExtension(file: File, resolvedExtension: String): Int {
+        if (file.isDirectory) return folderIconFor(file.name)
+        return iconForExtension(resolvedExtension)
+    }
+
+    private fun iconForExtension(extension: String): Int =
+        extensionMap[extension.lowercase()] ?: R.drawable.file_unknown
 
     private fun folderIconFor(name: String): Int = when (name.lowercase()) {
         "download", "downloads" -> R.drawable.folder_downloads

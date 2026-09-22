@@ -2,8 +2,9 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.64` (`versionCode 64`)  
+**Versão atual:** `0.1.0-alpha.65` (`versionCode 65`)  
 
+- A alpha.65 adiciona **detecção de tipo pelo conteúdo** para arquivos sem extensão, com extensão desconhecida ou genérica. ZIP/APK, PDF, PNG/JPEG/GIF/BMP/WebP e texto podem ser reconhecidos pela assinatura/conteúdo e encaminhados ao visualizador interno correto. O arquivo `EditaAi-0.1.0-alpha.3`, que é um ZIP sem extensão contendo um APK, passa a abrir no navegador ZIP normalmente.
 - A alpha.64 corrige o bloqueio de Lint `WrongConstant` no fluxo **Abrir com**: permissões persistentes de leitura/escrita agora são solicitadas somente com combinações explícitas aceitas pela API Android, mantendo todo o modo de arquivos grandes da alpha.63.
 
 ### Assinatura permanente dos APKs

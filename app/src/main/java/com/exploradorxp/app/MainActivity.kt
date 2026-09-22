@@ -199,7 +199,8 @@ private fun ExplorerApp(
         viewModel.events.collectLatest { event ->
             when (event) {
                 is ExplorerEvent.OpenFile -> {
-                    if (supportsInternalViewer(event.file)) {
+                    val supportsInternal = withContext(Dispatchers.IO) { supportsInternalViewer(event.file) }
+                    if (supportsInternal) {
                         viewerCleanupDirectory?.let { File(it).deleteRecursively() }
                         viewerCleanupDirectory = null
                         viewerMimeType = null

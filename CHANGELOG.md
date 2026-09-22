@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.65
+
+- Adicionada detecção de tipo pelo conteúdo para arquivos sem extensão, com extensão desconhecida ou genérica (`.bin`, `.dat`, `.tmp`, `.download`, `.file`).
+- ZIPs sem extensão passam a abrir no navegador interno de compactados. O arquivo de referência `EditaAi-0.1.0-alpha.3` foi identificado como ZIP válido contendo `EditaAi-0.1.0-alpha.3.apk`.
+- APKs sem extensão são diferenciados de ZIP comum pela presença de `AndroidManifest.xml` junto de `classes.dex`/`resources.arsc` e abrem no inspector de APK.
+- Também há fallback por assinatura para PDF, PNG, JPEG, GIF, BMP e WebP, além de heurística conservadora para texto.
+- A detecção não substitui extensões conhecidas: DOCX/XLSX/PPTX e demais formatos conhecidos não são reclassificados apenas porque internamente usam ZIP.
+- O fluxo normal de abertura executa a detecção fora da thread principal e usa cache curto baseado em caminho, tamanho e data de modificação.
+- O visualizador mostra o tipo detectado e usa o ícone correspondente durante a visualização.
+- `applicationId`/namespace preservados como `com.exploradorxp.app`.
+- Versão sincronizada para `0.1.0-alpha.65` / `versionCode 65`.
+
 ## 0.1.0-alpha.64
 
 - Corrigido o erro de Lint `WrongConstant` em `MainActivity.updateExternalOpenRequest()` relatado no `Gerar-APK-61-logs.zip`.

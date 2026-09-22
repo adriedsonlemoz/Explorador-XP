@@ -48,6 +48,8 @@ object FileTypeClassifier {
         return labels[ext] ?: if (ext.isBlank()) "Arquivo sem extensão" else "Arquivo ${ext.uppercase()}"
     }
 
+    fun isKnownExtension(extension: String): Boolean = extension.lowercase() in labels
+
     fun storageCategory(extension: String): Pair<String, String> {
         val ext = extension.lowercase()
         return when {
