@@ -1488,10 +1488,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Arquivos de texto grandes agora usam modo paginado: somente o trecho atual fica carregado na memória.",
-                    "É possível editar e salvar o trecho atual, navegar por trechos e ir diretamente para uma linha sem carregar o arquivo inteiro.",
-                    "A busca global percorre o arquivo por streaming, mostra progresso e pode ser cancelada.",
-                    "Realce de sintaxe acompanha apenas a área visível e o histórico usa limite de memória mais conservador no modo grande.",
+                    "Arquivos compactados ganharam cabeçalho mais organizado, métricas claras e ações Extrair/Abrir com em destaque.",
+                    "A janela Info do ZIP agora separa informações gerais, conteúdo e origem, com atalhos úteis do arquivo.",
+                    "Informações do dispositivo tentam mostrar primeiro o nome comercial conhecido do processador, mantendo o identificador técnico.",
+                    "GPU e processo de fabricação aparecem somente quando o SoC pode ser identificado com segurança pelo catálogo interno.",
                 ).forEach { change ->
                     Text(
                         "• $change",

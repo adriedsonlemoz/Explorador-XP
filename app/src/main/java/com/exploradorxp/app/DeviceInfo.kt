@@ -405,6 +405,7 @@ object DeviceInfoCollector {
 }
 
 fun DeviceInfoSnapshot.toAiReport(): String = buildString {
+    val socIdentity = DeviceSoCResolver.resolve(socManufacturer, socModel, hardware)
     appendLine("EXPLORADOR XP - RELATORIO DO DISPOSITIVO")
     appendLine("schema_version=3")
     appendLine("generated_at=$collectedAt")
@@ -439,8 +440,14 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("kernel=${reportValue(kernelVersion)}")
     appendLine()
     appendLine("[processor]")
+    appendLine("commercial_name=${reportValue(socIdentity.commercialName ?: "Nao identificado com seguranca")}")
     appendLine("soc_manufacturer=${reportValue(socManufacturer ?: "Nao disponivel")}")
     appendLine("soc_model=${reportValue(socModel ?: "Nao disponivel")}")
+    appendLine("resolved_manufacturer=${reportValue(socIdentity.manufacturer ?: "Nao disponivel")}")
+    appendLine("technical_id=${reportValue(socIdentity.technicalId)}")
+    appendLine("gpu=${reportValue(socIdentity.gpu ?: "Nao disponivel")}")
+    appendLine("manufacturing_process=${reportValue(socIdentity.processLabel ?: "Nao disponivel")}")
+    appendLine("commercial_name_catalog_match=${socIdentity.matchedCatalog}")
     appendLine("hardware=${reportValue(hardware)}")
     appendLine("cpu_cores=$cpuCores")
     appendLine("is_64_bit=$is64Bit")
@@ -539,10 +546,13 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
 }
 
 fun DeviceInfoSnapshot.toShareSummary(): String = buildString {
+    val socIdentity = DeviceSoCResolver.resolve(socManufacturer, socModel, hardware)
     appendLine("Explorador XP — Informações do dispositivo")
     appendLine("${deviceName} • ${manufacturer.smartReportTitle()} ${model}")
     appendLine("Android ${androidVersion} • API ${apiLevel} • Patch ${securityPatch}")
-    appendLine("Processador: ${listOfNotNull(socManufacturer, socModel).joinToString(" ").ifBlank { hardware }}")
+    appendLine("Processador: ${if (socIdentity.commercialName != null) "${socIdentity.commercialName} • ${socIdentity.technicalLabel}" else socIdentity.technicalLabel}")
+    socIdentity.gpu?.let { appendLine("GPU: $it") }
+    socIdentity.processLabel?.let { appendLine("Fabricação: $it") }
     appendLine("CPU: ${cpuCores} núcleos • ${if (is64Bit) "64 bits" else "32 bits"} • ${supportedAbis.firstOrNull() ?: "ABI N/D"}")
     if (cpuMaxFrequenciesMhz.isNotEmpty()) appendLine("Clock: ${cpuFrequencySummary(this@toShareSummary)}")
     appendLine("RAM: ${humanBytes(ramTotalBytes)} • ${humanBytes(ramAvailableBytes)} livre")

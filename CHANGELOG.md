@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.1.0-alpha.66
+
+- Redesenhado o cabeçalho do navegador ZIP para concentrar nome, tipo, indicação de detecção por conteúdo, tamanho do arquivo, contagem de arquivos/pastas, bytes compactados/descompactados e taxa de compressão.
+- **Extrair** e **Abrir com** passam a ser as ações principais; **Verificar** e **Info** permanecem visíveis, enquanto a ordenação fica acessível diretamente na linha de classificação.
+- Pesquisa, seleção, menu de três pontos, breadcrumb, navegação interna, senha, verificação de integridade, preview e extração parcial/total foram preservados.
+- Barra inferior do ZIP deixa de repetir o resumo da raiz e passa a aparecer apenas quando fornece contexto adicional de pesquisa ou pasta interna.
+- Janela **Informações do arquivo compactado** reorganizada nas seções Informações gerais, Conteúdo e Origem, com método/taxa de compressão, origem da identificação, modificação e ações para copiar caminho, compartilhar, abrir pasta e extrair.
+- Adicionado `DeviceSoCResolver`, um catálogo conservador e expansível por aliases exatos para apresentar nome comercial do SoC sem espalhar condicionais pela interface e sem inferir modelos desconhecidos.
+- Tela **Dispositivo**, resumo compartilhável e relatório para IA agora priorizam o nome comercial reconhecido e preservam fabricante, identificador técnico, CPU, arquitetura, frequências e hardware; GPU e processo de fabricação aparecem somente quando cadastrados para uma correspondência segura.
+- Cobertura unitária adicionada para resolução de MT6765/SM6225/SDM660, diferenciação SM6225-AD e fallback seguro de SoC desconhecido, além da apresentação de métodos de compressão.
+- Versão sincronizada para `0.1.0-alpha.66` / `versionCode 66`, sem alterar `applicationId` ou identidade do app.
+
 ## 0.1.0-alpha.65
 
 - Adicionada detecção de tipo pelo conteúdo para arquivos sem extensão, com extensão desconhecida ou genérica (`.bin`, `.dat`, `.tmp`, `.download`, `.file`).

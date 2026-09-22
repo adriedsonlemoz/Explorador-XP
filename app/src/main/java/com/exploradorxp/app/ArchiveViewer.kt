@@ -1,6 +1,10 @@
 package com.exploradorxp.app
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
@@ -60,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
@@ -112,6 +117,7 @@ internal fun ArchiveZipViewer(
     val selectedBytes = remember(archiveInfo, selected) {
         archiveInfo?.let { ArchiveManager.requiredBytes(it, selected.takeIf { paths -> paths.isNotEmpty() }) } ?: 0L
     }
+    val archiveType = remember(file.absolutePath, file.length(), file.lastModified()) { archiveTypeSummary(file) }
 
     BackHandler(enabled = selected.isNotEmpty() || currentPath.isNotBlank() || query.isNotBlank()) {
         when {
@@ -182,11 +188,11 @@ internal fun ArchiveZipViewer(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(XpPanel)
+                .background(Color(0xFFF3F7FC))
                 .border(1.dp, XpChromeBorder)
-                .padding(horizontal = 7.dp, vertical = 6.dp),
+                .padding(horizontal = 9.dp, vertical = 9.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
                 ArchiveHeaderIconButton(
                     icon = R.drawable.up,
                     label = "Subir",
@@ -195,37 +201,66 @@ internal fun ArchiveZipViewer(
                     currentPath = currentPath.substringBeforeLast('/', "")
                     selected = emptySet()
                 }
-                Spacer(Modifier.width(7.dp))
+                Spacer(Modifier.width(9.dp))
                 Column(Modifier.weight(1f)) {
-                    val countText = browserIndex?.let { "${it.totalFiles} arquivos • ${it.totalDirectories} pastas" } ?: "Lendo conteúdo..."
-                    Text(countText, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (archiveInfo != null) {
-                        val ratio = archiveInfo.compressionRatio?.let { " • compressão $it%" }.orEmpty()
-                        Text(
-                            "${archiveFormatBytes(file.length())} compactado • ${archiveFormatBytes(archiveInfo.uncompressedBytes)} descompactado$ratio",
-                            fontSize = 10.sp,
-                            color = XpTextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                    Text(
+                        file.name,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF173A67),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    ) {
+                        ArchiveBadge(archiveType.typeLabel)
+                        if (archiveType.detectedByContent) ArchiveBadge("Detectado pelo conteúdo", emphasized = true)
                     }
                 }
             }
-            Spacer(Modifier.height(7.dp))
+            if (archiveInfo != null) {
+                Spacer(Modifier.height(9.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    ArchiveMetric("Tamanho", archiveFormatBytes(file.length()), Modifier.weight(1f))
+                    ArchiveMetric("Arquivos", (browserIndex?.totalFiles ?: archiveInfo.fileCount).toString(), Modifier.weight(1f))
+                    ArchiveMetric("Pastas", (browserIndex?.totalDirectories ?: archiveInfo.directoryCount).toString(), Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    ArchiveMetric("Compactado", archiveFormatBytes(archiveInfo.compressedBytes), Modifier.weight(1f))
+                    ArchiveMetric("Descompactado", archiveFormatBytes(archiveInfo.uncompressedBytes), Modifier.weight(1f))
+                    ArchiveMetric("Compressão", archiveInfo.compressionRatio?.let { "$it%" } ?: "N/D", Modifier.weight(1f))
+                }
+            } else {
+                Spacer(Modifier.height(8.dp))
+                Text("Lendo conteúdo do arquivo compactado…", fontSize = 10.5.sp, color = XpTextSecondary)
+            }
+            Spacer(Modifier.height(9.dp))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                ArchiveActionButton("Info", R.drawable.info, archiveInfo != null) { showArchiveDetails = true }
-                ArchiveActionButton("Verificar", R.drawable.check, archiveInfo != null) { verifyArchive() }
-                ArchiveActionButton(
+                ArchivePrimaryActionButton(
                     if (selected.isEmpty()) "Extrair" else "Extrair ${selected.size}",
                     R.drawable.folder_open,
-                    archiveInfo != null,
+                    modifier = Modifier.weight(1f),
+                    enabled = archiveInfo != null,
                 ) { showExtraction = true }
-                ArchiveActionButton("Ordenar", R.drawable.sort, archiveInfo != null) { showSortMenu = true }
+                ArchivePrimaryActionButton(
+                    "Abrir com",
+                    R.drawable.folder_open,
+                    modifier = Modifier.weight(1f),
+                    enabled = true,
+                ) { onOpenExternal(file) }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                ArchiveSecondaryActionButton("Verificar", R.drawable.check, Modifier.weight(1f), archiveInfo != null) { verifyArchive() }
+                ArchiveSecondaryActionButton("Info", R.drawable.info, Modifier.weight(1f), archiveInfo != null) { showArchiveDetails = true }
             }
         }
 
@@ -243,7 +278,7 @@ internal fun ArchiveZipViewer(
                     selected = emptySet()
                 }
             }
-            Box {
+            Box(modifier = Modifier.clickable(enabled = archiveInfo != null) { showSortMenu = true }.padding(vertical = 5.dp)) {
                 Text(
                     "Classificação: ${when (sortMode) {
                         ArchiveSortMode.NAME -> "Nome"
@@ -454,8 +489,6 @@ internal fun ArchiveZipViewer(
         val folderInfo = browserIndex?.itemsByPath?.get(currentPath.trim('/'))
         val statusText = when {
             query.isNotBlank() -> if (visibleItems.size == 1) "1 resultado • pesquisa em todo o ZIP" else "${visibleItems.size} resultados • pesquisa em todo o ZIP"
-            currentPath.isBlank() && browserIndex != null && archiveInfo != null ->
-                "${browserIndex.totalFiles} arquivos • ${browserIndex.totalDirectories} pastas • ${archiveFormatBytes(archiveInfo.uncompressedBytes)}"
             folderInfo != null ->
                 "${folderInfo.descendantFiles} arquivos • ${folderInfo.descendantDirectories} pastas • ${archiveFormatBytes(folderInfo.size)}"
             else -> ""
@@ -489,7 +522,21 @@ internal fun ArchiveZipViewer(
     }
 
     if (showArchiveDetails && archiveInfo != null) {
-        ArchiveInfoDialog(file, archiveInfo, browserIndex) { showArchiveDetails = false }
+        ArchiveInfoDialog(
+            file = file,
+            info = archiveInfo,
+            index = browserIndex,
+            archiveType = archiveType,
+            onDismiss = { showArchiveDetails = false },
+            onOpenFolder = {
+                showArchiveDetails = false
+                file.parentFile?.let(onOpenFolder)
+            },
+            onExtract = {
+                showArchiveDetails = false
+                showExtraction = true
+            },
+        )
     }
 
     verifyProgress?.let { progress ->
@@ -1013,20 +1060,96 @@ private fun ArchivePasswordDialog(onDismiss: () -> Unit, onConfirm: (String) -> 
 }
 
 @Composable
-private fun ArchiveInfoDialog(file: File, info: ZipArchiveInfo, index: ArchiveBrowserIndex?, onDismiss: () -> Unit) {
-    XpDialogFrame(title = "Informações do ZIP", onDismiss = onDismiss) {
-        ArchiveInfoLine("Arquivo", file.name)
-        ArchiveInfoLine("Tamanho", archiveFormatBytes(file.length()))
-        ArchiveInfoLine("Descompactado", archiveFormatBytes(info.uncompressedBytes))
-        ArchiveInfoLine("Arquivos", (index?.totalFiles ?: info.fileCount).toString())
-        ArchiveInfoLine("Pastas", (index?.totalDirectories ?: info.directoryCount).toString())
-        ArchiveInfoLine("Itens", ((index?.totalFiles ?: info.fileCount) + (index?.totalDirectories ?: info.directoryCount)).toString())
-        ArchiveInfoLine("Criptografado", if (info.encrypted) "Sim" else "Não")
-        ArchiveInfoLine("ZIP dividido", if (info.splitArchive) "Sim" else "Não")
-        ArchiveInfoLine("Cabeçalhos", if (info.validHeaders) "Válidos" else "Inválidos")
-        info.compressionRatio?.let { ArchiveInfoLine("Taxa de compressão", "$it%") }
+private fun ArchiveInfoDialog(
+    file: File,
+    info: ZipArchiveInfo,
+    index: ArchiveBrowserIndex?,
+    archiveType: ArchiveTypeSummary,
+    onDismiss: () -> Unit,
+    onOpenFolder: () -> Unit,
+    onExtract: () -> Unit,
+) {
+    val context = LocalContext.current
+    var pathCopied by remember(file.absolutePath) { mutableStateOf(false) }
+    val fileCount = index?.totalFiles ?: info.fileCount
+    val directoryCount = index?.totalDirectories ?: info.directoryCount
+    val modified = file.lastModified().takeIf { it > 0L }
+        ?.let { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it)) }
+        ?: "Não disponível"
+
+    XpDialogFrame(title = "Informações do arquivo compactado", onDismiss = onDismiss, maxWidth = 390) {
+        Text(file.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF173A67), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(3.dp))
+        Text(archiveType.typeLabel, fontSize = 10.5.sp, color = XpTextSecondary)
+
+        Spacer(Modifier.height(12.dp))
+        ArchiveInfoSection("Informações gerais") {
+            ArchiveInfoLine("Nome", file.name)
+            ArchiveInfoLine("Caminho", file.absolutePath)
+            ArchiveInfoLine("Tipo", archiveType.typeLabel)
+            ArchiveInfoLine("Tamanho", archiveFormatBytes(file.length()))
+            ArchiveInfoLine("Compactado", archiveFormatBytes(info.compressedBytes))
+            ArchiveInfoLine("Descompactado", archiveFormatBytes(info.uncompressedBytes))
+        }
+
         Spacer(Modifier.height(9.dp))
+        ArchiveInfoSection("Conteúdo") {
+            ArchiveInfoLine("Arquivos", fileCount.toString())
+            ArchiveInfoLine("Pastas", directoryCount.toString())
+            ArchiveInfoLine("Método", archiveCompressionMethod(info))
+            ArchiveInfoLine("Taxa de compressão", info.compressionRatio?.let { "$it%" } ?: "Não disponível")
+            ArchiveInfoLine("Criptografado", if (info.encrypted) "Sim" else "Não")
+        }
+
+        Spacer(Modifier.height(9.dp))
+        ArchiveInfoSection("Origem") {
+            ArchiveInfoLine("Identificação", archiveType.originLabel)
+            ArchiveInfoLine("Última modificação", modified)
+            ArchiveInfoLine("ZIP dividido", if (info.splitArchive) "Sim" else "Não")
+            ArchiveInfoLine("Estrutura", if (info.validHeaders) "Cabeçalhos válidos" else "Cabeçalhos inválidos")
+        }
+
+        Spacer(Modifier.height(11.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+            XpDialogButton(
+                label = if (pathCopied) "Copiado" else "Copiar caminho",
+                iconRes = if (pathCopied) R.drawable.check else R.drawable.copy,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                    clipboard?.setPrimaryClip(ClipData.newPlainText("Caminho do arquivo", file.absolutePath))
+                    pathCopied = true
+                },
+            )
+            XpDialogButton(
+                label = "Compartilhar",
+                iconRes = R.drawable.share,
+                modifier = Modifier.weight(1f),
+                onClick = { shareArchiveFile(context, file) },
+            )
+        }
+        Spacer(Modifier.height(7.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+            XpDialogButton("Abrir pasta", iconRes = R.drawable.folder_open, onClick = onOpenFolder, modifier = Modifier.weight(1f))
+            XpDialogButton("Extrair", iconRes = R.drawable.folder_open, onClick = onExtract, modifier = Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(7.dp))
         XpDialogButton("Fechar", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun ArchiveInfoSection(title: String, content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(6.dp))
+            .border(1.dp, Color(0xFFD6E0EC), RoundedCornerShape(6.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Text(title, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF173A67))
+        Spacer(Modifier.height(4.dp))
+        content()
     }
 }
 
@@ -1119,28 +1242,90 @@ private fun ArchiveHeaderIconButton(
 }
 
 @Composable
-private fun ArchiveActionButton(
+private fun ArchiveBadge(label: String, emphasized: Boolean = false) {
+    Box(
+        modifier = Modifier
+            .background(if (emphasized) Color(0xFFDCEBFC) else Color.White, RoundedCornerShape(4.dp))
+            .border(1.dp, if (emphasized) XpBlue else Color(0xFFC7D3E0), RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp, vertical = 3.dp),
+    ) {
+        Text(
+            label,
+            fontSize = 9.5.sp,
+            color = if (emphasized) Color(0xFF174D88) else XpTextSecondary,
+            fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun ArchiveMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .background(Color.White, RoundedCornerShape(5.dp))
+            .border(1.dp, Color(0xFFD7E1EC), RoundedCornerShape(5.dp))
+            .padding(horizontal = 7.dp, vertical = 6.dp),
+    ) {
+        Text(label, fontSize = 9.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(value, fontSize = 10.5.sp, color = Color(0xFF20344F), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun ArchivePrimaryActionButton(
     label: String,
     icon: Int,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .height(34.dp)
-            .background(if (enabled) Color.White else Color(0xFFF0F0F0))
-            .border(1.dp, XpControlBorder)
+        modifier = modifier
+            .height(38.dp)
+            .background(if (enabled) Color(0xFFDCEBFC) else Color(0xFFF0F0F0), RoundedCornerShape(5.dp))
+            .border(1.dp, if (enabled) XpBlue else Color(0xFFD1D6DC), RoundedCornerShape(5.dp))
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 9.dp),
     ) {
-        CachedResourceIcon(icon, label, modifier = Modifier.size(15.dp), contentScale = ContentScale.Fit)
+        CachedResourceIcon(icon, label, modifier = Modifier.size(17.dp), contentScale = ContentScale.Fit)
         Spacer(Modifier.width(6.dp))
         Text(
             label,
+            fontSize = 11.sp,
+            color = if (enabled) Color(0xFF173A67) else Color(0xFF999999),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun ArchiveSecondaryActionButton(
+    label: String,
+    icon: Int,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .height(33.dp)
+            .background(if (enabled) Color.White else Color(0xFFF0F0F0), RoundedCornerShape(5.dp))
+            .border(1.dp, XpControlBorder, RoundedCornerShape(5.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 8.dp),
+    ) {
+        CachedResourceIcon(icon, label, modifier = Modifier.size(14.dp), contentScale = ContentScale.Fit)
+        Spacer(Modifier.width(5.dp))
+        Text(
+            label,
             fontSize = 10.5.sp,
-            color = if (enabled) Color(0xFF202020) else Color(0xFF999999),
+            color = if (enabled) Color(0xFF303030) else Color(0xFF999999),
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
         )
@@ -1162,6 +1347,18 @@ private fun ArchiveMenuText(label: String, selected: Boolean = false, onClick: (
     Row(modifier = Modifier.widthIn(min = 170.dp).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp)) {
         Text(if (selected) "✓" else "", color = XpBlue, modifier = Modifier.width(18.dp), fontSize = 11.sp)
         Text(label, fontSize = 11.5.sp)
+    }
+}
+
+private fun shareArchiveFile(context: Context, file: File) {
+    runCatching {
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Compartilhar arquivo compactado"))
     }
 }
 

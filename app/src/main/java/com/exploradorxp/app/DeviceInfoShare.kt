@@ -210,7 +210,12 @@ object DeviceInfoShare {
         paint.textAlign = Paint.Align.LEFT
     }
 
-    private fun processorForShare(info: DeviceInfoSnapshot): String =
-        listOfNotNull(info.socManufacturer, info.socModel).filter { it.isNotBlank() }.joinToString(" ")
-            .ifBlank { info.hardware }
+    private fun processorForShare(info: DeviceInfoSnapshot): String {
+        val identity = DeviceSoCResolver.resolve(info.socManufacturer, info.socModel, info.hardware)
+        return if (identity.commercialName != null) {
+            "${identity.commercialName} • ${identity.technicalLabel}"
+        } else {
+            identity.technicalLabel
+        }
+    }
 }

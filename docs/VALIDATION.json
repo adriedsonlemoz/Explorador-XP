@@ -1,13 +1,13 @@
 {
-  "version_build": "0.1.0-alpha.65",
-  "version_code": 65,
-  "manager_version": "0.1.0-alpha.65",
-  "manager_code": 65,
+  "version_build": "0.1.0-alpha.66",
+  "version_code": 66,
+  "manager_version": "0.1.0-alpha.66",
+  "manager_code": 66,
   "checks": {
     "version_sync": {
       "ok": true,
-      "version": "0.1.0-alpha.65",
-      "code": 65
+      "version": "0.1.0-alpha.66",
+      "code": 66
     },
     "ci_log_root_cause": {
       "ok": true,
@@ -558,6 +558,47 @@
       ],
       "main_thread_guard": "normal OpenFile flow resolves support in Dispatchers.IO",
       "cache": "path + size + lastModified, bounded by periodic clear"
+    },
+    "alpha66_archive_and_soc": {
+      "ok": true,
+      "archive_ui": [
+        "header reorganized with file/type/content-detection badge",
+        "size, files, folders, compressed bytes, uncompressed bytes and compression ratio exposed",
+        "Extract and Open with promoted as primary actions",
+        "Verify and Info retained as secondary actions",
+        "sort menu retained from clickable classification row",
+        "search, selection, breadcrumb, per-item three-dot menu and internal navigation preserved",
+        "root status bar no longer repeats header totals",
+        "archive info dialog split into general/content/origin sections with copy/share/open-folder/extract actions"
+      ],
+      "soc_resolution": [
+        "data-driven exact-alias catalog isolated in DeviceSoCResolver.kt",
+        "MT6765 -> Helio P35",
+        "SM6225 -> Snapdragon 680",
+        "SM6225-AD -> Snapdragon 685",
+        "SDM660 -> Snapdragon 660",
+        "unknown IDs fall back to Android technical identifier without invented commercial model",
+        "GPU and manufacturing process shown only for catalog matches"
+      ],
+      "logic_smoke": {
+        "device_soc_resolver": "passed with kotlinc/JVM",
+        "archive_presentation": "passed with kotlinc/JVM stubs",
+        "extensionless_zip_content_detection": "passed: extensionless ZIP remained detected as zip and marked detectedByContent in presentation"
+      },
+      "kotlin_parser_smoke": "changed Kotlin files produced no expecting/unclosed/unexpected-token/no-value-passed/too-many-arguments diagnostics; unresolved Android/Compose references are expected without SDK/classpath",
+      "generated_art_or_mockups": false,
+      "application_id_unchanged": true,
+      "content_detection_alpha65_preserved": true,
+      "json_parse": "3 JSON files parsed successfully",
+      "xml_parse": "12 XML files parsed successfully",
+      "yaml_parse": "2 workflow YAML files parsed successfully",
+      "drawable_references": "129 references checked; 0 missing",
+      "image_resources_unchanged_from_alpha65": "172 image files byte-identical",
+      "apk_workflows_unchanged_from_alpha65": true,
+      "full_gradle_android_build": {
+        "executed": false,
+        "reason": "Project does not include gradlew and no Gradle executable/Android SDK toolchain is available in this environment."
+      }
     }
   },
   "validated_at_utc": "2026-09-21T22:25:51Z",
@@ -1077,6 +1118,28 @@
       "app/build.gradle.kts",
       "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt",
+      "docs/VALIDATION.json",
+      "github-manager.json"
+    ],
+    "removed": []
+  },
+  "source_diff_alpha66_against_alpha65": {
+    "added": [
+      "app/src/main/java/com/exploradorxp/app/ArchivePresentation.kt",
+      "app/src/main/java/com/exploradorxp/app/DeviceSoCResolver.kt",
+      "app/src/test/java/com/exploradorxp/app/ArchivePresentationTest.kt",
+      "app/src/test/java/com/exploradorxp/app/DeviceSoCResolverTest.kt",
+      "docs/ALPHA66_ARCHIVE_AND_SOC.md"
+    ],
+    "changed": [
+      "CHANGELOG.md",
+      "README.md",
+      "app/build.gradle.kts",
+      "app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt",
+      "app/src/main/java/com/exploradorxp/app/DeviceInfo.kt",
+      "app/src/main/java/com/exploradorxp/app/DeviceInfoScreen.kt",
+      "app/src/main/java/com/exploradorxp/app/DeviceInfoShare.kt",
+      "app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt",
       "docs/VALIDATION.json",
       "github-manager.json"
     ],

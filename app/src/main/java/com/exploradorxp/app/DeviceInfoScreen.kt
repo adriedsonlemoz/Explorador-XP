@@ -222,17 +222,30 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
                         icon = Icons.Rounded.Settings,
                         iconTint = DeviceBlue,
                     ) {
+                        val socIdentity = DeviceSoCResolver.resolve(info.socManufacturer, info.socModel, info.hardware)
                         InfoRow("Android", "${info.androidVersion} • API ${info.apiLevel}")
                         SectionDivider()
                         InfoRow("Atualização de segurança", info.securityPatch)
                         SectionDivider()
-                        InfoRow("Processador", processorLabel(info))
+                        ProcessorInfoRow(socIdentity)
+                        SectionDivider()
+                        InfoRow("Fabricante", socIdentity.manufacturer ?: "Não disponível")
+                        SectionDivider()
+                        InfoRow("Identificador", socIdentity.technicalId)
                         SectionDivider()
                         InfoRow("CPU", "${info.cpuCores} núcleos • ${if (info.is64Bit) "64 bits" else "32 bits"}")
                         SectionDivider()
                         InfoRow("Arquitetura", info.supportedAbis.firstOrNull() ?: "Não disponível")
                         SectionDivider()
                         InfoRow("Frequência", cpuFrequencySummary(info))
+                        socIdentity.gpu?.let {
+                            SectionDivider()
+                            InfoRow("GPU", it)
+                        }
+                        socIdentity.processLabel?.let {
+                            SectionDivider()
+                            InfoRow("Fabricação", it)
+                        }
                         SectionDivider()
                         InfoRow("Hardware", info.hardware)
                         SectionDivider()
@@ -656,6 +669,36 @@ private fun InfoRow(label: String, value: String) {
 }
 
 @Composable
+private fun ProcessorInfoRow(identity: DeviceSoCResolver.Identity) {
+    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+        Text(
+            "Processador",
+            color = DeviceMuted,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            modifier = Modifier.weight(.42f).padding(end = 8.dp),
+        )
+        Column(modifier = Modifier.weight(.58f)) {
+            Text(
+                identity.primaryLabel,
+                color = DeviceText,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            if (identity.commercialName != null) {
+                Text(
+                    identity.technicalLabel,
+                    color = DeviceMuted,
+                    fontSize = 10.5.sp,
+                    lineHeight = 14.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SectionDivider() {
     HorizontalDivider(color = Color(0xFFE8EEF6), thickness = 1.dp)
 }
@@ -997,11 +1040,6 @@ private fun mobileDetailsLabel(info: DeviceInfoSnapshot): String = buildString {
 private fun simDetailsLabel(info: DeviceInfoSnapshot): String = when {
     info.simSlotCount <= 0 -> "Não detectado"
     else -> "${info.simSlotCount} slot(s) • ${info.simReadyCount} pronto(s)"
-}
-
-private fun processorLabel(info: DeviceInfoSnapshot): String {
-    val parts = listOfNotNull(info.socManufacturer, info.socModel).filter { it.isNotBlank() }
-    return parts.joinToString(" ").ifBlank { info.hardware }
 }
 
 private fun displayLabel(info: DeviceInfoSnapshot): String {
