@@ -120,6 +120,9 @@ fun ExplorerScreen(
     onNavigateTo: (File) -> Unit,
     onToggleSearch: () -> Unit,
     onQueryChange: (String) -> Unit,
+    onApplyAdvancedSearch: (AdvancedSearchFilters, SortMode) -> Unit,
+    onCancelAdvancedSearch: () -> Unit,
+    onUseSimpleSearch: () -> Unit,
     onToggleView: () -> Unit,
     onToggleHidden: (Boolean) -> Unit,
     onSortMode: (SortMode) -> Unit,
@@ -161,6 +164,7 @@ fun ExplorerScreen(
     trashState: StateFlow<TrashUiState>,
     storageScanState: StateFlow<StorageScanState>,
     transferState: StateFlow<TransferState?>,
+    advancedSearchState: StateFlow<AdvancedSearchState>,
     modifier: Modifier = Modifier,
 ) {
     var showNewFolder by remember { mutableStateOf(false) }
@@ -177,6 +181,9 @@ fun ExplorerScreen(
     var showStorageDetails by remember { mutableStateOf(false) }
     var archiveExtractTarget by remember { mutableStateOf<Pair<File, Boolean>?>(null) }
     var archiveCreateSources by remember { mutableStateOf<List<File>?>(null) }
+    var showAdvancedSearchFilters by remember { mutableStateOf(false) }
+    val advancedSearch by advancedSearchState.collectAsStateWithLifecycle()
+    val displayedItems = if (advancedSearch.active) advancedSearch.results else state.items
 
     Column(
         modifier = modifier
@@ -189,6 +196,9 @@ fun ExplorerScreen(
             query = state.query,
             onQueryChange = onQueryChange,
             onToggleSearch = onToggleSearch,
+            advancedSearchActive = advancedSearch.active,
+            onOpenAdvancedSearch = { showAdvancedSearchFilters = true },
+            onUseSimpleSearch = onUseSimpleSearch,
             onNewFolder = { showNewFolder = true },
             onNewFile = { showNewFile = true },
             onRefresh = onRefresh,
@@ -247,6 +257,13 @@ fun ExplorerScreen(
             },
         )
 
+        if (advancedSearch.active) {
+            AdvancedSearchStatusBar(
+                state = advancedSearch,
+                onCancel = onCancelAdvancedSearch,
+            )
+        }
+
         if (state.tab == ExplorerTab.FAVORITES && !state.searchVisible && state.selectedPaths.isEmpty()) {
             SectionTitle(title = "Favoritos", icon = R.drawable.favorites)
         }
@@ -260,17 +277,22 @@ fun ExplorerScreen(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            if (state.loading) {
+            if (!advancedSearch.active && state.loading) {
                 CircularProgressIndicator(
                     color = XpBlue,
                     modifier = Modifier.align(Alignment.Center)
                 )
-            } else if (state.items.isEmpty()) {
+            } else if (advancedSearch.active && advancedSearch.running && displayedItems.isEmpty()) {
+                AdvancedSearchScanningState(advancedSearch.scannedItems)
+            } else if (advancedSearch.active && displayedItems.isEmpty()) {
+                AdvancedSearchEmptyState(state.query)
+            } else if (displayedItems.isEmpty()) {
                 EmptyState(state.tab, state.query, state.currentDir)
             } else if (state.tab == ExplorerTab.FAVORITES || state.viewMode == ViewMode.LIST) {
                 FileList(
-                    scrollKey = "${state.tab}|${state.currentDir.absolutePath}",
-                    items = state.items,
+                    scrollKey = "${state.tab}|${state.currentDir.absolutePath}|advanced=${advancedSearch.active}",
+                    items = displayedItems,
+                    searchRoot = state.currentDir.takeIf { advancedSearch.active },
                     selectedPaths = state.selectedPaths,
                     onItemClick = onItemClick,
                     onMenuAction = { item, action ->
@@ -294,8 +316,9 @@ fun ExplorerScreen(
                 )
             } else {
                 FileGrid(
-                    scrollKey = "${state.tab}|${state.currentDir.absolutePath}",
-                    items = state.items,
+                    scrollKey = "${state.tab}|${state.currentDir.absolutePath}|advanced=${advancedSearch.active}",
+                    items = displayedItems,
+                    searchRoot = state.currentDir.takeIf { advancedSearch.active },
                     selectedPaths = state.selectedPaths,
                     onItemClick = onItemClick,
                     onMenuAction = { item, action ->
@@ -321,10 +344,10 @@ fun ExplorerScreen(
         }
 
         ExplorerStatusBar(
-            items = state.items,
+            items = displayedItems,
             selectedPaths = state.selectedPaths,
             currentDir = state.currentDir,
-            recursiveFolderStats = state.tab != ExplorerTab.FAVORITES,
+            recursiveFolderStats = !advancedSearch.active && state.tab != ExplorerTab.FAVORITES,
             storageInfo = state.storageInfo,
             onStorageClick = {
                 showStorageDetails = true
@@ -453,7 +476,7 @@ fun ExplorerScreen(
     if (showFolderContext) {
         FolderContextDialog(
             canPaste = state.clipboard != null && state.tab != ExplorerTab.FAVORITES,
-            canSelectAll = state.items.isNotEmpty(),
+            canSelectAll = displayedItems.isNotEmpty(),
             onDismiss = { showFolderContext = false },
             onPaste = { showFolderContext = false; onPaste() },
             onNewFolder = { showFolderContext = false; showNewFolder = true },
@@ -461,6 +484,18 @@ fun ExplorerScreen(
             onSelectAll = { showFolderContext = false; onSelectAll() },
             onProperties = { showFolderContext = false; propertiesTarget = state.currentDir },
             onRefresh = { showFolderContext = false; onRefresh() },
+        )
+    }
+
+    if (showAdvancedSearchFilters) {
+        AdvancedSearchDialog(
+            initial = advancedSearch.filters,
+            initialSortMode = state.sortMode,
+            onDismiss = { showAdvancedSearchFilters = false },
+            onApply = { filters, sortMode ->
+                showAdvancedSearchFilters = false
+                onApplyAdvancedSearch(filters, sortMode)
+            },
         )
     }
 
@@ -525,6 +560,9 @@ private fun XpHeader(
     query: String,
     onQueryChange: (String) -> Unit,
     onToggleSearch: () -> Unit,
+    advancedSearchActive: Boolean,
+    onOpenAdvancedSearch: () -> Unit,
+    onUseSimpleSearch: () -> Unit,
     onNewFolder: () -> Unit,
     onNewFile: () -> Unit,
     onRefresh: () -> Unit,
@@ -914,13 +952,29 @@ private fun XpHeader(
                         modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester),
                     )
                 }
+                Text(
+                    "Filtros",
+                    color = XpBlueDark,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    modifier = Modifier.clickable(onClick = onOpenAdvancedSearch).padding(horizontal = 7.dp, vertical = 6.dp),
+                )
+                if (advancedSearchActive) {
+                    Text(
+                        "Simples",
+                        color = XpBlueDark,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        modifier = Modifier.clickable(onClick = onUseSimpleSearch).padding(horizontal = 5.dp, vertical = 6.dp),
+                    )
+                }
                 if (query.isNotBlank()) {
                     Text(
                         "Limpar",
                         color = XpBlueDark,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp,
-                        modifier = Modifier.clickable { onQueryChange("") }.padding(horizontal = 7.dp, vertical = 6.dp),
+                        modifier = Modifier.clickable { onQueryChange("") }.padding(horizontal = 5.dp, vertical = 6.dp),
                     )
                 }
             }
@@ -1488,10 +1542,10 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Arquivos compactados ganharam cabeçalho mais organizado, métricas claras e ações Extrair/Abrir com em destaque.",
-                    "A janela Info do ZIP agora separa informações gerais, conteúdo e origem, com atalhos úteis do arquivo.",
-                    "Informações do dispositivo tentam mostrar primeiro o nome comercial conhecido do processador, mantendo o identificador técnico.",
-                    "GPU e processo de fabricação aparecem somente quando o SoC pode ser identificado com segurança pelo catálogo interno.",
+                    "Visualizador de imagens com zoom por pinça/duplo toque, deslocamento, rotação e tela cheia com controles auto-ocultáveis.",
+                    "Galeria continua limitada à pasta aberta, com contador e navegação anterior/próxima sem sair da imagem.",
+                    "Nova janela Info mostra resolução, tamanho, modificação e metadados EXIF disponíveis, como câmera, ISO, exposição e abertura.",
+                    "Compartilhar e mover para a Lixeira agora podem ser feitos diretamente no visualizador, com confirmação e proteção para arquivos externos somente leitura.",
                 ).forEach { change ->
                     Text(
                         "• $change",
@@ -1579,6 +1633,389 @@ private fun StorageDetailsDialogHost(
 }
 
 @Composable
+private fun AdvancedSearchStatusBar(
+    state: AdvancedSearchState,
+    onCancel: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFEAF4FF))
+            .border(1.dp, Color(0xFFBDD5EE))
+            .padding(horizontal = 9.dp, vertical = 6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = when {
+                    state.running -> "Busca avançada • ${state.matchedItems} encontrados • ${state.scannedItems} analisados"
+                    state.cancelled -> "Busca cancelada • ${state.matchedItems} resultados mantidos"
+                    state.error != null -> "Busca avançada • falha na varredura"
+                    else -> "Busca avançada • ${state.matchedItems} encontrados"
+                },
+                color = XpBlueDark,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (state.running) {
+                Text(
+                    "Cancelar",
+                    color = Color(0xFF8A2D22),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable(onClick = onCancel).padding(horizontal = 6.dp, vertical = 3.dp),
+                )
+            }
+        }
+        val summary = advancedSearchSummary(state.filters)
+        if (summary.isNotBlank()) {
+            Text(
+                summary,
+                color = XpTextSecondary,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (state.error != null) {
+            Text(state.error, color = Color(0xFF9C2E22), fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        if (state.running) {
+            Spacer(Modifier.height(4.dp))
+            LinearProgressIndicator(
+                color = XpBlue,
+                trackColor = Color(0xFFD5E4F4),
+                modifier = Modifier.fillMaxWidth().height(3.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdvancedSearchEmptyState(query: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize().padding(28.dp),
+    ) {
+        Text(
+            if (query.isBlank()) "Nenhum item corresponde aos filtros." else "Nenhum resultado para “$query”.",
+            color = Color(0xFF234A79),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(5.dp))
+        Text(
+            "Altere os filtros, o nome pesquisado ou volte para a busca simples.",
+            color = XpTextSecondary,
+            fontSize = 11.5.sp,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun AdvancedSearchScanningState(scannedItems: Int) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize().padding(28.dp),
+    ) {
+        CircularProgressIndicator(color = XpBlue, modifier = Modifier.size(34.dp))
+        Spacer(Modifier.height(10.dp))
+        Text("Pesquisando em subpastas…", color = Color(0xFF234A79), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text("$scannedItems itens analisados", color = XpTextSecondary, fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun AdvancedSearchDialog(
+    initial: AdvancedSearchFilters,
+    initialSortMode: SortMode,
+    onDismiss: () -> Unit,
+    onApply: (AdvancedSearchFilters, SortMode) -> Unit,
+) {
+    var includeSubfolders by remember(initial) { mutableStateOf(initial.includeSubfolders) }
+    var itemKind by remember(initial) { mutableStateOf(initial.itemKind) }
+    var fileType by remember(initial) { mutableStateOf(initial.fileType) }
+    var extension by remember(initial) { mutableStateOf(initial.extension) }
+    var minSize by remember(initial) { mutableStateOf(searchSizeText(initial.minSizeBytes)) }
+    var maxSize by remember(initial) { mutableStateOf(searchSizeText(initial.maxSizeBytes)) }
+    var dateRange by remember(initial) { mutableStateOf(initial.dateRange) }
+    var sortMode by remember(initialSortMode) { mutableStateOf(initialSortMode) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    XpDialogFrame(title = "Busca avançada", onDismiss = onDismiss, maxWidth = 430) {
+        Text(
+            "Refine a pesquisa na pasta atual. Ative subpastas para fazer uma varredura recursiva.",
+            fontSize = 12.sp,
+            color = XpTextSecondary,
+        )
+        Spacer(Modifier.height(12.dp))
+
+        SearchCheckRow(
+            checked = includeSubfolders,
+            label = "Pesquisar também em subpastas",
+            onCheckedChange = { includeSubfolders = it },
+        )
+        Spacer(Modifier.height(10.dp))
+
+        SearchChoiceField(
+            label = "Mostrar",
+            value = searchItemKindLabel(itemKind),
+            options = SearchItemKind.entries.map { it to searchItemKindLabel(it) },
+            onSelect = { itemKind = it },
+        )
+        Spacer(Modifier.height(8.dp))
+        SearchChoiceField(
+            label = "Tipo",
+            value = searchFileTypeLabel(fileType),
+            options = SearchFileType.entries.map { it to searchFileTypeLabel(it) },
+            onSelect = { fileType = it },
+        )
+        Spacer(Modifier.height(8.dp))
+        SearchChoiceField(
+            label = "Modificado",
+            value = searchDateRangeLabel(dateRange),
+            options = SearchDateRange.entries.map { it to searchDateRangeLabel(it) },
+            onSelect = { dateRange = it },
+        )
+        Spacer(Modifier.height(8.dp))
+        SearchChoiceField(
+            label = "Ordenar resultados",
+            value = searchSortModeLabel(sortMode),
+            options = SortMode.entries.map { it to searchSortModeLabel(it) },
+            onSelect = { sortMode = it },
+        )
+
+        Spacer(Modifier.height(12.dp))
+        SearchTextField(
+            label = "Extensão",
+            value = extension,
+            placeholder = "Ex.: pdf, jpg, zip",
+            onValueChange = { extension = it; error = null },
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            SearchTextField(
+                label = "Tamanho mínimo (MB)",
+                value = minSize,
+                placeholder = "Opcional",
+                onValueChange = { minSize = it; error = null },
+                modifier = Modifier.weight(1f),
+            )
+            SearchTextField(
+                label = "Tamanho máximo (MB)",
+                value = maxSize,
+                placeholder = "Opcional",
+                onValueChange = { maxSize = it; error = null },
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        error?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = Color(0xFF9C2E22), fontSize = 11.sp)
+        }
+
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+            XpDialogButton(
+                "Limpar filtros",
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    includeSubfolders = false
+                    itemKind = SearchItemKind.ALL
+                    fileType = SearchFileType.ALL
+                    extension = ""
+                    minSize = ""
+                    maxSize = ""
+                    dateRange = SearchDateRange.ANY
+                    sortMode = SortMode.NAME
+                    error = null
+                },
+            )
+            XpDialogButton("Cancelar", modifier = Modifier.weight(1f), onClick = onDismiss)
+            XpDialogButton(
+                "Pesquisar",
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.search,
+                onClick = {
+                    val minBytes = parseSearchMegabytes(minSize)
+                    val maxBytes = parseSearchMegabytes(maxSize)
+                    when {
+                        minSize.isNotBlank() && minBytes == null -> error = "Tamanho mínimo inválido."
+                        maxSize.isNotBlank() && maxBytes == null -> error = "Tamanho máximo inválido."
+                        minBytes != null && maxBytes != null && minBytes > maxBytes -> error = "O mínimo não pode ser maior que o máximo."
+                        else -> onApply(
+                            AdvancedSearchFilters(
+                                includeSubfolders = includeSubfolders,
+                                itemKind = itemKind,
+                                fileType = fileType,
+                                extension = extension.trim(),
+                                minSizeBytes = minBytes,
+                                maxSizeBytes = maxBytes,
+                                dateRange = dateRange,
+                            ),
+                            sortMode,
+                        )
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchCheckRow(
+    checked: Boolean,
+    label: String,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(5.dp))
+            .border(1.dp, XpControlBorder, RoundedCornerShape(5.dp))
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 6.dp, vertical = 3.dp),
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(label, fontSize = 12.sp, color = Color(0xFF303030), modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun <T> SearchChoiceField(
+    label: String,
+    value: String,
+    options: List<Pair<T, String>>,
+    onSelect: (T) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth()) {
+        Text(label, color = XpTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(4.dp))
+        Box {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp)
+                    .background(Color.White)
+                    .border(1.dp, Color(0xFF7F9DB9))
+                    .clickable { expanded = true }
+                    .padding(horizontal = 9.dp),
+            ) {
+                Text(value, fontSize = 12.5.sp, color = Color(0xFF202020), modifier = Modifier.weight(1f))
+                Text("▾", color = XpBlueDark, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            XpPopupMenu(expanded = expanded, onDismiss = { expanded = false }) {
+                options.forEach { (option, optionLabel) ->
+                    XpMenuItem(optionLabel) {
+                        expanded = false
+                        onSelect(option)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchTextField(
+    label: String,
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        Text(label, color = XpTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(4.dp))
+        Box(
+            contentAlignment = Alignment.CenterStart,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(36.dp)
+                .background(Color.White)
+                .border(1.dp, Color(0xFF7F9DB9))
+                .padding(horizontal = 8.dp),
+        ) {
+            if (value.isBlank()) {
+                Text(placeholder, color = Color(0xFF8A8A8A), fontSize = 12.sp)
+            }
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(color = Color(0xFF202020), fontSize = 12.5.sp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+private fun parseSearchMegabytes(value: String): Long? {
+    if (value.isBlank()) return null
+    val normalized = value.trim().replace(',', '.')
+    val number = normalized.toDoubleOrNull()?.takeIf { it >= 0.0 && it.isFinite() } ?: return null
+    val bytes = number * 1024.0 * 1024.0
+    return bytes.coerceAtMost(Long.MAX_VALUE.toDouble()).toLong()
+}
+
+private fun searchSizeText(bytes: Long?): String = bytes?.let {
+    val mb = it.toDouble() / (1024.0 * 1024.0)
+    if (mb % 1.0 == 0.0) mb.toLong().toString() else String.format(Locale.US, "%.2f", mb).trimEnd('0').trimEnd('.')
+}.orEmpty()
+
+private fun searchItemKindLabel(kind: SearchItemKind): String = when (kind) {
+    SearchItemKind.ALL -> "Arquivos e pastas"
+    SearchItemKind.FILES -> "Somente arquivos"
+    SearchItemKind.FOLDERS -> "Somente pastas"
+}
+
+private fun searchFileTypeLabel(type: SearchFileType): String = when (type) {
+    SearchFileType.ALL -> "Todos os tipos"
+    SearchFileType.IMAGES -> "Imagens"
+    SearchFileType.VIDEOS -> "Vídeos"
+    SearchFileType.AUDIO -> "Áudio"
+    SearchFileType.DOCUMENTS -> "Documentos"
+    SearchFileType.APKS -> "Aplicativos / APK"
+    SearchFileType.ARCHIVES -> "Compactados"
+    SearchFileType.OTHER -> "Outros"
+}
+
+private fun searchDateRangeLabel(range: SearchDateRange): String = when (range) {
+    SearchDateRange.ANY -> "Qualquer data"
+    SearchDateRange.TODAY -> "Hoje"
+    SearchDateRange.LAST_7_DAYS -> "Últimos 7 dias"
+    SearchDateRange.LAST_30_DAYS -> "Últimos 30 dias"
+}
+
+private fun searchSortModeLabel(mode: SortMode): String = when (mode) {
+    SortMode.NAME -> "Nome"
+    SortMode.DATE -> "Data (mais recentes)"
+    SortMode.SIZE -> "Tamanho (maiores)"
+    SortMode.TYPE -> "Tipo"
+}
+
+private fun advancedSearchSummary(filters: AdvancedSearchFilters): String = buildList {
+    if (filters.includeSubfolders) add("Subpastas") else add("Pasta atual")
+    if (filters.itemKind != SearchItemKind.ALL) add(searchItemKindLabel(filters.itemKind))
+    if (filters.fileType != SearchFileType.ALL) add(searchFileTypeLabel(filters.fileType))
+    AdvancedSearchMatcher.normalizeExtension(filters.extension).takeIf(String::isNotBlank)?.let { add(".$it") }
+    filters.minSizeBytes?.let { add("≥ ${formatBytes(it)}") }
+    filters.maxSizeBytes?.let { add("≤ ${formatBytes(it)}") }
+    if (filters.dateRange != SearchDateRange.ANY) add(searchDateRangeLabel(filters.dateRange))
+}.joinToString(" • ")
+
+@Composable
 private fun TransferProgressHost(
     stateFlow: StateFlow<TransferState?>,
     onPause: () -> Unit,
@@ -1608,16 +2045,24 @@ private fun TransferProgressDialog(
         animationSpec = tween(180),
         label = "transferFraction",
     )
+    val animatedItemFraction by animateFloatAsState(
+        targetValue = transfer.currentItemFraction,
+        animationSpec = tween(160),
+        label = "transferItemFraction",
+    )
+    val topLevelCount = transfer.currentItemCount.takeIf { it > 0 } ?: transfer.queueItems.size.takeIf { it > 0 } ?: transfer.total
     val title = when (transfer.kind) {
-        TransferKind.COPY -> "Copiando ${itemCountLabel(transfer.total)}"
-        TransferKind.MOVE -> "Movendo ${itemCountLabel(transfer.total)}"
-        TransferKind.DELETE -> "Excluindo ${itemCountLabel(transfer.total)}"
+        TransferKind.COPY -> "Copiando ${itemCountLabel(topLevelCount)}"
+        TransferKind.MOVE -> "Movendo ${itemCountLabel(topLevelCount)}"
+        TransferKind.DELETE -> "Excluindo ${itemCountLabel(topLevelCount)}"
     }
     val icon = when (transfer.kind) {
         TransferKind.COPY -> R.drawable.copy
         TransferKind.MOVE -> R.drawable.move
         TransferKind.DELETE -> R.drawable.delete
     }
+    val activeQueueItem = transfer.queueItems.getOrNull((transfer.currentItemIndex - 1).coerceAtLeast(0))
+
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(dismissOnClickOutside = false, usePlatformDefaultWidth = false),
@@ -1632,83 +2077,227 @@ private fun TransferProgressDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .widthIn(min = 270.dp, max = 320.dp)
+                    .widthIn(min = 280.dp, max = 390.dp)
+                    .heightIn(max = 610.dp)
                     .background(Color(0xFFF8F8F2))
                     .border(1.dp, XpBorder)
             ) {
-            XpDialogTitle(title, onCancel)
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.Image(
-                        painter = painterResource(icon),
-                        contentDescription = null,
-                        modifier = Modifier.size(29.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = transfer.currentName.ifBlank { "Preparando…" },
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Spacer(Modifier.height(10.dp))
-                LinearProgressIndicator(
-                    progress = { if (transfer.done >= transfer.total) 1f else animatedFraction },
-                    color = XpBlue,
-                    trackColor = Color(0xFFDCE6F2),
+                XpDialogTitle(title, onCancel)
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(5.dp)),
-                )
-                Spacer(Modifier.height(6.dp))
-                val percent = (transfer.fraction * 100f).toInt().coerceIn(0, 100)
-                Text(
-                    text = if (transfer.bytesTotal > 0L) {
-                        "${formatBytes(transfer.bytesDone)} de ${formatBytes(transfer.bytesTotal)} • $percent%"
-                    } else {
-                        "${transfer.done.coerceAtMost(transfer.total)} de ${transfer.total} • $percent%"
-                    },
-                    fontSize = 12.sp,
-                    color = XpTextSecondary,
-                )
-                if (transfer.isPaused) {
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.foundation.Image(
+                            painter = painterResource(icon),
+                            contentDescription = null,
+                            modifier = Modifier.size(29.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = activeQueueItem?.name ?: transfer.currentName.ifBlank { "Preparando…" },
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (transfer.currentItemCount > 0) {
+                                Text(
+                                    "Item ${transfer.currentItemIndex.coerceAtLeast(1)} de ${transfer.currentItemCount}",
+                                    fontSize = 10.5.sp,
+                                    color = XpTextSecondary,
+                                )
+                            }
+                        }
+                    }
+
+                    if (transfer.currentItemCount > 0) {
+                        Spacer(Modifier.height(10.dp))
+                        Text("Progresso do item", fontSize = 10.5.sp, color = XpTextSecondary, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(4.dp))
+                        LinearProgressIndicator(
+                            progress = { animatedItemFraction },
+                            color = Color(0xFF2E8B57),
+                            trackColor = Color(0xFFDDEBE4),
+                            modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(4.dp)),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = when {
+                                transfer.currentItemBytesTotal > 0L ->
+                                    "${formatBytes(transfer.currentItemBytesDone)} de ${formatBytes(transfer.currentItemBytesTotal)}"
+                                transfer.currentItemTotal > 0 ->
+                                    "${transfer.currentItemDone.coerceAtMost(transfer.currentItemTotal)} de ${transfer.currentItemTotal} entradas"
+                                else -> "Preparando item…"
+                            },
+                            fontSize = 10.5.sp,
+                            color = XpTextSecondary,
+                        )
+                    }
+
+                    Spacer(Modifier.height(11.dp))
+                    Text("Progresso total", fontSize = 10.5.sp, color = XpTextSecondary, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Pausado • toque em Continuar para retomar",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF9A6500),
+                    LinearProgressIndicator(
+                        progress = { if (transfer.done >= transfer.total) 1f else animatedFraction },
+                        color = XpBlue,
+                        trackColor = Color(0xFFDCE6F2),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(5.dp)),
                     )
-                } else if (transfer.kind != TransferKind.DELETE && transfer.bytesPerSecond > 0L) {
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(6.dp))
+                    val percent = (transfer.fraction * 100f).toInt().coerceIn(0, 100)
                     Text(
-                        text = buildString {
-                            append("${formatBytes(transfer.bytesPerSecond)}/s")
-                            transfer.etaSeconds?.let { append(" • restante ~${formatTransferDuration(it)}") }
+                        text = if (transfer.bytesTotal > 0L) {
+                            "${formatBytes(transfer.bytesDone)} de ${formatBytes(transfer.bytesTotal)} • $percent%"
+                        } else {
+                            "${transfer.done.coerceAtMost(transfer.total)} de ${transfer.total} • $percent%"
                         },
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = XpTextSecondary,
                     )
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    XpDialogButton(
-                        label = if (transfer.isPaused) "Continuar" else "Pausar",
-                        onClick = if (transfer.isPaused) onResume else onPause,
-                    )
-                    XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
+                    if (transfer.currentName.isNotBlank() && transfer.currentName != activeQueueItem?.name) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            "Agora: ${transfer.currentName}",
+                            fontSize = 10.5.sp,
+                            color = Color(0xFF66788F),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (transfer.isPaused) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Pausado • toque em Continuar para retomar",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF9A6500),
+                        )
+                    } else if (transfer.kind != TransferKind.DELETE && transfer.bytesPerSecond > 0L) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            text = buildString {
+                                append("${formatBytes(transfer.bytesPerSecond)}/s")
+                                transfer.etaSeconds?.let { append(" • restante ~${formatTransferDuration(it)}") }
+                            },
+                            fontSize = 11.sp,
+                            color = XpTextSecondary,
+                        )
+                    }
+
+                    if (transfer.queueItems.size > 1) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Fila (${transfer.queueItems.size} itens)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF34506F),
+                        )
+                        Spacer(Modifier.height(5.dp))
+                        TransferQueuePreview(transfer.queueItems, transfer.currentItemIndex)
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        XpDialogButton(
+                            label = if (transfer.isPaused) "Continuar" else "Pausar",
+                            onClick = if (transfer.isPaused) onResume else onPause,
+                        )
+                        XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun TransferQueuePreview(
+    queue: List<TransferQueueItem>,
+    currentItemIndex: Int,
+) {
+    val currentZeroBased = (currentItemIndex - 1).coerceAtLeast(0)
+    val start = (currentZeroBased - 2).coerceAtLeast(0)
+    val endExclusive = (start + 6).coerceAtMost(queue.size)
+    val visible = queue.subList(start, endExclusive)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(5.dp))
+            .border(1.dp, XpCardBorder, RoundedCornerShape(5.dp))
+            .padding(vertical = 3.dp),
+    ) {
+        visible.forEachIndexed { offset, item ->
+            val absoluteIndex = start + offset
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    text = transferQueueStatusSymbol(item.status),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = transferQueueStatusColor(item.status),
+                    modifier = Modifier.width(20.dp),
+                )
+                Text(
+                    text = item.name,
+                    fontSize = 10.5.sp,
+                    fontWeight = if (absoluteIndex == currentZeroBased) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (absoluteIndex == currentZeroBased) Color(0xFF24496F) else Color(0xFF4E6077),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = transferQueueStatusLabel(item.status),
+                    fontSize = 9.5.sp,
+                    color = transferQueueStatusColor(item.status),
+                )
+            }
+        }
+        if (queue.size > visible.size) {
+            Text(
+                "Mostrando ${visible.size} de ${queue.size} itens",
+                fontSize = 9.5.sp,
+                color = XpTextSecondary,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            )
+        }
     }
+}
+
+private fun transferQueueStatusSymbol(status: TransferQueueItemStatus): String = when (status) {
+    TransferQueueItemStatus.PENDING -> "○"
+    TransferQueueItemStatus.RUNNING -> "▶"
+    TransferQueueItemStatus.DONE -> "✓"
+    TransferQueueItemStatus.SKIPPED -> "–"
+    TransferQueueItemStatus.ERROR -> "!"
+}
+
+private fun transferQueueStatusLabel(status: TransferQueueItemStatus): String = when (status) {
+    TransferQueueItemStatus.PENDING -> "Aguardando"
+    TransferQueueItemStatus.RUNNING -> "Em andamento"
+    TransferQueueItemStatus.DONE -> "Concluído"
+    TransferQueueItemStatus.SKIPPED -> "Ignorado"
+    TransferQueueItemStatus.ERROR -> "Erro"
+}
+
+private fun transferQueueStatusColor(status: TransferQueueItemStatus): Color = when (status) {
+    TransferQueueItemStatus.PENDING -> Color(0xFF788697)
+    TransferQueueItemStatus.RUNNING -> XpBlueDark
+    TransferQueueItemStatus.DONE -> Color(0xFF2E7D32)
+    TransferQueueItemStatus.SKIPPED -> Color(0xFF8A6500)
+    TransferQueueItemStatus.ERROR -> Color(0xFF9C2E22)
 }
 
 @Composable
@@ -2895,6 +3484,7 @@ private fun ContextActionCell(
 private fun FileList(
     scrollKey: String,
     items: List<FileItem>,
+    searchRoot: File? = null,
     selectedPaths: Set<String>,
     onItemClick: (FileItem) -> Unit,
     onMenuAction: (FileItem, FileMenuAction) -> Unit,
@@ -2929,6 +3519,7 @@ private fun FileList(
                 item = item,
                 selected = item.path in selectedPaths,
                 loadThumbnail = loadThumbnails,
+                searchRoot = searchRoot,
                 onClick = { onItemClick(item) },
                 onLongSelect = { onLongSelect(item) },
                 onMenuAction = { action -> onMenuAction(item, action) },
@@ -2944,6 +3535,7 @@ private fun FileListRow(
     item: FileItem,
     selected: Boolean,
     loadThumbnail: Boolean,
+    searchRoot: File? = null,
     onClick: () -> Unit,
     onLongSelect: () -> Unit,
     onMenuAction: (FileMenuAction) -> Unit,
@@ -2996,6 +3588,15 @@ private fun FileListRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            searchRelativeParent(item.file, searchRoot)?.let { relativeParent ->
+                Text(
+                    text = relativeParent,
+                    color = Color(0xFF6A7380),
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Text(
                 text = "${FileDisplayFormatter.date(item.modifiedAt)} • ${FileDisplayFormatter.time(item.modifiedAt)}",
                 color = XpTextSecondary,
@@ -3022,6 +3623,7 @@ private fun FileListRow(
 private fun FileGrid(
     scrollKey: String,
     items: List<FileItem>,
+    searchRoot: File? = null,
     selectedPaths: Set<String>,
     onItemClick: (FileItem) -> Unit,
     onMenuAction: (FileItem, FileMenuAction) -> Unit,
@@ -3089,6 +3691,18 @@ private fun FileGrid(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    searchRelativeParent(item.file, searchRoot)?.let { relativeParent ->
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            relativeParent,
+                            fontSize = 9.5.sp,
+                            color = Color(0xFF6A7380),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     Spacer(Modifier.height(3.dp))
                 }
 
@@ -3118,6 +3732,17 @@ private fun FileGrid(
             }
         }
     }
+}
+
+private fun searchRelativeParent(file: File, root: File?): String? {
+    root ?: return null
+    val parent = file.parentFile ?: return null
+    val rootPath = canonicalPathOf(root)
+    val parentPath = canonicalPathOf(parent)
+    if (parentPath == rootPath) return "Nesta pasta"
+    if (!parentPath.startsWith(rootPath + File.separator)) return parentPath
+    val relative = parentPath.removePrefix(rootPath).trim(File.separatorChar, '/')
+    return if (relative.isBlank()) "Nesta pasta" else relative
 }
 
 @Composable

@@ -316,6 +316,8 @@ private fun ExplorerApp(
                 if (accessGranted) viewModel.navigateTo(target)
                 else Toast.makeText(context, "Libere o acesso aos arquivos para abrir esta pasta.", Toast.LENGTH_SHORT).show()
             },
+            onShareFile = viewModel::shareFile,
+            onMoveToTrash = viewModel::moveFileToTrash,
         )
         return
     }
@@ -338,6 +340,9 @@ private fun ExplorerApp(
         onNavigateTo = viewModel::navigateTo,
         onToggleSearch = { viewModel.setSearchVisible(!state.searchVisible) },
         onQueryChange = viewModel::setQuery,
+        onApplyAdvancedSearch = viewModel::applyAdvancedSearchFilters,
+        onCancelAdvancedSearch = viewModel::cancelAdvancedSearch,
+        onUseSimpleSearch = viewModel::useSimpleSearch,
         onToggleView = viewModel::toggleViewMode,
         onToggleHidden = viewModel::setShowHidden,
         onSortMode = viewModel::setSortMode,
@@ -379,6 +384,7 @@ private fun ExplorerApp(
         trashState = viewModel.trashState,
         storageScanState = viewModel.storageScanState,
         transferState = viewModel.transferState,
+        advancedSearchState = viewModel.advancedSearchState,
         modifier = modifier,
     )
 }

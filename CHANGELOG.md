@@ -1,4 +1,46 @@
-# CHANGELOG
+# Changelog
+
+## 0.1.0-alpha.69
+
+- Visualizador interno de imagens evoluído para uma experiência de galeria sem sair da pasta atual, preservando anterior/próxima e o contador de posição.
+- Adicionados **zoom por pinça**, deslocamento da imagem ampliada e **duplo toque** para alternar rapidamente entre Ajustar e 250%, com limite de zoom de 100% a 600%.
+- Adicionados **Girar**, **Tela cheia**, controles auto-ocultáveis em tela cheia e indicador discreto de zoom/rotação.
+- Nova janela **Info** mostra nome, pasta, tipo, tamanho, resolução, última modificação e metadados EXIF legíveis (fabricante/câmera, data da captura, orientação, ISO, exposição, abertura, distância focal e software) sem alterar o arquivo.
+- O visualizador agora permite **Compartilhar** a imagem e **Mover para a Lixeira** sem voltar à listagem. A exclusão segue a Lixeira restaurável do Explorador XP e pede confirmação; arquivos externos/temporários em modo somente leitura não oferecem essa ação.
+- Ao mover a imagem atual para a Lixeira, a galeria avança para a próxima imagem disponível ou volta para a anterior; se era a única imagem, fecha o visualizador.
+- Imagens HEIC com extensão conhecida passam a tentar o visualizador interno em Android compatível, mantendo fallback claro para **Abrir com** se o codec do aparelho não suportar o arquivo.
+- Adicionada lógica pura testável em `ImageViewerLogic.kt` para limites de zoom, duplo toque e escolha de posição após remoção.
+- Nenhuma imagem/mockup do projeto foi criada ou modificada. `applicationId`/namespace permanecem `com.exploradorxp.app`.
+- README, tela Sobre, documentação, validações e `github-manager.json` sincronizados.
+- Versão sincronizada para `0.1.0-alpha.69` / `versionCode 69`.
+
+## 0.1.0-alpha.68
+
+- Editor de texto/código passa a suportar **múltiplas abas** em uma mesma sessão para arquivos locais de texto/código da pasta atual, com limite seguro de 10 abas.
+- A barra de abas destaca o arquivo ativo, mostra `*` em documentos alterados e permite abrir, alternar e fechar arquivos sem retornar ao Explorer.
+- Ao alternar entre abas comuns, o editor preserva em memória o texto não salvo, a seleção/cursor e um histórico recente e contínuo de desfazer/refazer, limitado por quantidade e orçamento de caracteres; arquivos grandes continuam protegidos e exigem salvar o trecho atual antes de trocar de aba.
+- Fechar uma aba alterada oferece **Salvar e fechar / Fechar sem salvar / Cancelar**. Ao sair do editor com várias abas alteradas, existe **Salvar todas e sair**, evitando perda silenciosa em abas inativas.
+- Abas alteradas guardam a assinatura leve do arquivo no disco (tamanho/data). Se o arquivo mudar externamente enquanto estiver em segundo plano, a gravação direta é bloqueada e o editor orienta usar **Salvar como**.
+- O fluxo do visualizador foi unificado para que HTML, TXT, código e arquivos textuais especiais usem o mesmo ponto de composição do editor, preservando a sessão de abas ao alternar formatos.
+- Adicionados **Indentar →** e **← Recuar** para linhas/blocos selecionados, além de TAB/Shift+TAB em teclado físico.
+- Autoindentação e fechamento automático de `()`, `[]`, `{}` e aspas continuam ativos por padrão, mas agora podem ser ligados/desligados separadamente nas configurações persistentes do editor.
+- A lógica pura de transformação de indentação foi isolada em `EditorIndentationEngine.kt` e recebeu testes unitários.
+- Mantidas quebra automática de linha, destaque de sintaxe, localizar/substituir, desfazer/refazer, preview web, modo arquivo grande e edição segura de arquivos recebidos por **Abrir com**.
+- Nenhuma imagem ou mockup foi criada ou modificada; `applicationId`/namespace permanecem `com.exploradorxp.app`.
+- README, tela Sobre, documentação, validações e `github-manager.json` sincronizados.
+- Versão sincronizada para `0.1.0-alpha.68` / `versionCode 68`.
+
+## 0.1.0-alpha.67
+
+- Adicionada **Busca avançada** à pesquisa principal sem remover a busca simples existente.
+- A busca pode incluir subpastas e filtrar por arquivos/pastas, categoria (imagens, vídeos, áudio, documentos, APKs, compactados e outros), extensão, tamanho mínimo/máximo e período de modificação.
+- Resultados recursivos mostram a pasta relativa de origem, são publicados progressivamente durante a varredura e a pesquisa pode ser cancelada mantendo os resultados já encontrados.
+- A busca avançada respeita arquivos ocultos, ignora a Lixeira interna gerenciada pelo app, evita ciclos por caminhos canônicos e se atualiza após alterações no armazenamento.
+- Operações de copiar, mover, apagar e Lixeira agora expõem uma **fila visual de itens** com estados Aguardando, Em andamento, Concluído e Ignorado.
+- A janela de operações separa **progresso do item atual** e **progresso total**, preservando pausa/continuação, cancelamento, velocidade, ETA e resolução de conflitos com Substituir/Ignorar/Manter ambos e “aplicar a todos”.
+- Mantidas as otimizações de plano de operação e agrupamento de atualizações de progresso das versões anteriores.
+- Adicionados testes JVM para filtros da busca e cálculos de progresso atual/total.
+- Versão sincronizada para `0.1.0-alpha.67` / `versionCode 67` sem alterar `applicationId` ou identidade do app.
 
 ## 0.1.0-alpha.66
 
@@ -751,8 +793,6 @@
 - O cartão com usado/livre/total passou a aparecer apenas na página inicial do armazenamento interno.
 - Navegação para cartão SD passou a respeitar o limite da raiz do volume ao usar Subir.
 - Atualizado o conjunto visual principal de pastas, ações e dispositivos com ícones mais próximos do Windows XP.
-
-# Changelog
 
 ## 0.1.0-alpha.5
 

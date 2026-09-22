@@ -12,6 +12,7 @@ class PerformanceStateIsolationTest {
 
         assertFalse("transfer must stay outside ExplorerUiState", "transfer" in names)
         assertFalse("storageScan must stay outside ExplorerUiState", "storageScan" in names)
+        assertFalse("advancedSearch must stay outside ExplorerUiState", "advancedSearch" in names)
         assertFalse("trashItems must stay outside ExplorerUiState", "trashItems" in names)
         assertFalse("trashLoading must stay outside ExplorerUiState", "trashLoading" in names)
     }

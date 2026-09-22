@@ -2,8 +2,11 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.66` (`versionCode 66`)  
+**Versão atual:** `0.1.0-alpha.69` (`versionCode 69`)  
 
+- A alpha.69 evolui o **visualizador de imagens** para uma galeria completa da pasta atual: zoom por pinça/duplo toque, pan, rotação, tela cheia com controles auto-ocultáveis, contador, painel Info com resolução/EXIF, compartilhamento e envio para a Lixeira sem sair da imagem. A navegação continua restrita ao diretório aberto e arquivos externos/temporários permanecem protegidos contra exclusão.
+- A alpha.68 transforma o editor de texto/código em uma sessão com **múltiplas abas** para arquivos locais da mesma pasta. As abas preservam texto, seleção e histórico recente de desfazer/refazer ao alternar, mostram `*` quando há mudanças, permitem salvar/descartar ao fechar uma aba e oferecem **Salvar todas e sair** quando mais de um documento foi alterado. Se uma versão no disco mudar enquanto uma aba suja estiver em segundo plano, a sobrescrita é bloqueada e o editor orienta usar **Salvar como**. A edição também ganha **Indentar/Recuar** para seleção inteira, suporte a TAB/Shift+TAB e opções persistentes para ligar/desligar autoindentação e fechamento automático de pares.
+- A alpha.67 adiciona **busca avançada** à pesquisa do Explorer, com varredura opcional em subpastas, filtros por arquivo/pasta, categoria, extensão, tamanho e data, ordenação, resultados parciais e cancelamento. As operações de copiar, mover, excluir e Lixeira passam a mostrar uma **fila visual por item**, progresso do item atual e progresso total, preservando pausa/continuação, cancelamento, velocidade, ETA e resolução de conflitos com “aplicar a todos”.
 - A alpha.66 redesenha o **navegador de arquivos compactados** com cabeçalho informativo, métricas de tamanho/conteúdo/compressão, ações principais **Extrair** e **Abrir com**, barra inferior menos redundante e uma janela **Info** dividida em Informações gerais, Conteúdo e Origem. A tela **Dispositivo** passa a usar um resolvedor extensível de SoCs para exibir primeiro o nome comercial quando houver correspondência segura (por exemplo MT6765 → Helio P35, SM6225 → Snapdragon 680 e SDM660 → Snapdragon 660), preservando fabricante, identificador técnico, CPU, arquitetura, frequências e, quando catalogados, GPU e processo de fabricação.
 - A alpha.65 adiciona **detecção de tipo pelo conteúdo** para arquivos sem extensão, com extensão desconhecida ou genérica. ZIP/APK, PDF, PNG/JPEG/GIF/BMP/WebP e texto podem ser reconhecidos pela assinatura/conteúdo e encaminhados ao visualizador interno correto. O arquivo `EditaAi-0.1.0-alpha.3`, que é um ZIP sem extensão contendo um APK, passa a abrir no navegador ZIP normalmente.
 - A alpha.64 corrige o bloqueio de Lint `WrongConstant` no fluxo **Abrir com**: permissões persistentes de leitura/escrita agora são solicitadas somente com combinações explícitas aceitas pela API Android, mantendo todo o modo de arquivos grandes da alpha.63.
@@ -63,11 +66,11 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
 - Histórico de navegação com Voltar e Avançar, além da ação Subir.
-- Busca no diretório atual.
+- Busca rápida no diretório atual e **busca avançada** opcionalmente recursiva, com filtros por tipo, extensão, tamanho e data, ordenação e cancelamento.
 - Modos Lista e Grade.
 - Ordenação por nome, data, tamanho e tipo.
 - Toque longo entra diretamente no modo de seleção; a barra de ferramentas troca temporariamente para ações de seleção e volta ao normal ao concluir/cancelar.
-- Copiar, recortar/mover e colar, incluindo pastas recursivas; quando há conteúdo na área de transferência, **Downloads** vira temporariamente **Colar** na barra de ferramentas. Cópia, mover e exclusão exibem uma janela de progresso com o item atual, contagem e barra animada, com opção de **Cancelar** a qualquer momento.
+- Copiar, recortar/mover e colar, incluindo pastas recursivas; quando há conteúdo na área de transferência, **Downloads** vira temporariamente **Colar** na barra de ferramentas. Cópia, mover e exclusão exibem fila por item, progresso do item atual e progresso total, mantendo **Pausar/Continuar**, velocidade, ETA e **Cancelar**.
 - Criar pasta, renomear e excluir.
 - Visualizador interno para imagens, textos/código editáveis, HTML, PDF, ZIP, áudio, vídeo e informações de APK; o vídeo usa Media3/ExoPlayer com controles próprios e formatos/codec não suportados continuam disponíveis via `Abrir com...`.
 - Abertura externa por aplicativo compatível via `FileProvider` quando necessário.
@@ -93,6 +96,7 @@ app/src/main/java/com/exploradorxp/app/
   ExplorerScreen.kt
   ExplorerViewModel.kt
   ExplorerModels.kt
+  AdvancedSearch.kt
   FileRepository.kt
   ExplorerItemTransforms.kt
   FileDisplayFormatter.kt

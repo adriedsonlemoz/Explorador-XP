@@ -59,6 +59,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     private val _storageScanState = MutableStateFlow(StorageScanState())
     val storageScanState: StateFlow<StorageScanState> = _storageScanState.asStateFlow()
 
+    private val _advancedSearchState = MutableStateFlow(AdvancedSearchState())
+    val advancedSearchState: StateFlow<AdvancedSearchState> = _advancedSearchState.asStateFlow()
+
     private val _events = MutableSharedFlow<ExplorerEvent>(extraBufferCapacity = 8)
     val events: SharedFlow<ExplorerEvent> = _events.asSharedFlow()
 
@@ -70,6 +73,8 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     private var storageJob: Job? = null
     private var storageAnalysisJob: Job? = null
     private var trashJob: Job? = null
+    private var advancedSearchJob: Job? = null
+    private var advancedSearchGeneration: Long = 0L
 
     private var currentSnapshotKey: String? = null
     private var currentSnapshot: List<FileItem> = emptyList()
@@ -91,6 +96,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         projectionJob?.cancel()
         snapshotCache.remove(snapshotKey(_uiState.value))
         startRefresh(useCache = false)
+        if (_advancedSearchState.value.active) {
+            runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
+        }
     }
 
     /**
@@ -279,6 +287,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun commitNavigation(directory: File) {
+        advancedSearchJob?.cancel()
+        advancedSearchGeneration++
+        _advancedSearchState.update { it.copy(active = false, running = false, scannedItems = 0, matchedItems = 0, results = emptyList(), error = null, cancelled = false) }
         _uiState.update {
             it.copy(
                 currentDir = directory,
@@ -339,6 +350,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                 }
             }
             ExplorerTab.FAVORITES -> {
+                advancedSearchJob?.cancel()
+                advancedSearchGeneration++
+                _advancedSearchState.update { it.copy(active = false, running = false, scannedItems = 0, matchedItems = 0, results = emptyList(), error = null, cancelled = false) }
                 _uiState.update {
                     it.copy(
                         tab = ExplorerTab.FAVORITES,
@@ -355,12 +369,144 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun setQuery(query: String) {
         _uiState.update { it.copy(query = query) }
-        projectSnapshot(state = _uiState.value, debounceMs = 120L)
+        if (_advancedSearchState.value.active) {
+            runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 260L)
+        } else {
+            projectSnapshot(state = _uiState.value, debounceMs = 120L)
+        }
     }
 
     fun setSearchVisible(visible: Boolean) {
         _uiState.update { it.copy(searchVisible = visible, query = if (visible) it.query else "") }
-        if (!visible) projectSnapshot(state = _uiState.value, debounceMs = 0L)
+        if (!visible) {
+            advancedSearchJob?.cancel()
+            advancedSearchGeneration++
+            _advancedSearchState.update { it.copy(active = false, running = false, scannedItems = 0, matchedItems = 0, results = emptyList(), error = null, cancelled = false) }
+            projectSnapshot(state = _uiState.value, debounceMs = 0L)
+        }
+    }
+
+    fun applyAdvancedSearchFilters(filters: AdvancedSearchFilters, sortMode: SortMode = _uiState.value.sortMode) {
+        val normalized = filters.copy(extension = AdvancedSearchMatcher.normalizeExtension(filters.extension))
+        val min = normalized.minSizeBytes
+        val max = normalized.maxSizeBytes
+        if (min != null && max != null && min > max) {
+            _events.tryEmit(ExplorerEvent.ShowMessage("O tamanho mínimo não pode ser maior que o máximo."))
+            return
+        }
+        _uiState.update { it.copy(sortMode = sortMode) }
+        runAdvancedSearch(normalized, debounceMs = 0L)
+    }
+
+    fun cancelAdvancedSearch() {
+        if (advancedSearchJob?.isActive != true) return
+        advancedSearchGeneration++
+        advancedSearchJob?.cancel()
+        _advancedSearchState.update { it.copy(running = false, cancelled = true) }
+    }
+
+    fun useSimpleSearch() {
+        advancedSearchJob?.cancel()
+        advancedSearchGeneration++
+        _advancedSearchState.update { it.copy(active = false, running = false, scannedItems = 0, matchedItems = 0, results = emptyList(), error = null, cancelled = false) }
+        projectSnapshot(state = _uiState.value, debounceMs = 0L)
+    }
+
+    private fun runAdvancedSearch(filters: AdvancedSearchFilters, debounceMs: Long) {
+        if (!hasFileAccess(getApplication())) return
+        advancedSearchJob?.cancel()
+        val generation = ++advancedSearchGeneration
+        val stateAtStart = _uiState.value
+        val root = stateAtStart.currentDir
+        val query = stateAtStart.query
+        val tab = stateAtStart.tab
+        val previousSearch = _advancedSearchState.value
+        _advancedSearchState.value = AdvancedSearchState(
+            active = true,
+            running = true,
+            scannedItems = if (debounceMs > 0L) previousSearch.scannedItems else 0,
+            matchedItems = if (debounceMs > 0L) previousSearch.results.size else 0,
+            results = if (debounceMs > 0L) previousSearch.results else emptyList(),
+            filters = filters,
+        )
+        advancedSearchJob = viewModelScope.launch {
+            if (debounceMs > 0L) delay(debounceMs)
+            if (generation != advancedSearchGeneration) return@launch
+            try {
+                if (tab == ExplorerTab.FAVORITES) {
+                    val snapshot = withContext(Dispatchers.IO) { repository.favoriteSnapshot() }
+                    val now = System.currentTimeMillis()
+                    val filtered = withContext(Dispatchers.Default) {
+                        ExplorerItemTransforms.apply(
+                            snapshot = snapshot.filter { item ->
+                                AdvancedSearchMatcher.matches(
+                                    name = item.name,
+                                    extension = item.extension,
+                                    isDirectory = item.isDirectory,
+                                    size = item.size,
+                                    modifiedAt = item.modifiedAt,
+                                    query = query,
+                                    filters = filters.copy(includeSubfolders = false),
+                                    nowMillis = now,
+                                )
+                            },
+                            query = "",
+                            sortMode = stateAtStart.sortMode,
+                            showHidden = stateAtStart.showHidden,
+                            foldersFirst = stateAtStart.foldersFirst,
+                        )
+                    }
+                    if (generation == advancedSearchGeneration) {
+                        _advancedSearchState.value = AdvancedSearchState(
+                            active = true,
+                            running = false,
+                            scannedItems = snapshot.size,
+                            matchedItems = filtered.size,
+                            results = filtered,
+                            filters = filters,
+                        )
+                    }
+                } else {
+                    val result = repository.advancedSearch(
+                        directory = root,
+                        query = query,
+                        filters = filters,
+                        sortMode = stateAtStart.sortMode,
+                        showHidden = stateAtStart.showHidden,
+                        foldersFirst = stateAtStart.foldersFirst,
+                    ) { scanned, results ->
+                        if (generation == advancedSearchGeneration) {
+                            _advancedSearchState.value = AdvancedSearchState(
+                                active = true,
+                                running = true,
+                                scannedItems = scanned,
+                                matchedItems = results.size,
+                                results = results,
+                                filters = filters,
+                            )
+                        }
+                    }
+                    if (generation != advancedSearchGeneration) return@launch
+                    result
+                        .onSuccess { results ->
+                            _advancedSearchState.update { current ->
+                                current.copy(running = false, matchedItems = results.size, results = results, error = null, cancelled = false)
+                            }
+                        }
+                        .onFailure { error ->
+                            if (error is CancellationException) {
+                                _advancedSearchState.update { it.copy(running = false, cancelled = true) }
+                            } else {
+                                _advancedSearchState.update { it.copy(running = false, error = error.message ?: "Falha ao pesquisar.") }
+                            }
+                        }
+                }
+            } catch (error: CancellationException) {
+                if (generation == advancedSearchGeneration) _advancedSearchState.update { it.copy(running = false, cancelled = true) }
+            } catch (error: Throwable) {
+                if (generation == advancedSearchGeneration) _advancedSearchState.update { it.copy(running = false, error = error.message ?: "Falha ao pesquisar.") }
+            }
+        }
     }
 
     fun toggleViewMode() {
@@ -371,19 +517,22 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun setSortMode(sortMode: SortMode) {
         _uiState.update { it.copy(sortMode = sortMode) }
-        projectSnapshot(state = _uiState.value, debounceMs = 0L)
+        if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
+        else projectSnapshot(state = _uiState.value, debounceMs = 0L)
     }
 
     fun setFoldersFirst(enabled: Boolean) {
         prefs.setFoldersFirst(enabled)
         _uiState.update { it.copy(foldersFirst = enabled) }
-        projectSnapshot(state = _uiState.value, debounceMs = 0L)
+        if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
+        else projectSnapshot(state = _uiState.value, debounceMs = 0L)
     }
 
     fun setShowHidden(show: Boolean) {
         repository.setShowHidden(show)
         _uiState.update { it.copy(showHidden = show) }
-        projectSnapshot(state = _uiState.value, debounceMs = 0L)
+        if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
+        else projectSnapshot(state = _uiState.value, debounceMs = 0L)
     }
 
     fun copySelected() = setClipboard(selectedFiles(), ClipboardMode.COPY)
@@ -477,6 +626,15 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         val parentPath = openedFile.parentFile?.absolutePath ?: return listOf(openedFile)
         if (state.currentDir.absolutePath != parentPath || currentSnapshotKey != snapshotKey(state)) return listOf(openedFile)
 
+        val advancedResults = _advancedSearchState.value.takeIf { it.active }?.results
+        if (advancedResults != null) {
+            return advancedResults.asSequence()
+                .filter { !it.isDirectory && it.extension in imageExtensions }
+                .map(FileItem::file)
+                .toList()
+                .ifEmpty { listOf(openedFile) }
+        }
+
         val orderedItems = if (state.query.isBlank()) {
             state.items
         } else {
@@ -497,7 +655,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun selectAllVisible() {
-        val paths = _uiState.value.items.map { it.path }.toSet()
+        val advanced = _advancedSearchState.value
+        val visible = if (advanced.active) advanced.results else _uiState.value.items
+        val paths = visible.map { it.path }.toSet()
         _uiState.update { it.copy(selectedPaths = paths) }
     }
 
@@ -531,6 +691,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     invalidateAllSnapshots()
                     _events.emit(ExplorerEvent.ShowMessage("Pasta criada."))
                     startRefresh(useCache = false)
+                    if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
                 }
                 .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao criar pasta.")) }
         }
@@ -543,6 +704,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     invalidateAllSnapshots()
                     _events.emit(ExplorerEvent.ShowMessage("Arquivo criado."))
                     startRefresh(useCache = false)
+                    if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
                     if (supportsInternalViewer(file)) _events.emit(ExplorerEvent.OpenFile(file))
                 }
                 .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao criar arquivo.")) }
@@ -557,6 +719,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     clearSelection()
                     _events.emit(ExplorerEvent.ShowMessage("Item renomeado."))
                     startRefresh(useCache = false)
+                    if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
                 }
                 .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao renomear.")) }
         }
@@ -778,6 +941,13 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                         bytesPerSecond = bytesPerSecond,
                         etaSeconds = etaSeconds,
                         isPaused = transferPaused.value,
+                        currentItemIndex = progress.currentItemIndex,
+                        currentItemCount = progress.currentItemCount,
+                        currentItemDone = progress.currentItemDone,
+                        currentItemTotal = progress.currentItemTotal,
+                        currentItemBytesDone = progress.currentItemBytesDone,
+                        currentItemBytesTotal = progress.currentItemBytesTotal,
+                        queueItems = progress.queueItems,
                     )
                 }
             } catch (error: Throwable) {
@@ -799,6 +969,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     clearSelection()
                     _events.tryEmit(ExplorerEvent.ShowMessage(successMessage))
                     startRefresh(useCache = false)
+                    if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
                     if (refreshTrash) loadTrash()
                 }
                 .onFailure { error ->
@@ -810,6 +981,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     invalidateAllSnapshots()
                     _events.tryEmit(ExplorerEvent.ShowMessage(message))
                     startRefresh(useCache = false)
+                    if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
                     if (refreshTrash) loadTrash()
                 }
         }

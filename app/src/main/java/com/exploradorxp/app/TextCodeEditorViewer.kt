@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +52,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -96,6 +98,11 @@ private const val EDITOR_PREFERENCES = "text_code_editor"
 private const val PREF_USE_TABS = "use_tabs"
 private const val PREF_INDENT_SIZE = "indent_size"
 private const val PREF_WORD_WRAP = "word_wrap"
+private const val PREF_AUTO_INDENT = "auto_indent"
+private const val PREF_AUTO_PAIRS = "auto_pairs"
+private const val MAX_EDITOR_TABS = 10
+private const val TAB_HISTORY_LIMIT = 80
+private const val TAB_HISTORY_CHAR_BUDGET = 600_000
 
 private val webExtensions = setOf("html", "htm", "css", "js", "mjs", "cjs")
 private val syntaxExtensions = setOf(
@@ -160,12 +167,45 @@ private data class EditorPreferences(
     val useTabs: Boolean = false,
     val indentSize: Int = 4,
     val wordWrap: Boolean = false,
+    val autoIndent: Boolean = true,
+    val autoPairs: Boolean = true,
 ) {
     val indentUnit: String
         get() = if (useTabs) "\t" else " ".repeat(indentSize.coerceIn(2, 8))
 }
 
 private enum class EditorViewMode { CODE, PREVIEW }
+
+private data class EditorHistoryOperationSnapshot(
+    val start: Int,
+    val before: String,
+    val after: String,
+    val beforeStateId: Long,
+    val afterStateId: Long,
+) {
+    fun charCost(): Int = before.length + after.length
+}
+
+private data class EditorUndoRedoSnapshot(
+    val undo: List<EditorHistoryOperationSnapshot>,
+    val redo: List<EditorHistoryOperationSnapshot>,
+    val nextStateId: Long,
+    val currentStateId: Long,
+    val savedStateId: Long,
+)
+
+private data class EditorTabSnapshot(
+    val text: String?,
+    val dirty: Boolean,
+    val selectionStart: Int,
+    val selectionEnd: Int,
+    val sourceLength: Long,
+    val sourceModifiedAt: Long,
+    val history: EditorUndoRedoSnapshot?,
+) {
+    fun sourceChanged(file: File): Boolean =
+        file.length() != sourceLength || file.lastModified() != sourceModifiedAt
+}
 
 @Composable
 fun TextCodeEditorViewer(
@@ -225,6 +265,13 @@ fun TextCodeEditorViewer(
     var operationCancelToken by remember(file.absolutePath) { mutableStateOf<AtomicBoolean?>(null) }
     var pendingLargeSelection by remember(file.absolutePath) { mutableStateOf<LargeTextFileEngine.SearchMatch?>(null) }
 
+    // As abas pertencem à sessão do editor, não a um arquivo individual.
+    // O snapshot mantém texto/seleção de abas comuns sem obrigar gravação no disco ao alternar.
+    var openTabs by remember { mutableStateOf(listOf(file.absolutePath)) }
+    val tabSnapshots = remember { mutableStateMapOf<String, EditorTabSnapshot>() }
+    var showOpenTab by remember { mutableStateOf(false) }
+    var pendingCloseTabPath by remember { mutableStateOf<String?>(null) }
+
     val externalSaveAsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(externalOrigin?.mimeType ?: "text/plain"),
     ) { uri ->
@@ -274,6 +321,7 @@ fun TextCodeEditorViewer(
                         )
                         workingText = textToSave
                         dirty = false
+                        tabSnapshots.remove(file.absolutePath)
                         editorView?.markSaved()
                         historyState = EditorHistoryState()
                         statusMessage = "Cópia salva com sucesso"
@@ -303,6 +351,7 @@ fun TextCodeEditorViewer(
                 onSuccess = {
                     workingText = textToSave
                     dirty = false
+                    tabSnapshots.remove(file.absolutePath)
                     editorView?.markSaved()
                     historyState = EditorHistoryState()
                     statusMessage = "Cópia salva com sucesso"
@@ -322,6 +371,9 @@ fun TextCodeEditorViewer(
 
 
     LaunchedEffect(key) {
+        if (key !in openTabs) {
+            openTabs = (openTabs + key).distinct().takeLast(MAX_EDITOR_TABS)
+        }
         loadState = EditorLoadState.Loading
         val token = AtomicBoolean(false)
         operationCancelToken = token
@@ -349,17 +401,23 @@ fun TextCodeEditorViewer(
             operationCancelToken = null
         }
         val ready = loadState as? EditorLoadState.Ready
-        workingText = ready?.document?.text.orEmpty()
+        val restoredTab = tabSnapshots[key]?.takeIf { ready?.document?.isLargeFile != true }
+        workingText = restoredTab?.takeIf { it.dirty }?.text ?: ready?.document?.text.orEmpty()
         previewSource = workingText
-        dirty = false
+        dirty = restoredTab?.dirty ?: false
+        val restoredCursor = restoredTab?.selectionEnd?.coerceIn(0, workingText.length) ?: 0
         metrics = ready?.document?.largeWindow?.let {
-            metricsForText(workingText, 0).copy(line = it.firstLine, column = it.firstColumn)
-        } ?: metricsForText(workingText, 0)
-        historyState = EditorHistoryState()
+            metricsForText(workingText, restoredCursor).copy(line = it.firstLine, column = it.firstColumn)
+        } ?: metricsForText(workingText, restoredCursor)
+        historyState = EditorHistoryState(dirty = dirty)
         searchState = EditorSearchState()
-        statusMessage = if (ready?.document?.isLargeFile == true) {
-            "Modo arquivo grande: somente o trecho atual fica carregado na memória."
-        } else ""
+        statusMessage = when {
+            restoredTab?.dirty == true && restoredTab.sourceChanged(file) ->
+                "Atenção: este arquivo mudou no armazenamento enquanto a aba estava em segundo plano. Salve como outro arquivo para não sobrescrever a versão externa."
+            ready?.document?.isLargeFile == true ->
+                "Modo arquivo grande: somente o trecho atual fica carregado na memória."
+            else -> ""
+        }
         expectedExternalDigest = externalOrigin?.sourceSha256
         editorView = null
         viewMode = EditorViewMode.CODE
@@ -367,7 +425,8 @@ fun TextCodeEditorViewer(
     }
 
     val requestCloseState = rememberUpdatedState<() -> Unit> {
-        if (dirty) showCloseConfirm = true else onClose()
+        val hasUnsavedTabs = dirty || tabSnapshots.any { (path, snapshot) -> path != file.absolutePath && snapshot.dirty }
+        if (hasUnsavedTabs) showCloseConfirm = true else onClose()
     }
     DisposableEffect(file.absolutePath) {
         val handler = { requestCloseState.value.invoke() }
@@ -376,6 +435,63 @@ fun TextCodeEditorViewer(
             operationCancelToken?.set(true)
             onCloseHandlerChanged(null)
         }
+    }
+
+    fun captureCurrentTab() {
+        val ready = loadState as? EditorLoadState.Ready ?: return
+        if (ready.document.isLargeFile) return
+        val view = editorView
+        val currentText = view?.text?.toString() ?: workingText
+        val previous = tabSnapshots[file.absolutePath]
+        val preserveOriginalSource = dirty && previous?.dirty == true
+        tabSnapshots[file.absolutePath] = EditorTabSnapshot(
+            text = currentText.takeIf { dirty },
+            dirty = dirty,
+            selectionStart = view?.selectionStart?.coerceAtLeast(0) ?: 0,
+            selectionEnd = view?.selectionEnd?.coerceAtLeast(0) ?: 0,
+            sourceLength = if (preserveOriginalSource) previous!!.sourceLength else file.length(),
+            sourceModifiedAt = if (preserveOriginalSource) previous!!.sourceModifiedAt else file.lastModified(),
+            history = view?.exportHistorySnapshot()?.takeIf { dirty },
+        )
+    }
+
+    fun switchEditorTab(path: String) {
+        if (path == file.absolutePath) return
+        val ready = loadState as? EditorLoadState.Ready
+        if (ready?.document?.isLargeFile == true && dirty) {
+            statusMessage = "Salve o trecho atual antes de trocar de aba."
+            return
+        }
+        captureCurrentTab()
+        onFullScreenChange(false)
+        onFileChanged(File(path))
+    }
+
+    fun requestCloseEditorTab(path: String) {
+        val tabDirty = if (path == file.absolutePath) dirty else tabSnapshots[path]?.dirty == true
+        if (tabDirty) {
+            pendingCloseTabPath = path
+            return
+        }
+        val remaining = openTabs.filterNot { it == path }
+        if (remaining.isEmpty()) {
+            onClose()
+            return
+        }
+        tabSnapshots.remove(path)
+        openTabs = remaining
+        if (path == file.absolutePath) onFileChanged(File(remaining.last()))
+    }
+
+    fun openEditorTab(target: File) {
+        val targetPath = target.absolutePath
+        if (targetPath !in openTabs && openTabs.size >= MAX_EDITOR_TABS) {
+            statusMessage = "Limite de $MAX_EDITOR_TABS abas abertas. Feche uma aba para abrir outra."
+            return
+        }
+        if (targetPath !in openTabs) openTabs = openTabs + targetPath
+        showOpenTab = false
+        switchEditorTab(targetPath)
     }
 
     fun progressReporter(token: AtomicBoolean, label: String): (Long, Long) -> Unit {
@@ -612,6 +728,11 @@ fun TextCodeEditorViewer(
 
     fun saveTo(target: File, switchToTarget: Boolean) {
         val ready = loadState as? EditorLoadState.Ready ?: return
+        val restoredTab = tabSnapshots[file.absolutePath]
+        if (target.absolutePath == file.absolutePath && restoredTab?.dirty == true && restoredTab.sourceChanged(file)) {
+            statusMessage = "O arquivo foi alterado fora desta aba. Use Salvar como para preservar as duas versões."
+            return
+        }
         if (ready.document.truncated) {
             statusMessage = "Este arquivo está em modo somente leitura."
             return
@@ -650,6 +771,7 @@ fun TextCodeEditorViewer(
                     onSuccess = { patchedWindow ->
                         workingText = textToSave
                         dirty = false
+                        tabSnapshots.remove(file.absolutePath)
                         editorView?.markSaved()
                         historyState = EditorHistoryState()
                         if (patchedWindow != null) {
@@ -679,6 +801,7 @@ fun TextCodeEditorViewer(
                 onSuccess = {
                     workingText = textToSave
                     dirty = false
+                    tabSnapshots.remove(file.absolutePath)
                     editorView?.markSaved()
                     historyState = EditorHistoryState()
                     statusMessage = if (switchToTarget) "Salvo como ${target.name}" else "Arquivo salvo"
@@ -762,6 +885,7 @@ fun TextCodeEditorViewer(
                     expectedExternalDigest = newDigest
                     workingText = textToSave
                     dirty = false
+                    tabSnapshots.remove(file.absolutePath)
                     editorView?.markSaved()
                     historyState = EditorHistoryState()
                     statusMessage = "Arquivo original salvo"
@@ -811,10 +935,164 @@ fun TextCodeEditorViewer(
             result.fold(
                 onSuccess = {
                     dirty = false
+                    tabSnapshots.remove(file.absolutePath)
                     editorView?.markSaved()
                     onClose()
                 },
                 onFailure = { statusMessage = "Não foi possível salvar: ${it.message ?: "erro desconhecido"}" },
+            )
+        }
+    }
+
+    fun saveAndCloseTab(path: String) {
+        val currentReady = loadState as? EditorLoadState.Ready
+        val currentText = editorView?.text?.toString() ?: workingText
+        if (path == file.absolutePath) captureCurrentTab()
+        val snapshot = tabSnapshots[path]
+        scope.launch {
+            statusMessage = "Salvando ${File(path).name}..."
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val target = File(path)
+                    if (snapshot?.dirty == true && snapshot.sourceChanged(target)) {
+                        error("${target.name} foi alterado fora do Explorador XP. Abra a aba e use Salvar como para preservar as duas versões.")
+                    }
+                    if (path == file.absolutePath) {
+                        val ready = currentReady ?: error("O arquivo ainda não terminou de carregar.")
+                        val window = ready.document.largeWindow
+                        if (window != null) {
+                            LargeTextFileEngine.patchInPlace(
+                                file = target,
+                                window = window,
+                                editedText = currentText,
+                                charset = ready.document.encoding.charset,
+                                bom = ready.document.encoding.bom,
+                                preferredLineEnding = ready.document.lineEnding,
+                            )
+                        } else {
+                            safeWriteTextFile(
+                                target = target,
+                                text = currentText,
+                                encoding = ready.document.encoding,
+                                preferredLineEnding = ready.document.lineEnding,
+                            ).getOrThrow()
+                        }
+                    } else {
+                        val restored = snapshot ?: error("A sessão desta aba não está mais disponível.")
+                        val loaded = loadEditorDocument(target) as? EditorLoadState.Ready
+                            ?: error("Não foi possível reler ${target.name} antes de salvar.")
+                        check(!loaded.document.isLargeFile) { "${target.name} precisa ser aberto e salvo separadamente no modo arquivo grande." }
+                        safeWriteTextFile(
+                            target = target,
+                            text = restored.text ?: error("O conteúdo não salvo de ${target.name} não está disponível."),
+                            encoding = loaded.document.encoding,
+                            preferredLineEnding = loaded.document.lineEnding,
+                        ).getOrThrow()
+                    }
+                }
+            }
+            result.fold(
+                onSuccess = {
+                    pendingCloseTabPath = null
+                    tabSnapshots.remove(path)
+                    val remaining = openTabs.filterNot { it == path }
+                    openTabs = remaining
+                    if (remaining.isEmpty()) {
+                        onClose()
+                    } else if (path == file.absolutePath) {
+                        dirty = false
+                        editorView?.markSaved()
+                        onFileChanged(File(remaining.last()))
+                    } else {
+                        statusMessage = "${File(path).name} salvo e fechado"
+                    }
+                },
+                onFailure = { error ->
+                    pendingCloseTabPath = null
+                    statusMessage = "Não foi possível salvar ${File(path).name}: ${error.message ?: "erro desconhecido"}"
+                },
+            )
+        }
+    }
+
+    fun saveAllLocalTabsAndClose() {
+        val currentReady = loadState as? EditorLoadState.Ready ?: return
+        val currentText = editorView?.text?.toString() ?: workingText
+        captureCurrentTab()
+        val snapshots = tabSnapshots.toMap()
+        val paths = openTabs.toList()
+        scope.launch {
+            statusMessage = "Salvando abas alteradas..."
+            val savedPaths = mutableListOf<String>()
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    // Faz primeiro uma pré-verificação para não começar a gravar se já houver
+                    // conflito conhecido em alguma aba suja.
+                    paths.forEach { path ->
+                        val target = File(path)
+                        val snapshot = snapshots[path]
+                        val needsSave = if (path == file.absolutePath) dirty else snapshot?.dirty == true
+                        if (needsSave && snapshot?.dirty == true && snapshot.sourceChanged(target)) {
+                            error("${target.name} foi alterado fora do Explorador XP. Abra essa aba e use Salvar como antes de sair.")
+                        }
+                    }
+                    paths.forEach { path ->
+                        val target = File(path)
+                        val snapshot = snapshots[path]
+                        val needsSave = if (path == file.absolutePath) dirty else snapshot?.dirty == true
+                        if (!needsSave) return@forEach
+
+                        if (path == file.absolutePath) {
+                            val window = currentReady.document.largeWindow
+                            if (window != null) {
+                                LargeTextFileEngine.patchInPlace(
+                                    file = target,
+                                    window = window,
+                                    editedText = currentText,
+                                    charset = currentReady.document.encoding.charset,
+                                    bom = currentReady.document.encoding.bom,
+                                    preferredLineEnding = currentReady.document.lineEnding,
+                                )
+                            } else {
+                                safeWriteTextFile(
+                                    target = target,
+                                    text = currentText,
+                                    encoding = currentReady.document.encoding,
+                                    preferredLineEnding = currentReady.document.lineEnding,
+                                ).getOrThrow()
+                            }
+                        } else {
+                            val restored = snapshot ?: return@forEach
+                            val loaded = loadEditorDocument(target) as? EditorLoadState.Ready
+                                ?: error("Não foi possível reler ${target.name} antes de salvar.")
+                            check(!loaded.document.isLargeFile) { "${target.name} mudou para modo arquivo grande; abra a aba e salve-a separadamente." }
+                            safeWriteTextFile(
+                                target = target,
+                                text = restored.text ?: error("O conteúdo não salvo de ${target.name} não está disponível."),
+                                encoding = loaded.document.encoding,
+                                preferredLineEnding = loaded.document.lineEnding,
+                            ).getOrThrow()
+                        }
+                        savedPaths += path
+                    }
+                }
+            }
+            result.fold(
+                onSuccess = {
+                    dirty = false
+                    tabSnapshots.clear()
+                    editorView?.markSaved()
+                    onClose()
+                },
+                onFailure = { error ->
+                    savedPaths.forEach { saved -> tabSnapshots.remove(saved) }
+                    if (file.absolutePath in savedPaths) {
+                        dirty = false
+                        editorView?.markSaved()
+                    }
+                    val partial = if (savedPaths.isNotEmpty()) " ${savedPaths.size} aba(s) já foram salvas com sucesso." else ""
+                    statusMessage = "Não foi possível salvar todas as abas: ${error.message ?: "erro desconhecido"}.$partial"
+                },
             )
         }
     }
@@ -830,10 +1108,18 @@ fun TextCodeEditorViewer(
     }
 
     if (showCloseConfirm) {
+        val unsavedTabCount = buildSet {
+            tabSnapshots.forEach { (path, snapshot) -> if (snapshot.dirty) add(path) }
+            if (dirty) add(file.absolutePath) else remove(file.absolutePath)
+        }.size
         EditorChoiceDialog(
             title = "Alterações não salvas",
-            message = "Há alterações que ainda não foram salvas em ${file.name}. O que deseja fazer?",
-            primaryLabel = if (isExternalOpen && !canSaveBackToExternal) "Salvar como e sair" else "Salvar e sair",
+            message = if (!isExternalOpen && unsavedTabCount > 1) {
+                "Há alterações não salvas em $unsavedTabCount abas. O que deseja fazer?"
+            } else {
+                "Há alterações que ainda não foram salvas em ${file.name}. O que deseja fazer?"
+            },
+            primaryLabel = if (isExternalOpen && !canSaveBackToExternal) "Salvar como e sair" else if (!isExternalOpen && unsavedTabCount > 1) "Salvar todas e sair" else "Salvar e sair",
             secondaryLabel = "Sair sem salvar",
             cancelLabel = "Cancelar",
             destructiveSecondary = true,
@@ -842,15 +1128,49 @@ fun TextCodeEditorViewer(
                 when {
                     isExternalOpen && canSaveBackToExternal -> saveBackToExternal(closeAfterSave = true)
                     isExternalOpen -> requestSaveAs(closeAfterSave = true)
-                    else -> saveLocalAndClose()
+                    else -> saveAllLocalTabsAndClose()
                 }
             },
             onSecondary = {
                 showCloseConfirm = false
                 dirty = false
+                tabSnapshots.clear()
                 onClose()
             },
             onCancel = { showCloseConfirm = false },
+        )
+    }
+
+    if (showOpenTab) {
+        EditorOpenTabDialog(
+            currentFile = file,
+            openPaths = openTabs.toSet(),
+            onDismiss = { showOpenTab = false },
+            onOpen = ::openEditorTab,
+        )
+    }
+
+    pendingCloseTabPath?.let { path ->
+        EditorChoiceDialog(
+            title = "Fechar aba?",
+            message = "${File(path).name} possui alterações não salvas. Deseja salvar antes de fechar?",
+            primaryLabel = "Salvar e fechar",
+            secondaryLabel = "Fechar sem salvar",
+            cancelLabel = "Cancelar",
+            destructiveSecondary = true,
+            onPrimary = { saveAndCloseTab(path) },
+            onSecondary = {
+                pendingCloseTabPath = null
+                tabSnapshots.remove(path)
+                val remaining = openTabs.filterNot { it == path }
+                openTabs = remaining
+                if (remaining.isEmpty()) onClose()
+                else if (path == file.absolutePath) {
+                    dirty = false
+                    onFileChanged(File(remaining.last()))
+                }
+            },
+            onCancel = { pendingCloseTabPath = null },
         )
     }
 
@@ -967,6 +1287,19 @@ fun TextCodeEditorViewer(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().background(Color.White)) {
         val ready = loadState as? EditorLoadState.Ready
+        if (!isArchivePreview && !isExternalOpen) {
+            EditorTabStrip(
+                paths = openTabs,
+                activePath = file.absolutePath,
+                dirtyPaths = buildSet {
+                    tabSnapshots.forEach { (path, snapshot) -> if (snapshot.dirty) add(path) }
+                    if (dirty) add(file.absolutePath) else remove(file.absolutePath)
+                },
+                onSelect = ::switchEditorTab,
+                onClose = ::requestCloseEditorTab,
+                onAdd = { showOpenTab = true },
+            )
+        }
         EditorToolbar(
             dirty = dirty,
             editable = ((loadState as? EditorLoadState.Ready)?.document?.truncated == false) && !isArchivePreview,
@@ -983,6 +1316,8 @@ fun TextCodeEditorViewer(
             onSaveAs = { requestSaveAs() },
             onUndo = { editorView?.undoEdit() },
             onRedo = { editorView?.redoEdit() },
+            onOutdent = { editorView?.changeIndent(outdent = true) },
+            onIndent = { editorView?.changeIndent(outdent = false) },
             onFind = { showFindPanel = !showFindPanel },
             onToggleWordWrap = {
                 val updated = editorPreferences.copy(wordWrap = !editorPreferences.wordWrap)
@@ -1126,6 +1461,10 @@ fun TextCodeEditorViewer(
                             baseLineNumber = largeWindow?.firstLine ?: 1,
                             baseColumnNumber = largeWindow?.firstColumn ?: 1,
                             largeFileMode = state.document.isLargeFile,
+                            initialDirty = dirty,
+                            initialSelectionStart = tabSnapshots[file.absolutePath]?.selectionStart ?: 0,
+                            initialSelectionEnd = tabSnapshots[file.absolutePath]?.selectionEnd ?: 0,
+                            initialHistory = tabSnapshots[file.absolutePath]?.history,
                             onViewReady = { view ->
                                 editorView = view
                                 pendingLargeSelection?.let { pending ->
@@ -1206,6 +1545,139 @@ fun TextCodeEditorViewer(
 }
 
 @Composable
+private fun EditorTabStrip(
+    paths: List<String>,
+    activePath: String,
+    dirtyPaths: Set<String>,
+    onSelect: (String) -> Unit,
+    onClose: (String) -> Unit,
+    onAdd: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .background(Color(0xFFE8EEF7))
+            .border(1.dp, Color(0xFFB8C7DA))
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 5.dp, vertical = 3.dp),
+    ) {
+        paths.forEach { path ->
+            val active = path == activePath
+            val name = File(path).name + if (path in dirtyPaths) " *" else ""
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .height(28.dp)
+                    .background(if (active) Color.White else Color(0xFFDCE6F2), RoundedCornerShape(5.dp))
+                    .border(1.dp, if (active) XpBlue else Color(0xFFB7C6D8), RoundedCornerShape(5.dp))
+                    .clickable { onSelect(path) }
+                    .padding(start = 8.dp, end = 3.dp),
+            ) {
+                Text(
+                    name,
+                    fontSize = 11.sp,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                    color = if (active) XpBlueDark else Color(0xFF344454),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(min = 54.dp, max = 150.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "×",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF6A7480),
+                    modifier = Modifier.clickable { onClose(path) }.padding(horizontal = 4.dp, vertical = 2.dp),
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+        }
+        EditorButton("＋", enabled = paths.size < MAX_EDITOR_TABS, onClick = onAdd)
+    }
+}
+
+@Composable
+private fun EditorOpenTabDialog(
+    currentFile: File,
+    openPaths: Set<String>,
+    onDismiss: () -> Unit,
+    onOpen: (File) -> Unit,
+) {
+    val parentPath = currentFile.parentFile?.absolutePath
+    var siblings by remember(parentPath) { mutableStateOf<List<File>?>(null) }
+    LaunchedEffect(parentPath) {
+        siblings = withContext(Dispatchers.IO) {
+            currentFile.parentFile?.listFiles()
+                ?.asSequence()
+                ?.filter { it.isFile && isTextCodeTabCandidate(it) }
+                ?.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+                ?.toList()
+                .orEmpty()
+        }
+    }
+    SafeEditorDialog(onDismiss) {
+        EditorDialogSurface("Abrir em nova aba") {
+            Text(
+                "Arquivos de texto/código na pasta atual • ${openPaths.size}/$MAX_EDITOR_TABS abas abertas",
+                fontSize = 10.5.sp,
+                color = XpTextSecondary,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                when {
+                    siblings == null -> Text("Carregando arquivos da pasta...", fontSize = 11.sp, color = XpTextSecondary, modifier = Modifier.padding(8.dp))
+                    siblings!!.isEmpty() -> Text("Nenhum outro arquivo de texto/código encontrado nesta pasta.", fontSize = 11.sp, color = XpTextSecondary, modifier = Modifier.padding(8.dp))
+                }
+                siblings.orEmpty().forEach { candidate ->
+                    val opened = candidate.absolutePath in openPaths
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpen(candidate) }
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(candidate.name, fontSize = 12.sp, color = Color(0xFF202020), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                if (opened) "Já aberta" else formatEditorBytes(candidate.length()),
+                                fontSize = 9.5.sp,
+                                color = XpTextSecondary,
+                            )
+                        }
+                        Text(if (opened) "Abrir" else "＋", fontSize = 11.sp, color = XpBlueDark, fontWeight = FontWeight.Bold)
+                    }
+                    HorizontalDivider(color = Color(0xFFE1E7EE))
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                EditorButton("Fechar", onClick = onDismiss)
+            }
+        }
+    }
+}
+
+private fun isTextCodeTabCandidate(file: File): Boolean {
+    if (!file.isFile) return false
+    val knownNames = setOf("makefile", "dockerfile", "readme", "license", ".gitignore", ".gitattributes", ".editorconfig")
+    val supported = syntaxExtensions + webExtensions + setOf("txt", "log")
+    val ext = file.extension.lowercase()
+    if (file.name.lowercase() in knownNames || ext in supported) return true
+    if (!FileContentDetector.needsContentDetection(file)) return false
+    return FileContentDetector.detectExtension(file)?.lowercase() in supported
+}
+
+
+@Composable
 private fun EditorToolbar(
     dirty: Boolean,
     editable: Boolean,
@@ -1220,6 +1692,8 @@ private fun EditorToolbar(
     onSaveAs: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
+    onOutdent: () -> Unit,
+    onIndent: () -> Unit,
     onFind: () -> Unit,
     onToggleWordWrap: () -> Unit,
     onTogglePreview: () -> Unit,
@@ -1244,6 +1718,10 @@ private fun EditorToolbar(
         EditorButton("Desfazer", enabled = editable && canUndo, onClick = onUndo)
         Spacer(Modifier.width(5.dp))
         EditorButton("Refazer", enabled = editable && canRedo, onClick = onRedo)
+        Spacer(Modifier.width(8.dp))
+        EditorButton("← Recuar", enabled = editable, onClick = onOutdent)
+        Spacer(Modifier.width(5.dp))
+        EditorButton("Indentar →", enabled = editable, onClick = onIndent)
         Spacer(Modifier.width(8.dp))
         EditorButton("Localizar", onClick = onFind)
         if (supportsPreview) {
@@ -1431,6 +1909,10 @@ private fun CodeEditorView(
     baseLineNumber: Int,
     baseColumnNumber: Int,
     largeFileMode: Boolean,
+    initialDirty: Boolean,
+    initialSelectionStart: Int,
+    initialSelectionEnd: Int,
+    initialHistory: EditorUndoRedoSnapshot?,
     onViewReady: (CodeEditText) -> Unit,
     onMetricsState: (EditorMetrics) -> Unit,
     onContentChanged: () -> Unit,
@@ -1450,6 +1932,10 @@ private fun CodeEditorView(
                         baseLineNumber = baseLineNumber,
                         baseColumnNumber = baseColumnNumber,
                         largeFileMode = largeFileMode,
+                        initialDirty = initialDirty,
+                        initialSelectionStart = initialSelectionStart,
+                        initialSelectionEnd = initialSelectionEnd,
+                        initialHistory = initialHistory,
                         onMetricsState = onMetricsState,
                         onContentChanged = onContentChanged,
                         onHistoryState = onHistoryState,
@@ -1542,6 +2028,10 @@ private class CodeEditText(context: Context) : EditText(context) {
         baseLineNumber: Int,
         baseColumnNumber: Int,
         largeFileMode: Boolean,
+        initialDirty: Boolean,
+        initialSelectionStart: Int,
+        initialSelectionEnd: Int,
+        initialHistory: EditorUndoRedoSnapshot?,
         onMetricsState: (EditorMetrics) -> Unit,
         onContentChanged: () -> Unit,
         onHistoryState: (EditorHistoryState) -> Unit,
@@ -1575,12 +2065,72 @@ private class CodeEditText(context: Context) : EditText(context) {
         suppressHistory = false
         rebuildLineIndex(initialText)
         updateGutterPadding()
-        if (!readOnly) setSelection(0)
+        val safeStart = initialSelectionStart.coerceIn(0, initialText.length)
+        val safeEnd = initialSelectionEnd.coerceIn(safeStart, initialText.length)
+        if (!readOnly) setSelection(safeStart, safeEnd)
+        if (initialHistory != null) {
+            restoreHistorySnapshot(initialHistory)
+        } else if (initialDirty) {
+            currentStateId = 1L
+            nextStateId = 1L
+            savedStateId = 0L
+        }
         addTextChangedListener(historyWatcher)
         notifyMetrics()
         notifyHistory()
         scheduleHighlight()
     }
+
+    fun exportHistorySnapshot(): EditorUndoRedoSnapshot {
+        fun capped(source: ArrayDeque<EditOperation>): List<EditorHistoryOperationSnapshot> {
+            val kept = ArrayDeque<EditorHistoryOperationSnapshot>()
+            var chars = 0
+            for (op in source.toList().asReversed()) {
+                if (kept.size >= TAB_HISTORY_LIMIT) break
+                val snapshot = op.toSnapshot()
+                val cost = snapshot.charCost()
+                if (kept.isNotEmpty() && chars + cost > TAB_HISTORY_CHAR_BUDGET) break
+                kept.addFirst(snapshot)
+                chars += cost
+            }
+            return kept.toList()
+        }
+        return EditorUndoRedoSnapshot(
+            undo = capped(undoStack),
+            redo = capped(redoStack),
+            nextStateId = nextStateId,
+            currentStateId = currentStateId,
+            savedStateId = savedStateId,
+        )
+    }
+
+    private fun restoreHistorySnapshot(snapshot: EditorUndoRedoSnapshot) {
+        undoStack.clear()
+        redoStack.clear()
+        snapshot.undo.forEach { undoStack.addLast(it.toEditOperation()) }
+        snapshot.redo.forEach { redoStack.addLast(it.toEditOperation()) }
+        undoChars = undoStack.sumOf { it.historyCharCost() }
+        redoChars = redoStack.sumOf { it.historyCharCost() }
+        nextStateId = snapshot.nextStateId
+        currentStateId = snapshot.currentStateId
+        savedStateId = snapshot.savedStateId
+    }
+
+    private fun EditOperation.toSnapshot(): EditorHistoryOperationSnapshot = EditorHistoryOperationSnapshot(
+        start = start,
+        before = before,
+        after = after,
+        beforeStateId = beforeStateId,
+        afterStateId = afterStateId,
+    )
+
+    private fun EditorHistoryOperationSnapshot.toEditOperation(): EditOperation = EditOperation(
+        start = start,
+        before = before,
+        after = after,
+        beforeStateId = beforeStateId,
+        afterStateId = afterStateId,
+    )
 
     fun updatePreferences(updated: EditorPreferences) {
         if (preferences == updated) return
@@ -1671,6 +2221,9 @@ private class CodeEditText(context: Context) : EditText(context) {
     ): AutomaticEdit? {
         if (insertedText.length != 1) return null
         val typed = insertedText[0]
+        if (typed == '\n' && !preferences.autoIndent) return null
+        val isPairCharacter = typed in "()[]{}'\""
+        if (isPairCharacter && !preferences.autoPairs && typed != '\n') return null
         val initialEnd = (start + 1).coerceAtMost(editable.length)
         val next = editable.getOrNull(initialEnd)
 
@@ -1756,12 +2309,48 @@ private class CodeEditText(context: Context) : EditText(context) {
         if (!suppressHistory) notifyMetrics()
     }
 
+    fun changeIndent(outdent: Boolean) {
+        if (editorReadOnly) return
+        val editable = text ?: return
+        val originalStart = selectionStart.coerceAtLeast(0)
+        val originalEnd = selectionEnd.coerceAtLeast(originalStart)
+        val lineStart = if (originalStart <= 0) 0 else editable.lastIndexOf('\n', originalStart - 1).let { if (it < 0) 0 else it + 1 }
+        val selectionTouchesMultipleLines = editable.subSequence(lineStart, originalEnd.coerceAtMost(editable.length)).contains('\n')
+
+        if (!selectionTouchesMultipleLines && originalStart == originalEnd) {
+            if (outdent) {
+                val removable = removableIndentLength(editable, lineStart, originalStart)
+                if (removable > 0) editable.delete(lineStart, lineStart + removable)
+            } else {
+                editable.insert(originalStart, preferences.indentUnit)
+            }
+            return
+        }
+
+        val blockEnd = originalEnd.coerceAtMost(editable.length)
+        val source = editable.subSequence(lineStart, blockEnd).toString()
+        val transformed = EditorIndentationEngine.transformBlock(
+            source = source,
+            indentUnit = preferences.indentUnit,
+            indentSize = preferences.indentSize,
+            outdent = outdent,
+        )
+        editable.replace(lineStart, blockEnd, transformed)
+        setSelection(lineStart, (lineStart + transformed.length).coerceAtMost(editable.length))
+    }
+
+    private fun removableIndentLength(text: CharSequence, lineStart: Int, cursor: Int): Int {
+        if (lineStart >= cursor) return 0
+        if (preferences.useTabs && text.getOrNull(lineStart) == '\t') return 1
+        var count = 0
+        val maxSpaces = preferences.indentSize.coerceIn(2, 8)
+        while (lineStart + count < cursor && count < maxSpaces && text[lineStart + count] == ' ') count++
+        return count
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_TAB && !editorReadOnly) {
-            val editable = text ?: return super.onKeyDown(keyCode, event)
-            val start = selectionStart.coerceAtLeast(0)
-            val end = selectionEnd.coerceAtLeast(start)
-            editable.replace(start, end, preferences.indentUnit)
+            changeIndent(outdent = event?.isShiftPressed == true)
             return true
         }
         return super.onKeyDown(keyCode, event)
@@ -2577,8 +3166,18 @@ private fun EditorSettingsDialog(
                 enabled = true,
                 onClick = { onChange(preferences.copy(wordWrap = !preferences.wordWrap)) },
             )
+            EditorMenuRow(
+                label = "Autoindentação: ${if (preferences.autoIndent) "ativada" else "desativada"}",
+                enabled = true,
+                onClick = { onChange(preferences.copy(autoIndent = !preferences.autoIndent)) },
+            )
+            EditorMenuRow(
+                label = "Fechamento de pares: ${if (preferences.autoPairs) "ativado" else "desativado"}",
+                enabled = true,
+                onClick = { onChange(preferences.copy(autoPairs = !preferences.autoPairs)) },
+            )
             Text(
-                "As opções são salvas para os próximos arquivos. Autoindentação e fechamento de pares permanecem ativos.",
+                "As opções são salvas para os próximos arquivos. TAB/Shift+TAB e os botões do editor também indentam ou recuam blocos selecionados.",
                 fontSize = 10.sp,
                 color = XpTextSecondary,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
@@ -2783,6 +3382,8 @@ private fun loadEditorPreferences(context: Context): EditorPreferences {
         useTabs = prefs.getBoolean(PREF_USE_TABS, false),
         indentSize = indentSize,
         wordWrap = prefs.getBoolean(PREF_WORD_WRAP, false),
+        autoIndent = prefs.getBoolean(PREF_AUTO_INDENT, true),
+        autoPairs = prefs.getBoolean(PREF_AUTO_PAIRS, true),
     )
 }
 
@@ -2792,6 +3393,8 @@ private fun saveEditorPreferences(context: Context, preferences: EditorPreferenc
         .putBoolean(PREF_USE_TABS, preferences.useTabs)
         .putInt(PREF_INDENT_SIZE, preferences.indentSize)
         .putBoolean(PREF_WORD_WRAP, preferences.wordWrap)
+        .putBoolean(PREF_AUTO_INDENT, preferences.autoIndent)
+        .putBoolean(PREF_AUTO_PAIRS, preferences.autoPairs)
         .apply()
 }
 

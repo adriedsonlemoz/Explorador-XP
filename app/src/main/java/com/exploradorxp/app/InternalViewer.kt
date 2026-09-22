@@ -2,6 +2,7 @@ package com.exploradorxp.app
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.ExifInterface
 import android.content.Intent
 import android.content.Context
 import android.content.pm.PackageManager
@@ -18,7 +19,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.border
@@ -30,6 +36,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,14 +67,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.compose.BackHandler
 import androidx.core.content.FileProvider
@@ -73,11 +85,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.DateFormat
+import java.util.Date
 
-internal val imageExtensions = setOf("jpg", "jpeg", "png", "bmp", "webp", "gif")
+internal val imageExtensions = setOf("jpg", "jpeg", "png", "bmp", "webp", "gif", "heic")
 private val videoExtensions = setOf("mp4", "m4v", "3gp", "webm", "mkv", "avi", "mov")
 private val audioExtensions = setOf("mp3", "wav", "m4a", "aac", "ogg", "flac", "opus")
 internal val textExtensions = setOf(
@@ -119,6 +134,8 @@ fun InternalViewerScreen(
     onClose: () -> Unit,
     onOpenExternal: (File) -> Unit,
     onOpenFolder: (File) -> Unit,
+    onShareFile: (File) -> Unit,
+    onMoveToTrash: (File) -> Unit,
 ) {
     var activeFilePath by rememberSaveable(file.absolutePath) { mutableStateOf(file.absolutePath) }
     var returnToArchivePath by rememberSaveable(file.absolutePath) { mutableStateOf<String?>(null) }
@@ -141,8 +158,9 @@ fun InternalViewerScreen(
     val isArchivePreview = remember(activeFilePath, returnToArchivePath) {
         returnToArchivePath != null || activeFile.absolutePath.contains("/archive-preview/")
     }
-    var contentFullScreen by rememberSaveable(activeFilePath) { mutableStateOf(false) }
+    var contentFullScreen by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var guardedCloseRequest by remember(activeFilePath) { mutableStateOf<(() -> Unit)?>(null) }
+    var removedImagePaths by remember(file.absolutePath) { mutableStateOf<Set<String>>(emptySet()) }
 
     BackHandler {
         when {
@@ -176,33 +194,31 @@ fun InternalViewerScreen(
             HorizontalDivider(color = Color(0xFFB8C7DA))
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (extension) {
-                in imageExtensions -> ImageViewer(
+            when {
+                extension in imageExtensions -> ImageViewer(
                     file = activeFile,
-                    folderImages = folderImages,
+                    folderImages = folderImages.filterNot { it.absolutePath in removedImagePaths },
+                    fullScreen = contentFullScreen,
+                    canModify = !forcedReadOnly && !isArchivePreview,
+                    onFullScreenChange = { contentFullScreen = it },
                     onSelectFile = { selected -> activeFilePath = selected.absolutePath },
                     onOpenExternal = { onOpenExternal(activeFile) },
+                    onShare = { onShareFile(activeFile) },
+                    onMoveToTrash = { target ->
+                        removedImagePaths = removedImagePaths + target.absolutePath
+                        onMoveToTrash(target)
+                    },
+                    onClose = requestClose,
                 )
-                in videoExtensions -> VideoPlayerViewer(
+                extension in videoExtensions -> VideoPlayerViewer(
                     file = activeFile,
                     fullScreen = contentFullScreen,
                     onFullScreenChange = { contentFullScreen = it },
                     onOpenExternal = { onOpenExternal(activeFile) },
                 )
-                in audioExtensions -> MediaViewer(activeFile)
-                "html", "htm" -> TextCodeEditorViewer(
-                    file = activeFile,
-                    forcedReadOnly = isArchivePreview || forcedReadOnly,
-                    externalOrigin = externalOrigin,
-                    fullScreen = contentFullScreen,
-                    onFullScreenChange = { contentFullScreen = it },
-                    onClose = onClose,
-                    onCloseHandlerChanged = { guardedCloseRequest = it },
-                    onOpenExternal = { onOpenExternal(activeFile) },
-                    onFileChanged = { activeFilePath = it.absolutePath },
-                )
-                "pdf" -> PdfViewer(activeFile)
-                "zip" -> ArchiveZipViewer(
+                extension in audioExtensions -> MediaViewer(activeFile)
+                extension == "pdf" -> PdfViewer(activeFile)
+                extension == "zip" -> ArchiveZipViewer(
                     file = activeFile,
                     onPreviewFile = { preview ->
                         returnToArchivePath = activeFile.absolutePath
@@ -211,8 +227,8 @@ fun InternalViewerScreen(
                     onOpenExternal = onOpenExternal,
                     onOpenFolder = onOpenFolder,
                 )
-                "apk" -> ApkViewer(activeFile) { onOpenExternal(activeFile) }
-                in textExtensions -> TextCodeEditorViewer(
+                extension == "apk" -> ApkViewer(activeFile) { onOpenExternal(activeFile) }
+                isTextDocument -> TextCodeEditorViewer(
                     file = activeFile,
                     forcedReadOnly = isArchivePreview || forcedReadOnly,
                     externalOrigin = externalOrigin,
@@ -223,21 +239,7 @@ fun InternalViewerScreen(
                     onOpenExternal = { onOpenExternal(activeFile) },
                     onFileChanged = { activeFilePath = it.absolutePath },
                 )
-                else -> if (activeFile.name.lowercase() in textFileNames || isExternalText) {
-                    TextCodeEditorViewer(
-                        file = activeFile,
-                        forcedReadOnly = isArchivePreview || forcedReadOnly,
-                        externalOrigin = externalOrigin,
-                        fullScreen = contentFullScreen,
-                        onFullScreenChange = { contentFullScreen = it },
-                        onClose = onClose,
-                        onCloseHandlerChanged = { guardedCloseRequest = it },
-                        onOpenExternal = { onOpenExternal(activeFile) },
-                        onFileChanged = { activeFilePath = it.absolutePath },
-                    )
-                } else {
-                    UnsupportedViewer { onOpenExternal(activeFile) }
-                }
+                else -> UnsupportedViewer { onOpenExternal(activeFile) }
             }
         }
         if (!contentFullScreen) ViewerStatusBar(activeFile, extension, typeDetectedFromContent)
@@ -364,23 +366,37 @@ private fun ViewerActionButton(
 private fun ImageViewer(
     file: File,
     folderImages: List<File>,
+    fullScreen: Boolean,
+    canModify: Boolean,
+    onFullScreenChange: (Boolean) -> Unit,
     onSelectFile: (File) -> Unit,
     onOpenExternal: () -> Unit,
+    onShare: () -> Unit,
+    onMoveToTrash: (File) -> Unit,
+    onClose: () -> Unit,
 ) {
     val key = "${file.absolutePath}:${file.lastModified()}"
     var loadState by remember(key) { mutableStateOf<ViewerLoadState<Bitmap>>(ViewerLoadState.Loading) }
+    var scale by remember(file.absolutePath) { mutableFloatStateOf(1f) }
+    var offsetX by remember(file.absolutePath) { mutableFloatStateOf(0f) }
+    var offsetY by remember(file.absolutePath) { mutableFloatStateOf(0f) }
+    var quarterTurns by remember(file.absolutePath) { mutableIntStateOf(0) }
+    var controlsVisible by remember(file.absolutePath) { mutableStateOf(true) }
+    var showInfo by remember(file.absolutePath) { mutableStateOf(false) }
+    var confirmTrash by remember(file.absolutePath) { mutableStateOf(false) }
 
-    // A sequência é recebida do snapshot da pasta que já estava aberta no Explorer.
-    // O visualizador não varre subpastas e não mistura imagens de outras localizações.
+    // A sequência continua limitada ao snapshot da pasta que estava aberta no Explorer.
+    // Nada aqui percorre subpastas ou mistura imagens de outras localizações.
     val gallery = remember(folderImages, file.absolutePath) {
         val sameFolder = file.parentFile?.absolutePath
         val valid = folderImages
             .asSequence()
             .filter { it.parentFile?.absolutePath == sameFolder }
             .filter { it.extension.lowercase() in imageExtensions }
+            .filter { it.exists() && it.isFile }
             .distinctBy { it.absolutePath }
             .toMutableList()
-        if (valid.none { it.absolutePath == file.absolutePath }) valid.add(file)
+        if (file.exists() && valid.none { it.absolutePath == file.absolutePath }) valid.add(file)
         valid
     }
     val currentIndex = gallery.indexOfFirst { it.absolutePath == file.absolutePath }.coerceAtLeast(0)
@@ -395,11 +411,18 @@ private fun ImageViewer(
                 !file.canRead() -> ViewerLoadState.Error("O Explorador XP não conseguiu acessar esta imagem.")
                 file.length() <= 0L -> ViewerLoadState.Error("A imagem está vazia ou corrompida.")
                 else -> {
-                    val bitmap = decodeSampledBitmap(file, 1800, 1800)
+                    val bitmap = decodeSampledBitmap(file, 2200, 2200)
                     if (bitmap != null) ViewerLoadState.Success(bitmap)
                     else ViewerLoadState.Error("O formato ou a codificação desta imagem não pôde ser exibido internamente.")
                 }
             }
+        }
+    }
+
+    LaunchedEffect(fullScreen, controlsVisible, file.absolutePath) {
+        if (fullScreen && controlsVisible) {
+            delay(2800)
+            controlsVisible = false
         }
     }
 
@@ -410,6 +433,12 @@ private fun ImageViewer(
         }
     }
 
+    fun resetTransform() {
+        scale = 1f
+        offsetX = 0f
+        offsetY = 0f
+    }
+
     fun previous() {
         if (canGoPrevious) onSelectFile(gallery[currentIndex - 1])
     }
@@ -418,10 +447,17 @@ private fun ImageViewer(
         if (canGoNext) onSelectFile(gallery[currentIndex + 1])
     }
 
+    fun trashCurrent() {
+        val replacement = ImageViewerLogic.replacementSourceIndex(currentIndex, gallery.size)
+            ?.let(gallery::getOrNull)
+        if (replacement != null) onSelectFile(replacement) else onClose()
+        onMoveToTrash(file)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF262626))
+            .background(Color(0xFF202020))
     ) {
         var dragDistance by remember(file.absolutePath) { mutableStateOf(0f) }
         Box(
@@ -429,22 +465,66 @@ private fun ImageViewer(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(8.dp)
-                .pointerInput(file.absolutePath, gallery.size) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { dragDistance = 0f },
-                        onHorizontalDrag = { _, amount ->
-                            dragDistance += amount
-                        },
-                        onDragEnd = {
-                            when {
-                                dragDistance <= -80f -> next()
-                                dragDistance >= 80f -> previous()
+                .padding(if (fullScreen) 0.dp else 8.dp)
+                // Pinça com dois dedos: zoom e deslocamento. Um dedo continua reservado
+                // para a navegação horizontal entre as imagens da pasta.
+                .pointerInput(file.absolutePath) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var gestureActive = true
+                        while (gestureActive) {
+                            val event = awaitPointerEvent()
+                            if (event.changes.count { it.pressed } >= 2) {
+                                val zoomChange = event.calculateZoom()
+                                val panChange = event.calculatePan()
+                                val nextScale = ImageViewerLogic.clampScale(scale * zoomChange)
+                                scale = nextScale
+                                if (nextScale > 1.01f) {
+                                    offsetX += panChange.x
+                                    offsetY += panChange.y
+                                } else {
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                }
+                                event.changes.forEach { change ->
+                                    if (change.positionChanged()) change.consume()
+                                }
                             }
-                            dragDistance = 0f
+                            gestureActive = event.changes.any { it.pressed }
+                        }
+                    }
+                }
+                .pointerInput(file.absolutePath, scale, fullScreen) {
+                    detectTapGestures(
+                        onTap = {
+                            if (fullScreen) controlsVisible = !controlsVisible
                         },
-                        onDragCancel = { dragDistance = 0f },
+                        onDoubleTap = {
+                            val nextScale = ImageViewerLogic.doubleTapScale(scale)
+                            scale = nextScale
+                            if (nextScale <= 1.01f) {
+                                offsetX = 0f
+                                offsetY = 0f
+                            }
+                            controlsVisible = true
+                        },
                     )
+                }
+                .pointerInput(file.absolutePath, gallery.size, scale) {
+                    if (scale <= 1.01f) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { dragDistance = 0f },
+                            onHorizontalDrag = { _, amount -> dragDistance += amount },
+                            onDragEnd = {
+                                when {
+                                    dragDistance <= -80f -> next()
+                                    dragDistance >= 80f -> previous()
+                                }
+                                dragDistance = 0f
+                            },
+                            onDragCancel = { dragDistance = 0f },
+                        )
+                    }
                 }
         ) {
             when (val state = loadState) {
@@ -461,33 +541,208 @@ private fun ImageViewer(
                 is ViewerLoadState.Success -> Image(
                     bitmap = state.value.asImageBitmap(),
                     contentDescription = file.name,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offsetX,
+                            translationY = offsetY,
+                            rotationZ = quarterTurns * 90f,
+                        ),
                     contentScale = ContentScale.Fit,
+                )
+            }
+
+            if (controlsVisible && loadState is ViewerLoadState.Success<*>) {
+                Text(
+                    text = "${(scale * 100).toInt()}%${if (quarterTurns != 0) "  •  ${quarterTurns * 90}°" else ""}",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(Color(0x99000000), RoundedCornerShape(5.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }
         }
 
-        if (gallery.size > 1) {
+        if (controlsVisible) {
+            if (gallery.size > 1) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF171717))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                ) {
+                    ViewerActionButton("◀ Anterior", enabled = canGoPrevious, onClick = ::previous)
+                    Text(
+                        text = "${currentIndex + 1} / ${gallery.size}",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ViewerActionButton("Próxima ▶", enabled = canGoNext, onClick = ::next)
+                }
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF171717))
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
             ) {
-                ViewerActionButton("◀ Anterior", enabled = canGoPrevious, onClick = ::previous)
-                Text(
-                    text = "${currentIndex + 1} de ${gallery.size}",
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f),
-                )
-                ViewerActionButton("Próxima ▶", enabled = canGoNext, onClick = ::next)
+                if (scale > 1.01f) ViewerActionButton("Ajustar") { resetTransform() }
+                ViewerActionButton("↻ Girar") {
+                    quarterTurns = (quarterTurns + 1) % 4
+                    resetTransform()
+                }
+                ViewerActionButton("Info") { showInfo = true }
+                ViewerActionButton("Compartilhar", onClick = onShare)
+                ViewerActionButton(if (fullScreen) "Sair tela cheia" else "Tela cheia") {
+                    controlsVisible = true
+                    onFullScreenChange(!fullScreen)
+                }
+                ViewerActionButton("Lixeira", enabled = canModify) { confirmTrash = true }
             }
         }
+    }
+
+    if (showInfo) {
+        ImageInfoDialog(file = file, onDismiss = { showInfo = false })
+    }
+    if (confirmTrash) {
+        ImageTrashDialog(
+            file = file,
+            onDismiss = { confirmTrash = false },
+            onConfirm = {
+                confirmTrash = false
+                trashCurrent()
+            },
+        )
+    }
+}
+
+@Composable
+private fun ImageInfoDialog(file: File, onDismiss: () -> Unit) {
+    var details by remember(file.absolutePath, file.lastModified()) {
+        mutableStateOf<ViewerLoadState<ImageDetails>>(ViewerLoadState.Loading)
+    }
+    LaunchedEffect(file.absolutePath, file.lastModified()) {
+        details = ViewerLoadState.Loading
+        details = withContext(Dispatchers.IO) {
+            runCatching { readImageDetails(file) }.fold(
+                onSuccess = { ViewerLoadState.Success(it) },
+                onFailure = { ViewerLoadState.Error(it.message ?: "Não foi possível ler as informações da imagem.") },
+            )
+        }
+    }
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFF7F4EC), RoundedCornerShape(10.dp))
+                .border(1.dp, XpChromeBorder, RoundedCornerShape(10.dp))
+                .padding(14.dp),
+        ) {
+            Text("Informações da imagem", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+            Spacer(Modifier.height(8.dp))
+            when (val state = details) {
+                ViewerLoadState.Loading -> Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().height(72.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = XpBlue)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Lendo metadados...", fontSize = 12.sp, color = XpTextSecondary)
+                }
+                is ViewerLoadState.Error -> Text(state.message, fontSize = 12.sp, color = Color(0xFF7A1E1E))
+                is ViewerLoadState.Success -> {
+                    val d = state.value
+                    LazyColumn(modifier = Modifier.heightIn(max = 440.dp)) {
+                        item { ImageInfoSection("Arquivo") }
+                        item { ImageInfoLine("Nome", file.name) }
+                        item { ImageInfoLine("Pasta", file.parentFile?.absolutePath ?: "—") }
+                        item { ImageInfoLine("Tipo", FileTypeClassifier.labelFor(file, false)) }
+                        item { ImageInfoLine("Tamanho", formatViewerBytes(file.length())) }
+                        item { ImageInfoLine("Resolução", if (d.width > 0 && d.height > 0) "${d.width} × ${d.height} px" else "Não informada") }
+                        item { ImageInfoLine("Modificado", d.modified) }
+                        if (d.hasExif) {
+                            item { Spacer(Modifier.height(6.dp)); ImageInfoSection("EXIF") }
+                            d.cameraMake?.let { item { ImageInfoLine("Fabricante", it) } }
+                            d.cameraModel?.let { item { ImageInfoLine("Câmera", it) } }
+                            d.dateTaken?.let { item { ImageInfoLine("Capturada em", it) } }
+                            d.orientation?.let { item { ImageInfoLine("Orientação", it) } }
+                            d.iso?.let { item { ImageInfoLine("ISO", it) } }
+                            d.exposure?.let { item { ImageInfoLine("Exposição", it) } }
+                            d.aperture?.let { item { ImageInfoLine("Abertura", it) } }
+                            d.focalLength?.let { item { ImageInfoLine("Distância focal", it) } }
+                            d.software?.let { item { ImageInfoLine("Software", it) } }
+                        } else {
+                            item {
+                                Text(
+                                    "Nenhum metadado EXIF legível foi encontrado.",
+                                    fontSize = 11.sp,
+                                    color = XpTextSecondary,
+                                    modifier = Modifier.padding(top = 8.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                ViewerActionButton("Fechar", onClick = onDismiss)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageTrashDialog(file: File, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFF7F4EC), RoundedCornerShape(10.dp))
+                .border(1.dp, XpChromeBorder, RoundedCornerShape(10.dp))
+                .padding(14.dp),
+        ) {
+            Text("Mover para a Lixeira?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "${file.name}\n\nO arquivo poderá ser restaurado pela Lixeira do Explorador XP.",
+                fontSize = 12.sp,
+                color = Color(0xFF303030),
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Box(Modifier.weight(1f)) { ViewerActionButton("Cancelar", onClick = onDismiss) }
+                Box(Modifier.weight(1f)) { ViewerActionButton("Mover", onClick = onConfirm) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageInfoSection(title: String) {
+    Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = XpBlueDark, modifier = Modifier.padding(vertical = 3.dp))
+}
+
+@Composable
+private fun ImageInfoLine(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF555555), modifier = Modifier.width(105.dp))
+        Text(value, fontSize = 11.sp, color = Color(0xFF202020), modifier = Modifier.weight(1f))
     }
 }
 
@@ -1220,6 +1475,71 @@ private fun ViewerStatusBar(file: File, resolvedExtension: String, detectedFromC
         Box(Modifier.height(18.dp).width(1.dp).background(XpChromeBorder))
         Text(formatViewerBytes(size), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
     }
+}
+
+private data class ImageDetails(
+    val width: Int,
+    val height: Int,
+    val modified: String,
+    val cameraMake: String?,
+    val cameraModel: String?,
+    val dateTaken: String?,
+    val orientation: String?,
+    val iso: String?,
+    val exposure: String?,
+    val aperture: String?,
+    val focalLength: String?,
+    val software: String?,
+) {
+    val hasExif: Boolean
+        get() = listOf(cameraMake, cameraModel, dateTaken, orientation, iso, exposure, aperture, focalLength, software)
+            .any { !it.isNullOrBlank() }
+}
+
+@Suppress("DEPRECATION")
+private fun readImageDetails(file: File): ImageDetails {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(file.absolutePath, bounds)
+    val exif = runCatching { ExifInterface(file.absolutePath) }.getOrNull()
+    fun attr(tag: String): String? = exif?.getAttribute(tag)?.trim()?.takeIf { it.isNotEmpty() }
+    val orientation = attr(ExifInterface.TAG_ORIENTATION)?.toIntOrNull()?.let(::imageOrientationLabel)
+    val modified = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(file.lastModified()))
+    return ImageDetails(
+        width = bounds.outWidth.coerceAtLeast(0),
+        height = bounds.outHeight.coerceAtLeast(0),
+        modified = modified,
+        cameraMake = attr(ExifInterface.TAG_MAKE),
+        cameraModel = attr(ExifInterface.TAG_MODEL),
+        dateTaken = attr(ExifInterface.TAG_DATETIME_ORIGINAL) ?: attr(ExifInterface.TAG_DATETIME),
+        orientation = orientation,
+        iso = attr(ExifInterface.TAG_ISO_SPEED_RATINGS),
+        exposure = attr(ExifInterface.TAG_EXPOSURE_TIME)?.let { "${formatExifNumber(it)} s" },
+        aperture = attr(ExifInterface.TAG_F_NUMBER)?.let { "f/${formatExifNumber(it)}" },
+        focalLength = attr(ExifInterface.TAG_FOCAL_LENGTH)?.let { "${formatExifNumber(it)} mm" },
+        software = attr(ExifInterface.TAG_SOFTWARE),
+    )
+}
+
+private fun formatExifNumber(raw: String): String {
+    val parts = raw.split('/', limit = 2)
+    if (parts.size != 2) return raw
+    val numerator = parts[0].toDoubleOrNull() ?: return raw
+    val denominator = parts[1].toDoubleOrNull()?.takeIf { it != 0.0 } ?: return raw
+    val value = numerator / denominator
+    return if (value >= 1.0) String.format(java.util.Locale.getDefault(), "%.1f", value).trimEnd('0').trimEnd('.')
+    else String.format(java.util.Locale.getDefault(), "%.4f", value).trimEnd('0').trimEnd('.')
+}
+
+private fun imageOrientationLabel(value: Int): String = when (value) {
+    ExifInterface.ORIENTATION_NORMAL -> "Normal"
+    ExifInterface.ORIENTATION_ROTATE_90 -> "90°"
+    ExifInterface.ORIENTATION_ROTATE_180 -> "180°"
+    ExifInterface.ORIENTATION_ROTATE_270 -> "270°"
+    ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> "Espelhada horizontalmente"
+    ExifInterface.ORIENTATION_FLIP_VERTICAL -> "Espelhada verticalmente"
+    ExifInterface.ORIENTATION_TRANSPOSE -> "Transposta"
+    ExifInterface.ORIENTATION_TRANSVERSE -> "Transversa"
+    else -> "Não informada"
 }
 
 private data class PdfPageData(val bitmap: Bitmap, val pageCount: Int)

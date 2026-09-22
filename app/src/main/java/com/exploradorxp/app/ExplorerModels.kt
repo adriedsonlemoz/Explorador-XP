@@ -8,6 +8,50 @@ enum class ExplorerTab { FILES, DOWNLOADS, FAVORITES }
 enum class SortMode { NAME, DATE, SIZE, TYPE }
 enum class ClipboardMode { COPY, CUT }
 enum class TransferKind { COPY, MOVE, DELETE }
+enum class TransferQueueItemStatus { PENDING, RUNNING, DONE, SKIPPED, ERROR }
+
+@Immutable
+data class TransferQueueItem(
+    val path: String,
+    val name: String,
+    val status: TransferQueueItemStatus = TransferQueueItemStatus.PENDING,
+)
+
+enum class SearchItemKind { ALL, FILES, FOLDERS }
+enum class SearchFileType { ALL, IMAGES, VIDEOS, AUDIO, DOCUMENTS, APKS, ARCHIVES, OTHER }
+enum class SearchDateRange { ANY, TODAY, LAST_7_DAYS, LAST_30_DAYS }
+
+@Immutable
+data class AdvancedSearchFilters(
+    val includeSubfolders: Boolean = false,
+    val itemKind: SearchItemKind = SearchItemKind.ALL,
+    val fileType: SearchFileType = SearchFileType.ALL,
+    val extension: String = "",
+    val minSizeBytes: Long? = null,
+    val maxSizeBytes: Long? = null,
+    val dateRange: SearchDateRange = SearchDateRange.ANY,
+) {
+    val hasRestrictions: Boolean
+        get() = includeSubfolders ||
+            itemKind != SearchItemKind.ALL ||
+            fileType != SearchFileType.ALL ||
+            extension.isNotBlank() ||
+            minSizeBytes != null ||
+            maxSizeBytes != null ||
+            dateRange != SearchDateRange.ANY
+}
+
+@Immutable
+data class AdvancedSearchState(
+    val active: Boolean = false,
+    val running: Boolean = false,
+    val scannedItems: Int = 0,
+    val matchedItems: Int = 0,
+    val results: List<FileItem> = emptyList(),
+    val filters: AdvancedSearchFilters = AdvancedSearchFilters(),
+    val error: String? = null,
+    val cancelled: Boolean = false,
+)
 
 /** Progresso relatado pelo [FileRepository] durante cópia, mover ou exclusão. */
 data class TransferProgress(
@@ -16,6 +60,13 @@ data class TransferProgress(
     val currentName: String,
     val bytesDone: Long = 0L,
     val bytesTotal: Long = 0L,
+    val currentItemIndex: Int = 0,
+    val currentItemCount: Int = 0,
+    val currentItemDone: Int = 0,
+    val currentItemTotal: Int = 0,
+    val currentItemBytesDone: Long = 0L,
+    val currentItemBytesTotal: Long = 0L,
+    val queueItems: List<TransferQueueItem> = emptyList(),
 )
 
 enum class ConflictDecision { REPLACE, SKIP, KEEP_BOTH }
@@ -48,12 +99,26 @@ data class TransferState(
     val bytesPerSecond: Long = 0L,
     val etaSeconds: Long? = null,
     val isPaused: Boolean = false,
+    val currentItemIndex: Int = 0,
+    val currentItemCount: Int = 0,
+    val currentItemDone: Int = 0,
+    val currentItemTotal: Int = 0,
+    val currentItemBytesDone: Long = 0L,
+    val currentItemBytesTotal: Long = 0L,
+    val queueItems: List<TransferQueueItem> = emptyList(),
 ) {
     val fraction: Float
         get() = if (bytesTotal > 0L) {
             (bytesDone.toDouble() / bytesTotal.toDouble()).toFloat().coerceIn(0f, 1f)
         } else if (total > 0) {
             (done.toFloat() / total).coerceIn(0f, 1f)
+        } else 0f
+
+    val currentItemFraction: Float
+        get() = if (currentItemBytesTotal > 0L) {
+            (currentItemBytesDone.toDouble() / currentItemBytesTotal.toDouble()).toFloat().coerceIn(0f, 1f)
+        } else if (currentItemTotal > 0) {
+            (currentItemDone.toFloat() / currentItemTotal).coerceIn(0f, 1f)
         } else 0f
 }
 

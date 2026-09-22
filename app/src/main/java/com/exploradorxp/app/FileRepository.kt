@@ -138,12 +138,9 @@ class FileRepository(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val plans = files.map { file -> buildFileOperationPlan(file, awaitIfPaused) }
-            val ticker = ProgressTicker(
-                totalEntries = plans.sumOf { it.entryCount }.coerceAtLeast(1),
-                totalBytes = plans.sumOf { it.totalBytes },
-                onProgress = onProgress,
-            )
-            plans.forEach { plan ->
+            val ticker = ProgressTicker(plans = plans, onProgress = onProgress)
+            plans.forEachIndexed { index, plan ->
+                ticker.beginPlan(index)
                 coroutineContext.ensureActive()
                 awaitIfPaused()
                 check(deleteFileOperationPlan(
@@ -166,13 +163,10 @@ class FileRepository(
             val validFiles = files.filter { it.exists() }
             require(validFiles.isNotEmpty()) { "Nenhum item disponível para mover para a Lixeira." }
             val plans = validFiles.map { source -> buildFileOperationPlan(source, awaitIfPaused) }
-            val ticker = ProgressTicker(
-                totalEntries = plans.sumOf { it.entryCount }.coerceAtLeast(1),
-                totalBytes = plans.sumOf { it.totalBytes },
-                onProgress = onProgress,
-            )
+            val ticker = ProgressTicker(plans = plans, onProgress = onProgress)
 
-            plans.forEach { plan ->
+            plans.forEachIndexed { index, plan ->
+                ticker.beginPlan(index)
                 coroutineContext.ensureActive()
                 awaitIfPaused()
                 val source = plan.root
@@ -211,6 +205,7 @@ class FileRepository(
                     check(deleteFileOperationPlan(plan, awaitIfPaused = awaitIfPaused)) {
                         "O item foi copiado para a Lixeira, mas não foi possível remover toda a origem. A cópia foi preservada na Lixeira."
                     }
+                    ticker.completePlan(plan, target.name)
                 }
             }
             ticker.reportFinal("")
@@ -233,13 +228,10 @@ class FileRepository(
             val existing = items.filter { it.trashedFile.exists() }
             require(existing.isNotEmpty()) { "Nenhum item disponível para restaurar." }
             val plannedItems = existing.map { item -> item to buildFileOperationPlan(item.trashedFile, awaitIfPaused) }
-            val ticker = ProgressTicker(
-                totalEntries = plannedItems.sumOf { it.second.entryCount }.coerceAtLeast(1),
-                totalBytes = plannedItems.sumOf { it.second.totalBytes },
-                onProgress = onProgress,
-            )
+            val ticker = ProgressTicker(plans = plannedItems.map { it.second }, onProgress = onProgress)
 
-            plannedItems.forEach { (item, plan) ->
+            plannedItems.forEachIndexed { index, (item, plan) ->
+                ticker.beginPlan(index)
                 coroutineContext.ensureActive()
                 awaitIfPaused()
                 val original = File(item.originalPath)
@@ -265,6 +257,7 @@ class FileRepository(
                     check(deleteFileOperationPlan(plan, awaitIfPaused = awaitIfPaused)) {
                         "O item foi restaurado, mas não foi possível limpar totalmente a cópia da Lixeira. O arquivo restaurado foi preservado."
                     }
+                    ticker.completePlan(plan, target.name)
                 }
                 item.trashedFile.parentFile?.let(::cleanupTrashContainer)
             }
@@ -281,12 +274,9 @@ class FileRepository(
         runCatching {
             val existing = items.filter { it.trashedFile.exists() }
             val plannedItems = existing.map { item -> item to buildFileOperationPlan(item.trashedFile, awaitIfPaused) }
-            val ticker = ProgressTicker(
-                totalEntries = plannedItems.sumOf { it.second.entryCount }.coerceAtLeast(1),
-                totalBytes = plannedItems.sumOf { it.second.totalBytes },
-                onProgress = onProgress,
-            )
-            plannedItems.forEach { (item, plan) ->
+            val ticker = ProgressTicker(plans = plannedItems.map { it.second }, onProgress = onProgress)
+            plannedItems.forEachIndexed { index, (item, plan) ->
+                ticker.beginPlan(index)
                 coroutineContext.ensureActive()
                 awaitIfPaused()
                 check(deleteFileOperationPlan(
@@ -309,12 +299,9 @@ class FileRepository(
             val roots = storageLocations().map { managedTrashRoot(it.root) }.filter(File::exists)
             val entries = roots.flatMap { it.listFiles().orEmpty().toList() }
             val plans = entries.map { entry -> buildFileOperationPlan(entry, awaitIfPaused) }
-            val ticker = ProgressTicker(
-                totalEntries = plans.sumOf { it.entryCount }.coerceAtLeast(1),
-                totalBytes = plans.sumOf { it.totalBytes },
-                onProgress = onProgress,
-            )
-            plans.forEach { plan ->
+            val ticker = ProgressTicker(plans = plans, onProgress = onProgress)
+            plans.forEachIndexed { index, plan ->
+                ticker.beginPlan(index)
                 coroutineContext.ensureActive()
                 awaitIfPaused()
                 check(deleteFileOperationPlan(
@@ -354,14 +341,11 @@ class FileRepository(
                 prepared += buildFileOperationPlan(source, awaitIfPaused)
             }
 
-            val ticker = ProgressTicker(
-                totalEntries = prepared.sumOf { it.entryCount }.coerceAtLeast(1),
-                totalBytes = prepared.sumOf { it.totalBytes },
-                onProgress = onProgress,
-            )
+            val ticker = ProgressTicker(plans = prepared, onProgress = onProgress)
             var applyAllDecision: ConflictDecision? = null
 
-            prepared.forEach { plan ->
+            prepared.forEachIndexed { index, plan ->
+                ticker.beginPlan(index)
                 coroutineContext.ensureActive()
                 awaitIfPaused()
                 val source = plan.root
@@ -390,7 +374,7 @@ class FileRepository(
                     when (decision) {
                         ConflictDecision.SKIP -> {
                             ticker.skipPlan(plan, source.name)
-                            return@forEach
+                            return@forEachIndexed
                         }
                         ConflictDecision.KEEP_BOTH -> target = uniqueTarget(destination, source.name)
                         ConflictDecision.REPLACE -> {
@@ -414,11 +398,95 @@ class FileRepository(
                     if (clipboard.mode == ClipboardMode.CUT) {
                         check(deleteFileOperationPlan(plan, awaitIfPaused = awaitIfPaused)) { "O item foi copiado, mas não foi possível remover a origem." }
                     }
+                    ticker.completePlan(plan, target.name)
                 }
             }
             ticker.reportFinal("")
         }
     }
+
+    /**
+     * Pesquisa opcionalmente recursiva com filtros. A varredura é cooperativamente
+     * cancelável e publica resultados parciais em lotes para a UI permanecer responsiva.
+     */
+    suspend fun advancedSearch(
+        directory: File,
+        query: String,
+        filters: AdvancedSearchFilters,
+        sortMode: SortMode,
+        showHidden: Boolean,
+        foldersFirst: Boolean,
+        onProgress: (scannedItems: Int, results: List<FileItem>) -> Unit = { _, _ -> },
+    ): Result<List<FileItem>> = withContext(Dispatchers.IO) {
+        runCatching {
+            require(directory.exists() && directory.isDirectory) { "A pasta de pesquisa não está mais disponível." }
+            val favorites = prefs.favorites()
+            val pending = ArrayDeque<File>()
+            directory.listFiles().orEmpty().forEach { child ->
+                if (!isInternalTrashArtifact(child)) pending.addLast(child)
+            }
+            val matches = mutableListOf<FileItem>()
+            val visitedDirectories = HashSet<String>()
+            visitedDirectories += runCatching { directory.canonicalPath }.getOrElse { directory.absolutePath }
+            var scanned = 0
+            var lastEmitMs = 0L
+
+            while (pending.isNotEmpty()) {
+                coroutineContext.ensureActive()
+                val file = pending.removeFirst()
+                if (isInternalTrashArtifact(file) || isInsideManagedTrash(file)) continue
+
+                val name = file.name.ifBlank { file.absolutePath }
+                val hidden = name.startsWith('.')
+                if (!showHidden && hidden) continue
+
+                val isDirectory = file.isDirectory
+                val extension = if (isDirectory) "" else file.extension.lowercase()
+                val size = if (isDirectory) 0L else runCatching { file.length() }.getOrDefault(0L).coerceAtLeast(0L)
+                val modifiedAt = runCatching { file.lastModified() }.getOrDefault(0L)
+                scanned++
+
+                if (AdvancedSearchMatcher.matches(
+                        name = name,
+                        extension = extension,
+                        isDirectory = isDirectory,
+                        size = size,
+                        modifiedAt = modifiedAt,
+                        query = query,
+                        filters = filters,
+                    )
+                ) {
+                    matches += toFileItem(file, file.absolutePath in favorites)
+                }
+
+                if (filters.includeSubfolders && isDirectory) {
+                    val directoryKey = runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
+                    if (visitedDirectories.add(directoryKey)) {
+                        file.listFiles().orEmpty().forEach { child ->
+                            if (!isInternalTrashArtifact(child)) pending.addLast(child)
+                        }
+                    }
+                }
+
+                val now = System.currentTimeMillis()
+                if (scanned % 100 == 0 || now - lastEmitMs >= 140L) {
+                    lastEmitMs = now
+                    onProgress(scanned, sortSearchResults(matches, sortMode, foldersFirst))
+                }
+            }
+
+            sortSearchResults(matches, sortMode, foldersFirst).also { final -> onProgress(scanned, final) }
+        }
+    }
+
+    private fun sortSearchResults(items: List<FileItem>, sortMode: SortMode, foldersFirst: Boolean): List<FileItem> =
+        ExplorerItemTransforms.apply(
+            snapshot = items,
+            query = "",
+            sortMode = sortMode,
+            showHidden = true,
+            foldersFirst = foldersFirst,
+        )
 
     fun toggleFavorite(file: File): Boolean = prefs.toggleFavorite(file)
     fun addRecent(file: File) = prefs.addRecent(file)
@@ -737,43 +805,91 @@ class FileRepository(
      * em transferências grandes: emite no máximo a cada ~80 ms, sempre garantindo a emissão final.
      */
     private class ProgressTicker(
-        private val totalEntries: Int,
-        totalBytes: Long,
+        private val plans: List<FileOperationPlan>,
         private val onProgress: (TransferProgress) -> Unit,
     ) {
+        private val totalEntries = plans.sumOf { it.entryCount }.coerceAtLeast(1)
+        private var effectiveTotalBytes = plans.sumOf { it.totalBytes }.coerceAtLeast(0L)
         private var doneEntries = 0
         private var doneBytes = 0L
-        private var effectiveTotalBytes = totalBytes.coerceAtLeast(0L)
+        private var activePlanIndex = -1
+        private var currentItemDone = 0
+        private var currentItemBytesDone = 0L
         private var lastEmitMs = 0L
+        private val queue = plans.map { plan ->
+            TransferQueueItem(
+                path = plan.root.absolutePath,
+                name = plan.root.name.ifBlank { plan.root.absolutePath },
+            )
+        }.toMutableList()
+
+        fun beginPlan(index: Int) {
+            if (index !in plans.indices) return
+            activePlanIndex = index
+            currentItemDone = 0
+            currentItemBytesDone = 0L
+            queue[index] = queue[index].copy(status = TransferQueueItemStatus.RUNNING)
+            emit(plans[index].root.name, force = true)
+        }
 
         fun copyProgress(currentName: String, bytesDelta: Long, entryCompleted: Boolean) {
-            if (bytesDelta > 0L) doneBytes = (doneBytes + bytesDelta).coerceAtMost(effectiveTotalBytes)
-            if (entryCompleted) doneEntries = (doneEntries + 1).coerceAtMost(totalEntries)
+            if (bytesDelta > 0L) {
+                doneBytes = (doneBytes + bytesDelta).coerceAtMost(effectiveTotalBytes)
+                val itemTotal = currentPlan()?.totalBytes ?: 0L
+                currentItemBytesDone = (currentItemBytesDone + bytesDelta).coerceAtMost(itemTotal)
+            }
+            if (entryCompleted) {
+                doneEntries = (doneEntries + 1).coerceAtMost(totalEntries)
+                val itemTotal = currentPlan()?.entryCount ?: 0
+                currentItemDone = (currentItemDone + 1).coerceAtMost(itemTotal)
+            }
             emit(currentName)
         }
 
         fun completeEntry(currentName: String, bytes: Long) {
             doneEntries = (doneEntries + 1).coerceAtMost(totalEntries)
-            if (bytes > 0L) doneBytes = (doneBytes + bytes).coerceAtMost(effectiveTotalBytes)
+            val itemTotalEntries = currentPlan()?.entryCount ?: 0
+            currentItemDone = (currentItemDone + 1).coerceAtMost(itemTotalEntries)
+            if (bytes > 0L) {
+                doneBytes = (doneBytes + bytes).coerceAtMost(effectiveTotalBytes)
+                val itemTotalBytes = currentPlan()?.totalBytes ?: 0L
+                currentItemBytesDone = (currentItemBytesDone + bytes).coerceAtMost(itemTotalBytes)
+            }
+            if (currentItemDone >= itemTotalEntries && activePlanIndex in queue.indices) {
+                queue[activePlanIndex] = queue[activePlanIndex].copy(status = TransferQueueItemStatus.DONE)
+            }
             emit(currentName)
         }
 
         fun completePlan(plan: FileOperationPlan, currentName: String) {
-            doneEntries = (doneEntries + plan.entryCount).coerceAtMost(totalEntries)
-            doneBytes = (doneBytes + plan.totalBytes).coerceAtMost(effectiveTotalBytes)
+            doneEntries = (doneEntries + (plan.entryCount - currentItemDone).coerceAtLeast(0)).coerceAtMost(totalEntries)
+            doneBytes = (doneBytes + (plan.totalBytes - currentItemBytesDone).coerceAtLeast(0L)).coerceAtMost(effectiveTotalBytes)
+            currentItemDone = plan.entryCount
+            currentItemBytesDone = plan.totalBytes
+            if (activePlanIndex in queue.indices) {
+                queue[activePlanIndex] = queue[activePlanIndex].copy(status = TransferQueueItemStatus.DONE)
+            }
             emit(currentName, force = true)
         }
 
         fun skipPlan(plan: FileOperationPlan, currentName: String) {
-            doneEntries = (doneEntries + plan.entryCount).coerceAtMost(totalEntries)
-            effectiveTotalBytes = (effectiveTotalBytes - plan.totalBytes).coerceAtLeast(doneBytes)
+            doneEntries = (doneEntries + (plan.entryCount - currentItemDone).coerceAtLeast(0)).coerceAtMost(totalEntries)
+            effectiveTotalBytes = (effectiveTotalBytes - (plan.totalBytes - currentItemBytesDone).coerceAtLeast(0L)).coerceAtLeast(doneBytes)
+            currentItemDone = plan.entryCount
+            currentItemBytesDone = 0L
+            if (activePlanIndex in queue.indices) {
+                queue[activePlanIndex] = queue[activePlanIndex].copy(status = TransferQueueItemStatus.SKIPPED)
+            }
             emit(currentName, force = true)
         }
+
+        private fun currentPlan(): FileOperationPlan? = plans.getOrNull(activePlanIndex)
 
         private fun emit(currentName: String, force: Boolean = false) {
             val now = System.currentTimeMillis()
             if (force || now - lastEmitMs >= 80L || doneEntries >= totalEntries) {
                 lastEmitMs = now
+                val plan = currentPlan()
                 onProgress(
                     TransferProgress(
                         done = doneEntries,
@@ -781,6 +897,13 @@ class FileRepository(
                         currentName = currentName,
                         bytesDone = doneBytes,
                         bytesTotal = effectiveTotalBytes,
+                        currentItemIndex = if (activePlanIndex >= 0) activePlanIndex + 1 else 0,
+                        currentItemCount = plans.size,
+                        currentItemDone = currentItemDone,
+                        currentItemTotal = plan?.entryCount ?: 0,
+                        currentItemBytesDone = currentItemBytesDone,
+                        currentItemBytesTotal = plan?.totalBytes ?: 0L,
+                        queueItems = queue.toList(),
                     )
                 )
             }
@@ -789,15 +912,16 @@ class FileRepository(
         fun reportFinal(currentName: String) {
             doneEntries = totalEntries
             doneBytes = effectiveTotalBytes
-            onProgress(
-                TransferProgress(
-                    done = doneEntries,
-                    total = totalEntries,
-                    currentName = currentName,
-                    bytesDone = doneBytes,
-                    bytesTotal = effectiveTotalBytes,
-                )
-            )
+            queue.indices.forEach { index ->
+                if (queue[index].status == TransferQueueItemStatus.PENDING || queue[index].status == TransferQueueItemStatus.RUNNING) {
+                    queue[index] = queue[index].copy(status = TransferQueueItemStatus.DONE)
+                }
+            }
+            currentPlan()?.let { plan ->
+                currentItemDone = plan.entryCount
+                currentItemBytesDone = plan.totalBytes
+            }
+            emit(currentName, force = true)
         }
     }
 
