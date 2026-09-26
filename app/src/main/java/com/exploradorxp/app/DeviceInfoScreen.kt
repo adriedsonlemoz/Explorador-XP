@@ -10,6 +10,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.widget.Toast
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -125,32 +126,46 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
     var imageLoading by remember { mutableStateOf(false) }
     var showImageDetails by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
+    var loadError by remember { mutableStateOf<String?>(null) }
     val externalLookupEnabled = remember(refreshKey) { PreferencesStore(context).deviceImagesEnabled() }
 
     LaunchedEffect(refreshKey, externalLookupEnabled) {
         loading = true
+        loadError = null
         imageLoading = false
         deviceImage = null
         val input = DeviceIdentityInput.current()
-        val local = withContext(Dispatchers.IO) {
-            val info = DeviceInfoCollector.collect(context)
-            val repository = DeviceIdentityRepository(context)
-            val identified = if (externalLookupEnabled) repository.resolveWithCache(input) else repository.resolveLocal(input)
-            info to identified
-        }
-        snapshot = local.first
-        identity = local.second
-        loading = false
-
-        if (externalLookupEnabled) {
-            imageLoading = local.second.confirmed
-            val refreshed = withContext(Dispatchers.IO) { DeviceIdentityRepository(context).refresh(input) }
-            identity = refreshed
-            if (refreshed.confirmed) {
-                imageLoading = true
-                deviceImage = withContext(Dispatchers.IO) { DeviceImageRepository(context).resolve(refreshed) }
+        runCatching {
+            val local = withContext(Dispatchers.IO) {
+                val info = DeviceInfoCollector.collect(context)
+                val repository = DeviceIdentityRepository(context)
+                val identified = if (externalLookupEnabled) repository.resolveWithCache(input) else repository.resolveLocal(input)
+                info to identified
             }
+            snapshot = local.first
+            identity = local.second
+            loading = false
+
+            if (externalLookupEnabled) {
+                imageLoading = local.second.confirmed
+                val refreshed = withContext(Dispatchers.IO) { DeviceIdentityRepository(context).refresh(input) }
+                identity = refreshed
+                if (refreshed.confirmed) {
+                    imageLoading = true
+                    deviceImage = withContext(Dispatchers.IO) { DeviceImageRepository(context).resolve(refreshed) }
+                }
+                imageLoading = false
+            }
+        }.onFailure { throwable ->
+            Log.e("ExploradorXP", "Falha ao abrir Informações do dispositivo", throwable)
+            loadError = throwable.message?.takeIf { it.isNotBlank() }
+                ?: "O Android ou o fabricante bloquearam alguma informação desta tela."
+            loading = false
             imageLoading = false
+            if (snapshot == null) {
+                identity = null
+                deviceImage = DeviceImageResult.Unavailable("Não foi possível carregar agora")
+            }
         }
     }
 
@@ -251,17 +266,55 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                 .fillMaxWidth()
                 .background(DeviceSurface),
         ) {
-                if (loading && snapshot == null) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize().padding(44.dp),
-                    ) {
-                        CircularProgressIndicator(color = DeviceBlue)
-                        Spacer(Modifier.height(12.dp))
-                        Text("Lendo informações do aparelho…", color = DeviceMuted, fontSize = 13.sp)
+                when {
+                    loading && snapshot == null -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize().padding(44.dp),
+                        ) {
+                            CircularProgressIndicator(color = DeviceBlue)
+                            Spacer(Modifier.height(12.dp))
+                            Text("Lendo informações do aparelho…", color = DeviceMuted, fontSize = 13.sp)
+                        }
                     }
-                } else {
+                    snapshot == null -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize().padding(26.dp),
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(62.dp)
+                                    .background(DeviceGraySoft, RoundedCornerShape(18.dp))
+                                    .border(1.dp, DeviceBorder, RoundedCornerShape(18.dp)),
+                            ) {
+                                Icon(Icons.Rounded.Info, contentDescription = null, tint = DeviceBlue, modifier = Modifier.size(30.dp))
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Não foi possível abrir Informações do dispositivo agora",
+                                color = DeviceText,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                loadError ?: "Ocorreu uma falha temporária ao consultar dados do Android.",
+                                color = DeviceMuted,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = onDismiss) { Text("Fechar") }
+                                Button(onClick = { refreshKey++ }) { Text("Tentar novamente") }
+                            }
+                        }
+                    }
+                    else -> {
                     snapshot?.let { info ->
                         Column(
                             verticalArrangement = Arrangement.spacedBy(9.dp),
@@ -270,6 +323,22 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                                 .verticalScroll(rememberScrollState())
                                 .padding(start = 10.dp, end = 10.dp, top = 9.dp, bottom = 13.dp),
                         ) {
+                            loadError?.let { message ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFFFFF7E8), RoundedCornerShape(12.dp))
+                                        .border(1.dp, Color(0xFFF0D59C), RoundedCornerShape(12.dp))
+                                        .padding(10.dp),
+                                ) {
+                                    Text(
+                                        text = "Algumas informações não puderam ser carregadas agora: $message",
+                                        color = Color(0xFF785200),
+                                        fontSize = 10.5.sp,
+                                        lineHeight = 14.sp,
+                                    )
+                                }
+                            }
                             DeviceHero(
                                 info = info,
                                 identity = identity,
@@ -448,6 +517,7 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                         }
                     }
                 }
+        }
         }
         HorizontalDivider(color = XpChromeBorder)
         Row(

@@ -1,7 +1,7 @@
 {
-  "version_build": "0.1.0-alpha.88",
-  "version_code": 88,
-  "manager_version": "0.1.0-alpha.88",
+  "version_build": "0.1.0-alpha.90",
+  "version_code": 90,
+  "manager_version": "0.1.0-alpha.90",
   "application_id": "com.exploradorxp.app",
   "scope": "Recriação da tela Armazenamento e melhoria do fluxo educativo de Acesso ao uso/configurações restritas, preservando funções existentes",
   "checks": [
@@ -63,7 +63,7 @@
     {
       "name": "metadata_sync",
       "status": "passed",
-      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.88/versionCode 88."
+      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.90/versionCode 90."
     },
     {
       "name": "format_validation",
@@ -284,6 +284,66 @@
       "name": "alpha88_installed_apps_logic_regression",
       "status": "passed",
       "details": "InstalledAppsLogic foi recompilado com kotlinc e o runner de regressão executou 6/6 verificações para filtros, pesquisa, tamanho total/fallback e formatação."
+    },
+    {
+      "name": "alpha89_installed_app_details_visual_refresh",
+      "status": "passed",
+      "details": "InstalledAppDetailsScreen recebeu novo cabeçalho visual, resumo em cartões para versão/armazenamento, seções com subtítulos e ações redesenhadas com melhor hierarquia sem remover comandos existentes."
+    },
+    {
+      "name": "alpha89_storage_breakdown_cards",
+      "status": "passed",
+      "details": "Quando StorageStatsManager fornece dados, a ficha do app destaca Total, Aplicativo/código, Dados e Cache em cartões separados; sem Acesso ao uso, o módulo continua exibindo somente os APKs reais e orienta a autorização opcional."
+    },
+    {
+      "name": "alpha89_device_info_fail_safe",
+      "status": "passed",
+      "details": "DeviceInfoScreen passou a capturar falhas de coleta/identificação com runCatching e exibir estado de erro amigável com opção de tentar novamente, evitando encerramento brusco ao abrir Ferramentas > Informações do dispositivo."
+    },
+    {
+      "name": "alpha89_existing_features_preserved",
+      "status": "passed",
+      "details": "Gerenciador de aplicativos, APK inspector, Armazenamento, Lixeira, visualizadores e Informações do dispositivo permanecem presentes; a alpha.89 apenas melhora visual e estabilidade."
+    },
+    {
+      "name": "alpha90_storage_ui_rebuild",
+      "status": "passed",
+      "details": "StorageDetailsScreen usa novo cabeçalho, indicador de uso, métricas, atalhos e seções V2 sem remover os callbacks existentes de análise, cancelamento, Lixeira, apps instalados, abertura de pastas e arquivos."
+    },
+    {
+      "name": "alpha90_storage_truthful_scope",
+      "status": "passed",
+      "details": "Capacidade total/uso continuam vindo de StorageInfo do Android; categorias, pastas e arquivos grandes usam somente StorageAnalysis.scannedBytes/scannedFiles e exibem diretórios inacessíveis sem estimativas."
+    },
+    {
+      "name": "alpha90_storage_existing_actions_preserved",
+      "status": "passed",
+      "details": "Aplicativos instalados, Analisar/Atualizar, Cancelar análise, Lixeira, abrir pasta e abrir arquivo continuam conectados aos mesmos callbacks da alpha.89."
+    },
+    {
+      "name": "alpha90_storage_last_scan_summary",
+      "status": "passed",
+      "details": "Quando existe análise válida, a tela mostra data/hora de conclusão, bytes analisados, arquivos e diretórios inacessíveis sem misturar esses valores com o total do volume."
+    },
+    {
+      "name": "alpha90_drawable_reference_integrity",
+      "status": "passed",
+      "details": "Varredura encontrou e corrigiu a referência inexistente R.drawable.storage herdada da alpha.89. Após a correção, 83/83 referências R.drawable resolvem para VectorDrawable direto ou alias existente."
+    },
+    {
+      "name": "alpha90_device_info_structure_integrity",
+      "status": "passed",
+      "details": "O bloco Compose de DeviceInfoScreen foi reequilibrado após a proteção de erro da alpha.89. Verificação léxica confirma parênteses, colchetes e chaves balanceados; kotlinc isolado não reportou erro de sintaxe."
+    },
+    {
+      "name": "alpha90_static_integrity",
+      "status": "passed",
+      "details": "Validação final: 5 JSONs e 80 XMLs válidos, 83 referências R.drawable sem ausências, zero PNG/JPG/WebP/GIF em app/src/main e nenhum arquivo existente da alpha.89 removido."
+    },
+    {
+      "name": "alpha90_kotlin_syntax_smoke",
+      "status": "passed",
+      "details": "ExplorerScreen.kt, InstalledAppsManager.kt, DeviceInfoScreen.kt e ReleaseNotes.kt foram passados pelo parser do kotlinc isoladamente; sem diagnósticos de sintaxe como expecting/unexpected tokens/unclosed."
     }
   ]
 }

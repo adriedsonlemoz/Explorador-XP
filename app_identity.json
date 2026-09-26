@@ -2,8 +2,8 @@
   "product": "Explorador XP",
   "name": "explorador-xp",
   "displayName": "Explorador XP",
-  "version": "0.1.0-alpha.88",
-  "versionCode": 88,
+  "version": "0.1.0-alpha.90",
+  "versionCode": 90,
   "packageFormat": 2,
   "projectType": "android",
   "framework": "Android native / Jetpack Compose",
@@ -11,8 +11,8 @@
   "android": {
     "applicationId": "com.exploradorxp.app",
     "namespace": "com.exploradorxp.app",
-    "versionName": "0.1.0-alpha.88",
-    "versionCode": 88,
+    "versionName": "0.1.0-alpha.90",
+    "versionCode": 90,
     "minSdk": 26,
     "targetSdk": 35,
     "compileSdk": 35

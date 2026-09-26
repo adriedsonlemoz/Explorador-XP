@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.0-alpha.90
+
+- Tela **Armazenamento** recriada com uma nova arquitetura visual: cabeçalho próprio, indicador circular de percentual usado, cartões de Usado/Livre/Total e melhor hierarquia para leitura em telas pequenas.
+- O atalho **Aplicativos instalados** ficou destacado e as ações **Analisar/Atualizar/Cancelar** e **Lixeira** foram reorganizadas em um bloco compacto.
+- O resultado da análise ganhou resumo próprio com bytes analisados, quantidade de arquivos, diretórios inacessíveis e data/hora da última conclusão.
+- Categorias, maiores pastas e arquivos grandes foram reorganizados em seções independentes com menos bordas e melhor espaçamento, preservando os callbacks existentes para abrir pastas e arquivos.
+- Mantida a separação entre capacidade total do Android e bytes realmente enumerados pelo Explorador XP; áreas protegidas continuam sem estimativas.
+- Preservadas todas as funções existentes da alpha.89, incluindo Aplicativos instalados, Lixeira, análise, cancelamento e atualização.
+- Corrigida preventivamente a referência vetorial inválida `R.drawable.storage` herdada da tela de detalhes de aplicativos; o módulo agora usa o recurso existente `drive_storage`.
+- Corrigido o fechamento estrutural do estado de erro em **Informações do dispositivo**, garantindo que a proteção contra falhas introduzida na alpha.89 compile corretamente e permaneça dentro do conteúdo da tela.
+- Versão sincronizada para `0.1.0-alpha.90` / `versionCode 90`.
+
+## 0.1.0-alpha.89
+
+- Melhorada visualmente a tela **Detalhes do aplicativo** em **Aplicativos instalados**: novo cabeçalho com cartão de destaque, badges de tipo/estado, resumo de versão e armazenamento, seções mais legíveis, cartões de métricas e ações redesenhadas com descrições curtas.
+- A seção **Armazenamento** do detalhe do app agora destaca Total, Aplicativo/código, Dados e Cache em cartões próprios; sem Acesso ao uso, o aviso opcional foi mantido e ficou mais claro.
+- Reforçada a robustez da tela **Informações do dispositivo**. Falhas inesperadas durante a coleta agora são capturadas e exibidas de forma amigável com opção de tentar novamente, evitando que o app feche ao abrir o módulo por **Ferramentas > Informações do dispositivo**.
+- Preservadas todas as funções anteriores de arquivos, APKs, Armazenamento, Aplicativos instalados e Informações do dispositivo.
+- Versão sincronizada para `0.1.0-alpha.89` / `versionCode 89`.
+
 ## 0.1.0-alpha.88
 
 - Tela **Armazenamento** recriada com novo painel de capacidade, atalho para **Aplicativos instalados**, ações rápidas, categorias em lista, maiores pastas e arquivos grandes.

@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "A tela Armazenamento foi recriada como um painel mais limpo: capacidade usada/livre/total, atalho direto para Aplicativos instalados, ações rápidas, categorias em lista, maiores pastas e arquivos grandes.",
-                "O módulo Aplicativos instalados ganhou uma orientação mais clara para liberar Acesso ao uso. A mensagem amarela abre Informações do Explorador XP e explica o caminho dos 3 pontos > Permitir configurações restritas quando o Android exigir essa etapa.",
-                "Após Novidades, a atualização mostra uma explicação única sobre Acesso ao uso quando a autorização ainda não estiver liberada. O recurso continua opcional e nenhuma função anterior foi removida.",
+                "A tela Armazenamento foi recriada com um painel mais limpo: indicador circular do espaço usado, cartões de usado/livre/total e melhor aproveitamento da tela.",
+                "Aplicativos instalados agora tem um atalho destacado dentro de Armazenamento, enquanto Analisar/Atualizar/Cancelar e Lixeira ficam em ações compactas logo abaixo do resumo.",
+                "A análise detalhada ganhou resumo da última varredura e seções reorganizadas para categorias, maiores pastas e arquivos grandes, mantendo a separação entre dados totais do Android e arquivos realmente analisados.",
             )
         )
 }

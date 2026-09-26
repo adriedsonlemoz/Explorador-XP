@@ -634,93 +634,197 @@ private fun InstalledAppDetailsScreen(
 
     BackHandler(onBack = onBack)
 
+    val storageHeadline = storageInfo?.let { AppManagerLogic.displayBytes(it.totalBytes) }
+        ?: "APK ${AppManagerLogic.displayBytes(app.apkBytes)}"
+    val versionLabel = app.versionName?.takeIf { it.isNotBlank() } ?: "Sem nome de versão"
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF6F8FB)),
+            .background(Color(0xFFF3F7FC)),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
+                .height(58.dp)
                 .background(XpBlueDark)
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(34.dp).background(Color.White, RoundedCornerShape(6.dp)).clickable(onClick = onBack),
+                Modifier
+                    .size(38.dp)
+                    .background(Color.White, RoundedCornerShape(10.dp))
+                    .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                CachedResourceIcon(R.drawable.back, "Voltar", Modifier.size(20.dp))
+                CachedResourceIcon(R.drawable.back, "Voltar", Modifier.size(21.dp))
             }
-            Text("Detalhes do aplicativo", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Detalhes do aplicativo", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("Dados do Android e ações seguras", color = Color.White.copy(alpha = .84f), fontSize = 10.5.sp)
+            }
             Box(
-                Modifier.size(34.dp).background(Color.White, RoundedCornerShape(6.dp)).clickable(onClick = onRefresh),
+                Modifier
+                    .size(38.dp)
+                    .background(Color.White, RoundedCornerShape(10.dp))
+                    .clickable(onClick = onRefresh),
                 contentAlignment = Alignment.Center,
             ) {
-                CachedResourceIcon(R.drawable.refresh, "Atualizar", Modifier.size(20.dp))
+                CachedResourceIcon(R.drawable.refresh, "Atualizar", Modifier.size(21.dp))
             }
         }
 
         Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(12.dp),
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White, RoundedCornerShape(8.dp))
-                    .border(1.dp, XpCardBorder, RoundedCornerShape(8.dp))
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .background(Color.White, RoundedCornerShape(16.dp))
+                    .border(1.dp, Color(0xFFD7E5F3), RoundedCornerShape(16.dp))
+                    .padding(13.dp),
             ) {
-                InstalledAppIcon(app.packageName, Modifier.size(66.dp))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(app.label, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2D3A))
-                    Spacer(Modifier.height(3.dp))
-                    Text(app.packageName, fontSize = 11.sp, color = XpTextSecondary)
-                    Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        AppTypeBadge(if (app.isUpdatedSystem) "Sistema atualizado" else if (app.isSystem) "Sistema" else "Usuário", app.isSystem)
-                        AppTypeBadge(if (app.enabled) "Ativo" else "Desativado", !app.enabled)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .background(Color(0xFFF0F6FF), RoundedCornerShape(18.dp))
+                            .border(1.dp, Color(0xFFD4E3F5), RoundedCornerShape(18.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        InstalledAppIcon(app.packageName, Modifier.size(54.dp))
                     }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            app.label,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1C2F43),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            app.packageName,
+                            fontSize = 11.sp,
+                            color = XpTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(7.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            AppSummaryChip(
+                                text = if (app.isUpdatedSystem) "Sistema atualizado" else if (app.isSystem) "Sistema" else "Usuário",
+                                background = if (app.isSystem) Color(0xFFEAF1FA) else Color(0xFFEAF8EE),
+                                contentColor = if (app.isSystem) Color(0xFF46607A) else Color(0xFF2F7445),
+                            )
+                            AppSummaryChip(
+                                text = if (app.enabled) "Ativo" else "Desativado",
+                                background = if (app.enabled) Color(0xFFEAF8EE) else Color(0xFFFFF3E7),
+                                contentColor = if (app.enabled) Color(0xFF2F7445) else Color(0xFF9B6400),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    AppStorageStatCard(
+                        title = "Versão",
+                        value = versionLabel,
+                        note = "(${app.versionCode})",
+                        accent = Color(0xFF2F7FD7),
+                        modifier = Modifier.weight(1f),
+                    )
+                    AppStorageStatCard(
+                        title = "Armazenamento",
+                        value = storageHeadline,
+                        note = if (storageInfo != null) "total" else "somente APK",
+                        accent = Color(0xFF4B7BEC),
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
-            AppDetailsCard("Armazenamento") {
+            if (!usageAccess && storageInfo == null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFFF7E7), RoundedCornerShape(14.dp))
+                        .border(1.dp, Color(0xFFF0D6A1), RoundedCornerShape(14.dp))
+                        .padding(12.dp),
+                ) {
+                    Text("Armazenamento completo opcional", color = Color(0xFF7C5300), fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Sem Acesso ao uso, o Explorador XP mostra o tamanho real dos APKs instalados. Se você liberar essa autorização, o Android também permite consultar código, dados e cache.",
+                        fontSize = 10.5.sp,
+                        color = Color(0xFF7C5300),
+                        lineHeight = 14.sp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    AppActionTile(
+                        label = "Permitir acesso ao uso",
+                        description = "Abrir a tela do Android para liberar a estatística completa",
+                        icon = R.drawable.info,
+                        onClick = onOpenUsageAccess,
+                    )
+                }
+            }
+
+            AppDetailsCard(
+                title = "Armazenamento",
+                icon = R.drawable.drive_storage,
+                subtitle = if (storageInfo != null) "Código, dados e cache deste aplicativo" else "Tamanho detectado e opção de estatística completa",
+            ) {
                 if (storageInfo != null) {
-                    AppDetailLine("Total", AppManagerLogic.displayBytes(storageInfo.totalBytes), boldValue = true)
-                    AppDetailLine("Aplicativo/código", AppManagerLogic.displayBytes(storageInfo.appBytes))
-                    AppDetailLine("Dados", AppManagerLogic.displayBytes(storageInfo.dataBytes))
-                    AppDetailLine("Cache", AppManagerLogic.displayBytes(storageInfo.cacheBytes))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            AppStorageStatCard("Total", AppManagerLogic.displayBytes(storageInfo.totalBytes), accent = Color(0xFF1D7EF2), modifier = Modifier.weight(1f))
+                            AppStorageStatCard("Aplicativo/código", AppManagerLogic.displayBytes(storageInfo.appBytes), accent = Color(0xFF28A56C), modifier = Modifier.weight(1f))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            AppStorageStatCard("Dados", AppManagerLogic.displayBytes(storageInfo.dataBytes), accent = Color(0xFFF0A31B), modifier = Modifier.weight(1f))
+                            AppStorageStatCard("Cache", AppManagerLogic.displayBytes(storageInfo.cacheBytes), accent = Color(0xFF8C68E8), modifier = Modifier.weight(1f))
+                        }
+                    }
+                    Spacer(Modifier.height(9.dp))
                     Text(
                         "O valor de Dados informado pelo Android já inclui o cache; por isso o total não soma Cache duas vezes.",
-                        fontSize = 9.5.sp,
+                        fontSize = 9.8.sp,
                         color = XpTextSecondary,
                         lineHeight = 13.sp,
                     )
                 } else {
-                    AppDetailLine("APKs instalados", AppManagerLogic.displayBytes(app.apkBytes), boldValue = true)
+                    AppStorageStatCard(
+                        title = "APKs instalados",
+                        value = AppManagerLogic.displayBytes(app.apkBytes),
+                        note = "base + splits",
+                        accent = Color(0xFF1D7EF2),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        if (usageAccess) "O Android não forneceu estatísticas completas para este pacote."
+                        if (usageAccess) "O Android não forneceu estatísticas completas para este pacote nesta consulta."
                         else "Conceda Acesso ao uso para consultar código, dados e cache separadamente.",
                         fontSize = 10.5.sp,
                         color = XpTextSecondary,
                     )
-                    if (!usageAccess) {
-                        Spacer(Modifier.height(7.dp))
-                        AppManagerActionButton("Permitir acesso ao uso", R.drawable.info, onClick = onOpenUsageAccess)
-                    }
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
-            AppDetailsCard("Informações") {
-                AppDetailLine("Versão", app.versionName?.takeIf { it.isNotBlank() } ?: "Não informada")
+            AppDetailsCard(
+                title = "Informações",
+                icon = R.drawable.info,
+                subtitle = "Dados detectados diretamente pelo Android",
+            ) {
+                AppDetailLine("Versão", versionLabel)
                 AppDetailLine("Version code", app.versionCode.toString())
                 AppDetailLine("Tipo", if (app.isUpdatedSystem) "Aplicativo do sistema atualizado" else if (app.isSystem) "Aplicativo do sistema" else "Aplicativo do usuário")
                 AppDetailLine("Estado", if (app.enabled) "Ativo" else "Desativado")
@@ -731,39 +835,62 @@ private fun InstalledAppDetailsScreen(
                 AppDetailLine("Instalador", app.installerPackage ?: "Não informado pelo Android")
             }
 
-            Spacer(Modifier.height(10.dp))
-            AppDetailsCard("Ações") {
+            AppDetailsCard(
+                title = "Ações",
+                icon = R.drawable.settings,
+                subtitle = "Atalhos seguros que respeitam as proteções do Android",
+            ) {
                 if (app.canLaunch) {
-                    AppManagerActionButton("Abrir aplicativo", R.drawable.file_apk) {
-                        val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
-                        if (launchIntent != null) {
-                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            runCatching { context.startActivity(launchIntent) }
-                        }
-                    }
-                    Spacer(Modifier.height(7.dp))
+                    AppActionTile(
+                        label = "Abrir aplicativo",
+                        description = "Executar este app agora",
+                        icon = R.drawable.file_apk,
+                        onClick = {
+                            val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+                            if (launchIntent != null) {
+                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                runCatching { context.startActivity(launchIntent) }
+                            }
+                        },
+                    )
+                    Spacer(Modifier.height(8.dp))
                 }
-                AppManagerActionButton("Limpar dados", R.drawable.delete) { showClearDataInfo = true }
-                Spacer(Modifier.height(7.dp))
+                AppActionTile(
+                    label = "Limpar dados",
+                    description = "Abrir os detalhes oficiais do Android para concluir a limpeza",
+                    icon = R.drawable.delete,
+                    onClick = { showClearDataInfo = true },
+                )
+                Spacer(Modifier.height(8.dp))
                 if (!app.isOwnPackage) {
-                    AppManagerActionButton(
-                        if (app.isSystem) "Desinstalar / remover atualizações" else "Desinstalar",
-                        R.drawable.delete,
+                    AppActionTile(
+                        label = if (app.isSystem) "Desinstalar / remover atualizações" else "Desinstalar",
+                        description = if (app.isSystem) "O próprio Android decidirá se pode remover o app ou apenas suas atualizações" else "Abrir a confirmação oficial de desinstalação",
+                        icon = R.drawable.delete,
                         destructive = true,
-                    ) { showUninstallConfirm = true }
-                    Spacer(Modifier.height(7.dp))
+                        onClick = { showUninstallConfirm = true },
+                    )
+                    Spacer(Modifier.height(8.dp))
                 }
-                AppManagerActionButton("Detalhes no Android", R.drawable.settings) {
-                    onOpenSystemDetails(app.packageName)
-                }
-                Spacer(Modifier.height(7.dp))
-                AppManagerActionButton("Copiar nome do pacote", R.drawable.copy) {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Pacote", app.packageName))
-                    Toast.makeText(context, "Nome do pacote copiado.", Toast.LENGTH_SHORT).show()
-                }
+                AppActionTile(
+                    label = "Detalhes no Android",
+                    description = "Abrir a página oficial do aplicativo no sistema",
+                    icon = R.drawable.settings,
+                    onClick = { onOpenSystemDetails(app.packageName) },
+                )
+                Spacer(Modifier.height(8.dp))
+                AppActionTile(
+                    label = "Copiar nome do pacote",
+                    description = app.packageName,
+                    icon = R.drawable.copy,
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Pacote", app.packageName))
+                        Toast.makeText(context, "Nome do pacote copiado.", Toast.LENGTH_SHORT).show()
+                    },
+                )
                 if (app.isOwnPackage) {
-                    Spacer(Modifier.height(7.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         "A desinstalação do próprio Explorador XP não é oferecida aqui porque encerraria o gerenciador durante a operação.",
                         fontSize = 10.sp,
@@ -773,19 +900,25 @@ private fun InstalledAppDetailsScreen(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
-            AppDetailsCard("Permissões declaradas") {
+            AppDetailsCard(
+                title = "Permissões declaradas",
+                icon = R.drawable.info,
+                subtitle = "Lista declarada pelo pacote e estado de concessão informado pelo Android",
+            ) {
                 when {
                     permissionsLoading -> Text("Carregando permissões…", fontSize = 10.5.sp, color = XpTextSecondary)
                     permissions.isEmpty() -> Text("Nenhuma permissão declarada pelo pacote.", fontSize = 10.5.sp, color = XpTextSecondary)
                     else -> permissions.forEachIndexed { index, permission ->
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(8.dp)
-                                    .background(if (permission.granted) Color(0xFF3A8B4D) else Color(0xFFB08A2E), RoundedCornerShape(4.dp))
+                                    .size(9.dp)
+                                    .background(if (permission.granted) Color(0xFF3A8B4D) else Color(0xFFB08A2E), RoundedCornerShape(5.dp))
                             )
-                            Spacer(Modifier.width(7.dp))
+                            Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(permission.name, fontSize = 10.5.sp, color = Color(0xFF303B46))
                                 Text(if (permission.granted) "Concedida" else "Não concedida", fontSize = 9.5.sp, color = XpTextSecondary)
@@ -857,37 +990,99 @@ private fun InstalledAppDetailsScreen(
 }
 
 @Composable
-private fun AppDetailsCard(title: String, content: @Composable () -> Unit) {
+private fun AppSummaryChip(
+    text: String,
+    background: Color,
+    contentColor: Color,
+) {
+    Box(
+        modifier = Modifier
+            .background(background, RoundedCornerShape(999.dp))
+            .border(1.dp, background.copy(alpha = .95f), RoundedCornerShape(999.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(text, fontSize = 9.sp, color = contentColor, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+@Composable
+private fun AppStorageStatCard(
+    title: String,
+    value: String,
+    note: String? = null,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = modifier
+            .background(accent.copy(alpha = .07f), RoundedCornerShape(12.dp))
+            .border(1.dp, accent.copy(alpha = .18f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+    ) {
+        Text(title, fontSize = 9.5.sp, color = accent, fontWeight = FontWeight.Bold)
+        Text(value, fontSize = 14.sp, color = Color(0xFF23313F), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        note?.takeIf { it.isNotBlank() }?.let {
+            Text(it, fontSize = 9.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun AppDetailsCard(
+    title: String,
+    icon: Int,
+    subtitle: String? = null,
+    content: @Composable () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(8.dp))
-            .border(1.dp, XpCardBorder, RoundedCornerShape(8.dp))
-            .padding(11.dp),
+            .background(Color.White, RoundedCornerShape(14.dp))
+            .border(1.dp, XpCardBorder, RoundedCornerShape(14.dp))
+            .padding(12.dp),
     ) {
-        Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
-        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(Color(0xFFF0F6FF), RoundedCornerShape(10.dp))
+                    .border(1.dp, Color(0xFFD4E3F5), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                CachedResourceIcon(icon, null, Modifier.size(17.dp))
+            }
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                subtitle?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, fontSize = 9.8.sp, color = XpTextSecondary, lineHeight = 13.sp)
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
         content()
     }
 }
 
 @Composable
 private fun AppDetailLine(label: String, value: String, boldValue: Boolean = false) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Text(label, fontSize = 10.5.sp, color = XpTextSecondary, modifier = Modifier.width(112.dp))
         Text(
             value,
-            fontSize = 10.5.sp,
+            fontSize = 10.7.sp,
             color = Color(0xFF26333F),
-            fontWeight = if (boldValue) FontWeight.Bold else FontWeight.Normal,
+            fontWeight = if (boldValue) FontWeight.Bold else FontWeight.Medium,
             modifier = Modifier.weight(1f),
         )
     }
 }
 
 @Composable
-private fun AppManagerActionButton(
+private fun AppActionTile(
     label: String,
+    description: String,
     icon: Int,
     destructive: Boolean = false,
     onClick: () -> Unit,
@@ -895,15 +1090,28 @@ private fun AppManagerActionButton(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (destructive) Color(0xFFFFF3F3) else XpControlBackground, RoundedCornerShape(6.dp))
-            .border(1.dp, if (destructive) Color(0xFFE6B6B6) else XpControlBorder, RoundedCornerShape(6.dp))
+            .background(if (destructive) Color(0xFFFFF4F4) else Color(0xFFF7FAFD), RoundedCornerShape(12.dp))
+            .border(1.dp, if (destructive) Color(0xFFE8B8B8) else Color(0xFFDCE6F1), RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 9.dp),
+            .padding(horizontal = 11.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CachedResourceIcon(icon, label, Modifier.size(18.dp))
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .background(if (destructive) Color(0xFFFFE6E6) else Color.White, RoundedCornerShape(10.dp))
+                .border(1.dp, if (destructive) Color(0xFFF0C5C5) else Color(0xFFE2EAF2), RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            CachedResourceIcon(icon, label, Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, fontSize = 11.2.sp, fontWeight = FontWeight.Bold, color = if (destructive) Color(0xFFA32121) else Color(0xFF2B4055))
+            Text(description, fontSize = 9.5.sp, color = XpTextSecondary, lineHeight = 13.sp)
+        }
         Spacer(Modifier.width(8.dp))
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (destructive) Color(0xFFA32121) else Color(0xFF2B4055))
+        CachedResourceIcon(R.drawable.forward, null, Modifier.size(16.dp))
     }
 }
 

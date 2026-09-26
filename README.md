@@ -2,12 +2,15 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.88` (`versionCode 88`)  
+**Versão atual:** `0.1.0-alpha.90` (`versionCode 90`)  
 
-- A alpha.88 recria a tela **Armazenamento** como um painel mais direto: usado/livre/total no topo, atalho destacado para **Aplicativos instalados**, ações rápidas para Lixeira e análise, categorias em lista proporcional, maiores pastas e arquivos grandes. A separação entre total do Android e arquivos efetivamente enumerados continua explícita; áreas protegidas não são estimadas.
+- A alpha.90 recria novamente a tela **Armazenamento** com uma arquitetura visual mais limpa: indicador circular de uso, cartões de usado/livre/total, acesso destacado a **Aplicativos instalados**, ações compactas para análise e Lixeira, resumo da última varredura e seções bem separadas para categorias, maiores pastas e arquivos grandes.
+- A tela continua distinguindo a capacidade total informada pelo Android do conjunto que o Explorador XP realmente conseguiu analisar; áreas protegidas não são estimadas.
+- Todas as funções introduzidas nas versões anteriores permanecem disponíveis.
 
-- A alpha.88 também melhora a orientação de **Acesso ao uso** do gerenciador de aplicativos. A mensagem amarela agora abre **Informações do Explorador XP** e explica o caminho pelos 3 pontos > **Permitir configurações restritas** quando essa proteção existir. Após a tela Novidades, uma explicação única aparece na primeira atualização compatível se o acesso ainda não estiver concedido. O acesso permanece opcional; sem ele, o módulo continua mostrando o tamanho real dos APKs.
-
+- A alpha.89 melhora visualmente a tela **Detalhes do aplicativo** do gerenciador de apps: novo cartão de destaque com ícone, tipo, estado, versão e resumo de armazenamento; seções redesenhadas; estatísticas de armazenamento em cartões; e ações com visual mais limpo e descrições curtas.
+- A alpha.89 também reforça a abertura de **Informações do dispositivo**. A coleta agora é protegida contra falhas inesperadas: se algum fabricante/API falhar, a tela não derruba o app; em vez disso, mostra uma mensagem amigável com opção de tentar novamente.
+- A tela **Armazenamento** renovada da alpha.88 e a orientação de **Acesso ao uso** continuam preservadas. Nenhuma função anterior foi removida.
 
 - A alpha.87 corrige o erro de compilação do menu **Ferramentas > Aplicativos instalados**. O estado da tela principal não é mais acessado diretamente pelo `XpHeader`; a abertura do módulo passa por uma callback dedicada (`onShowInstalledApps`), seguindo o mesmo padrão de Configurações e Informações do dispositivo. Nenhuma função da alpha.86 foi removida.
 
