@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.84
+
+- Corrigida a integração do cabeçalho de Informações do dispositivo com a inclusão do componente vetorial `HeroSpecChip` usado nos indicadores de Android, RAM e armazenamento.
+- Corrigida a compilação do editor de texto/código adicionando o modificador Compose `size` utilizado pelo ícone de abrir em nova aba.
+- Mantida integralmente a padronização vetorial da alpha.83, sem reintroduzir PNGs ou bitmaps decorativos.
+- Versão sincronizada para `0.1.0-alpha.84` / `versionCode 84` em Gradle, VERSION, metadados, README, ReleaseNotes e validação.
+
 ## 0.1.0-alpha.83
 
 ### Padronização completa dos ícones

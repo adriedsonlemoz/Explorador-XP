@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.83",
-  "version_code": 83,
-  "manager_version": "0.1.0-alpha.83",
+  "version_build": "0.1.0-alpha.84",
+  "version_code": 84,
+  "manager_version": "0.1.0-alpha.84",
   "application_id": "com.exploradorxp.app",
-  "scope": "Padronização completa da iconografia em VectorDrawable, remoção dos PNGs de interface, categorias de arquivo e launcher vetorial",
+  "scope": "Correção de compilação da padronização vetorial da alpha.83 sem alteração funcional adicional",
   "checks": [
     {
       "name": "cpu_architecture_no_abi_guess",
@@ -63,7 +63,7 @@
     {
       "name": "metadata_sync",
       "status": "passed",
-      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes e documentação estão sincronizados para 0.1.0-alpha.83/versionCode 83."
+      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes e documentação estão sincronizados para 0.1.0-alpha.84/versionCode 84."
     },
     {
       "name": "format_validation",
@@ -78,7 +78,7 @@
     {
       "name": "android_unit_lint_build",
       "status": "not_run",
-      "reason": "O pacote recebido continua sem gradlew e este ambiente não possui Gradle/Android SDK/android.jar. A lógica pura de FileIconMapper/ReleaseNotes foi compilada com kotlinc e executou 11/11 checks; validações estáticas/XML passaram, mas test/lint/assemble Android dependem do workflow do projeto."
+      "reason": "O ambiente local não possui Gradle/Android SDK/android.jar. O log do GitHub Actions foi analisado: os quatro erros Kotlin reportados foram tratados diretamente (HeroSpecChip ausente e import de Modifier.size ausente). O assemble completo deve ser confirmado pelo workflow do projeto."
     },
     {
       "name": "device_identity_exact_match",
@@ -154,6 +154,11 @@
       "name": "legacy_text_icon_cleanup",
       "status": "passed",
       "details": "Marcadores visuais antigos usados como ícones (play, expandir/recolher, check e adicionar aba) foram trocados por recursos vetoriais. Separadores e pontuação textual permanecem texto."
+    },
+    {
+      "name": "alpha84_compile_log_fixes",
+      "status": "passed",
+      "details": "O log Explorador-XP-Gerar-APK-80 reportou três referências ausentes a HeroSpecChip em DeviceInfoScreen.kt e uma referência ausente a size em TextCodeEditorViewer.kt. O componente foi implementado e o import androidx.compose.foundation.layout.size foi adicionado; busca estática confirma que os símbolos agora possuem definição/import correspondente."
     }
   ]
 }

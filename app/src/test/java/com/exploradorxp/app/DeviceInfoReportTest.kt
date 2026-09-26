@@ -109,7 +109,7 @@ class DeviceInfoReportTest {
             esimSupported = true,
             esimEnabled = true,
             esimMepSupported = true,
-            appVersionName = "0.1.0-alpha.83",
+            appVersionName = "0.1.0-alpha.84",
             appVersionCode = 82,
         )
 

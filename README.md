@@ -2,9 +2,10 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.83` (`versionCode 83`)  
+**Versão atual:** `0.1.0-alpha.84` (`versionCode 84`)  
 
 
+- A alpha.84 consolida a migração visual da versão anterior com ajustes internos de compatibilidade nos componentes vetoriais da tela de informações do dispositivo e do editor de texto/código.
 - A alpha.83 reorganiza toda a iconografia do aplicativo: o antigo pacote de PNGs foi removido dos recursos da interface e substituído por um conjunto vetorial consistente. Arquivos usam categorias visuais (documentos, planilhas, imagens, áudio, vídeo, compactados, código, aplicativos e outros), enquanto pastas, ações, navegação, armazenamento e estados usam a mesma linguagem. O launcher também passa a ser um Adaptive Icon vetorial; fotos/miniaturas de conteúdo continuam sendo tratadas como conteúdo real, não como ícones decorativos.
 
 - A alpha.82 evolui **Informações do dispositivo** em duas frentes complementares. A coleta técnica continua conservadora e baseada nas APIs reais do Android (ABIs, processo, SoC, GPU, RAM, armazenamento, bateria, rede e sensores), enquanto uma camada separada identifica o **nome comercial** por correspondência exata de fabricante/marca + modelo usando catálogo local versionado e, quando permitido, a lista pública de dispositivos do Google Play. Quando existe entidade confiável, uma miniatura real pode ser obtida de Wikidata/Wikimedia Commons com cache, fonte/licença/autor; resultados ambíguos usam o ícone genérico. **Ferramentas > Configurações** permite desligar completamente essas consultas externas, mantendo o recurso funcional offline.

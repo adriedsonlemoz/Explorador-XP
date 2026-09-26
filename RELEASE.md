@@ -1,4 +1,10 @@
-# Explorador XP 0.1.0-alpha.83
+# Explorador XP 0.1.0-alpha.84
+
+## Ajustes da alpha.84
+
+- Compatibilidade do novo cabeçalho vetorial da tela Informações do dispositivo corrigida.
+- Editor de texto/código corrigido para usar o modificador de tamanho importado corretamente.
+- Nenhuma imagem raster decorativa foi reintroduzida.
 
 Esta versão reorganiza completamente a iconografia do aplicativo. O antigo conjunto de PNGs decorativos foi removido dos recursos da interface e substituído por um sistema de `VectorDrawable` XML com linguagem visual única.
 

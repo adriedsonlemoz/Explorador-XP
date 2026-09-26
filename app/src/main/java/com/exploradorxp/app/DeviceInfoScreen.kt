@@ -662,6 +662,38 @@ private fun DeviceHero(
 }
 
 @Composable
+private fun HeroSpecChip(
+    icon: ImageVector,
+    tint: Color,
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = modifier
+            .background(tint.copy(alpha = .09f), RoundedCornerShape(10.dp))
+            .border(1.dp, tint.copy(alpha = .18f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 7.dp, vertical = 6.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(15.dp),
+        )
+        Text(
+            text = text,
+            color = DeviceText,
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun DeviceOriginLabel(text: String) {
     Text(
         text = text,

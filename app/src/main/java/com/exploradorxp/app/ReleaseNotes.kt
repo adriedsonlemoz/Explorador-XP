@@ -18,11 +18,8 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Os ícones do Explorador XP foram padronizados em uma única linguagem visual vetorial, substituindo o antigo pacote de PNGs misturados.",
-                "Arquivos agora usam ícones por categoria — documentos, imagens, áudio, vídeo, compactados, código, aplicativos e outros — mantendo a identificação sem poluir a interface.",
-                "Pastas, armazenamento, navegação, ações e estados também passaram a usar vetores consistentes e nítidos em qualquer densidade de tela.",
-                "O ícone do aplicativo/launcher foi convertido para um Adaptive Icon vetorial, sem bitmap incorporado.",
-                "A remoção dos bitmaps de interface reduz recursos gráficos no código-fonte e elimina o antigo cache de decodificação de PNG usado pelas listas.",
+                "A padronização vetorial recebeu ajustes internos para manter os novos componentes visuais compatíveis em todas as telas.",
+                "O editor de texto e código foi alinhado ao mesmo conjunto de modificadores usado pelos novos ícones vetoriais.",
             )
         )
 }
