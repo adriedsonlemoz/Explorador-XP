@@ -1,7 +1,7 @@
 {
-  "version_build": "0.1.0-alpha.90",
-  "version_code": 90,
-  "manager_version": "0.1.0-alpha.90",
+  "version_build": "0.1.0-alpha.91",
+  "version_code": 91,
+  "manager_version": "0.1.0-alpha.91",
   "application_id": "com.exploradorxp.app",
   "scope": "Recriação da tela Armazenamento e melhoria do fluxo educativo de Acesso ao uso/configurações restritas, preservando funções existentes",
   "checks": [
@@ -63,7 +63,7 @@
     {
       "name": "metadata_sync",
       "status": "passed",
-      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.90/versionCode 90."
+      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.91/versionCode 91."
     },
     {
       "name": "format_validation",
@@ -344,6 +344,21 @@
       "name": "alpha90_kotlin_syntax_smoke",
       "status": "passed",
       "details": "ExplorerScreen.kt, InstalledAppsManager.kt, DeviceInfoScreen.kt e ReleaseNotes.kt foram passados pelo parser do kotlinc isoladamente; sem diagnósticos de sintaxe como expecting/unexpected tokens/unclosed."
+    },
+    {
+      "name": "alpha91_build86_device_image_fallback_fix",
+      "status": "passed",
+      "details": "O log Gerar APK 86 apontou DeviceInfoScreen.kt:167 com ausência de checkedAtEpochMs e fromCache. A construção DeviceImageResult.Unavailable agora passa reason, System.currentTimeMillis() e fromCache=false."
+    },
+    {
+      "name": "alpha91_unavailable_signature_sweep",
+      "status": "passed",
+      "details": "Varredura estática encontrou 8 construções DeviceImageResult.Unavailable; todas fornecem os três campos obrigatórios reason, checkedAtEpochMs e fromCache. Um checker Kotlin isolado da assinatura compilou e executou com sucesso."
+    },
+    {
+      "name": "alpha91_existing_features_preserved",
+      "status": "passed",
+      "details": "Comparação de caminhos com a alpha.90 confirma que a correção não removeu arquivos existentes; a tela Armazenamento alpha.90 e módulos anteriores permanecem presentes."
     }
   ]
 }

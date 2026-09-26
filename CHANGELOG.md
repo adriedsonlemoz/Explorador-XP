@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.91
+
+- Corrigido o erro de compilação do workflow **Gerar APK 86** em `DeviceInfoScreen.kt`.
+- O fallback `DeviceImageResult.Unavailable` usado quando **Informações do dispositivo** falha durante a coleta agora fornece os parâmetros obrigatórios `reason`, `checkedAtEpochMs` e `fromCache`.
+- Feita varredura de todas as construções `DeviceImageResult.Unavailable` para confirmar que nenhuma outra chamada permanece com assinatura incompleta.
+- Preservada integralmente a tela **Armazenamento** recriada na alpha.90 e todas as funções anteriores do Explorador XP.
+- Versão sincronizada para `0.1.0-alpha.91` / `versionCode 91`.
+
 ## 0.1.0-alpha.90
 
 - Tela **Armazenamento** recriada com uma nova arquitetura visual: cabeçalho próprio, indicador circular de percentual usado, cartões de Usado/Livre/Total e melhor hierarquia para leitura em telas pequenas.

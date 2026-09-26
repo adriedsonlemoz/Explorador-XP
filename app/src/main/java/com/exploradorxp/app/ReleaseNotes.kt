@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "A tela Armazenamento foi recriada com um painel mais limpo: indicador circular do espaço usado, cartões de usado/livre/total e melhor aproveitamento da tela.",
-                "Aplicativos instalados agora tem um atalho destacado dentro de Armazenamento, enquanto Analisar/Atualizar/Cancelar e Lixeira ficam em ações compactas logo abaixo do resumo.",
-                "A análise detalhada ganhou resumo da última varredura e seções reorganizadas para categorias, maiores pastas e arquivos grandes, mantendo a separação entre dados totais do Android e arquivos realmente analisados.",
+                "Corrigido um erro de compilação no fallback de Informações do dispositivo: a resposta de imagem indisponível agora usa todos os campos obrigatórios da estrutura interna.",
+                "A proteção contra falhas de Informações do dispositivo continua ativa: em erro de coleta, a tela deve mostrar uma mensagem amigável em vez de fechar o aplicativo.",
+                "A nova tela Armazenamento da alpha.90 e todas as funções anteriores foram preservadas.",
             )
         )
 }

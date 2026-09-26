@@ -164,7 +164,11 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
             imageLoading = false
             if (snapshot == null) {
                 identity = null
-                deviceImage = DeviceImageResult.Unavailable("Não foi possível carregar agora")
+                deviceImage = DeviceImageResult.Unavailable(
+                    reason = "Não foi possível carregar agora",
+                    checkedAtEpochMs = System.currentTimeMillis(),
+                    fromCache = false,
+                )
             }
         }
     }

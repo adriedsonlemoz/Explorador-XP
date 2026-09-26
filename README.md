@@ -2,7 +2,10 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.90` (`versionCode 90`)  
+**Versão atual:** `0.1.0-alpha.91` (`versionCode 91`)  
+
+- A alpha.91 corrige o erro de compilação reportado no workflow **Gerar APK 86** em `DeviceInfoScreen.kt`: o fallback `DeviceImageResult.Unavailable` agora fornece `reason`, `checkedAtEpochMs` e `fromCache`, exatamente como a classe exige.
+- A nova tela **Armazenamento** da alpha.90 e todas as funções anteriores foram preservadas sem regressão funcional.
 
 - A alpha.90 recria novamente a tela **Armazenamento** com uma arquitetura visual mais limpa: indicador circular de uso, cartões de usado/livre/total, acesso destacado a **Aplicativos instalados**, ações compactas para análise e Lixeira, resumo da última varredura e seções bem separadas para categorias, maiores pastas e arquivos grandes.
 - A tela continua distinguindo a capacidade total informada pelo Android do conjunto que o Explorador XP realmente conseguiu analisar; áreas protegidas não são estimadas.
