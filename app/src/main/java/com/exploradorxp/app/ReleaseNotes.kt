@@ -18,10 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "A tela Sobre o Explorador XP agora abre como tela completa, no mesmo padrão adotado para a Lixeira e Informações do dispositivo.",
-                "O layout Sobre deixou de usar popup/modal e passou a ocupar toda a área útil do aplicativo, mantendo o estilo XP.",
-                "Ajuda, Informações técnicas e Fechar continuam disponíveis na barra inferior padronizada.",
-                "Versão e documentação foram sincronizadas para a alpha.79.",
+                "Ajuda agora abre em tela completa, mantendo os tópicos expansíveis e o botão Fechar na barra inferior.",
+                "Armazenamento agora abre em tela completa e mantém análise, cancelamento e abertura das pastas encontradas.",
+                "A análise por tipo foi redesenhada em cartões compactos, com no máximo cinco categorias visíveis.",
+                "Os números agora diferenciam claramente o armazenamento total informado pelo Android dos arquivos efetivamente analisados pelo Explorador XP.",
+                "Contagens e porcentagens foram revisadas para usar apenas o mesmo conjunto de arquivos analisados, sem estimar dados inacessíveis.",
             )
         )
 }

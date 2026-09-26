@@ -1,126 +1,69 @@
 {
-  "version_build": "0.1.0-alpha.78",
-  "version_code": 78,
-  "manager_version": "0.1.0-alpha.78",
+  "version_build": "0.1.0-alpha.80",
+  "version_code": 80,
+  "manager_version": "0.1.0-alpha.80",
   "application_id": "com.exploradorxp.app",
-  "scope": "Compactação da tela de APK, padronização do Fechar e release GitHub por versão",
+  "scope": "Ajuda e Armazenamento em tela completa, métricas de armazenamento coerentes e cartões compactos por tipo",
   "checks": [
+    {
+      "name": "help_full_screen_static",
+      "status": "passed",
+      "details": "HelpManualScreen usa fillMaxSize + BackHandler, rodapé fixo com contagem de tópicos/Fechar e não usa XpModalWindow/Dialog."
+    },
+    {
+      "name": "storage_full_screen_static",
+      "status": "passed",
+      "details": "StorageDetailsScreen usa fillMaxSize + BackHandler, rodapé fixo e substitui a tela principal enquanto aberta; não usa XpModalWindow/Dialog."
+    },
+    {
+      "name": "storage_metric_sources_static",
+      "status": "passed",
+      "details": "Capacidade total/usada/livre permanece derivada de StatFs; scannedFiles/scannedBytes são produzidos somente pela travessia de arquivos enumerados e alimentam o universo analisado."
+    },
+    {
+      "name": "storage_category_denominator_static",
+      "status": "passed",
+      "details": "Percentuais dos cartões por tipo usam somente analysis.scannedBytes como denominador, sem misturar com totalBytes do dispositivo."
+    },
+    {
+      "name": "storage_category_limit_static",
+      "status": "passed",
+      "details": "buildStorageDisplayCategories mantém até quatro categorias específicas e agrega o restante em um único cartão Outros, retornando no máximo cinco cartões."
+    },
+    {
+      "name": "storage_counts_static",
+      "status": "passed",
+      "details": "scannedFiles incrementa somente para File.isFile; diretórios não entram na contagem de arquivos. O ranking de pastas acumula os mesmos arquivos analisados."
+    },
+    {
+      "name": "storage_partial_scan_static",
+      "status": "passed",
+      "details": "A análise incrementa inaccessibleDirectories somente quando File.listFiles() retorna null; a interface não estima bytes/arquivos ausentes e só marca parcial quando essa condição foi observada."
+    },
+    {
+      "name": "storage_refresh_previous_result_static",
+      "status": "passed",
+      "details": "Uma atualização preserva o último StorageAnalysis válido enquanto a nova varredura roda, identifica o resultado como anterior e só o substitui após sucesso."
+    },
     {
       "name": "update_highlights_policy_static",
       "status": "passed",
-      "details": "PreferencesStore persiste o último versionCode apresentado; MainActivity exige atualização real do pacote, abertura normal e versionCode novo antes de mostrar UpdateHighlightsScreen."
+      "details": "PreferencesStore persiste o último versionCode apresentado; MainActivity exige atualização real do pacote e versionCode novo antes de mostrar UpdateHighlightsScreen, marcando a versão como vista na primeira exibição."
     },
     {
-      "name": "update_highlights_single_source",
+      "name": "workflow_release_per_version_static",
       "status": "passed",
-      "details": "ReleaseNotes.kt é usado pela tela automática e por Sobre > Novidades desta versão."
-    },
-    {
-      "name": "external_open_not_interrupted_static",
-      "status": "passed",
-      "details": "A elegibilidade da tela automática exige externalOpenRequest == null e ignora também a entrada de desempenho."
-    },
-    {
-      "name": "device_info_full_screen_static",
-      "status": "passed",
-      "details": "DeviceInfoScreen usa fillMaxSize e não usa XpModalWindow/Dialog; ExplorerScreen substitui a área principal enquanto a tela está aberta e BackHandler retorna ao Explorer."
-    },
-    {
-      "name": "json",
-      "status": "passed"
-    },
-    {
-      "name": "xml",
-      "status": "passed"
-    },
-    {
-      "name": "workflow_yaml",
-      "status": "passed"
+      "details": "gerar-apk.yml continua criando/uploadando APK diretamente em uma GitHub prerelease por tag v<versionName>, sem actions/upload-artifact."
     },
     {
       "name": "version_metadata",
       "status": "passed",
-      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, documentação e ReleaseNotes sincronizados para alpha.75/versionCode 75."
+      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, ReleaseNotes e documentação estão sincronizados para alpha.80/versionCode 80."
     },
     {
       "name": "android_full_build",
       "status": "not_run",
-      "reason": "O projeto não inclui gradlew e o ambiente atual não possui Gradle/Android SDK configurados para executar o build completo."
-    },
-    {
-      "name": "Correção de compilação horizontalScroll",
-      "status": "PASS",
-      "details": "InternalViewer.kt usa androidx.compose.foundation.horizontalScroll; corrige Unresolved reference no compileDebugKotlin."
-    },
-    {
-      "name": "launcher_blue_resource",
-      "status": "passed",
-      "details": "values/colors.xml declara launcher_blue=#087CF0 e todos os Adaptive Icons referenciam esse recurso existente."
-    },
-    {
-      "name": "adaptive_icon_resources",
-      "status": "passed",
-      "details": "ic_launcher.xml e ic_launcher_round.xml existem em mipmap-anydpi-v26 e mipmap-anydpi-v33 e referenciam foreground/background válidos."
-    },
-    {
-      "name": "apk_comparison_static",
-      "status": "passed",
-      "details": "ApkInspector coleta versão instalada, SDKs, tamanho base/splits, permissões e fingerprints; ApkViewer apresenta comparação APK × instalado."
-    },
-    {
-      "name": "apk_file_sha256_static",
-      "status": "passed",
-      "details": "sha256File(File) calcula SHA-256 do conteúdo do APK em streaming e o valor é exibido/copiável."
-    },
-    {
-      "name": "apk_permission_delta_static",
-      "status": "passed",
-      "details": "ApkInfo calcula permissões novas/removidas e destaca novas permissões perigosas na interface."
-    },
-    {
-      "name": "apk_secondary_actions_static",
-      "status": "passed",
-      "details": "Tela oferece compartilhar, abrir localização, copiar pacote/SHA-256, extrair ícone e resumo interpretado do AndroidManifest."
-    },
-    {
-      "name": "update_highlights_alpha75",
-      "status": "passed",
-      "details": "ReleaseNotes.current contém as mudanças da alpha.75 e UpdateHighlightsScreen permanece ligada à política de primeira abertura após atualização."
-    },
-    {
-      "name": "sha256_helper_conflict",
-      "status": "passed",
-      "details": "ApkInspector usa sha256ApkFile; helpers sha256File privados permanecem isolados."
-    },
-    {
-      "name": "device_info_close",
-      "status": "passed",
-      "details": "Botão inferior Fechar removido e X vermelho compartilhado no cabeçalho."
-    },
-    {
-      "name": "trash_fullscreen",
-      "status": "passed",
-      "details": "Lixeira não usa mais XpModalWindow; é renderizada como rota/tela completa com BackHandler."
-    },
-    {
-      "name": "close_button_standardization",
-      "status": "passed",
-      "details": "X vermelho removido dos cabeçalhos; telas completas usam Fechar inferior e diálogos de ação mantêm Cancelar/Fechar."
-    },
-    {
-      "name": "apk_inspector_sha256_test",
-      "status": "passed",
-      "details": "ApkInspectorSupportTest referencia sha256ApkFile."
-    },
-    {
-      "name": "apk_viewer_compact_layout",
-      "status": "passed",
-      "details": "Comparação inicia recolhida, espaçamentos principais foram reduzidos e o rodapé usa XpDialogButton para Fechar."
-    },
-    {
-      "name": "github_release_per_version",
-      "status": "passed",
-      "details": "Workflow usa RELEASE_TAG=v${APP_VERSION}, cria uma prerelease por versão e usa --clobber apenas em reexecuções da mesma release."
+      "reason": "O ZIP não inclui gradlew e o ambiente atual não possui Gradle/Android SDK configurados; foram executadas validações estáticas em substituição ao build completo."
     }
   ]
 }

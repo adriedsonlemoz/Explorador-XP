@@ -217,6 +217,7 @@ data class StorageAnalysis(
     val largeFiles: List<StorageFileSummary>,
     val scannedFiles: Int,
     val scannedBytes: Long,
+    val inaccessibleDirectories: Int = 0,
     val trashBytes: Long = 0L,
     val trashItemCount: Int = 0,
     val completedAt: Long,

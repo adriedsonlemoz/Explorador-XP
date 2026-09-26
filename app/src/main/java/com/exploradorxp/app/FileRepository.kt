@@ -552,9 +552,15 @@ class FileRepository(
             val folders = linkedMapOf<String, MutableFolder>()
             val largest = PriorityQueue<StorageFileSummary>(compareBy { it.bytes })
             val queue = ArrayDeque<ScanNode>()
-            storageRoot.listFiles().orEmpty().forEach { child ->
-                if (!isInternalTrashArtifact(child)) {
-                    queue.add(ScanNode(child, if (child.isDirectory) child else null))
+            var inaccessibleDirectories = 0
+            val rootChildren = storageRoot.listFiles()
+            if (rootChildren == null) {
+                inaccessibleDirectories++
+            } else {
+                rootChildren.forEach { child ->
+                    if (!isInternalTrashArtifact(child)) {
+                        queue.add(ScanNode(child, if (child.isDirectory) child else null))
+                    }
                 }
             }
 
@@ -565,8 +571,13 @@ class FileRepository(
                 val node = queue.removeFirst()
                 val file = node.file
                 if (file.isDirectory) {
-                    file.listFiles().orEmpty().forEach { child ->
-                        if (!isInternalTrashArtifact(child)) queue.add(ScanNode(child, node.topFolder ?: file))
+                    val children = file.listFiles()
+                    if (children == null) {
+                        inaccessibleDirectories++
+                    } else {
+                        children.forEach { child ->
+                            if (!isInternalTrashArtifact(child)) queue.add(ScanNode(child, node.topFolder ?: file))
+                        }
                     }
                     continue
                 }
@@ -622,6 +633,7 @@ class FileRepository(
                 largeFiles = largest.toList().sortedByDescending { it.bytes },
                 scannedFiles = scannedFiles,
                 scannedBytes = scannedBytes,
+                inaccessibleDirectories = inaccessibleDirectories,
                 trashBytes = trashBytes,
                 trashItemCount = trashItems.size,
                 completedAt = System.currentTimeMillis(),

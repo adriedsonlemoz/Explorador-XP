@@ -801,7 +801,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         val locations = _uiState.value.storageLocations
         val target = locations.firstOrNull { !it.removable }?.root ?: repository.root
         storageAnalysisJob = viewModelScope.launch {
-            _storageScanState.value = StorageScanState(analyzing = true)
+            _storageScanState.value = current.copy(analyzing = true, scannedFiles = 0, error = null)
             val result = repository.analyzeStorage(target) { count ->
                 _storageScanState.update { state ->
                     state.copy(analyzing = true, scannedFiles = count, error = null)
@@ -815,7 +815,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     if (error is CancellationException) {
                         _storageScanState.update { it.copy(analyzing = false) }
                     } else {
-                        _storageScanState.value = StorageScanState(analyzing = false, error = error.message ?: "Falha ao analisar o armazenamento.")
+                        _storageScanState.update {
+                            it.copy(analyzing = false, error = error.message ?: "Falha ao analisar o armazenamento.")
+                        }
                     }
                 }
         }

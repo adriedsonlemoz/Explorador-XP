@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0-alpha.80
+
+### Ajuda e Armazenamento
+- **Ajuda** deixou de abrir em `Dialog`/popup e agora ocupa toda a área útil do aplicativo, com tópicos expansíveis preservados, rolagem, `BackHandler` e barra inferior fixa com contagem de tópicos e botão **Fechar**.
+- **Armazenamento** também virou tela completa, mantendo Atualizar análise, cancelamento, abertura de pastas/arquivos e o mesmo padrão visual XP das demais telas completas.
+- O painel agora separa **Armazenamento do dispositivo** (total/usado/livre vindo de `StatFs`) de **Arquivos analisados pelo Explorador XP** (`scannedBytes`/`scannedFiles` obtidos na enumeração real).
+- A seção **Por tipo de arquivo** foi redesenhada em cartões compactos, com no máximo cinco cartões: quatro categorias específicas de maior peso e um cartão **Outros** agregando o restante sem duplicar a categoria interna `other`.
+- Percentuais das categorias usam exclusivamente `scannedBytes`; nenhuma porcentagem de categoria é calculada contra o armazenamento total do aparelho.
+- Contagens de pastas foram rotuladas como **arquivos analisados** e continuam derivadas da mesma varredura que alimenta as categorias.
+- A varredura passa a contar diretórios para os quais `listFiles()` retorna `null`; somente nesses casos a interface marca a análise como parcial, sem estimar bytes ou arquivos ausentes.
+- Ao atualizar uma análise existente, o último resultado válido permanece visível e é marcado como anterior até a nova varredura terminar; uma falha mantém os dados válidos anteriores em vez de substituí-los.
+- Versão sincronizada para `0.1.0-alpha.80` / `versionCode 80`.
+
 ## 0.1.0-alpha.79
 
 ### Tela de APK

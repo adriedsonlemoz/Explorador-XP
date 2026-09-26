@@ -212,6 +212,38 @@ fun ExplorerScreen(
         return
     }
 
+    if (showManual) {
+        HelpManualScreen(onDismiss = { showManual = false })
+        return
+    }
+
+    if (showStorageDetails) {
+        StorageDetailsScreenHost(
+            stateFlow = storageScanState,
+            fallbackInfo = state.storageInfo,
+            onDismiss = { analyzing ->
+                if (analyzing) onCancelStorageAnalysis()
+                showStorageDetails = false
+            },
+            onRefresh = { onAnalyzeStorage(true) },
+            onCancel = onCancelStorageAnalysis,
+            onOpenFolder = { folder ->
+                showStorageDetails = false
+                onNavigateTo(folder)
+            },
+            onOpenFile = { file ->
+                showStorageDetails = false
+                onOpenTarget(file)
+            },
+            onOpenTrash = {
+                showStorageDetails = false
+                showTrash = true
+                onLoadTrash()
+            },
+        )
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -526,31 +558,6 @@ fun ExplorerScreen(
         )
     }
 
-    if (showManual) HelpManualDialog(onDismiss = { showManual = false })
-    StorageDetailsDialogHost(
-        visible = showStorageDetails,
-        stateFlow = storageScanState,
-        fallbackInfo = state.storageInfo,
-        onDismiss = { analyzing ->
-            if (analyzing) onCancelStorageAnalysis()
-            showStorageDetails = false
-        },
-        onRefresh = { onAnalyzeStorage(true) },
-        onCancel = onCancelStorageAnalysis,
-        onOpenFolder = { folder ->
-            showStorageDetails = false
-            onNavigateTo(folder)
-        },
-        onOpenFile = { file ->
-            showStorageDetails = false
-            onOpenTarget(file)
-        },
-        onOpenTrash = {
-            showStorageDetails = false
-            showTrash = true
-            onLoadTrash()
-        },
-    )
     TransferProgressHost(
         stateFlow = transferState,
         onPause = onPauseTransfer,
@@ -1363,7 +1370,7 @@ private fun SectionTitle(title: String, icon: Int) {
 }
 
 @Composable
-private fun HelpManualDialog(onDismiss: () -> Unit) {
+private fun HelpManualScreen(onDismiss: () -> Unit) {
     var expandedTopic by remember { mutableStateOf("Começando") }
     val topics = listOf(
         "Começando" to "Use a barra superior para voltar, avançar, ir ao Início, subir uma pasta, pesquisar, criar novos itens, abrir Downloads e acessar a Lixeira. Atualizar fica no menu Exibir. Toque em um arquivo para abrir e segure para selecionar.",
@@ -1372,34 +1379,24 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
         "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Downloads é temporariamente substituído por Colar.",
         "Compactar ZIP" to "Selecione um ou vários arquivos/pastas e use o atalho ZIP da barra de seleção. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
         "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A pasta interna e artefatos de lixeira do sistema ficam ocultos da navegação comum. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
-        "Armazenamento" to "A barra inferior mostra espaço livre e percentual usado em uma faixa mais larga. Ao lado, a contagem da pasta soma arquivos, subpastas e tamanho acessível também dentro das subpastas. Toque no armazenamento para abrir a análise completa; áreas protegidas do Android podem não entrar na soma.",
+        "Armazenamento" to "A barra inferior mostra os valores gerais do volume informados pelo Android. Na tela Armazenamento, esses números ficam separados dos arquivos efetivamente analisados pelo Explorador XP. Categorias e pastas usam somente o conjunto que pôde ser enumerado; áreas protegidas não são estimadas.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
         "Favoritos" to "Adicione arquivos ou pastas aos Favoritos pelo menu de opções. A lista fica disponível no menu Favoritos do cabeçalho.",
         "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. O visualizador APK compara a versão instalada, assinatura, Android/CPU e permissões antes de chamar o instalador do sistema; a permissão de fonte desconhecida é guiada quando necessária. ZIP permite navegar, pesquisar, selecionar e extrair itens.",
         "Arquivos ocultos" to "No menu Exibir é possível mostrar ou ocultar arquivos ocultos. A pasta interna usada pela Lixeira continua protegida e não aparece na navegação comum.",
     )
 
-    XpModalWindow(
-        onDismiss = onDismiss,
-        maxWidth = 640,
-        heightFraction = 0.86f,
-        header = { XpDialogTitle("Ajuda", onDismiss) },
-        footer = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    "${topics.size} tópicos de ajuda",
-                    fontSize = 10.5.sp,
-                    color = XpTextSecondary,
-                    modifier = Modifier.weight(1f),
-                )
-                XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
-            }
-        },
+    BackHandler(onBack = onDismiss)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        XpDialogTitle("Ajuda", onDismiss)
+        HorizontalDivider(color = XpChromeBorder)
+
+        Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
             Text(
                 "Escolha um assunto para ver somente a explicação necessária.",
                 fontSize = 12.sp,
@@ -1411,6 +1408,7 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    .background(Color(0xFFF6F8FB))
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 10.dp, vertical = 8.dp),
             ) {
@@ -1423,6 +1421,27 @@ private fun HelpManualDialog(onDismiss: () -> Unit) {
                     )
                     Spacer(Modifier.height(6.dp))
                 }
+            }
+        }
+
+        HorizontalDivider(color = XpChromeBorder)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpChrome)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "${topics.size} tópicos de ajuda",
+                    fontSize = 10.5.sp,
+                    color = XpTextSecondary,
+                    modifier = Modifier.weight(1f),
+                )
+                XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
             }
         }
     }
@@ -1623,8 +1642,7 @@ private fun TrashScreenHost(
 }
 
 @Composable
-private fun StorageDetailsDialogHost(
-    visible: Boolean,
+private fun StorageDetailsScreenHost(
     stateFlow: StateFlow<StorageScanState>,
     fallbackInfo: StorageInfo,
     onDismiss: (Boolean) -> Unit,
@@ -1634,9 +1652,8 @@ private fun StorageDetailsDialogHost(
     onOpenFile: (File) -> Unit,
     onOpenTrash: () -> Unit,
 ) {
-    if (!visible) return
     val state by stateFlow.collectAsStateWithLifecycle()
-    StorageDetailsDialog(
+    StorageDetailsScreen(
         state = state,
         fallbackInfo = fallbackInfo,
         onDismiss = { onDismiss(state.analyzing) },
@@ -3032,7 +3049,7 @@ private fun TrashItemRow(
 }
 
 @Composable
-private fun StorageDetailsDialog(
+private fun StorageDetailsScreen(
     state: StorageScanState,
     fallbackInfo: StorageInfo,
     onDismiss: () -> Unit,
@@ -3045,68 +3062,58 @@ private fun StorageDetailsDialog(
     val analysis = state.analysis
     val info = analysis?.storageInfo ?: fallbackInfo
 
-    XpModalWindow(
-        onDismiss = onDismiss,
-        maxWidth = 680,
-        heightFraction = 0.88f,
-        header = { XpDialogTitle("Armazenamento", onDismiss) },
-        footer = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
+    BackHandler(onBack = onDismiss)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+    ) {
+        XpDialogTitle("Armazenamento", onDismiss)
+        HorizontalDivider(color = XpChromeBorder)
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpChrome)
+                .padding(horizontal = 10.dp, vertical = 7.dp),
+        ) {
+            androidx.compose.foundation.Image(
+                painterResource(R.drawable.drive_storage),
+                null,
+                modifier = Modifier.size(31.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Armazenamento interno", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
                 Text(
-                    if (state.analyzing) "${state.scannedFiles} arquivos verificados" else "${storageUsedPercent(info)}% usado • ${100 - storageUsedPercent(info)}% livre",
+                    "${formatBytes(info.usedBytes)} usados • ${formatBytes(info.freeBytes)} livres • ${formatBytes(info.totalBytes)} total",
                     fontSize = 10.5.sp,
                     color = XpTextSecondary,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
                 )
-                XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
             }
-        },
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(XpChrome)
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-            ) {
-                androidx.compose.foundation.Image(painterResource(R.drawable.drive_storage), null, modifier = Modifier.size(31.dp))
-                Spacer(Modifier.width(8.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Armazenamento interno", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
-                    Text(
-                        "${formatBytes(info.usedBytes)} usados • ${formatBytes(info.freeBytes)} livres",
-                        fontSize = 11.sp,
-                        color = XpTextSecondary,
-                    )
-                    Text(
-                        "${storageUsedPercent(info)}% usado • ${100 - storageUsedPercent(info)}% livre • ${formatBytes(info.totalBytes)} total",
-                        fontSize = 10.5.sp,
-                        color = Color(0xFF66788F),
-                    )
-                }
-                if (state.analyzing) {
-                    XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
-                } else {
-                    XpDialogButton(
-                        if (analysis == null) "Analisar" else "Atualizar análise",
-                        iconRes = R.drawable.drive_storage,
-                        onClick = onRefresh,
-                    )
-                }
+            Spacer(Modifier.width(8.dp))
+            if (state.analyzing) {
+                XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onCancel)
+            } else {
+                XpDialogButton(
+                    if (analysis == null) "Analisar" else "Atualizar análise",
+                    iconRes = R.drawable.refresh,
+                    onClick = onRefresh,
+                )
             }
-            HorizontalDivider(color = XpChromeBorder)
+        }
+        HorizontalDivider(color = XpChromeBorder)
 
-            if (state.analyzing && analysis == null) {
+        when {
+            state.analyzing && analysis == null -> {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(20.dp),
                 ) {
                     CircularProgressIndicator(color = XpBlue)
                     Spacer(Modifier.height(12.dp))
@@ -3114,9 +3121,15 @@ private fun StorageDetailsDialog(
                     Spacer(Modifier.height(4.dp))
                     Text("${state.scannedFiles} arquivos verificados", fontSize = 12.sp, color = XpTextSecondary)
                     Spacer(Modifier.height(5.dp))
-                    Text("A análise roda somente nesta tela e pode ser cancelada.", fontSize = 11.sp, color = Color(0xFF66788F))
+                    Text(
+                        "Os resultados serão exibidos somente quando a análise produzir dados válidos.",
+                        fontSize = 11.sp,
+                        color = Color(0xFF66788F),
+                        textAlign = TextAlign.Center,
+                    )
                 }
-            } else if (state.error != null && analysis == null) {
+            }
+            state.error != null && analysis == null -> {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -3126,36 +3139,56 @@ private fun StorageDetailsDialog(
                     Spacer(Modifier.height(10.dp))
                     Text(state.error, fontSize = 13.sp, color = Color(0xFF7D2A20), textAlign = TextAlign.Center)
                     Spacer(Modifier.height(12.dp))
-                    XpDialogButton("Tentar novamente", onClick = onRefresh)
+                    XpDialogButton("Tentar novamente", iconRes = R.drawable.refresh, onClick = onRefresh)
                 }
-            } else if (analysis != null) {
+            }
+            analysis != null -> {
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
+                        .background(Color(0xFFF6F8FB))
                         .verticalScroll(rememberScrollState())
                         .padding(10.dp),
                 ) {
-                    StorageSummaryCard(info)
+                    if (state.analyzing) {
+                        StorageAnalysisNotice(
+                            text = "Atualização em andamento: os dados abaixo são da última análise concluída e só serão substituídos quando a nova análise terminar.",
+                            warning = true,
+                        )
+                        Spacer(Modifier.height(9.dp))
+                    } else if (state.error != null) {
+                        StorageAnalysisNotice(
+                            text = "A atualização falhou. O último resultado válido foi mantido: ${state.error}",
+                            warning = true,
+                        )
+                        Spacer(Modifier.height(9.dp))
+                    }
+
+                    StorageDeviceSummaryCard(info)
+                    Spacer(Modifier.height(9.dp))
+                    StorageAnalyzedSummaryCard(analysis)
+
                     Spacer(Modifier.height(14.dp))
-                    StorageSectionHeader("Por tipo de arquivo", "${formatBytes(analysis.scannedBytes)} acessíveis")
+                    StorageSectionHeader("Por tipo de arquivo", "até 5 categorias")
                     Text(
-                        "As porcentagens abaixo consideram apenas os arquivos que o Android permitiu ao Explorador XP analisar.",
+                        "Os cartões abaixo somam somente dentro do conjunto analisado pelo Explorador XP, nunca sobre o armazenamento total do aparelho.",
                         fontSize = 10.5.sp,
                         color = Color(0xFF66788F),
-                        modifier = Modifier.padding(bottom = 5.dp),
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
-                    val categorizedBytes = analysis.scannedBytes.coerceAtLeast(1L)
-                    analysis.categories.forEach { category ->
-                        StorageCategoryRow(category, categorizedBytes)
-                    }
+                    StorageCategoryCards(
+                        categories = buildStorageDisplayCategories(analysis.categories),
+                        totalBytes = analysis.scannedBytes,
+                    )
+
                     if (analysis.trashItemCount > 0 || analysis.trashBytes > 0L) {
                         Spacer(Modifier.height(10.dp))
                         StorageTrashRow(analysis.trashItemCount, analysis.trashBytes, onOpenTrash)
                     }
 
                     Spacer(Modifier.height(16.dp))
-                    StorageSectionHeader("Pastas que mais ocupam espaço", "Toque para abrir")
+                    StorageSectionHeader("Pastas que mais ocupam espaço", "arquivos analisados")
                     if (analysis.topFolders.isEmpty()) {
                         Text("Nenhuma pasta pôde ser analisada.", fontSize = 12.sp, color = XpTextSecondary)
                     } else {
@@ -3165,7 +3198,7 @@ private fun StorageDetailsDialog(
                     }
 
                     Spacer(Modifier.height(16.dp))
-                    StorageSectionHeader("Arquivos grandes", "Toque para abrir")
+                    StorageSectionHeader("Arquivos grandes", "mesmo conjunto analisado")
                     if (analysis.largeFiles.isEmpty()) {
                         Text("Nenhum arquivo encontrado.", fontSize = 12.sp, color = XpTextSecondary)
                     } else {
@@ -3175,25 +3208,21 @@ private fun StorageDetailsDialog(
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Algumas áreas protegidas do Android podem não permitir leitura completa. Por isso, a soma das categorias pode ser menor que o espaço usado pelo sistema.",
+                        if (analysis.inaccessibleDirectories > 0) {
+                            if (analysis.inaccessibleDirectories == 1) {
+                                "Análise parcial: 1 pasta não pôde ser lida. Esses dados não foram estimados nem incluídos nas somas."
+                            } else {
+                                "Análise parcial: ${analysis.inaccessibleDirectories} pastas não puderam ser lidas. Esses dados não foram estimados nem incluídos nas somas."
+                            }
+                        } else {
+                            "A análise inclui somente os arquivos que o Android expôs ao Explorador XP. Áreas protegidas que o sistema não enumera não são estimadas."
+                        },
                         fontSize = 10.sp,
                         color = Color(0xFF66788F),
                     )
                 }
-                if (state.analyzing) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFFFF6D9))
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                    ) {
-                        CircularProgressIndicator(color = XpBlue, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(7.dp))
-                        Text("Atualizando… ${state.scannedFiles} arquivos", fontSize = 11.sp, color = Color(0xFF5F4B00))
-                    }
-                }
-            } else {
+            }
+            else -> {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -3209,45 +3238,119 @@ private fun StorageDetailsDialog(
                 }
             }
         }
+
+        HorizontalDivider(color = XpChromeBorder)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpChrome)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Text(
+                when {
+                    state.analyzing -> "${state.scannedFiles} arquivos verificados na nova análise"
+                    analysis != null -> "${analysis.scannedFiles} arquivos analisados • ${formatBytes(analysis.scannedBytes)}"
+                    else -> "Análise ainda não executada"
+                },
+                fontSize = 10.5.sp,
+                color = XpTextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
+        }
     }
 }
 
 @Composable
-private fun StorageSummaryCard(info: StorageInfo) {
+private fun StorageAnalysisNotice(text: String, warning: Boolean) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (warning) Color(0xFFFFF6D9) else Color(0xFFEAF4FF))
+            .border(1.dp, if (warning) Color(0xFFE0C987) else Color(0xFFBDD5EE))
+            .padding(horizontal = 9.dp, vertical = 7.dp),
+    ) {
+        androidx.compose.foundation.Image(
+            painterResource(if (warning) R.drawable.warning else R.drawable.info),
+            null,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(7.dp))
+        Text(text, fontSize = 10.5.sp, color = Color(0xFF4A5563), modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun StorageDeviceSummaryCard(info: StorageInfo) {
     val usedPercent = storageUsedPercent(info)
     val freePercent = 100 - usedPercent
     Column(
-        modifier = Modifier.fillMaxWidth().background(Color.White).border(1.dp, Color(0xFFCAD8E8)).padding(11.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(8.dp))
+            .border(1.dp, Color(0xFFCAD8E8), RoundedCornerShape(8.dp))
+            .padding(11.dp),
     ) {
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(painterResource(R.drawable.drive_storage), null, modifier = Modifier.size(27.dp))
+            Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text("Espaço total", fontSize = 10.5.sp, color = XpTextSecondary)
-                Text(formatBytes(info.totalBytes), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
+                Text("Armazenamento do dispositivo", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                Text("Valores gerais informados pelo Android.", fontSize = 10.sp, color = XpTextSecondary)
             }
-            Text("$usedPercent% usado", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
         }
-        Spacer(Modifier.height(7.dp))
+        Spacer(Modifier.height(8.dp))
+        Text("${formatBytes(info.totalBytes)} total", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
         Text(
             "${formatBytes(info.usedBytes)} usados • ${formatBytes(info.freeBytes)} livres",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.5.sp,
             color = Color(0xFF303030),
         )
-        Text(
-            "$usedPercent% usado • $freePercent% livre",
-            fontSize = 11.sp,
-            color = XpTextSecondary,
-        )
-        Spacer(Modifier.height(8.dp))
-        Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xFFE1ECF8)).border(1.dp, XpChromeBorder)) {
+        Text("$usedPercent% usado • $freePercent% livre", fontSize = 10.5.sp, color = XpTextSecondary)
+        Spacer(Modifier.height(7.dp))
+        Box(Modifier.fillMaxWidth().height(10.dp).background(Color(0xFFE1ECF8)).border(1.dp, XpChromeBorder)) {
             Box(Modifier.fillMaxWidth(info.usedFraction.coerceIn(0f, 1f)).fillMaxHeight().background(Color(0xFF39B54A)))
         }
-        Spacer(Modifier.height(5.dp))
+    }
+}
+
+@Composable
+private fun StorageAnalyzedSummaryCard(analysis: StorageAnalysis) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFBFDFF), RoundedCornerShape(8.dp))
+            .border(1.dp, XpCardBorder, RoundedCornerShape(8.dp))
+            .padding(11.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(painterResource(R.drawable.search), null, modifier = Modifier.size(27.dp))
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Arquivos analisados pelo Explorador XP", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
+                Text("Somente arquivos que o Android permitiu enumerar durante a varredura.", fontSize = 10.sp, color = XpTextSecondary)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("${formatBytes(analysis.scannedBytes)} analisados", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
         Text(
-            "Esta barra representa o armazenamento total informado pelo Android.",
-            fontSize = 9.5.sp,
-            color = Color(0xFF66788F),
+            "${analysis.scannedFiles} ${if (analysis.scannedFiles == 1) "arquivo analisado" else "arquivos analisados"}",
+            fontSize = 11.5.sp,
+            color = Color(0xFF303030),
         )
+        if (analysis.inaccessibleDirectories > 0) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Parcial: ${analysis.inaccessibleDirectories} ${if (analysis.inaccessibleDirectories == 1) "pasta não pôde ser lida" else "pastas não puderam ser lidas"}.",
+                fontSize = 10.5.sp,
+                color = Color(0xFF8A5B00),
+            )
+        }
     }
 }
 
@@ -3262,20 +3365,100 @@ private fun StorageSectionHeader(title: String, hint: String) {
     }
 }
 
-@Composable
-private fun StorageCategoryRow(category: StorageCategorySummary, totalBytes: Long) {
-    val fraction = (category.bytes.toDouble() / totalBytes.toDouble()).toFloat().coerceIn(0f, 1f)
-    val percent = (fraction * 100f).toInt().coerceIn(0, 100)
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text(category.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text("$percent% dos acessíveis • ${category.fileCount} • ${formatBytes(category.bytes)}", fontSize = 10.5.sp, color = XpTextSecondary)
+private fun buildStorageDisplayCategories(categories: List<StorageCategorySummary>): List<StorageCategorySummary> {
+    val sorted = categories
+        .filter { it.bytes > 0L || it.fileCount > 0 }
+        .sortedByDescending { it.bytes }
+    if (sorted.isEmpty()) return emptyList()
+
+    val topSpecific = sorted.filterNot { it.key == "other" }.take(4)
+    val topKeys = topSpecific.mapTo(mutableSetOf()) { it.key }
+    val remaining = sorted.filter { it.key !in topKeys }
+
+    return buildList {
+        addAll(topSpecific)
+        if (remaining.isNotEmpty()) {
+            add(
+                StorageCategorySummary(
+                    key = "other_aggregate",
+                    label = "Outros",
+                    bytes = remaining.sumOf { it.bytes },
+                    fileCount = remaining.sumOf { it.fileCount },
+                )
+            )
         }
-        Spacer(Modifier.height(3.dp))
-        Box(Modifier.fillMaxWidth().height(7.dp).background(Color(0xFFE3EAF2))) {
-            Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(XpBlueLight))
+    }.take(5)
+}
+
+@Composable
+private fun StorageCategoryCards(categories: List<StorageCategorySummary>, totalBytes: Long) {
+    if (categories.isEmpty()) {
+        Text("Nenhuma categoria de arquivo encontrada na análise.", fontSize = 12.sp, color = XpTextSecondary)
+        return
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val columns = if (maxWidth >= 360.dp) 2 else 1
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            categories.chunked(columns).forEach { rowItems ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    rowItems.forEach { category ->
+                        StorageCategoryCard(category, totalBytes, Modifier.weight(1f))
+                    }
+                    if (columns == 2 && rowItems.size == 1) {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun StorageCategoryCard(category: StorageCategorySummary, totalBytes: Long, modifier: Modifier = Modifier) {
+    val safeTotal = totalBytes.coerceAtLeast(1L)
+    val percent = ((category.bytes.toDouble() / safeTotal.toDouble()) * 100.0).toInt().coerceIn(0, 100)
+    Column(
+        modifier = modifier
+            .background(Color.White, RoundedCornerShape(8.dp))
+            .border(1.dp, Color(0xFFCAD8E8), RoundedCornerShape(8.dp))
+            .padding(9.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(
+                painterResource(storageCategoryIcon(category.key)),
+                null,
+                modifier = Modifier.size(25.dp),
+            )
+            Spacer(Modifier.width(7.dp))
+            Text(
+                category.label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = XpBlueDark,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(formatBytes(category.bytes), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
+        Text(
+            "${category.fileCount} ${if (category.fileCount == 1) "arquivo" else "arquivos"}",
+            fontSize = 10.5.sp,
+            color = XpTextSecondary,
+        )
+        Text("$percent% dos analisados", fontSize = 9.5.sp, color = Color(0xFF66788F))
+    }
+}
+
+private fun storageCategoryIcon(key: String): Int = when (key) {
+    "videos" -> R.drawable.videos
+    "images" -> R.drawable.pictures
+    "audio" -> R.drawable.music
+    "archives" -> R.drawable.folder_compressed
+    "documents" -> R.drawable.documents
+    "apps" -> R.drawable.file_apk
+    else -> R.drawable.file_unknown
 }
 
 @Composable
@@ -3289,7 +3472,7 @@ private fun StorageFolderRow(index: Int, folder: StorageFolderSummary, onClick: 
         Spacer(Modifier.width(7.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(folder.folder.name.ifBlank { folder.folder.absolutePath }, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${folder.fileCount} arquivos", fontSize = 10.sp, color = XpTextSecondary)
+            Text("${folder.fileCount} ${if (folder.fileCount == 1) "arquivo analisado" else "arquivos analisados"}", fontSize = 10.sp, color = XpTextSecondary)
         }
         Text(formatBytes(folder.bytes), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
     }
@@ -4278,8 +4461,8 @@ private fun StorageTrashRow(itemCount: Int, bytes: Long, onOpen: () -> Unit) {
         androidx.compose.foundation.Image(painterResource(R.drawable.trash_full), null, modifier = Modifier.size(28.dp))
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("Lixeira", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5D4710))
-            Text("${itemCountLabel(itemCount)} • ${formatBytes(bytes)}", fontSize = 10.5.sp, color = Color(0xFF78642F))
+            Text("Lixeira gerenciada", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5D4710))
+            Text("${itemCountLabel(itemCount)} • ${formatBytes(bytes)} • fora da análise por tipo", fontSize = 10.5.sp, color = Color(0xFF78642F))
         }
         Text("Abrir ›", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
     }
