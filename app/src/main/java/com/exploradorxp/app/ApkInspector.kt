@@ -82,6 +82,9 @@ internal data class ApkInfo(
         get() = androidCompatible && abiCompatible &&
             signatureRelation != ApkSignatureRelation.MISMATCH &&
             versionRelation != ApkVersionRelation.DOWNGRADE
+
+    val canAttemptInstallAfterRemoval: Boolean
+        get() = androidCompatible && abiCompatible
 }
 
 internal fun inspectApk(context: Context, file: File): ApkInfo {
@@ -155,6 +158,9 @@ private fun getArchivePackageInfo(pm: PackageManager, file: File): PackageInfo? 
 }
 
 @Suppress("DEPRECATION")
+internal fun isPackageCurrentlyInstalled(context: Context, packageName: String): Boolean =
+    getInstalledPackageInfo(context.packageManager, packageName) != null
+
 private fun getInstalledPackageInfo(pm: PackageManager, packageName: String): PackageInfo? {
     val flags = PackageManager.GET_PERMISSIONS.toLong() or
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

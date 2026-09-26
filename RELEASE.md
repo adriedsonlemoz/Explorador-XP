@@ -1,13 +1,23 @@
-# Explorador XP 0.1.0-alpha.84
+# Explorador XP 0.1.0-alpha.85
 
-## Ajustes da alpha.84
+## Gerenciamento direto de aplicativos
 
-- Compatibilidade do novo cabeçalho vetorial da tela Informações do dispositivo corrigida.
-- Editor de texto/código corrigido para usar o modificador de tamanho importado corretamente.
-- Nenhuma imagem raster decorativa foi reintroduzida.
+O visualizador de APK ganhou uma ação **Desinstalar** para aplicativos já instalados. A ação abre diretamente a confirmação de remoção do Android, sem exigir que o usuário passe primeiro pela tela de detalhes do aplicativo.
 
-Esta versão reorganiza completamente a iconografia do aplicativo. O antigo conjunto de PNGs decorativos foi removido dos recursos da interface e substituído por um sistema de `VectorDrawable` XML com linguagem visual única.
+## Instalação de versão anterior
 
-Arquivos agora são representados por categorias consistentes — documentos, planilhas, apresentações, imagens, áudio, vídeo, compactados, código, aplicativos e outros — em vez de um desenho diferente e visualmente incompatível para cada extensão. Pastas, armazenamento, navegação, ações e estados seguem o mesmo padrão.
+Quando o APK selecionado possui `versionCode` menor que o aplicativo instalado, o Explorador XP identifica o downgrade e mostra a comparação das duas versões. Ao confirmar **Instalar versão anterior**, o aplicativo:
 
-O launcher também passa a usar foreground e monochrome vetoriais no Adaptive Icon. A mudança não interfere em fotos, miniaturas de arquivos ou na imagem real opcional do modelo do aparelho, que continuam sendo conteúdo e não fazem parte do pacote decorativo de ícones.
+1. alerta que a desinstalação pode apagar dados locais;
+2. solicita ao Android a remoção da versão instalada;
+3. verifica se o pacote realmente deixou de estar instalado;
+4. somente então abre o instalador para o APK antigo.
+
+Se a remoção for cancelada ou falhar, o APK antigo não é aberto automaticamente. O Explorador XP também não tenta auto-downgrade do próprio pacote, pois se remover encerraria o processo antes da continuação.
+
+## Compatibilidade preservada
+
+Permanecem disponíveis instalação normal, atualização, reinstalação, Abrir, Gerenciar/Detalhes do app, comparação de versões e assinaturas, permissões, compartilhamento, localização, cópia de pacote/SHA-256, extração de ícone e resumo do manifesto.
+
+Versão: `0.1.0-alpha.85`  
+versionCode: `85`

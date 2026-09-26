@@ -18,8 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "A padronização vetorial recebeu ajustes internos para manter os novos componentes visuais compatíveis em todas as telas.",
-                "O editor de texto e código foi alinhado ao mesmo conjunto de modificadores usado pelos novos ícones vetoriais.",
+                "O visualizador de APK agora permite solicitar a desinstalação de um aplicativo diretamente, sem precisar abrir primeiro a tela Detalhes do app.",
+                "A nova ação Instalar versão anterior aparece quando o APK tem versionCode menor e usa um fluxo assistido: remover a versão atual e, após a remoção ser confirmada, abrir a instalação do APK selecionado.",
+                "O downgrade exibe as versões instalada e selecionada e alerta que a desinstalação pode apagar dados locais antes de qualquer ação destrutiva.",
+                "As ações existentes de instalar, atualizar, reinstalar, abrir, gerenciar, compartilhar, extrair ícone e inspecionar manifesto foram preservadas.",
             )
         )
 }

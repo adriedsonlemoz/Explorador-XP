@@ -76,4 +76,48 @@ class ApkInspectorSupportTest {
             file.delete()
         }
     }
+    @Test
+    fun installPlanUsesRemovalBeforeDowngrade() {
+        assertEquals(
+            ApkInstallPlan.REMOVE_THEN_INSTALL,
+            apkInstallPlan(
+                versionRelation = ApkVersionRelation.DOWNGRADE,
+                signatureRelation = ApkSignatureRelation.MATCH,
+                androidCompatible = true,
+                abiCompatible = true,
+                isSelfPackage = false,
+            ),
+        )
+    }
+
+    @Test
+    fun installPlanNeverTriesToSelfDowngradeByRemovingExplorer() {
+        assertEquals(
+            ApkInstallPlan.BLOCKED_SELF_DOWNGRADE,
+            apkInstallPlan(
+                versionRelation = ApkVersionRelation.DOWNGRADE,
+                signatureRelation = ApkSignatureRelation.MATCH,
+                androidCompatible = true,
+                abiCompatible = true,
+                isSelfPackage = true,
+            ),
+        )
+    }
+
+    @Test
+    fun installPlanPreservesDirectUpgradeAndBlocksSignatureMismatch() {
+        assertEquals(
+            ApkInstallPlan.DIRECT,
+            apkInstallPlan(ApkVersionRelation.UPGRADE, ApkSignatureRelation.MATCH, true, true, false),
+        )
+        assertEquals(
+            ApkInstallPlan.BLOCKED_SIGNATURE,
+            apkInstallPlan(ApkVersionRelation.UPGRADE, ApkSignatureRelation.MISMATCH, true, true, false),
+        )
+        assertEquals(
+            ApkInstallPlan.BLOCKED_COMPATIBILITY,
+            apkInstallPlan(ApkVersionRelation.UPGRADE, ApkSignatureRelation.MATCH, false, true, false),
+        )
+    }
+
 }

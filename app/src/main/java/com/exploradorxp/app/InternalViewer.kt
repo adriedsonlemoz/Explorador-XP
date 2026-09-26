@@ -835,6 +835,10 @@ private fun ApkViewer(
     var comparisonExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var moreActionsExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var manifestExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
+    var showUninstallConfirm by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
+    var showDowngradeConfirm by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
+    var pendingDowngradePackage by rememberSaveable(file.absolutePath) { mutableStateOf<String?>(null) }
+    var uninstallResultRevision by remember(file.absolutePath) { mutableIntStateOf(0) }
     val key = "${file.absolutePath}:${file.lastModified()}:$resumeRevision"
     var loadState by remember(key) { mutableStateOf<ViewerLoadState<ApkInfo>>(ViewerLoadState.Loading) }
 
@@ -843,6 +847,11 @@ private fun ApkViewer(
     }
 
     val appDetailsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        resumeRevision++
+    }
+
+    val uninstallLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        uninstallResultRevision++
         resumeRevision++
     }
 
@@ -913,12 +922,71 @@ private fun ApkViewer(
         }
     }
 
+    fun launchUninstaller(packageName: String, continueWithSelectedApk: Boolean) {
+        pendingDowngradePackage = packageName.takeIf { continueWithSelectedApk }
+        runCatching { uninstallLauncher.launch(apkUninstallerIntent(packageName)) }.onFailure {
+            pendingDowngradePackage = null
+            Toast.makeText(context, "Não foi possível abrir a confirmação de desinstalação do Android.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(uninstallResultRevision) {
+        if (uninstallResultRevision <= 0) return@LaunchedEffect
+        val pendingPackage = pendingDowngradePackage ?: return@LaunchedEffect
+        var removed = false
+        for (attempt in 0 until 6) {
+            if (!isPackageCurrentlyInstalled(context, pendingPackage)) {
+                removed = true
+                break
+            }
+            delay(250)
+        }
+        pendingDowngradePackage = null
+        if (removed) {
+            Toast.makeText(context, "Versão atual removida. Continuando com a instalação da versão anterior.", Toast.LENGTH_SHORT).show()
+            requestInstall()
+        } else {
+            Toast.makeText(context, "A desinstalação foi cancelada ou não foi concluída.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     LaunchedEffect(key) {
         loadState = withContext(Dispatchers.IO) {
             runCatching { inspectApk(context, file) }.fold(
                 onSuccess = { ViewerLoadState.Success(it) },
                 onFailure = { ViewerLoadState.Error(it.message ?: "Não foi possível analisar o APK.") },
             )
+        }
+    }
+
+    val dialogInfo = (loadState as? ViewerLoadState.Success<ApkInfo>)?.value
+    if (showUninstallConfirm && dialogInfo != null) {
+        val selfPackage = dialogInfo.packageName == context.packageName
+        ApkDecisionDialog(
+            title = "Desinstalar ${dialogInfo.appName}",
+            message = if (selfPackage) {
+                "O Android abrirá a confirmação de desinstalação. Remover o próprio Explorador XP encerrará o aplicativo e poderá apagar seus dados locais. Esta ação não abre a tela Detalhes do app."
+            } else {
+                "O Android abrirá a confirmação de desinstalação diretamente, sem passar pela tela Detalhes do app. Os dados locais de ${dialogInfo.appName} podem ser apagados pela remoção."
+            },
+            confirmText = "Desinstalar",
+            danger = true,
+            onDismiss = { showUninstallConfirm = false },
+        ) {
+            showUninstallConfirm = false
+            launchUninstaller(dialogInfo.packageName, continueWithSelectedApk = false)
+        }
+    }
+    if (showDowngradeConfirm && dialogInfo != null) {
+        ApkDecisionDialog(
+            title = "Instalar versão anterior",
+            message = "Instalado: ${dialogInfo.installedVersion ?: "-"} (${dialogInfo.installedVersionCode ?: "-"})\nAPK selecionado: ${dialogInfo.versionName} (${dialogInfo.versionCode})\n\nO Android não permite esse downgrade como atualização comum. O Explorador XP solicitará a remoção da versão atual e, somente se ela for concluída, abrirá a instalação deste APK. A desinstalação pode apagar dados locais do aplicativo.",
+            confirmText = "Remover e continuar",
+            danger = true,
+            onDismiss = { showDowngradeConfirm = false },
+        ) {
+            showDowngradeConfirm = false
+            launchUninstaller(dialogInfo.packageName, continueWithSelectedApk = true)
         }
     }
 
@@ -967,25 +1035,37 @@ private fun ApkViewer(
                     ApkVersionRelation.NOT_INSTALLED -> "Instalar"
                     ApkVersionRelation.UPGRADE -> "Atualizar"
                     ApkVersionRelation.SAME -> "Reinstalar"
-                    ApkVersionRelation.DOWNGRADE -> "Versão anterior"
+                    ApkVersionRelation.DOWNGRADE -> "Instalar versão anterior"
                 }
                 val sourceAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
                     context.packageManager.canRequestPackageInstalls()
+                val installPlan = apkInstallPlan(
+                    versionRelation = info.versionRelation,
+                    signatureRelation = info.signatureRelation,
+                    androidCompatible = info.androidCompatible,
+                    abiCompatible = info.abiCompatible,
+                    isSelfPackage = info.packageName == context.packageName,
+                )
+                val requiresRemovalBeforeInstall = installPlan == ApkInstallPlan.REMOVE_THEN_INSTALL
                 val signatureText = when (info.signatureRelation) {
                     ApkSignatureRelation.NOT_APPLICABLE -> if (info.signerDigests.isEmpty()) "Assinatura não identificada" else "Assinatura identificada • sem app instalado para comparar"
                     ApkSignatureRelation.MATCH -> "Mesma assinatura do app instalado"
                     ApkSignatureRelation.MISMATCH -> "Assinatura diferente do app instalado"
                     ApkSignatureRelation.UNKNOWN -> "Não foi possível comparar"
                 }
-                val blockedReason = when {
-                    !info.androidCompatible -> "Este APK exige Android API ${info.minSdk}; o aparelho usa API ${Build.VERSION.SDK_INT}."
-                    !info.abiCompatible -> "O APK não possui biblioteca nativa compatível com ${info.deviceAbis.joinToString(", ")}."
-                    info.signatureRelation == ApkSignatureRelation.MISMATCH -> "A assinatura é diferente da versão instalada. O Android não permite atualizar esse pacote diretamente."
-                    info.versionRelation == ApkVersionRelation.DOWNGRADE -> "O versionCode deste APK é menor que o instalado. O Android normalmente bloqueia downgrade direto."
+                val blockedReason = when (installPlan) {
+                    ApkInstallPlan.BLOCKED_COMPATIBILITY -> when {
+                        !info.androidCompatible -> "Este APK exige Android API ${info.minSdk}; o aparelho usa API ${Build.VERSION.SDK_INT}."
+                        else -> "O APK não possui biblioteca nativa compatível com ${info.deviceAbis.joinToString(", ")}."
+                    }
+                    ApkInstallPlan.BLOCKED_SIGNATURE -> "A assinatura é diferente da versão instalada. O Android não permite atualizar esse pacote diretamente."
+                    ApkInstallPlan.BLOCKED_SELF_DOWNGRADE -> "O próprio Explorador XP não pode se desinstalar e continuar automaticamente a instalação de uma versão anterior."
                     else -> null
                 }
                 val summary = when {
-                    blockedReason != null -> "A instalação direta exige atenção: $blockedReason"
+                    blockedReason != null -> "A instalação exige atenção: $blockedReason"
+                    requiresRemovalBeforeInstall ->
+                        "Versão anterior detectada. Para continuar, o Explorador XP precisa solicitar a remoção da versão instalada antes de abrir este APK."
                     info.versionRelation == ApkVersionRelation.UPGRADE && info.signatureRelation == ApkSignatureRelation.MATCH ->
                         "Compatível para atualização: mesma assinatura, versão superior e aparelho compatível."
                     info.versionRelation == ApkVersionRelation.SAME && info.signatureRelation == ApkSignatureRelation.MATCH ->
@@ -1048,7 +1128,7 @@ private fun ApkViewer(
                             modifier = Modifier
                                 .background(
                                     when {
-                                        blockedReason != null -> Color(0xFFFFEEE6)
+                                        blockedReason != null || requiresRemovalBeforeInstall -> Color(0xFFFFEEE6)
                                         info.versionRelation == ApkVersionRelation.UPGRADE -> Color(0xFFE1F3E4)
                                         else -> Color(0xFFE7F0FB)
                                     },
@@ -1057,7 +1137,7 @@ private fun ApkViewer(
                                 .border(
                                     1.dp,
                                     when {
-                                        blockedReason != null -> Color(0xFFD89A78)
+                                        blockedReason != null || requiresRemovalBeforeInstall -> Color(0xFFD89A78)
                                         info.versionRelation == ApkVersionRelation.UPGRADE -> Color(0xFF82AF87)
                                         else -> Color(0xFFABC0D9)
                                     },
@@ -1082,18 +1162,18 @@ private fun ApkViewer(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            if (blockedReason == null) Color(0xFFEAF6EC) else Color(0xFFFFF2E9),
+                            if (blockedReason == null && !requiresRemovalBeforeInstall) Color(0xFFEAF6EC) else Color(0xFFFFF2E9),
                             RoundedCornerShape(9.dp),
                         )
                         .border(
                             1.dp,
-                            if (blockedReason == null) Color(0xFF91B996) else Color(0xFFE4A47F),
+                            if (blockedReason == null && !requiresRemovalBeforeInstall) Color(0xFF91B996) else Color(0xFFE4A47F),
                             RoundedCornerShape(9.dp),
                         )
                         .padding(horizontal = 9.dp, vertical = 7.dp),
                 ) {
                     CachedResourceIcon(
-                        if (blockedReason == null) R.drawable.check else R.drawable.warning,
+                        if (blockedReason == null && !requiresRemovalBeforeInstall) R.drawable.check else R.drawable.warning,
                         null,
                         modifier = Modifier.size(20.dp),
                         contentScale = ContentScale.Fit,
@@ -1102,7 +1182,7 @@ private fun ApkViewer(
                     Text(
                         summary,
                         fontSize = 11.sp,
-                        color = if (blockedReason == null) Color(0xFF315D38) else Color(0xFF6B3A22),
+                        color = if (blockedReason == null && !requiresRemovalBeforeInstall) Color(0xFF315D38) else Color(0xFF6B3A22),
                         lineHeight = 15.sp,
                         modifier = Modifier.weight(1f),
                     )
@@ -1384,35 +1464,86 @@ private fun ApkViewer(
                     Text("Ações", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     if (info.installedVersion != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        if (requiresRemovalBeforeInstall) {
                             ApkPrimaryButton(
                                 label = installLabel,
                                 icon = R.drawable.file_apk,
                                 primary = true,
-                                enabled = info.canAttemptInstall,
-                                modifier = Modifier.weight(1f),
-                                onClick = ::requestInstall,
+                                enabled = info.canAttemptInstallAfterRemoval && info.packageName != context.packageName,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { showDowngradeConfirm = true },
                             )
-                            ApkPrimaryButton(
-                                label = "Abrir",
-                                icon = R.drawable.visible,
-                                primary = false,
-                                enabled = info.canLaunchInstalled,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
-                                if (launchIntent != null) context.startActivity(launchIntent)
-                                else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
+                            Spacer(Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                ApkPrimaryButton(
+                                    label = "Abrir",
+                                    icon = R.drawable.visible,
+                                    primary = false,
+                                    enabled = info.canLaunchInstalled,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
+                                    if (launchIntent != null) context.startActivity(launchIntent)
+                                    else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
+                                }
+                                ApkPrimaryButton(
+                                    label = "Desinstalar",
+                                    icon = R.drawable.delete,
+                                    primary = false,
+                                    modifier = Modifier.weight(1f),
+                                ) { showUninstallConfirm = true }
+                                ApkPrimaryButton(
+                                    label = "Gerenciar",
+                                    icon = R.drawable.settings,
+                                    primary = false,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    val details = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${info.packageName}"))
+                                    runCatching { appDetailsLauncher.launch(details) }.onFailure {
+                                        Toast.makeText(context, "Não foi possível abrir as informações do aplicativo.", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             }
-                            ApkPrimaryButton(
-                                label = "Gerenciar",
-                                icon = R.drawable.settings,
-                                primary = false,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                val details = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${info.packageName}"))
-                                runCatching { appDetailsLauncher.launch(details) }.onFailure {
-                                    Toast.makeText(context, "Não foi possível abrir as informações do aplicativo.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                ApkPrimaryButton(
+                                    label = installLabel,
+                                    icon = R.drawable.file_apk,
+                                    primary = true,
+                                    enabled = info.canAttemptInstall,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = ::requestInstall,
+                                )
+                                ApkPrimaryButton(
+                                    label = "Abrir",
+                                    icon = R.drawable.visible,
+                                    primary = false,
+                                    enabled = info.canLaunchInstalled,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
+                                    if (launchIntent != null) context.startActivity(launchIntent)
+                                    else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                ApkPrimaryButton(
+                                    label = "Desinstalar",
+                                    icon = R.drawable.delete,
+                                    primary = false,
+                                    modifier = Modifier.weight(1f),
+                                ) { showUninstallConfirm = true }
+                                ApkPrimaryButton(
+                                    label = "Gerenciar",
+                                    icon = R.drawable.settings,
+                                    primary = false,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    val details = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${info.packageName}"))
+                                    runCatching { appDetailsLauncher.launch(details) }.onFailure {
+                                        Toast.makeText(context, "Não foi possível abrir as informações do aplicativo.", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         }
@@ -1426,16 +1557,24 @@ private fun ApkViewer(
                             onClick = ::requestInstall,
                         )
                     }
-                    if (blockedReason != null && info.installedVersion != null) {
+                    if (requiresRemovalBeforeInstall) {
                         Spacer(Modifier.height(7.dp))
                         Text(
-                            "Para resolver assinatura diferente ou downgrade, use Gerenciar para remover a versão atual somente se você tiver certeza de que não perderá dados importantes.",
+                            "Downgrade seguro: o Explorador XP não tenta forçar uma instalação por cima. A versão atual precisa ser desinstalada com sua confirmação; isso pode apagar os dados locais do aplicativo.",
+                            fontSize = 10.5.sp,
+                            color = Color(0xFF7A4A2E),
+                            lineHeight = 14.sp,
+                        )
+                    } else if (blockedReason != null && info.installedVersion != null) {
+                        Spacer(Modifier.height(7.dp))
+                        Text(
+                            "A instalação direta está bloqueada. A ação Gerenciar foi preservada e Desinstalar pode remover o pacote atual quando isso fizer sentido para você.",
                             fontSize = 10.5.sp,
                             color = Color(0xFF7A4A2E),
                             lineHeight = 14.sp,
                         )
                     }
-                    if (!sourceAllowed && info.canAttemptInstall) {
+                    if (!sourceAllowed && (info.canAttemptInstall || requiresRemovalBeforeInstall)) {
                         Spacer(Modifier.height(7.dp))
                         ApkPrimaryButton(
                             label = "Permitir instalação nesta fonte",
@@ -1598,6 +1737,46 @@ private fun ApkPermissionLine(permission: ApkPermission, status: String? = null)
                 fontSize = 9.5.sp,
                 color = if (status == "removida") Color(0xFF53657B) else Color(0xFF9A4D28),
                 fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ApkDecisionDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    danger: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    XpDialogFrame(title = title, onDismiss = onDismiss, maxWidth = 640) {
+        Row(verticalAlignment = Alignment.Top) {
+            CachedResourceIcon(
+                resId = if (danger) R.drawable.warning else R.drawable.info,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+                contentScale = ContentScale.Fit,
+            )
+            Spacer(Modifier.width(9.dp))
+            Text(
+                message,
+                fontSize = 12.5.sp,
+                lineHeight = 17.sp,
+                color = Color(0xFF303A46),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+            XpDialogButton("Cancelar", iconRes = R.drawable.close, onClick = onDismiss)
+            Spacer(Modifier.width(8.dp))
+            XpDialogButton(
+                label = confirmText,
+                danger = danger,
+                iconRes = if (danger) R.drawable.delete else R.drawable.check,
+                onClick = onConfirm,
             )
         }
     }
@@ -1861,6 +2040,14 @@ private fun imageOrientationLabel(value: Int): String = when (value) {
 }
 
 private data class PdfPageData(val bitmap: Bitmap, val pageCount: Int)
+@Suppress("DEPRECATION")
+private fun apkUninstallerIntent(packageName: String): Intent = Intent(
+    Intent.ACTION_UNINSTALL_PACKAGE,
+    Uri.parse("package:$packageName"),
+).apply {
+    putExtra(Intent.EXTRA_RETURN_RESULT, true)
+}
+
 @Suppress("DEPRECATION")
 private fun apkInstallerIntent(context: Context, file: File): Intent {
     require(file.exists() && file.isFile) { "O APK não existe mais." }

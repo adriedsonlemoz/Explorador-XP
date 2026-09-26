@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.0-alpha.85
+
+### Gerenciamento de aplicativos/APKs
+- Adicionado botão **Desinstalar** diretamente no visualizador de APK para pacotes já instalados; o Explorador XP chama a confirmação de desinstalação do Android sem redirecionar primeiro para **Detalhes do app**.
+- Adicionada a permissão normal `REQUEST_DELETE_PACKAGES`, necessária nas versões modernas do Android para solicitar o fluxo de remoção.
+- APKs com `versionCode` menor que o instalado agora recebem a ação **Instalar versão anterior**. O aplicativo não tenta burlar o bloqueio de downgrade: solicita a remoção da versão atual e só abre o instalador do APK antigo depois de verificar que o pacote realmente foi removido.
+- Antes do downgrade, a interface compara versão instalada e APK selecionado e mostra aviso explícito de que a desinstalação pode apagar dados locais do aplicativo.
+- Se a remoção for cancelada ou não terminar, a instalação da versão anterior não é iniciada.
+- O fluxo automático de downgrade é bloqueado para o próprio pacote do Explorador XP, pois a desinstalação encerraria o processo antes da continuação; a desinstalação manual continua disponível.
+- As ações anteriores **Instalar/Atualizar/Reinstalar**, **Abrir**, **Gerenciar**, compartilhamento, localização, cópia de pacote/SHA-256, extração de ícone e manifesto foram preservadas.
+- Adicionados testes puros para instalação direta, downgrade após remoção, bloqueio de assinatura, incompatibilidade e proteção contra auto-downgrade.
+
+### Metadados
+- Versão sincronizada para `0.1.0-alpha.85` / `versionCode 85` em Gradle, `VERSION`, `app_identity.json`, `github-manager.json`, README, ReleaseNotes, RELEASE e validação.
+
 ## 0.1.0-alpha.84
 
 - Corrigida a integração do cabeçalho de Informações do dispositivo com a inclusão do componente vetorial `HeroSpecChip` usado nos indicadores de Android, RAM e armazenamento.

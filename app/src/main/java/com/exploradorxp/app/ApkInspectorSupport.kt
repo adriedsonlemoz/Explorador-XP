@@ -19,6 +19,32 @@ internal enum class ApkSignatureRelation {
     UNKNOWN,
 }
 
+internal enum class ApkInstallPlan {
+    DIRECT,
+    REMOVE_THEN_INSTALL,
+    BLOCKED_COMPATIBILITY,
+    BLOCKED_SIGNATURE,
+    BLOCKED_SELF_DOWNGRADE,
+}
+
+/**
+ * Decide somente o fluxo permitido pelas APIs públicas do Android. Um downgrade comum
+ * não é tratado como instalação direta: o pacote atual precisa ser removido primeiro.
+ */
+internal fun apkInstallPlan(
+    versionRelation: ApkVersionRelation,
+    signatureRelation: ApkSignatureRelation,
+    androidCompatible: Boolean,
+    abiCompatible: Boolean,
+    isSelfPackage: Boolean,
+): ApkInstallPlan = when {
+    !androidCompatible || !abiCompatible -> ApkInstallPlan.BLOCKED_COMPATIBILITY
+    versionRelation == ApkVersionRelation.DOWNGRADE && isSelfPackage -> ApkInstallPlan.BLOCKED_SELF_DOWNGRADE
+    versionRelation == ApkVersionRelation.DOWNGRADE -> ApkInstallPlan.REMOVE_THEN_INSTALL
+    signatureRelation == ApkSignatureRelation.MISMATCH -> ApkInstallPlan.BLOCKED_SIGNATURE
+    else -> ApkInstallPlan.DIRECT
+}
+
 internal fun apkVersionRelation(apkVersionCode: Long, installedVersionCode: Long?): ApkVersionRelation = when {
     installedVersionCode == null -> ApkVersionRelation.NOT_INSTALLED
     apkVersionCode > installedVersionCode -> ApkVersionRelation.UPGRADE

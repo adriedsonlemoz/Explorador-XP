@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.84",
-  "version_code": 84,
-  "manager_version": "0.1.0-alpha.84",
+  "version_build": "0.1.0-alpha.85",
+  "version_code": 85,
+  "manager_version": "0.1.0-alpha.85",
   "application_id": "com.exploradorxp.app",
-  "scope": "Correção de compilação da padronização vetorial da alpha.83 sem alteração funcional adicional",
+  "scope": "Gerenciamento de aplicativos/APKs: desinstalação direta e fluxo assistido de instalação de versão anterior, preservando funções existentes",
   "checks": [
     {
       "name": "cpu_architecture_no_abi_guess",
@@ -63,7 +63,7 @@
     {
       "name": "metadata_sync",
       "status": "passed",
-      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes e documentação estão sincronizados para 0.1.0-alpha.84/versionCode 84."
+      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.85/versionCode 85."
     },
     {
       "name": "format_validation",
@@ -78,7 +78,7 @@
     {
       "name": "android_unit_lint_build",
       "status": "not_run",
-      "reason": "O ambiente local não possui Gradle/Android SDK/android.jar. O log do GitHub Actions foi analisado: os quatro erros Kotlin reportados foram tratados diretamente (HeroSpecChip ausente e import de Modifier.size ausente). O assemble completo deve ser confirmado pelo workflow do projeto."
+      "reason": "O ambiente local não possui Gradle/Android SDK/android.jar. Nesta etapa foram executadas validações estáticas, compilação Kotlin isolada da lógica pura e verificações de recursos/metadados; o assemble Android completo deve ser confirmado pelo workflow do projeto."
     },
     {
       "name": "device_identity_exact_match",
@@ -159,6 +159,41 @@
       "name": "alpha84_compile_log_fixes",
       "status": "passed",
       "details": "O log Explorador-XP-Gerar-APK-80 reportou três referências ausentes a HeroSpecChip em DeviceInfoScreen.kt e uma referência ausente a size em TextCodeEditorViewer.kt. O componente foi implementado e o import androidx.compose.foundation.layout.size foi adicionado; busca estática confirma que os símbolos agora possuem definição/import correspondente."
+    },
+    {
+      "name": "apk_direct_uninstall_flow",
+      "status": "passed",
+      "details": "O visualizador mantém Gerenciar e adiciona Desinstalar. A ação usa ACTION_UNINSTALL_PACKAGE com package: URI e EXTRA_RETURN_RESULT, precedida por confirmação interna; REQUEST_DELETE_PACKAGES foi declarado no manifesto."
+    },
+    {
+      "name": "apk_downgrade_assisted_flow",
+      "status": "passed",
+      "details": "ApkInstallPlan classifica downgrade compatível como REMOVE_THEN_INSTALL. O fluxo solicita desinstalação, confirma que o pacote saiu e só então chama o instalador do APK selecionado; cancelamento não dispara instalação."
+    },
+    {
+      "name": "apk_downgrade_data_warning",
+      "status": "passed",
+      "details": "O diálogo de downgrade mostra versão/versionCode instalada e selecionada e alerta explicitamente que a remoção pode apagar dados locais antes de continuar."
+    },
+    {
+      "name": "apk_self_downgrade_guard",
+      "status": "passed",
+      "details": "O plano retorna BLOCKED_SELF_DOWNGRADE para o próprio packageName do Explorador XP, evitando prometer continuação automática após o processo se desinstalar."
+    },
+    {
+      "name": "apk_existing_actions_preserved",
+      "status": "passed",
+      "details": "Instalar/Atualizar/Reinstalar, Abrir, Gerenciar, compartilhamento, localização, cópia de pacote/SHA-256, extração de ícone e manifesto permanecem no visualizador."
+    },
+    {
+      "name": "apk_install_plan_tests",
+      "status": "passed",
+      "details": "ApkInspectorSupport ganhou casos para downgrade após remoção, auto-downgrade bloqueado, upgrade direto, assinatura divergente e incompatibilidade. Um runner Kotlin isolado executou 6 verificações da decisão de instalação com 6/6 aprovadas."
+    },
+    {
+      "name": "alpha85_static_integrity",
+      "status": "passed",
+      "details": "Validação final: 5 JSONs e 80 XMLs parseados; 83 referências R.drawable resolvidas sem ausências; zero PNG/JPG/WebP/GIF em app/src/main; REQUEST_DELETE_PACKAGES presente uma única vez; ações antigas Abrir/Gerenciar/Compartilhar/Manifesto preservadas; nenhum APK, AAB, keystore ou chave privada incluído."
     }
   ]
 }
