@@ -1420,6 +1420,13 @@ internal fun ArchiveExtractionLauncher(
                 Spacer(Modifier.width(9.dp))
                 Text("Lendo conteúdo e calculando o espaço necessário...", fontSize = 12.sp)
             }
+            Spacer(Modifier.height(12.dp))
+            XpDialogButton(
+                "Cancelar",
+                iconRes = R.drawable.close,
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
         else -> result.fold(
             onSuccess = { info ->

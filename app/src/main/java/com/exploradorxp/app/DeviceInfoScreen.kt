@@ -177,7 +177,6 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
         DeviceInfoHeader(
             loading = loading,
             onRefresh = { refreshKey++ },
-            onDismiss = onDismiss,
         )
         HorizontalDivider(color = XpChromeBorder)
         Box(
@@ -338,6 +337,12 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            Spacer(Modifier.width(8.dp))
+            XpDialogButton(
+                "Fechar",
+                iconRes = R.drawable.close,
+                onClick = onDismiss,
+            )
         }
     }
 
@@ -347,7 +352,6 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
 private fun DeviceInfoHeader(
     loading: Boolean,
     onRefresh: () -> Unit,
-    onDismiss: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -403,7 +407,6 @@ private fun DeviceInfoHeader(
                 Icon(Icons.Rounded.Refresh, contentDescription = "Atualizar", tint = Color.White, modifier = Modifier.size(21.dp))
             }
         }
-        XpTitleCloseButton(onClick = onDismiss)
     }
 }
 

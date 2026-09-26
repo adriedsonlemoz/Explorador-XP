@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.0-alpha.77
+
+### Padronização do fechamento
+- Removido o X vermelho dos cabeçalhos compartilhados (`XpDialogTitle`) e do visualizador interno.
+- Informações do dispositivo e Lixeira agora usam o botão **Fechar** na barra inferior.
+- Ajuda, Sobre, Armazenamento, Propriedades e diálogos informativos passam a depender somente dos controles inferiores já existentes.
+- Diálogos de ação mantêm **Cancelar** na parte inferior; o estado “Preparando ZIP” ganhou um botão Cancelar explícito.
+- Os `×` usados para fechar abas e painéis internos do editor foram preservados porque não representam fechamento da tela.
+
+### Correção do build
+- Corrigido `ApkInspectorSupportTest`: o teste agora chama `sha256ApkFile`, nome atual do helper do inspetor de APK.
+- Resolve a falha `Cannot access 'fun sha256File(file: File): String': it is private in file` observada no workflow.
+- Versão sincronizada para `0.1.0-alpha.77` / `versionCode 77`.
+
 ## 0.1.0-alpha.76
 
 ### Interface

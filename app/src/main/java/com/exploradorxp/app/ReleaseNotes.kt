@@ -18,10 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Informações do dispositivo agora tem apenas um botão de fechar: o X vermelho no topo, no mesmo estilo das janelas do Explorador XP.",
-                "A Lixeira deixou de abrir como popup e agora ocupa toda a área do aplicativo, igual à tela de informações do dispositivo.",
-                "A Lixeira mantém atualizar, restaurar, excluir e esvaziar, com confirmações apenas para ações destrutivas.",
-                "Corrigido o erro do último build causado por conflito entre funções SHA-256 do editor e do novo inspetor de APK.",
+                "Padronizado o fechamento das telas: o X vermelho do topo foi removido das janelas e telas do Explorador XP.",
+                "Informações do dispositivo e Lixeira voltaram a usar o botão Fechar na barra inferior, mantendo o mesmo padrão visual.",
+                "O visualizador interno também passa a fechar pela barra inferior, sem o X vermelho no cabeçalho.",
+                "Diálogos de ação continuam usando Cancelar/Fechar na parte inferior; abas e painéis internos mantêm seus controles próprios.",
+                "Corrigido o teste do inspetor de APK que ainda chamava o nome antigo da função SHA-256 e fazia o workflow falhar.",
             )
         )
 }

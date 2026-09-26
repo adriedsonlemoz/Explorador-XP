@@ -70,7 +70,7 @@ class ApkInspectorSupportTest {
             file.writeText("abc")
             assertEquals(
                 "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD",
-                sha256File(file),
+                sha256ApkFile(file),
             )
         } finally {
             file.delete()

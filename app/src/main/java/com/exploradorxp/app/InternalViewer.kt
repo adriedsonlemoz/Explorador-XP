@@ -189,7 +189,7 @@ fun InternalViewerScreen(
             .background(if (isVideo) Color.Black else Color(0xFFF6F2E8))
     ) {
         if (!contentFullScreen) {
-            ViewerTitleBar(activeFile, extension, requestClose)
+            ViewerTitleBar(activeFile, extension)
             ViewerToolbar(activeFile, extension, typeDetectedFromContent) { onOpenExternal(activeFile) }
             HorizontalDivider(color = Color(0xFFB8C7DA))
         }
@@ -247,12 +247,12 @@ fun InternalViewerScreen(
                 else -> UnsupportedViewer { onOpenExternal(activeFile) }
             }
         }
-        if (!contentFullScreen) ViewerStatusBar(activeFile, extension, typeDetectedFromContent)
+        if (!contentFullScreen) ViewerStatusBar(activeFile, extension, typeDetectedFromContent, requestClose)
     }
 }
 
 @Composable
-private fun ViewerTitleBar(file: File, resolvedExtension: String, onClose: () -> Unit) {
+private fun ViewerTitleBar(file: File, resolvedExtension: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -277,16 +277,6 @@ private fun ViewerTitleBar(file: File, resolvedExtension: String, onClose: () ->
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(25.dp)
-                .background(Brush.verticalGradient(listOf(Color(0xFFF36B58), Color(0xFFB92318))))
-                .border(1.dp, Color.White)
-                .clickable(onClick = onClose),
-        ) {
-            Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        }
     }
 }
 
@@ -1742,7 +1732,12 @@ private fun UnsupportedMessage(message: String) {
 }
 
 @Composable
-private fun ViewerStatusBar(file: File, resolvedExtension: String, detectedFromContent: Boolean) {
+private fun ViewerStatusBar(
+    file: File,
+    resolvedExtension: String,
+    detectedFromContent: Boolean,
+    onClose: () -> Unit,
+) {
     val extension = remember(file.absolutePath, resolvedExtension, detectedFromContent) {
         val base = if (resolvedExtension.isBlank()) {
             FileTypeClassifier.labelFor(file, false)
@@ -1766,7 +1761,13 @@ private fun ViewerStatusBar(file: File, resolvedExtension: String, detectedFromC
             modifier = Modifier.weight(1f),
         )
         Box(Modifier.height(18.dp).width(1.dp).background(XpChromeBorder))
-        Text(formatViewerBytes(size), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+        Text(
+            formatViewerBytes(size),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+        ViewerActionButton("Fechar", onClick = onClose)
     }
 }
 

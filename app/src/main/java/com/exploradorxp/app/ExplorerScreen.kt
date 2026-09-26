@@ -2402,6 +2402,7 @@ private fun formatTransferDuration(seconds: Long): String {
 }
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 private fun XpDialogTitle(title: String, onDismiss: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -2411,22 +2412,15 @@ private fun XpDialogTitle(title: String, onDismiss: () -> Unit) {
             .background(Brush.verticalGradient(listOf(XpBlueLight, XpBlueDark)))
             .padding(horizontal = 10.dp)
     ) {
-        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        XpTitleCloseButton(onClick = onDismiss)
-    }
-}
-
-@Composable
-internal fun XpTitleCloseButton(onClick: () -> Unit) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(24.dp)
-            .background(Brush.verticalGradient(listOf(Color(0xFFF36B58), Color(0xFFB92318))))
-            .border(1.dp, Color.White)
-            .clickable(onClick = onClick),
-    ) {
-        Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        Text(
+            title,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -2891,6 +2885,12 @@ private fun TrashScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            XpDialogButton(
+                "Fechar",
+                iconRes = R.drawable.close,
+                onClick = onDismiss,
             )
         }
     }
