@@ -1,7 +1,7 @@
-# Explorador XP 0.1.0-alpha.82
+# Explorador XP 0.1.0-alpha.83
 
-A tela **Informações do dispositivo** passa a identificar o nome comercial do aparelho com correspondência conservadora de fabricante/marca + código do modelo. O recurso mantém todos os valores reais fornecidos pelo Android separados das informações de catálogo.
+Esta versão reorganiza completamente a iconografia do aplicativo. O antigo conjunto de PNGs decorativos foi removido dos recursos da interface e substituído por um sistema de `VectorDrawable` XML com linguagem visual única.
 
-Quando permitido em **Ferramentas > Configurações**, o Explorador XP pode atualizar a identificação pela lista pública de dispositivos suportados pelo Google Play e procurar uma imagem real via Wikidata/Wikimedia Commons. A imagem só é aceita quando nome e fabricante da entidade são compatíveis e existe uma propriedade de imagem própria; ambiguidades usam o ícone genérico.
+Arquivos agora são representados por categorias consistentes — documentos, planilhas, apresentações, imagens, áudio, vídeo, compactados, código, aplicativos e outros — em vez de um desenho diferente e visualmente incompatível para cada extensão. Pastas, armazenamento, navegação, ações e estados seguem o mesmo padrão.
 
-Miniatura, fonte, autor e licença ficam em cache para evitar consultas repetidas. O modo offline continua funcional e a opção pode desligar completamente as consultas externas. Nenhuma chave privada ou API paga é necessária.
+O launcher também passa a usar foreground e monochrome vetoriais no Adaptive Icon. A mudança não interfere em fotos, miniaturas de arquivos ou na imagem real opcional do modelo do aparelho, que continuam sendo conteúdo e não fazem parte do pacote decorativo de ícones.

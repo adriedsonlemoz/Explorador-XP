@@ -18,12 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Informações do dispositivo agora identifica o nome comercial por correspondência exata de fabricante/marca + código do modelo, mantendo os dados brutos do Android separados.",
-                "Foi adicionado catálogo local versionado e cache para atualização usando a lista pública de dispositivos compatíveis com Google Play, sem bloquear o modo offline.",
-                "Quando há identificação confiável, o app pode procurar uma imagem real do modelo via Wikidata/Wikimedia Commons e só aceita entidades com nome e fabricante compatíveis.",
-                "Imagem, URL, autor e licença ficam em cache; resultados ambíguos, falhas de rede ou modelos sem imagem usam o ícone genérico em vez de arriscar uma foto errada.",
-                "Ferramentas > Configurações ganhou a opção para desligar consultas externas de identificação/imagem; desativada, a tela usa somente dados locais e do Android.",
-                "A tela continua separando arquitetura, ABIs, SoC, GPU, RAM, armazenamento, bateria, rede e sensores sem inventar valores ausentes.",
+                "Os ícones do Explorador XP foram padronizados em uma única linguagem visual vetorial, substituindo o antigo pacote de PNGs misturados.",
+                "Arquivos agora usam ícones por categoria — documentos, imagens, áudio, vídeo, compactados, código, aplicativos e outros — mantendo a identificação sem poluir a interface.",
+                "Pastas, armazenamento, navegação, ações e estados também passaram a usar vetores consistentes e nítidos em qualquer densidade de tela.",
+                "O ícone do aplicativo/launcher foi convertido para um Adaptive Icon vetorial, sem bitmap incorporado.",
+                "A remoção dos bitmaps de interface reduz recursos gráficos no código-fonte e elimina o antigo cache de decodificação de PNG usado pelas listas.",
             )
         )
 }

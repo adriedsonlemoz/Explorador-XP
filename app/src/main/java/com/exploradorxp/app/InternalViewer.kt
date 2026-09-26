@@ -1122,7 +1122,11 @@ private fun ApkViewer(
                             modifier = Modifier.fillMaxWidth().clickable { comparisonExpanded = !comparisonExpanded }.padding(vertical = 2.dp),
                         ) {
                             Text("Comparação com o instalado", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                            Text(if (comparisonExpanded) "▲" else "▼", fontSize = 11.sp, color = XpBlueDark)
+                            CachedResourceIcon(
+                                resId = if (comparisonExpanded) R.drawable.xp_chevron_up else R.drawable.xp_chevron_down,
+                                contentDescription = if (comparisonExpanded) "Recolher" else "Expandir",
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
                         if (comparisonExpanded) {
                             Spacer(Modifier.height(5.dp))
@@ -1266,7 +1270,11 @@ private fun ApkViewer(
                         modifier = Modifier.fillMaxWidth().clickable { technicalExpanded = !technicalExpanded }.padding(vertical = 2.dp),
                     ) {
                         Text("Detalhes técnicos", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text(if (technicalExpanded) "▲" else "▼", fontSize = 11.sp, color = XpBlueDark)
+                        CachedResourceIcon(
+                            resId = if (technicalExpanded) R.drawable.xp_chevron_up else R.drawable.xp_chevron_down,
+                            contentDescription = if (technicalExpanded) "Recolher" else "Expandir",
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                     if (technicalExpanded) {
                         Spacer(Modifier.height(6.dp))
@@ -1337,7 +1345,11 @@ private fun ApkViewer(
                                 Text(permissionSummary, fontSize = 10.5.sp, color = Color(0xFF8B4B24))
                             }
                         }
-                        Text(if (permissionsExpanded) "▲" else "▼", fontSize = 11.sp, color = XpBlueDark)
+                        CachedResourceIcon(
+                            resId = if (permissionsExpanded) R.drawable.xp_chevron_up else R.drawable.xp_chevron_down,
+                            contentDescription = if (permissionsExpanded) "Recolher" else "Expandir",
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                     if (permissionsExpanded) {
                         Spacer(Modifier.height(7.dp))
@@ -1448,7 +1460,11 @@ private fun ApkViewer(
                         modifier = Modifier.fillMaxWidth().clickable { moreActionsExpanded = !moreActionsExpanded }.padding(horizontal = 3.dp, vertical = 3.dp),
                     ) {
                         Text("Mais ações do APK", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text(if (moreActionsExpanded) "▲" else "▼", fontSize = 11.sp, color = XpBlueDark)
+                        CachedResourceIcon(
+                            resId = if (moreActionsExpanded) R.drawable.xp_chevron_up else R.drawable.xp_chevron_down,
+                            contentDescription = if (moreActionsExpanded) "Recolher" else "Expandir",
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                     if (moreActionsExpanded) {
                         Spacer(Modifier.height(6.dp))

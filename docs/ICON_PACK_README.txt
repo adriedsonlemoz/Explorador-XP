@@ -1,20 +1,16 @@
-EXPLORADOR XP PARA ANDROID — PACOTE DE ÍCONES v2
+EXPLORADOR XP — SISTEMA DE ÍCONES VETORIAIS
 
-Pacote de assets para o mockup final do gerenciador de arquivos Android com identidade visual inspirada no Windows XP.
+A partir da v0.1.0-alpha.83 o aplicativo não usa mais o antigo pacote de PNGs para ícones da interface.
 
-Estrutura:
-- actions/      navegação e operações
-- devices/      armazenamento e dispositivos
-- file_types/   formatos conhecidos de arquivos
-- folders/      pastas e variações
-- locations/    atalhos e locais
-- misc/         tipos/símbolos auxiliares
-- status/       estados
-- view/         modos de visualização
-- mockup/       referência da interface final
-- reference/    catálogo visual dos ícones
+Padrão atual:
+- VectorDrawable XML para navegação, ações, estados, arquivos, pastas e armazenamento.
+- Um conjunto pequeno e consistente de ícones por categoria de arquivo, em vez de um bitmap diferente para cada extensão.
+- Adaptive Icon do launcher com foreground/monochrome vetoriais.
+- O mesmo vetor escala para qualquer densidade sem perda de nitidez.
+- Não há cache de Bitmap para ícones; o Compose renderiza os vetores diretamente.
 
-Os PNGs individuais existentes no pacote continuam preservando a identidade visual original.
-Desde a alpha.23, os 150 ícones comuns usados pela interface ficam em `res/drawable-xxxhdpi/` com 192×192, para que o Android aplique density scaling e reduza custo de decodificação/memória. O Compose continua controlando o tamanho final em dp.
+Categorias de arquivo:
+- texto; documentos; planilhas; apresentações; PDF; imagens; áudio; vídeo; compactados; código; bancos; apps/pacotes; imagens de disco; fontes; ebooks; desconhecidos.
 
-`drawable-nodpi` fica reservado ao launcher e às variantes grandes usadas em telas específicas (`file_apk_large`, `folder_open_large`, `search_large`).
+Exceção intencional:
+- conteúdo real aberto pelo usuário (fotos/miniaturas) e a imagem opcional do modelo do aparelho continuam sendo conteúdo, não ícones decorativos. Essas imagens não fazem parte do pacote de ícones do APK.

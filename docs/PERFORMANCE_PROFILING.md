@@ -87,3 +87,8 @@ O visualizador de imagens não faz scan adicional do armazenamento: recebe do `E
 A alpha.58 insere checkpoints cooperativos no mesmo pipeline de `FileOperationPlan`, sem criar uma segunda travessia da árvore. Cópias consultam a pausa entre blocos de 256 KiB, exclusões antes de cada item e o planejamento em lotes. O período pausado é removido da janela de tempo usada para velocidade/ETA.
 
 Nos testes de desempenho, comparar uma cópia longa sem pausa e outra com pausa intermediária. Após continuar, a taxa deve convergir para a velocidade ativa real, sem carregar o tempo ocioso da pausa para a média.
+
+
+## Sistema vetorial definitivo — alpha.83
+
+A alpha.83 substitui o pipeline histórico de PNGs por uma iconografia vetorial consolidada. Diferente do experimento da alpha.27, a migração atual reduz o número de desenhos por extensão, usa categorias semânticas e mantém aliases para os IDs antigos. `CachedResourceIcon` não cria mais `Bitmap`, não usa `Dispatchers.IO` e não mantém LRU de 6 MiB para ícones. Miniaturas de conteúdo real continuam com seus caches próprios.

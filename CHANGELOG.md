@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.0-alpha.83
+
+### Padronização completa dos ícones
+- Removido o pacote de PNGs de ícones da interface em `drawable-xxxhdpi` e `drawable-nodpi`.
+- Adicionado um conjunto coerente de `VectorDrawable` XML para navegação, ações, estados, armazenamento, arquivos e pastas.
+- `FileIconMapper` deixou de manter um drawable diferente para cada extensão e agora agrupa formatos em categorias visuais: texto, documentos, planilhas, apresentações, PDF, imagens, áudio, vídeo, compactados, código, banco de dados, apps/pacotes, imagens de disco, fontes, ebooks e desconhecidos.
+- Pastas especiais (Downloads, Documentos, Imagens/DCIM, Música e Vídeos) também usam variações do mesmo desenho-base, reduzindo mistura de estilos.
+- `CachedResourceIcon` deixou de decodificar PNGs em background e de manter cache LRU de bitmaps; a API foi preservada e agora renderiza os vetores diretamente.
+- O launcher foi convertido para Adaptive Icon com foreground vetorial e camada monocromática vetorial no Android 13+, sem bitmap incorporado.
+- Fotos/miniaturas de conteúdo real e a imagem opcional do modelo do aparelho continuam permitidas porque não são ícones decorativos do pacote visual.
+- Adicionados testes do mapeamento de categorias e varredura estática para impedir referências de drawable quebradas.
+
+### Metadados
+- Versão sincronizada para `0.1.0-alpha.83` / `versionCode 83` em Gradle, `github-manager.json`, `app_identity.json`, `VERSION`, README, ReleaseNotes e documentação.
+
 ## 0.1.0-alpha.82
 
 ### Informações do dispositivo

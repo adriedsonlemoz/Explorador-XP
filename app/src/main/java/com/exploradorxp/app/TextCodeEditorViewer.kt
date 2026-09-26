@@ -1653,7 +1653,15 @@ private fun EditorOpenTabDialog(
                                 color = XpTextSecondary,
                             )
                         }
-                        Text(if (opened) "Abrir" else "＋", fontSize = 11.sp, color = XpBlueDark, fontWeight = FontWeight.Bold)
+                        if (opened) {
+                            Text("Abrir", fontSize = 11.sp, color = XpBlueDark, fontWeight = FontWeight.Bold)
+                        } else {
+                            CachedResourceIcon(
+                                resId = R.drawable.xp_file_add,
+                                contentDescription = "Abrir em nova aba",
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
                     HorizontalDivider(color = Color(0xFFE1E7EE))
                 }

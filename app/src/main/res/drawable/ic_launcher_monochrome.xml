@@ -1,9 +1,3 @@
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:insetLeft="10dp"
-    android:insetTop="10dp"
-    android:insetRight="10dp"
-    android:insetBottom="10dp">
-    <bitmap
-        android:src="@drawable/launcher_explorer_monochrome"
-        android:gravity="fill" />
-</inset>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M25,31h23l7,8h28c5,0 9,4 9,9v27c0,5-4,9-9,9H25c-5,0-9-4-9-9V40c0-5,4-9,9-9zM56,49a14,14 0,1 0,8.9,24.8L75,84l6-6-10.2-10.1A14,14 0,0 0,56,49zm0,7a7,7 0,1 1,0,14 7,7 0,0 1,0-14z" />
+</vector>

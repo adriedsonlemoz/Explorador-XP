@@ -299,8 +299,8 @@ internal fun ArchiveZipViewer(
                     ArchiveMenuText("Tipo", sortMode == ArchiveSortMode.TYPE) { sortMode = ArchiveSortMode.TYPE; showSortMenu = false }
                     ArchiveMenuText("Data", sortMode == ArchiveSortMode.DATE) { sortMode = ArchiveSortMode.DATE; showSortMenu = false }
                     HorizontalDivider()
-                    ArchiveMenuText(if (ascending) "Crescente ✓" else "Crescente") { ascending = true; showSortMenu = false }
-                    ArchiveMenuText(if (!ascending) "Decrescente ✓" else "Decrescente") { ascending = false; showSortMenu = false }
+                    ArchiveMenuText("Crescente", selected = ascending) { ascending = true; showSortMenu = false }
+                    ArchiveMenuText("Decrescente", selected = !ascending) { ascending = false; showSortMenu = false }
                 }
             }
         }
@@ -1020,7 +1020,11 @@ private fun ArchiveFolderPickerDialog(initial: File, onDismiss: () -> Unit, onCh
                             androidx.compose.foundation.Image(painterResource(R.drawable.folder), null, Modifier.size(25.dp))
                             Spacer(Modifier.width(7.dp))
                             Text(folder.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Text("›", fontSize = 18.sp, color = XpBlue)
+                            CachedResourceIcon(
+                                resId = R.drawable.xp_arrow_forward,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
                         HorizontalDivider(color = Color(0xFFE0E6EE))
                     }
@@ -1194,7 +1198,13 @@ private fun ArchiveToggleRow(label: String, checked: Boolean, onClick: () -> Uni
             modifier = Modifier.size(18.dp).background(if (checked) XpBlue else Color.White).border(1.dp, XpControlBorder),
             contentAlignment = Alignment.Center,
         ) {
-            if (checked) Text("✓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            if (checked) {
+                CachedResourceIcon(
+                    resId = R.drawable.xp_check_white,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                )
+            }
         }
         Spacer(Modifier.width(7.dp))
         Text(label, fontSize = 12.sp)
@@ -1345,7 +1355,15 @@ private fun ArchiveSmallButton(label: String, enabled: Boolean = true, onClick: 
 @Composable
 private fun ArchiveMenuText(label: String, selected: Boolean = false, onClick: () -> Unit) {
     Row(modifier = Modifier.widthIn(min = 170.dp).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp)) {
-        Text(if (selected) "✓" else "", color = XpBlue, modifier = Modifier.width(18.dp), fontSize = 11.sp)
+        Box(modifier = Modifier.width(18.dp), contentAlignment = Alignment.CenterStart) {
+            if (selected) {
+                CachedResourceIcon(
+                    resId = R.drawable.xp_check,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
         Text(label, fontSize = 11.5.sp)
     }
 }

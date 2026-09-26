@@ -2,8 +2,10 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.82` (`versionCode 82`)  
+**Versão atual:** `0.1.0-alpha.83` (`versionCode 83`)  
 
+
+- A alpha.83 reorganiza toda a iconografia do aplicativo: o antigo pacote de PNGs foi removido dos recursos da interface e substituído por um conjunto vetorial consistente. Arquivos usam categorias visuais (documentos, planilhas, imagens, áudio, vídeo, compactados, código, aplicativos e outros), enquanto pastas, ações, navegação, armazenamento e estados usam a mesma linguagem. O launcher também passa a ser um Adaptive Icon vetorial; fotos/miniaturas de conteúdo continuam sendo tratadas como conteúdo real, não como ícones decorativos.
 
 - A alpha.82 evolui **Informações do dispositivo** em duas frentes complementares. A coleta técnica continua conservadora e baseada nas APIs reais do Android (ABIs, processo, SoC, GPU, RAM, armazenamento, bateria, rede e sensores), enquanto uma camada separada identifica o **nome comercial** por correspondência exata de fabricante/marca + modelo usando catálogo local versionado e, quando permitido, a lista pública de dispositivos do Google Play. Quando existe entidade confiável, uma miniatura real pode ser obtida de Wikidata/Wikimedia Commons com cache, fonte/licença/autor; resultados ambíguos usam o ícone genérico. **Ferramentas > Configurações** permite desligar completamente essas consultas externas, mantendo o recurso funcional offline.
 
@@ -63,8 +65,8 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 - A alpha.47 corrige a compilação do visualizador ZIP após o polimento visual da alpha.45: foi restaurado o import de `horizontalScroll` usado na faixa de ações **Info / Verificar / Extrair / Ordenar**, sem remover as melhorias da alpha.46.
 - A alpha.46 simplifica a **tela principal**: o cartão grande de armazenamento foi removido e espaço livre/uso passaram para a barra inferior clicável; a toolbar ganhou **Atualizar** e **Novo** (pasta/arquivo), enquanto a barra de seleção expõe Renomear, Compartilhar, ZIP e Excluir diretamente, reduzindo a dependência de **Mais**.
 - Interface principal baseada no Explorer clássico do Windows XP: barra de título azul, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, barra de ferramentas compacta, barra de endereço, indicador de armazenamento, lista/grade e barra de status inferior.
-- Pacote visual XP com ícones PNG otimizados por densidade Android; os 150 ícones comuns usados na navegação ficam em `drawable-xxxhdpi`, com variantes grandes apenas onde necessário.
-- A experiência vetorial da alpha.27 foi revertida na alpha.28 por preferência visual e ausência de ganho perceptível no aparelho; o app voltou ao pipeline PNG otimizado com decodificação assíncrona/cache.
+- Sistema visual com ícones vetoriais XML padronizados. Formatos de arquivo são agrupados por categoria visual e ações/pastas/dispositivos compartilham a mesma linguagem, sem bitmaps decorativos no pacote da interface.
+- A experiência vetorial experimental da alpha.27 foi revertida na alpha.28; a alpha.83 retoma a estratégia de forma diferente, com desenho visual unificado, categorias reduzidas e remoção definitiva do pipeline/cache de PNG para ícones.
 - A alpha.29 aplica o polimento visual observado no vídeo de uso real: menus e diálogos XP mais consistentes, busca focada, breadcrumb clicável, grade mais espaçosa, seleção contextual, miniaturas locais de foto/vídeo e visualizadores internos padronizados.
 - A alpha.30 integra uma **Lixeira real** ao fluxo de exclusão: cada remoção oferece mover para a Lixeira ou apagar permanentemente; itens podem ser restaurados, apagados individualmente ou removidos de uma vez com **Esvaziar Lixeira**.
 - A alpha.31 continua o refinamento visual: menus superiores mais legíveis e roláveis em telas estreitas, barra de seleção com ações sem compressão, listagem com tipo/tamanho e data separados, janelas com botão Fechar no padrão XP e armazenamento com leitura visual mais clara.
@@ -84,7 +86,7 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 - O card de armazenamento abre uma análise detalhada sob demanda, com total/usado/livre, categorias de arquivo, pastas que mais ocupam espaço e maiores arquivos; a varredura roda fora da thread principal, pode ser cancelada e não pesa na abertura do app.
 - Arquivos e pastas ganharam identificação textual consistente de tipo em lista, grade, status, Lixeira e visualizadores (por exemplo, **Imagem JPEG**, **Documento PDF** e **Aplicativo Android (APK)**).
 - A toolbar ganhou acesso direto à Lixeira no lugar da ação duplicada **Exibir**; Ajuda foi reorganizada em tópicos expansíveis e Sobre reúne versão, desenvolvedor, PIX copiável e novidades da versão.
-- Imagens e vídeos agora podem mostrar miniaturas assíncronas em lista/grade com cache LRU limitado; os ícones XP originais continuam sendo o fallback e permanecem inalterados para os demais tipos.
+- Imagens e vídeos podem mostrar miniaturas assíncronas em lista/grade com cache LRU limitado; quando não há miniatura, a interface usa o ícone vetorial da categoria correspondente.
 - ZIP agora funciona como navegador de compactados, com pastas internas, pesquisa, ordenação, seleção, extração total/parcial, destino configurável, progresso, senha e verificação de integridade; TXT/código usa o editor interno da alpha.35 com histórico, busca/substituição, números de linha, codificação e salvamento seguro; APK mostra nome/ícone, versão instalada × arquivo, SDK, arquiteturas, assinatura SHA-256, permissões e compatibilidade antes de encaminhar ao instalador do Android.
 - Reconhecimento visual de dezenas de tipos de arquivo: PDF, Word, Excel, PowerPoint, HTML, CSS, JS, JSON, XML, APK, ZIP, RAR, 7Z, imagens, áudio, vídeo, código e outros.
 - Navegação real pelo armazenamento compartilhado primário.
@@ -106,9 +108,9 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 - Na primeira abertura sem permissão, um pop-up central obrigatório explica o acesso aos arquivos e leva diretamente à tela do Android para conceder `MANAGE_EXTERNAL_STORAGE`.
 - **Informações do dispositivo** ganhou painel visual moderno feito integralmente em Compose: resumo do aparelho, indicadores de RAM/armazenamento/bateria, sistema, conectividade, recursos, sensores e exportação para IA, sem foto fake nem banco fixo de especificações.
 - O painel também detecta sensores reais via `SensorManager` e oferece **Copiar resumo**, **Salvar PNG** e **Compartilhar imagem**, mantendo identificadores sensíveis fora das saídas rápidas.
-- Launcher legado/adaptativo atualizado com nova arte da pasta dourada e órbita azul, agora com margem de segurança maior, sem borda aparente e com transparência correta para evitar cortes na máscara adaptativa do Android.
-- Ícones PNG usados na navegação foram otimizados para densidade Android: o conjunto comum saiu de 256×256 `nodpi` para 192×192 em `drawable-xxxhdpi`, permitindo que o sistema decodifique tamanhos menores em telas de densidade inferior.
-- Ícones dos itens da lista/grade são decodificados em background e reutilizados por um cache LRU de 6 MiB, evitando a primeira decodificação pesada no frame da rolagem; os primeiros tipos visíveis são aquecidos de forma assíncrona.
+- Launcher adaptativo usa foreground e camada monocromática em VectorDrawable XML, sem bitmap incorporado.
+- Ícones da navegação, arquivos, pastas, armazenamento, ações e estados são vetoriais; não há mais `drawable-xxxhdpi`/`drawable-nodpi` dedicados a PNGs de ícone.
+- `CachedResourceIcon` preserva a API das listas/grades, mas não mantém mais cache de Bitmap nem pré-decodificação: o Compose renderiza os vetores diretamente.
 - Barras de status e navegação do Android permanecem visíveis no app; somente o modo **Tela cheia** do player de vídeo pode ocultá-las temporariamente, com restauração ao sair/fechar.
 
 ## Estrutura
@@ -147,16 +149,15 @@ baselineprofile/src/main/java/com/exploradorxp/benchmark/
   ExplorerMacrobenchmark.kt
   BenchmarkFixtures.kt
 
-app/src/main/res/drawable-xxxhdpi/
-  150 PNGs do pacote visual XP
+app/src/main/res/drawable/
+  VectorDrawables padronizados para arquivos, pastas, ações, estados e launcher
 
-app/src/main/res/drawable-nodpi/
-  5 variantes grandes/launcher
+app/src/main/res/values/drawable_aliases.xml
+  aliases compatíveis para nomes de ícones usados pelas telas existentes
 
 docs/
-  mockup_explorador_android_xp.png
-  catalogo_icones.png
-  ICON_FILES.txt
+  ICON_PACK_README.txt
+  ALPHA83_VECTOR_ICON_SYSTEM.md
 ```
 
 ## Acesso aos arquivos

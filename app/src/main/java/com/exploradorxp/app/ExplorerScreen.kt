@@ -1475,7 +1475,11 @@ private fun HelpTopic(
             .padding(horizontal = 11.dp, vertical = 9.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(if (expanded) "▼" else "▶", color = XpBlueDark, fontSize = 11.sp)
+            CachedResourceIcon(
+                resId = if (expanded) R.drawable.xp_chevron_down else R.drawable.xp_chevron_right,
+                contentDescription = if (expanded) "Recolher" else "Expandir",
+                modifier = Modifier.size(18.dp),
+            )
             Spacer(Modifier.width(7.dp))
             Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = XpBlueDark)
         }
@@ -2048,7 +2052,11 @@ private fun <T> SearchChoiceField(
                     .padding(horizontal = 9.dp),
             ) {
                 Text(value, fontSize = 12.5.sp, color = Color(0xFF202020), modifier = Modifier.weight(1f))
-                Text("▾", color = XpBlueDark, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                CachedResourceIcon(
+                    resId = R.drawable.xp_chevron_down,
+                    contentDescription = "Abrir opções",
+                    modifier = Modifier.size(18.dp),
+                )
             }
             XpPopupMenu(expanded = expanded, onDismiss = { expanded = false }) {
                 options.forEach { (option, optionLabel) ->

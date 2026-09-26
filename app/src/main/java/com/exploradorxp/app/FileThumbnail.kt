@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,10 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
@@ -112,14 +109,17 @@ fun FileVisual(
                         .clip(CircleShape)
                         .background(Color(0x99000000))
                 ) {
-                    Text("▶", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    CachedResourceIcon(
+                        resId = R.drawable.xp_play,
+                        contentDescription = "Reproduzir vídeo",
+                        modifier = Modifier.size(13.dp),
+                    )
                 }
             }
         }
     } else {
-        // Os PNGs XP têm proporções e margens internas diferentes (Movies/Music são os casos
-        // mais perceptíveis). Mantém uma caixa externa estável e aplica uma área segura ao
-        // desenho para impedir corte/encosto nas bordas sem deformar o recurso original.
+        // O fallback usa o ícone vetorial da categoria. Mantém uma caixa externa estável
+        // e uma pequena área segura para alinhar lista e grade em qualquer densidade.
         Box(
             contentAlignment = Alignment.Center,
             modifier = modifier.size(size),
