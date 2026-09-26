@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.72` (`versionCode 72`)  
+**Versão atual:** `0.1.0-alpha.73` (`versionCode 72`)  
 
 - A alpha.71 adiciona uma **tela de novidades pós-atualização**, exibida automaticamente somente na primeira abertura normal após cada nova versão, e transforma **Informações do dispositivo** em uma tela de área completa dentro do app, eliminando o comportamento de pop-up. As notas da versão agora usam uma fonte única compartilhada com **Sobre > Novidades desta versão**.
 - A alpha.70 reorganiza as **ações do inspector de APK** para manter **Reinstalar / Abrir / Gerenciar** na mesma linha em apps já instalados e adiciona **atualização automática da pasta aberta** por observação do sistema de arquivos, fazendo downloads/criações/movimentos/exclusões externos aparecerem sem sair e entrar novamente no diretório.

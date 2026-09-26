@@ -1,6 +1,6 @@
 <resources>
     <color name="launcher_graphite">#111B22</color>
     <!-- Compatibilidade com referências antigas; não é mais a identidade visual azul. -->
-    <color name="launcher_blue">#111B22</color>
+    \1#087CF0\2
     <color name="launcher_transparent">#00000000</color>
 </resources>
