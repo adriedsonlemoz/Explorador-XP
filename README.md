@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.75` (`versionCode 75`)  
+**Versão atual:** `0.1.0-alpha.76` (`versionCode 76`)  
 
 
 - A alpha.75 evolui o **inspector/instalador de APK**: compara APK × instalado (versão, SDK, tamanho, assinatura e permissões), destaca permissões novas/removidas, calcula o SHA-256 real do arquivo e adiciona ações de compartilhar, abrir localização, copiar dados, extrair ícone e consultar um resumo do AndroidManifest.
@@ -257,3 +257,8 @@ Abra o projeto no Android Studio e sincronize o Gradle. O workflow `.github/work
 ## Observação
 
 O cabeçalho reproduz de forma mais fiel a estrutura do Explorer do Windows XP, mas mantém áreas de toque e comportamento adaptados a telas verticais de Android.
+
+### Alpha 0.1.0-alpha.76
+- Informações do dispositivo usa somente o X vermelho superior para fechar; o botão inferior foi removido.
+- Lixeira convertida de popup para tela completa, mantendo o padrão visual do Explorador XP.
+- Corrigido o build Kotlin removendo a ambiguidade entre helpers SHA-256 do inspetor de APK e do editor/abertura externa.

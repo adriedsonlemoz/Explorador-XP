@@ -18,12 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Tela de APK redesenhada com comparação clara entre o arquivo e o aplicativo já instalado.",
-                "Versão, Target Android, Compile SDK, tamanho, assinatura e permissões agora podem ser comparados antes da instalação.",
-                "Permissões novas e removidas são destacadas, com aviso especial quando uma nova permissão sensível aparece na atualização.",
-                "O APK agora mostra SHA-256 real do arquivo, certificado, arquiteturas, data, compatibilidade e um resumo técnico do AndroidManifest.",
-                "Novas ações permitem compartilhar o APK, abrir sua pasta, copiar pacote/SHA-256 e extrair o ícone sem sair do Explorador XP.",
-                "O botão principal continua inteligente: Instalar, Atualizar, Reinstalar ou Instalar versão anterior conforme a situação.",
+                "Informações do dispositivo agora tem apenas um botão de fechar: o X vermelho no topo, no mesmo estilo das janelas do Explorador XP.",
+                "A Lixeira deixou de abrir como popup e agora ocupa toda a área do aplicativo, igual à tela de informações do dispositivo.",
+                "A Lixeira mantém atualizar, restaurar, excluir e esvaziar, com confirmações apenas para ações destrutivas.",
+                "Corrigido o erro do último build causado por conflito entre funções SHA-256 do editor e do novo inspetor de APK.",
             )
         )
 }

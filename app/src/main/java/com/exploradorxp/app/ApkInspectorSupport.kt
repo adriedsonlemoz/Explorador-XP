@@ -66,7 +66,7 @@ internal fun sha256Hex(bytes: ByteArray): String = MessageDigest
     .digest(bytes)
     .joinToString("") { "%02X".format(Locale.ROOT, it.toInt() and 0xFF) }
 
-internal fun sha256File(file: File): String {
+internal fun sha256ApkFile(file: File): String {
     val digest = MessageDigest.getInstance("SHA-256")
     file.inputStream().buffered().use { input ->
         val buffer = ByteArray(64 * 1024)

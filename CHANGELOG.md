@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.0-alpha.76
+
+### Interface
+- Removido o botão **Fechar** inferior da tela Informações do dispositivo.
+- O fechamento da tela agora usa apenas o **X vermelho** no topo, com o mesmo componente visual usado nas janelas XP.
+- A **Lixeira** deixou de usar `XpModalWindow` e agora é uma tela completa dentro do aplicativo.
+- Mantidos contador, tamanho, Atualizar, Esvaziar Lixeira, Restaurar, exclusão definitiva e confirmações destrutivas.
+- O botão Voltar do Android fecha a Lixeira e retorna ao Explorer.
+
+### Build
+- Corrigido `:app:compileDebugKotlin` com `Overload resolution ambiguity` / `Conflicting overloads` em `sha256File`.
+- O helper do inspetor de APK foi renomeado para `sha256ApkFile`, isolando-o dos helpers privados do editor e da abertura externa.
+- Versão sincronizada para `0.1.0-alpha.76` / `versionCode 76`.
+
 ## 0.1.0-alpha.75
 
 ### Inspector/instalador de APK

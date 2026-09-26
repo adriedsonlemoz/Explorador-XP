@@ -1,5 +1,6 @@
 package com.exploradorxp.app
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -187,6 +188,18 @@ fun ExplorerScreen(
 
     if (showDeviceInfo) {
         DeviceInfoScreen(onDismiss = { showDeviceInfo = false })
+        return
+    }
+
+    if (showTrash) {
+        TrashScreenHost(
+            stateFlow = trashState,
+            onDismiss = { showTrash = false },
+            onRefresh = onLoadTrash,
+            onRestore = onRestoreTrashItem,
+            onDeletePermanently = onDeleteTrashItem,
+            onEmpty = onEmptyTrash,
+        )
         return
     }
 
@@ -509,15 +522,6 @@ fun ExplorerScreen(
         onDismiss = { showAbout = false },
         onOpenHelp = { showAbout = false; showManual = true },
         onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
-    )
-    TrashDialogHost(
-        visible = showTrash,
-        stateFlow = trashState,
-        onDismiss = { showTrash = false },
-        onRefresh = onLoadTrash,
-        onRestore = onRestoreTrashItem,
-        onDeletePermanently = onDeleteTrashItem,
-        onEmpty = onEmptyTrash,
     )
     StorageDetailsDialogHost(
         visible = showStorageDetails,
@@ -1583,8 +1587,7 @@ private fun AboutSectionCard(
 }
 
 @Composable
-private fun TrashDialogHost(
-    visible: Boolean,
+private fun TrashScreenHost(
     stateFlow: StateFlow<TrashUiState>,
     onDismiss: () -> Unit,
     onRefresh: () -> Unit,
@@ -1592,9 +1595,8 @@ private fun TrashDialogHost(
     onDeletePermanently: (TrashItem) -> Unit,
     onEmpty: () -> Unit,
 ) {
-    if (!visible) return
     val state by stateFlow.collectAsStateWithLifecycle()
-    TrashDialog(
+    TrashScreen(
         items = state.items,
         loading = state.loading,
         onDismiss = onDismiss,
@@ -2410,16 +2412,21 @@ private fun XpDialogTitle(title: String, onDismiss: () -> Unit) {
             .padding(horizontal = 10.dp)
     ) {
         Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(24.dp)
-                .background(Brush.verticalGradient(listOf(Color(0xFFF36B58), Color(0xFFB92318))))
-                .border(1.dp, Color.White)
-                .clickable(onClick = onDismiss),
-        ) {
-            Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-        }
+        XpTitleCloseButton(onClick = onDismiss)
+    }
+}
+
+@Composable
+internal fun XpTitleCloseButton(onClick: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(24.dp)
+            .background(Brush.verticalGradient(listOf(Color(0xFFF36B58), Color(0xFFB92318))))
+            .border(1.dp, Color.White)
+            .clickable(onClick = onClick),
+    ) {
+        Text("×", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
     }
 }
 
@@ -2710,7 +2717,7 @@ private fun DeleteChoiceDialog(
 }
 
 @Composable
-private fun TrashDialog(
+private fun TrashScreen(
     items: List<TrashItem>,
     loading: Boolean,
     onDismiss: () -> Unit,
@@ -2723,159 +2730,168 @@ private fun TrashDialog(
     var confirmEmpty by remember { mutableStateOf(false) }
     val trashBytes = items.sumOf { it.size }
 
-    XpModalWindow(
-        onDismiss = onDismiss,
-        maxWidth = 680,
-        heightFraction = 0.88f,
-        header = { XpDialogTitle("Lixeira", onDismiss) },
-        footer = {
+    BackHandler(onBack = onDismiss)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+    ) {
+        XpDialogTitle("Lixeira", onDismiss)
+        HorizontalDivider(color = XpChromeBorder)
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpChrome)
+                .padding(horizontal = 10.dp, vertical = 9.dp),
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
-                    "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
-                    fontSize = 10.5.sp,
-                    color = XpTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                androidx.compose.foundation.Image(
+                    painter = painterResource(if (items.isEmpty()) R.drawable.trash_empty else R.drawable.trash_full),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    contentScale = ContentScale.Fit,
                 )
-                XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
-            }
-        },
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(XpChrome)
-                    .padding(horizontal = 10.dp, vertical = 9.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    androidx.compose.foundation.Image(
-                        painter = painterResource(if (items.isEmpty()) R.drawable.trash_empty else R.drawable.trash_full),
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                    Spacer(Modifier.width(9.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF202020),
-                        )
-                        Spacer(Modifier.height(1.dp))
-                        Text(
-                            "Restaure o que precisar ou apague definitivamente.",
-                            fontSize = 10.5.sp,
-                            color = XpTextSecondary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    if (maxWidth >= 290.dp) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(7.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            XpDialogButton(
-                                "Atualizar",
-                                modifier = Modifier.weight(1f),
-                                enabled = !loading,
-                                iconRes = R.drawable.refresh,
-                                onClick = onRefresh,
-                            )
-                            XpDialogButton(
-                                "Esvaziar Lixeira",
-                                modifier = Modifier.weight(1f),
-                                enabled = items.isNotEmpty() && !loading,
-                                danger = true,
-                                iconRes = R.drawable.delete,
-                            ) { confirmEmpty = true }
-                        }
-                    } else {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            XpDialogButton(
-                                "Atualizar",
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !loading,
-                                iconRes = R.drawable.refresh,
-                                onClick = onRefresh,
-                            )
-                            XpDialogButton(
-                                "Esvaziar Lixeira",
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = items.isNotEmpty() && !loading,
-                                danger = true,
-                                iconRes = R.drawable.delete,
-                            ) { confirmEmpty = true }
-                        }
-                    }
-                }
-            }
-
-            HorizontalDivider(color = XpChromeBorder)
-
-            when {
-                loading -> LoadingPanelInline("Carregando Lixeira…")
-                items.isEmpty() -> Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .background(Color.White),
-                ) {
-                    androidx.compose.foundation.Image(
-                        painterResource(R.drawable.trash_empty),
-                        null,
-                        modifier = Modifier.size(64.dp),
-                    )
-                    Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.width(9.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "A Lixeira está vazia",
-                        fontSize = 16.sp,
+                        "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
+                        fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = XpBlueDark,
+                        color = Color(0xFF202020),
                     )
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(1.dp))
                     Text(
-                        "Arquivos enviados para a Lixeira aparecerão aqui.",
-                        fontSize = 11.5.sp,
+                        "Restaure o que precisar ou apague definitivamente.",
+                        fontSize = 10.5.sp,
                         color = XpTextSecondary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 18.dp),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .background(Color(0xFFF1F4F8)),
-                ) {
-                    items(items, key = { it.id }) { item ->
-                        TrashItemRow(
-                            item = item,
-                            onRestore = { onRestore(item) },
-                            onDelete = { deleteCandidate = item },
+            }
+            Spacer(Modifier.height(8.dp))
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                if (maxWidth >= 290.dp) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        XpDialogButton(
+                            "Atualizar",
+                            modifier = Modifier.weight(1f),
+                            enabled = !loading,
+                            iconRes = R.drawable.refresh,
+                            onClick = onRefresh,
                         )
+                        XpDialogButton(
+                            "Esvaziar Lixeira",
+                            modifier = Modifier.weight(1f),
+                            enabled = items.isNotEmpty() && !loading,
+                            danger = true,
+                            iconRes = R.drawable.delete,
+                        ) { confirmEmpty = true }
+                    }
+                } else {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        XpDialogButton(
+                            "Atualizar",
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !loading,
+                            iconRes = R.drawable.refresh,
+                            onClick = onRefresh,
+                        )
+                        XpDialogButton(
+                            "Esvaziar Lixeira",
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = items.isNotEmpty() && !loading,
+                            danger = true,
+                            iconRes = R.drawable.delete,
+                        ) { confirmEmpty = true }
                     }
                 }
             }
+        }
+
+        HorizontalDivider(color = XpChromeBorder)
+
+        when {
+            loading -> Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White),
+            ) {
+                LoadingPanelInline("Carregando Lixeira…")
+            }
+            items.isEmpty() -> Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(Color.White),
+            ) {
+                androidx.compose.foundation.Image(
+                    painterResource(R.drawable.trash_empty),
+                    null,
+                    modifier = Modifier.size(64.dp),
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "A Lixeira está vazia",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = XpBlueDark,
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    "Arquivos enviados para a Lixeira aparecerão aqui.",
+                    fontSize = 11.5.sp,
+                    color = XpTextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 18.dp),
+                )
+            }
+            else -> LazyColumn(
+                contentPadding = PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(Color(0xFFF1F4F8)),
+            ) {
+                items(items, key = { it.id }) { item ->
+                    TrashItemRow(
+                        item = item,
+                        onRestore = { onRestore(item) },
+                        onDelete = { deleteCandidate = item },
+                    )
+                }
+            }
+        }
+
+        HorizontalDivider(color = XpChromeBorder)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpChrome)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Text(
+                "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
+                fontSize = 10.5.sp,
+                color = XpTextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 

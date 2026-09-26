@@ -338,7 +338,6 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
         }
     }
 
@@ -404,17 +403,7 @@ private fun DeviceInfoHeader(
                 Icon(Icons.Rounded.Refresh, contentDescription = "Atualizar", tint = Color.White, modifier = Modifier.size(21.dp))
             }
         }
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .height(28.dp)
-                .width(58.dp)
-                .background(Color(0xFFE8F1FB), RoundedCornerShape(2.dp))
-                .border(1.dp, Color.White.copy(alpha = .9f), RoundedCornerShape(2.dp))
-                .clickable(onClick = onDismiss),
-        ) {
-            Text("Fechar", color = XpBlueDark, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-        }
+        XpTitleCloseButton(onClick = onDismiss)
     }
 }
 

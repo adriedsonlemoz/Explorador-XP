@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.75",
-  "version_code": 75,
-  "manager_version": "0.1.0-alpha.75",
+  "version_build": "0.1.0-alpha.76",
+  "version_code": 76,
+  "manager_version": "0.1.0-alpha.76",
   "application_id": "com.exploradorxp.app",
-  "scope": "Evolução do inspector/instalador de APK e atualização das novidades pós-update",
+  "scope": "Tela completa da Lixeira, fechamento das Informações do dispositivo e correção do conflito SHA-256 no build",
   "checks": [
     {
       "name": "update_highlights_policy_static",
@@ -86,6 +86,21 @@
       "name": "update_highlights_alpha75",
       "status": "passed",
       "details": "ReleaseNotes.current contém as mudanças da alpha.75 e UpdateHighlightsScreen permanece ligada à política de primeira abertura após atualização."
+    },
+    {
+      "name": "sha256_helper_conflict",
+      "status": "passed",
+      "details": "ApkInspector usa sha256ApkFile; helpers sha256File privados permanecem isolados."
+    },
+    {
+      "name": "device_info_close",
+      "status": "passed",
+      "details": "Botão inferior Fechar removido e X vermelho compartilhado no cabeçalho."
+    },
+    {
+      "name": "trash_fullscreen",
+      "status": "passed",
+      "details": "Lixeira não usa mais XpModalWindow; é renderizada como rota/tela completa com BackHandler."
     }
   ]
 }

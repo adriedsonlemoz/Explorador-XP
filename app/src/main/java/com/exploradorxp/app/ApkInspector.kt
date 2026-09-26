@@ -134,7 +134,7 @@ internal fun inspectApk(context: Context, file: File): ApkInfo {
         installedSignerDigests = installedInfo?.let(::signingDigests),
         signerName = signerCommonName(archiveInfo),
         installedSignerName = installedInfo?.let(::signerCommonName),
-        apkFileSha256 = sha256File(file),
+        apkFileSha256 = sha256ApkFile(file),
     )
 }
 
