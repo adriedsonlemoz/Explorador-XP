@@ -18,10 +18,12 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Novo ícone oficial do Explorador XP aplicado ao Android com suporte a Adaptive Icon.",
-                "Corrigida a integração do ícone que fazia o build falhar ao localizar a cor launcher_blue.",
-                "O ícone mantém margem de segurança para não cortar a pasta e a lupa em formatos circulares ou arredondados.",
-                "Ícones legacy e round continuam disponíveis para launchers e versões antigas do Android.",
-            ),
+                "Tela de APK redesenhada com comparação clara entre o arquivo e o aplicativo já instalado.",
+                "Versão, Target Android, Compile SDK, tamanho, assinatura e permissões agora podem ser comparados antes da instalação.",
+                "Permissões novas e removidas são destacadas, com aviso especial quando uma nova permissão sensível aparece na atualização.",
+                "O APK agora mostra SHA-256 real do arquivo, certificado, arquiteturas, data, compatibilidade e um resumo técnico do AndroidManifest.",
+                "Novas ações permitem compartilhar o APK, abrir sua pasta, copiar pacote/SHA-256 e extrair o ícone sem sair do Explorador XP.",
+                "O botão principal continua inteligente: Instalar, Atualizar, Reinstalar ou Instalar versão anterior conforme a situação.",
+            )
         )
 }

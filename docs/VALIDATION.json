@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.74",
-  "version_code": 74,
-  "manager_version": "0.1.0-alpha.74",
+  "version_build": "0.1.0-alpha.75",
+  "version_code": 75,
+  "manager_version": "0.1.0-alpha.75",
   "application_id": "com.exploradorxp.app",
-  "scope": "Correção da integração do novo ícone Android e do link de recursos AAPT2",
+  "scope": "Evolução do inspector/instalador de APK e atualização das novidades pós-update",
   "checks": [
     {
       "name": "update_highlights_policy_static",
@@ -40,7 +40,7 @@
     {
       "name": "version_metadata",
       "status": "passed",
-      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, documentação e notas internas sincronizados para alpha.71/versionCode 71."
+      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, documentação e ReleaseNotes sincronizados para alpha.75/versionCode 75."
     },
     {
       "name": "android_full_build",
@@ -61,6 +61,31 @@
       "name": "adaptive_icon_resources",
       "status": "passed",
       "details": "ic_launcher.xml e ic_launcher_round.xml existem em mipmap-anydpi-v26 e mipmap-anydpi-v33 e referenciam foreground/background válidos."
+    },
+    {
+      "name": "apk_comparison_static",
+      "status": "passed",
+      "details": "ApkInspector coleta versão instalada, SDKs, tamanho base/splits, permissões e fingerprints; ApkViewer apresenta comparação APK × instalado."
+    },
+    {
+      "name": "apk_file_sha256_static",
+      "status": "passed",
+      "details": "sha256File(File) calcula SHA-256 do conteúdo do APK em streaming e o valor é exibido/copiável."
+    },
+    {
+      "name": "apk_permission_delta_static",
+      "status": "passed",
+      "details": "ApkInfo calcula permissões novas/removidas e destaca novas permissões perigosas na interface."
+    },
+    {
+      "name": "apk_secondary_actions_static",
+      "status": "passed",
+      "details": "Tela oferece compartilhar, abrir localização, copiar pacote/SHA-256, extrair ícone e resumo interpretado do AndroidManifest."
+    },
+    {
+      "name": "update_highlights_alpha75",
+      "status": "passed",
+      "details": "ReleaseNotes.current contém as mudanças da alpha.75 e UpdateHighlightsScreen permanece ligada à política de primeira abertura após atualização."
     }
   ]
 }

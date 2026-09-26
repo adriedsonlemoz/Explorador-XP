@@ -66,6 +66,19 @@ internal fun sha256Hex(bytes: ByteArray): String = MessageDigest
     .digest(bytes)
     .joinToString("") { "%02X".format(Locale.ROOT, it.toInt() and 0xFF) }
 
+internal fun sha256File(file: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    file.inputStream().buffered().use { input ->
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { "%02X".format(Locale.ROOT, it.toInt() and 0xFF) }
+}
+
 internal fun compactSha256(digest: String): String {
     val normalized = digest.filter { it.isLetterOrDigit() }.uppercase(Locale.ROOT)
     if (normalized.length <= 24) return normalized

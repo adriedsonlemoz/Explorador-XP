@@ -62,4 +62,18 @@ class ApkInspectorSupportTest {
         assertEquals("BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD", digest)
         assertTrue(compactSha256(digest).startsWith("BA:78:16:BF"))
     }
+
+    @Test
+    fun sha256FileHashesFileContents() {
+        val file = File.createTempFile("apk-sha256", ".bin")
+        try {
+            file.writeText("abc")
+            assertEquals(
+                "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD",
+                sha256File(file),
+            )
+        } finally {
+            file.delete()
+        }
+    }
 }

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.0-alpha.75
+
+### Inspector/instalador de APK
+- Redesenhada a tela de APK para funcionar como um painel de instalação e comparação antes de chamar o instalador do Android.
+- Adicionada comparação APK × instalado para versão/versionCode, Target Android, Compile SDK quando disponível, tamanho dos pacotes, quantidade de permissões e assinatura.
+- Permissões novas e removidas agora são identificadas; novas permissões sensíveis geram aviso destacado antes da atualização.
+- O cabeçalho mostra packageName e, quando disponível, o nome do certificado/assinante.
+- Detalhes técnicos agora incluem SHA-256 real do arquivo APK, SHA-256 do certificado, data do arquivo, minSdk/targetSdk, arquiteturas e tamanho estimado dos APKs instalados.
+- Mantido o botão principal inteligente: **Instalar / Atualizar / Reinstalar / Instalar versão anterior**, com bloqueios claros para assinatura incompatível, ABI/Android incompatível e downgrade direto.
+- Adicionadas ações **Compartilhar**, **Localização**, **Copiar pacote**, **Copiar SHA-256**, **Extrair ícone** e **Manifesto**.
+- Adicionado resumo interpretado do `AndroidManifest` com pacote, versões, SDKs e `uses-permission`, deixando claro que não é o XML bruto binário.
+- A tela automática **Novidades da atualização** foi atualizada para a alpha.75 e continua aparecendo uma única vez após cada atualização normal do aplicativo.
+- Versão sincronizada para `0.1.0-alpha.75` / `versionCode 75`.
+
 ## 0.1.0-alpha.74
 
 ### Correção do ícone / build
