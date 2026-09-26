@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "google-play-seed-2026-09-25",
+  "generatedAtEpochMs": 1790294400000,
+  "source": "Google Play supported devices schema; Redmi A3 model mapping cross-checked with Xiaomi documentation",
+  "entries": [
+    {
+      "manufacturer": "Xiaomi",
+      "brand": "Redmi",
+      "marketingName": "Redmi A3",
+      "device": "",
+      "model": "23129RN51X"
+    }
+  ]
+}

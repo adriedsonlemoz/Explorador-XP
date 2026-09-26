@@ -3,7 +3,7 @@
   "version_code": 82,
   "manager_version": "0.1.0-alpha.82",
   "application_id": "com.exploradorxp.app",
-  "scope": "Precisão técnica, diagnóstico e exportação da tela Informações do dispositivo",
+  "scope": "Identificação comercial confiável do aparelho, catálogo atualizável, imagem Wikidata/Wikimedia, cache, privacidade e modo offline",
   "checks": [
     {
       "name": "cpu_architecture_no_abi_guess",
@@ -71,9 +71,59 @@
       "details": "JSON, XML e workflows YAML foram parseados com sucesso; validações estáticas das invariantes desta etapa passaram e não há APK dentro do código-fonte."
     },
     {
+      "name": "device_identity_isolated_kotlin_checks",
+      "status": "passed",
+      "details": "DeviceIdentity.kt, DeviceImage.kt e os três novos testes foram compilados com kotlinc usando stubs mínimos de APIs Android/JSON/JUnit. Um runner puro executou 15 checks de correspondência, colisão, fabricante, ambiguidade, imagem, política offline, cache e parser CSV com 15/15 aprovados."
+    },
+    {
       "name": "android_unit_lint_build",
       "status": "not_run",
-      "reason": "O ZIP não contém gradlew e o ambiente atual não possui Gradle nem Android SDK/android.jar configurados. O resolvedor Kotlin puro foi compilado, mas testes Android/JVM completos, lint e assemble dependem desse toolchain."
+      "reason": "O ZIP recebido não contém gradlew e o ambiente atual não possui Gradle nem Android SDK/android.jar configurados. Foram feitos checks estáticos/JSON/XML, mas test, lint e assemble precisam do workflow Android do projeto."
+    },
+    {
+      "name": "device_identity_exact_match",
+      "status": "passed",
+      "details": "DeviceIdentityMatcher exige modelo exato e fabricante ou marca exatos; usa device apenas como desempate e retorna Não identificado quando ainda há nomes comerciais conflitantes."
+    },
+    {
+      "name": "redmi_a3_seed_mapping",
+      "status": "passed",
+      "details": "O catálogo local inclui Xiaomi/Redmi 23129RN51X -> Redmi A3. A correspondência foi mantida somente após confirmação do código de modelo e nome comercial em documentação pública da Xiaomi; o teste não deriva especificações adicionais dessa entrada."
+    },
+    {
+      "name": "google_play_catalog_update_architecture",
+      "status": "passed",
+      "details": "DeviceCatalogService aponta para o CSV público oficial supported_devices.csv, lê UTF-16LE, limita tamanho/timeouts, mantém apenas correspondências do aparelho atual e usa cache de 30 dias. Falhas retornam catálogo local/cache sem bloquear a UI."
+    },
+    {
+      "name": "wikidata_wikimedia_reliability",
+      "status": "passed",
+      "details": "DeviceImageMatcher só aceita uma única entidade com nome/alias exato, fabricante compatível e P18. Resultado ambíguo, fabricante divergente ou ausência de P18 usa fallback genérico."
+    },
+    {
+      "name": "image_cache_and_attribution",
+      "status": "passed",
+      "details": "DeviceImageCache separa a persistência do repositório/serviço. Thumbnail e metadados de Commons ficam em cache por 30 dias; detalhes preservam fonte, autor e licença quando fornecidos. Falhas transitórias de servidor/JSON/download não são persistidas como ausência definitiva de imagem."
+    },
+    {
+      "name": "external_lookup_setting",
+      "status": "passed",
+      "details": "Ferramentas > Configurações adiciona a preferência Buscar imagem do modelo pela internet. Desligada, DeviceInfoScreen usa somente catálogo local + Android e não chama refresh remoto nem DeviceImageRepository."
+    },
+    {
+      "name": "privacy_external_queries",
+      "status": "passed",
+      "details": "As consultas usam somente fabricante, marca, model, device e nome comercial. Não há IMEI, serial, Android ID, MAC, localização, telefone, operadora, SIM ou conteúdo de arquivos nos requests/logs."
+    },
+    {
+      "name": "network_permissions_and_offline",
+      "status": "passed",
+      "details": "INTERNET foi adicionado e ACCESS_NETWORK_STATE já existia. Rede ausente/sem validação cai para dados Android + catálogo/cache local sem derrubar a tela."
+    },
+    {
+      "name": "device_identity_tests_added",
+      "status": "passed",
+      "details": "Foram adicionados testes JVM para modelo encontrado/desconhecido, fabricante diferente, ambiguidade, desempate por device, política sem internet, imagem encontrada/inexistente/ambígua, fabricante divergente, cache fresco/expirado e CSV inválido."
     }
   ]
 }

@@ -5,7 +5,7 @@ Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirad
 **Versão atual:** `0.1.0-alpha.82` (`versionCode 82`)  
 
 
-- A alpha.82 revisa **Informações do dispositivo** para priorizar dados reais e rastreáveis: separa ABIs suportadas pelo sistema da bitness do processo do app, não converte `armeabi-v7a` em arquitetura física, obtém GPU do `GL_RENDERER` quando possível, deixa origem de catálogo explícita, melhora RAM/armazenamento/bateria/rede/SIM, adiciona diagnóstico rápido e detalhes reais/leituras dos sensores. O relatório/exportação acompanha os novos campos e mantém identificadores pessoais fora da coleta.
+- A alpha.82 evolui **Informações do dispositivo** em duas frentes complementares. A coleta técnica continua conservadora e baseada nas APIs reais do Android (ABIs, processo, SoC, GPU, RAM, armazenamento, bateria, rede e sensores), enquanto uma camada separada identifica o **nome comercial** por correspondência exata de fabricante/marca + modelo usando catálogo local versionado e, quando permitido, a lista pública de dispositivos do Google Play. Quando existe entidade confiável, uma miniatura real pode ser obtida de Wikidata/Wikimedia Commons com cache, fonte/licença/autor; resultados ambíguos usam o ícone genérico. **Ferramentas > Configurações** permite desligar completamente essas consultas externas, mantendo o recurso funcional offline.
 
 - A alpha.81 faz um polimento visual da tela **Armazenamento**: o ícone do armazenamento ganha uma área própria com ajuste `Fit` e margem interna para não parecer recortado em densidades menores, e os cartões de Vídeos/Imagens/Áudio/APK/Outros ficam mais baixos e compactos sem remover tamanho, contagem ou porcentagem.
 
@@ -32,6 +32,15 @@ A partir da `0.1.0-alpha.42`, o APK `performance` usa assinatura Android permane
 **Pacote:** `com.exploradorxp.app`  
 **Min SDK:** 26  
 **Target/Compile SDK:** 35
+
+### Identificação comercial e imagens do aparelho
+
+- Fonte principal de identidade: `Build.MANUFACTURER`, `Build.BRAND`, `Build.DEVICE`, `Build.MODEL` e `Build.PRODUCT`.
+- Catálogo local: `app/src/main/assets/device_catalog.json`, pequeno, versionado e substituível sem espalhar mapeamentos no Kotlin.
+- Atualização externa opcional: lista pública de dispositivos suportados pelo Google Play (`supported_devices.csv`), lida somente quando a política de cache exige e sem bloquear a interface.
+- Imagens: Wikidata é usado para validar entidade/fabricante e a propriedade de imagem; Wikimedia Commons fornece somente a miniatura e os metadados de atribuição.
+- Privacidade: as consultas não enviam IMEI, serial, Android ID, MAC, localização, telefone, operadora, SIM ou arquivos.
+- Cache: correspondências de catálogo ficam em armazenamento interno do app; miniaturas/metadados ficam no cache do app e podem ser removidos pelo Android. Nenhuma coleção de fotos é embutida no APK.
 
 ## O que já está implementado
 

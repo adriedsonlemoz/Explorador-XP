@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -12,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image as ComposeImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -57,6 +59,7 @@ import androidx.compose.material.icons.rounded.SdCard
 import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,6 +69,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -79,8 +83,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -89,6 +95,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -111,12 +120,38 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     var refreshKey by remember { mutableIntStateOf(0) }
     var snapshot by remember { mutableStateOf<DeviceInfoSnapshot?>(null) }
+    var identity by remember { mutableStateOf<DeviceIdentityResult?>(null) }
+    var deviceImage by remember { mutableStateOf<DeviceImageResult?>(null) }
+    var imageLoading by remember { mutableStateOf(false) }
+    var showImageDetails by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
+    val externalLookupEnabled = remember(refreshKey) { PreferencesStore(context).deviceImagesEnabled() }
 
-    LaunchedEffect(refreshKey) {
+    LaunchedEffect(refreshKey, externalLookupEnabled) {
         loading = true
-        snapshot = withContext(Dispatchers.IO) { DeviceInfoCollector.collect(context) }
+        imageLoading = false
+        deviceImage = null
+        val input = DeviceIdentityInput.current()
+        val local = withContext(Dispatchers.IO) {
+            val info = DeviceInfoCollector.collect(context)
+            val repository = DeviceIdentityRepository(context)
+            val identified = if (externalLookupEnabled) repository.resolveWithCache(input) else repository.resolveLocal(input)
+            info to identified
+        }
+        snapshot = local.first
+        identity = local.second
         loading = false
+
+        if (externalLookupEnabled) {
+            imageLoading = local.second.confirmed
+            val refreshed = withContext(Dispatchers.IO) { DeviceIdentityRepository(context).refresh(input) }
+            identity = refreshed
+            if (refreshed.confirmed) {
+                imageLoading = true
+                deviceImage = withContext(Dispatchers.IO) { DeviceImageRepository(context).resolve(refreshed) }
+            }
+            imageLoading = false
+        }
     }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
@@ -185,6 +220,19 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
         }
     }
 
+    val availableImage = deviceImage as? DeviceImageResult.Available
+    if (showImageDetails && availableImage != null && identity != null) {
+        DeviceImageDetailsDialog(
+            identity = identity!!,
+            image = availableImage,
+            onDismiss = { showImageDetails = false },
+            onOpenSource = { source ->
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source))) }
+                    .onFailure { Toast.makeText(context, "Não foi possível abrir a fonte.", Toast.LENGTH_SHORT).show() }
+            },
+        )
+    }
+
     BackHandler(onBack = onDismiss)
 
     Column(
@@ -222,7 +270,21 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                                 .verticalScroll(rememberScrollState())
                                 .padding(start = 10.dp, end = 10.dp, top = 9.dp, bottom = 13.dp),
                         ) {
-                            DeviceHero(info)
+                            DeviceHero(
+                                info = info,
+                                identity = identity,
+                                image = deviceImage,
+                                imageLoading = imageLoading,
+                                externalLookupEnabled = externalLookupEnabled,
+                                onImageDetails = { if (availableImage != null) showImageDetails = true },
+                            )
+                            DeviceModelInformation(
+                                info = info,
+                                identity = identity,
+                                image = deviceImage,
+                                externalLookupEnabled = externalLookupEnabled,
+                            )
+                            DeviceOriginLabel("DETECTADO NESTE APARELHO")
                             DeviceUsageCards(info)
 
                             DeviceSection(
@@ -455,7 +517,7 @@ private fun DeviceInfoHeader(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "Dados reais informados pelo Android",
+                "Dados Android e informações do modelo separados",
                 color = Color.White.copy(alpha = .84f),
                 fontSize = 10.sp,
                 maxLines = 1,
@@ -477,7 +539,16 @@ private fun DeviceInfoHeader(
 }
 
 @Composable
-private fun DeviceHero(info: DeviceInfoSnapshot) {
+private fun DeviceHero(
+    info: DeviceInfoSnapshot,
+    identity: DeviceIdentityResult?,
+    image: DeviceImageResult?,
+    imageLoading: Boolean,
+    externalLookupEnabled: Boolean,
+    onImageDetails: () -> Unit,
+) {
+    val commercialName = identity?.displayName ?: "Identificando modelo…"
+    val maker = identity?.manufacturerNormalized?.takeIf { it.isNotBlank() } ?: info.manufacturer.smartTitle()
     Column(
         verticalArrangement = Arrangement.spacedBy(7.dp),
         modifier = Modifier
@@ -495,24 +566,36 @@ private fun DeviceHero(info: DeviceInfoSnapshot) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(54.dp)
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(
                         Brush.linearGradient(listOf(Color(0xFFEEF6FF), Color(0xFFD8EAFE))),
-                        RoundedCornerShape(14.dp),
                     )
-                    .border(1.dp, Color(0xFFBDD8F4), RoundedCornerShape(14.dp)),
+                    .border(1.dp, Color(0xFFBDD8F4), RoundedCornerShape(14.dp))
+                    .clickable(enabled = image is DeviceImageResult.Available, onClick = onImageDetails),
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.PhoneAndroid,
-                    contentDescription = null,
-                    tint = DeviceBlue,
-                    modifier = Modifier.size(34.dp),
-                )
+                when (image) {
+                    is DeviceImageResult.Available -> ComposeImage(
+                        bitmap = image.bitmap.asImageBitmap(),
+                        contentDescription = "Imagem de ${identity?.displayName ?: "dispositivo"}",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(5.dp),
+                    )
+                    else -> Icon(
+                        imageVector = Icons.Rounded.PhoneAndroid,
+                        contentDescription = null,
+                        tint = DeviceBlue,
+                        modifier = Modifier.size(40.dp),
+                    )
+                }
+                if (imageLoading) {
+                    CircularProgressIndicator(color = DeviceBlue, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                }
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = info.deviceName,
+                    text = commercialName,
                     fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     color = DeviceText,
@@ -521,12 +604,37 @@ private fun DeviceHero(info: DeviceInfoSnapshot) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "${info.manufacturer.smartTitle()} • ${info.model}",
+                    text = maker,
                     color = DeviceMuted,
                     fontSize = 11.5.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Text(
+                    text = info.model,
+                    color = DeviceText,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                when {
+                    image is DeviceImageResult.Available -> Text(
+                        "Toque na imagem para ver fonte e licença",
+                        color = DeviceBlueDark,
+                        fontSize = 9.5.sp,
+                    )
+                    !externalLookupEnabled -> Text(
+                        "Busca de imagem desativada nas Configurações",
+                        color = DeviceMuted,
+                        fontSize = 9.5.sp,
+                    )
+                    !imageLoading -> Text(
+                        "Imagem deste modelo não disponível",
+                        color = DeviceMuted,
+                        fontSize = 9.5.sp,
+                    )
+                }
             }
         }
 
@@ -554,26 +662,107 @@ private fun DeviceHero(info: DeviceInfoSnapshot) {
 }
 
 @Composable
-private fun HeroSpecChip(icon: ImageVector, tint: Color, text: String, modifier: Modifier = Modifier) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-        modifier = modifier
-            .background(Color.White.copy(alpha = .78f), RoundedCornerShape(9.dp))
-            .padding(horizontal = 5.dp, vertical = 6.dp),
+private fun DeviceOriginLabel(text: String) {
+    Text(
+        text = text,
+        fontSize = 9.5.sp,
+        fontWeight = FontWeight.Bold,
+        color = DeviceMuted,
+        letterSpacing = .6.sp,
+        modifier = Modifier.padding(start = 3.dp, top = 2.dp, bottom = (-3).dp),
+    )
+}
+
+@Composable
+private fun DeviceModelInformation(
+    info: DeviceInfoSnapshot,
+    identity: DeviceIdentityResult?,
+    image: DeviceImageResult?,
+    externalLookupEnabled: Boolean,
+) {
+    DeviceOriginLabel("INFORMAÇÕES DO MODELO")
+    DeviceSection(
+        title = "Identificação do modelo",
+        icon = Icons.Rounded.Image,
+        iconTint = DevicePurple,
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
-        Spacer(Modifier.width(4.dp))
         Text(
-            text,
-            color = DeviceText,
-            fontSize = 9.5.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            "Dados de catálogo ficam separados dos valores medidos/detectados neste aparelho.",
+            color = DeviceMuted,
+            fontSize = 10.5.sp,
+            lineHeight = 14.sp,
+            modifier = Modifier.padding(bottom = 6.dp),
         )
+        InfoRow("Nome comercial", identity?.displayName ?: "Identificando…")
+        SectionDivider()
+        InfoRow("Fabricante (Android)", info.manufacturer)
+        SectionDivider()
+        InfoRow("Marca (Android)", DeviceIdentityInput.current().brand.ifBlank { "Não disponível" })
+        SectionDivider()
+        InfoRow("Modelo (Android)", info.model)
+        SectionDivider()
+        InfoRow("Device (Android)", info.deviceCode)
+        SectionDivider()
+        InfoRow("Product (Android)", info.product)
+        SectionDivider()
+        InfoRow("Origem da identificação", identity?.source?.label ?: "Não disponível")
+        identity?.catalogVersion?.let { version ->
+            SectionDivider()
+            InfoRow("Versão do catálogo", version)
+        }
+        identity?.variants?.takeIf { it.isNotEmpty() }?.let { variants ->
+            SectionDivider()
+            InfoRow("Variantes (device)", variants.take(4).joinToString(" • "))
+        }
+        SectionDivider()
+        val imageStatus = when {
+            !externalLookupEnabled -> "Busca externa desativada"
+            image is DeviceImageResult.Available -> if (image.fromCache) "Wikimedia Commons • cache" else "Wikimedia Commons"
+            image is DeviceImageResult.Unavailable -> image.reason
+            else -> "Aguardando consulta"
+        }
+        InfoRow("Imagem", imageStatus)
     }
 }
+
+@Composable
+private fun DeviceImageDetailsDialog(
+    identity: DeviceIdentityResult,
+    image: DeviceImageResult.Available,
+    onDismiss: () -> Unit,
+    onOpenSource: (String) -> Unit,
+) {
+    val metadata = image.metadata
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Detalhes da imagem") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Modelo: ${identity.displayName}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text("Fonte: Wikimedia Commons via Wikidata", fontSize = 12.sp)
+                Text("Autor: ${metadata.author ?: "Não informado pela fonte"}", fontSize = 12.sp)
+                Text("Licença: ${metadata.license ?: "Não informada pela fonte"}", fontSize = 12.sp)
+                Text("Entidade: ${metadata.wikidataEntityId}", fontSize = 12.sp)
+                Text("Consulta: ${formatImageQueryTime(metadata.queriedAtEpochMs)}", fontSize = 12.sp)
+                Text(
+                    if (image.fromCache) "Imagem carregada do cache local." else "Imagem consultada nesta sessão e armazenada em cache.",
+                    fontSize = 11.sp,
+                    color = DeviceMuted,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onOpenSource(metadata.sourceUrl) }) { Text("Ver fonte") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Fechar") } },
+    )
+}
+
+private fun formatImageQueryTime(epochMs: Long): String = runCatching {
+    DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.getDefault())
+        .withZone(ZoneId.systemDefault())
+        .format(Instant.ofEpochMilli(epochMs))
+}.getOrDefault("Não disponível")
 
 @Composable
 private fun DeviceUsageCards(info: DeviceInfoSnapshot) {

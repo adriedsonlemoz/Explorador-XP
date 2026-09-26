@@ -43,6 +43,12 @@ class PreferencesStore(context: Context) {
         prefs.edit().putInt(KEY_LAST_SEEN_UPDATE_VERSION_CODE, versionCode).apply()
     }
 
+    fun deviceImagesEnabled(): Boolean = prefs.getBoolean(KEY_DEVICE_IMAGES_ENABLED, true)
+
+    fun setDeviceImagesEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DEVICE_IMAGES_ENABLED, enabled).apply()
+    }
+
     fun addRecent(file: File) {
         val items = recents().toMutableList()
         items.remove(file.absolutePath)
@@ -69,5 +75,6 @@ class PreferencesStore(context: Context) {
         private const val KEY_SHOW_HIDDEN = "show_hidden"
         private const val KEY_FOLDERS_FIRST = "folders_first"
         private const val KEY_LAST_SEEN_UPDATE_VERSION_CODE = "last_seen_update_version_code"
+        private const val KEY_DEVICE_IMAGES_ENABLED = "device_images_enabled"
     }
 }

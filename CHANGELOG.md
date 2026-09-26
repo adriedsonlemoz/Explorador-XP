@@ -14,6 +14,19 @@
 - Cabeçalho, cards e espaçamentos da tela foram compactados para melhorar uso em telas pequenas.
 - Ações de copiar, compartilhar relatório, salvar/compartilhar imagem e exportar diagnóstico completo foram consolidadas. O relatório inclui data/hora, versão do app, fontes relevantes e “Não disponível” sem coletar IMEI, serial, Android ID, MAC, localização ou arquivos pessoais.
 
+### Nome comercial, catálogo e imagem do aparelho
+- Adicionada a camada modular `DeviceIdentityRepository`/`DeviceCatalogRepository`, que cruza `Build.MANUFACTURER`, `Build.BRAND`, `Build.DEVICE`, `Build.MODEL` e `Build.PRODUCT` sem substituir os valores reais fornecidos pelo Android.
+- O nome comercial só é confirmado com correspondência exata de modelo e fabricante/marca; colisões de modelo são desambiguadas por `device` quando possível e resultados ainda ambíguos permanecem como **Não identificado**.
+- Adicionado `device_catalog.json` como catálogo local compacto/versionado; a arquitetura pode atualizar a correspondência do aparelho usando o CSV público de dispositivos suportados pelo Google Play e mantém cache/resultado negativo por 30 dias para evitar downloads repetidos.
+- O app faz aquecimento não bloqueante do catálogo ao iniciar apenas quando consultas externas estão habilitadas; para modelos já cobertos pelo catálogo local da mesma data, uma verificação remota não exige baixar novamente a lista inteira.
+- Adicionadas `DeviceImageRepository`/`DeviceImageCache`/`DeviceImageService`: a busca passa por Wikidata, exige nome/alias exato e fabricante compatível, exige propriedade `P18` e rejeita múltiplas entidades igualmente válidas.
+- Wikimedia Commons fornece thumbnail de até 320 px e metadados de fonte, licença e autor. A imagem e os metadados são armazenados em cache; falhas transitórias não viram resultado negativo permanente.
+- O cabeçalho da tela ganhou miniatura/ícone, nome comercial, fabricante e código do modelo, com uma seção **Informações do modelo** separada da área **Detectado neste aparelho**.
+- Ao tocar numa imagem real é possível ver fonte, autor, licença, entidade Wikidata e data da consulta; **Ver fonte** só abre o navegador por ação explícita.
+- Adicionada **Ferramentas > Configurações > Buscar imagem do modelo pela internet**. Desativada, a tela usa somente catálogo local + Android e ignora caches/consultas externas.
+- Adicionada permissão `INTERNET`; nenhum identificador pessoal é usado nas consultas. IMEI, serial, Android ID, MAC, localização, telefone, operadora, SIM e arquivos continuam fora do recurso.
+- Cobertura unitária adicionada para modelo conhecido/desconhecido, fabricante divergente, colisão/ambiguidade, política sem internet, imagem válida/inexistente/ambígua, cache fresco/expirado e linha de catálogo inválida.
+
 ### Metadados
 - Versão sincronizada para `0.1.0-alpha.82` / `versionCode 82` em Gradle, `github-manager.json`, `app_identity.json`, `VERSION`, README, ReleaseNotes e documentação.
 

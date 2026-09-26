@@ -18,11 +18,12 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Informações do dispositivo agora separa arquitetura, ABIs do sistema e bitness real do processo do aplicativo sem deduzir a arquitetura física.",
-                "CPU/SoC, GPU e processo de fabricação agora mostram a origem do dado e evitam nomes comerciais ambíguos.",
-                "RAM, armazenamento, bateria, rede e SIM ganharam métricas mais claras usando somente valores realmente expostos pelo Android.",
-                "Sensores disponíveis agora podem mostrar fabricante, resolução, alcance, consumo e leituras reais do SensorManager.",
-                "Foi adicionado um diagnóstico rápido de recursos e o relatório técnico passou a acompanhar os novos campos e suas fontes.",
+                "Informações do dispositivo agora identifica o nome comercial por correspondência exata de fabricante/marca + código do modelo, mantendo os dados brutos do Android separados.",
+                "Foi adicionado catálogo local versionado e cache para atualização usando a lista pública de dispositivos compatíveis com Google Play, sem bloquear o modo offline.",
+                "Quando há identificação confiável, o app pode procurar uma imagem real do modelo via Wikidata/Wikimedia Commons e só aceita entidades com nome e fabricante compatíveis.",
+                "Imagem, URL, autor e licença ficam em cache; resultados ambíguos, falhas de rede ou modelos sem imagem usam o ícone genérico em vez de arriscar uma foto errada.",
+                "Ferramentas > Configurações ganhou a opção para desligar consultas externas de identificação/imagem; desativada, a tela usa somente dados locais e do Android.",
+                "A tela continua separando arquitetura, ABIs, SoC, GPU, RAM, armazenamento, bateria, rede e sensores sem inventar valores ausentes.",
             )
         )
 }

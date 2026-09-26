@@ -177,6 +177,7 @@ fun ExplorerScreen(
     var showFolderContext by remember { mutableStateOf(false) }
     var showManual by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     var showDeviceInfo by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     var showStorageDetails by remember { mutableStateOf(false) }
@@ -188,6 +189,11 @@ fun ExplorerScreen(
 
     if (showDeviceInfo) {
         DeviceInfoScreen(onDismiss = { showDeviceInfo = false })
+        return
+    }
+
+    if (showSettings) {
+        AppSettingsScreen(onDismiss = { showSettings = false })
         return
     }
 
@@ -303,6 +309,7 @@ fun ExplorerScreen(
             onClearSelection = onClearSelection,
             onShowManual = { showManual = true },
             onShowAbout = { showAbout = true },
+            onShowSettings = { showSettings = true },
             onShowDeviceInfo = { showDeviceInfo = true },
             selectedArchive = state.selectedPaths.singleOrNull()?.let(::File)?.takeIf { it.isFile && it.extension.equals("zip", ignoreCase = true) },
             onOpenSelectedArchive = { target -> onClearSelection(); onOpenTarget(target) },
@@ -618,6 +625,7 @@ private fun XpHeader(
     onClearSelection: () -> Unit,
     onShowManual: () -> Unit,
     onShowAbout: () -> Unit,
+    onShowSettings: () -> Unit,
     onShowDeviceInfo: () -> Unit,
     selectedArchive: File?,
     onOpenSelectedArchive: (File) -> Unit,
@@ -810,6 +818,10 @@ private fun XpHeader(
                             }
                         }
                         XpMenuDivider()
+                        XpMenuItem("Configurações", R.drawable.settings) {
+                            toolsMenu = false
+                            onShowSettings()
+                        }
                         XpMenuItem("Informações do dispositivo", R.drawable.device_mobile) {
                             toolsMenu = false
                             onShowDeviceInfo()
@@ -1470,6 +1482,96 @@ private fun HelpTopic(
         if (expanded) {
             Spacer(Modifier.height(7.dp))
             Text(text, fontSize = 12.sp, color = Color(0xFF303030), lineHeight = 17.sp)
+        }
+    }
+}
+
+@Composable
+private fun AppSettingsScreen(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val preferences = remember(context) { PreferencesStore(context) }
+    var deviceImagesEnabled by remember { mutableStateOf(preferences.deviceImagesEnabled()) }
+
+    BackHandler(onBack = onDismiss)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+    ) {
+        XpDialogTitle("Configurações", onDismiss)
+        HorizontalDivider(color = XpChromeBorder)
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(Color(0xFFF6F8FB))
+                .verticalScroll(rememberScrollState())
+                .padding(12.dp),
+        ) {
+            AboutSectionCard("Informações do dispositivo", R.drawable.device_mobile) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            deviceImagesEnabled = !deviceImagesEnabled
+                            preferences.setDeviceImagesEnabled(deviceImagesEnabled)
+                        }
+                        .padding(vertical = 2.dp),
+                ) {
+                    Checkbox(
+                        checked = deviceImagesEnabled,
+                        onCheckedChange = { enabled ->
+                            deviceImagesEnabled = enabled
+                            preferences.setDeviceImagesEnabled(enabled)
+                        },
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Buscar imagem do modelo pela internet",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF202020),
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            "Quando disponível, o Explorador XP consulta fontes públicas para localizar uma imagem correspondente ao modelo do aparelho.",
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                            color = XpTextSecondary,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(7.dp))
+                Text(
+                    if (deviceImagesEnabled) {
+                        "Ativado: o app pode atualizar o catálogo público e consultar Wikidata/Wikimedia. As consultas usam apenas fabricante, marca, código do modelo, device e nome comercial identificado."
+                    } else {
+                        "Desativado: somente o catálogo local e os dados fornecidos pelo Android são usados; nenhuma consulta de identificação/imagem é feita pela internet."
+                    },
+                    fontSize = 10.5.sp,
+                    lineHeight = 14.sp,
+                    color = Color(0xFF4A5B70),
+                )
+            }
+        }
+
+        HorizontalDivider(color = XpChromeBorder)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpChrome)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            XpDialogButton(
+                "Fechar",
+                iconRes = R.drawable.close,
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
         }
     }
 }
