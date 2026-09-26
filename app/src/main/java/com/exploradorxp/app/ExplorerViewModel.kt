@@ -75,6 +75,8 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     private var trashJob: Job? = null
     private var advancedSearchJob: Job? = null
     private var advancedSearchGeneration: Long = 0L
+    private var directoryRefreshJob: Job? = null
+    private val currentDirectoryObserver = CurrentDirectoryObserver(::onCurrentDirectoryChanged)
 
     private var currentSnapshotKey: String? = null
     private var currentSnapshot: List<FileItem> = emptyList()
@@ -109,6 +111,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         if (!hasFileAccess(getApplication())) {
             refreshJob?.cancel()
             projectionJob?.cancel()
+            currentDirectoryObserver.stop()
             _uiState.update { it.copy(loading = false, items = emptyList()) }
             return
         }
@@ -117,6 +120,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         projectionJob?.cancel()
 
         val stateAtStart = _uiState.value
+        syncCurrentDirectoryObserver(stateAtStart)
         val key = snapshotKey(stateAtStart)
         val cached = if (useCache) snapshotCache[key] else null
 
@@ -987,6 +991,39 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private fun syncCurrentDirectoryObserver(state: ExplorerUiState = _uiState.value) {
+        if (state.tab == ExplorerTab.FAVORITES || !hasFileAccess(getApplication())) {
+            currentDirectoryObserver.stop()
+        } else {
+            currentDirectoryObserver.watch(state.currentDir)
+        }
+    }
+
+    private fun onCurrentDirectoryChanged() {
+        // FileObserver pode emitir CREATE e CLOSE_WRITE para o mesmo download. Consolida
+        // os eventos para evitar várias releituras enquanto o arquivo ainda está sendo gravado.
+        viewModelScope.launch {
+            directoryRefreshJob?.cancel()
+            directoryRefreshJob = viewModelScope.launch directoryRefresh@{
+                delay(DIRECTORY_REFRESH_DEBOUNCE_MS)
+                val state = _uiState.value
+                if (state.tab == ExplorerTab.FAVORITES || !hasFileAccess(getApplication())) return@directoryRefresh
+
+                snapshotCache.remove(snapshotKey(state))
+                startRefresh(useCache = false)
+                if (_advancedSearchState.value.active) {
+                    runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        directoryRefreshJob?.cancel()
+        currentDirectoryObserver.stop()
+        super.onCleared()
+    }
+
     private fun invalidateAllSnapshots() {
         snapshotCache.clear()
         currentSnapshotKey = null
@@ -1021,5 +1058,6 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         private const val FAVORITES_SNAPSHOT_KEY = "FAVORITES"
+        private const val DIRECTORY_REFRESH_DEBOUNCE_MS = 350L
     }
 }

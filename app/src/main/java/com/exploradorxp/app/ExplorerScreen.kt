@@ -1542,10 +1542,9 @@ private fun AboutDialog(
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
                 listOf(
-                    "Visualizador de imagens com zoom por pinça/duplo toque, deslocamento, rotação e tela cheia com controles auto-ocultáveis.",
-                    "Galeria continua limitada à pasta aberta, com contador e navegação anterior/próxima sem sair da imagem.",
-                    "Nova janela Info mostra resolução, tamanho, modificação e metadados EXIF disponíveis, como câmera, ISO, exposição e abertura.",
-                    "Compartilhar e mover para a Lixeira agora podem ser feitos diretamente no visualizador, com confirmação e proteção para arquivos externos somente leitura.",
+                    "No inspector de APK, Reinstalar, Abrir e Gerenciar ficam alinhados na mesma linha quando o aplicativo já está instalado.",
+                    "Os rótulos de ações do APK foram encurtados para Abrir e Gerenciar, preservando os mesmos destinos e verificações.",
+                    "A pasta atualmente aberta agora é monitorada em tempo real: arquivos baixados, criados, movidos ou removidos por outros apps aparecem automaticamente sem precisar sair e entrar novamente.",
                 ).forEach { change ->
                     Text(
                         "• $change",

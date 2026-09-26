@@ -1226,40 +1226,29 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
                 ) {
                     Text("Ações", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
-                    ApkPrimaryButton(
-                        label = installLabel,
-                        icon = R.drawable.file_apk,
-                        primary = true,
-                        enabled = info.canAttemptInstall,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = ::requestInstall,
-                    )
-                    if (!sourceAllowed && info.canAttemptInstall) {
-                        Spacer(Modifier.height(7.dp))
-                        ApkPrimaryButton(
-                            label = "Permitir instalação nesta fonte",
-                            icon = R.drawable.unlocked,
-                            primary = false,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { openUnknownSourcesSettings(continueInstall = false) }
-                    }
                     if (info.installedVersion != null) {
-                        Spacer(Modifier.height(7.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            if (info.canLaunchInstalled) {
-                                ApkPrimaryButton(
-                                    label = "Abrir app",
-                                    icon = R.drawable.visible,
-                                    primary = false,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
-                                    if (launchIntent != null) context.startActivity(launchIntent)
-                                    else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
-                                }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            ApkPrimaryButton(
+                                label = installLabel,
+                                icon = R.drawable.file_apk,
+                                primary = true,
+                                enabled = info.canAttemptInstall,
+                                modifier = Modifier.weight(1f),
+                                onClick = ::requestInstall,
+                            )
+                            ApkPrimaryButton(
+                                label = "Abrir",
+                                icon = R.drawable.visible,
+                                primary = false,
+                                enabled = info.canLaunchInstalled,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
+                                if (launchIntent != null) context.startActivity(launchIntent)
+                                else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
                             }
                             ApkPrimaryButton(
-                                label = "Gerenciar app",
+                                label = "Gerenciar",
                                 icon = R.drawable.settings,
                                 primary = false,
                                 modifier = Modifier.weight(1f),
@@ -1270,6 +1259,24 @@ private fun ApkViewer(file: File, onInstall: () -> Unit) {
                                 }
                             }
                         }
+                    } else {
+                        ApkPrimaryButton(
+                            label = installLabel,
+                            icon = R.drawable.file_apk,
+                            primary = true,
+                            enabled = info.canAttemptInstall,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = ::requestInstall,
+                        )
+                    }
+                    if (!sourceAllowed && info.canAttemptInstall) {
+                        Spacer(Modifier.height(7.dp))
+                        ApkPrimaryButton(
+                            label = "Permitir instalação nesta fonte",
+                            icon = R.drawable.unlocked,
+                            primary = false,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { openUnknownSourcesSettings(continueInstall = false) }
                     }
                     if (!sourceAllowed && info.canAttemptInstall) {
                         Spacer(Modifier.height(8.dp))

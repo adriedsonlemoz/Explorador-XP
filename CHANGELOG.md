@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0-alpha.70
+
+- Inspector de APK reorganizado para manter **Reinstalar**, **Abrir** e **Gerenciar** na mesma linha quando o pacote já está instalado.
+- Os rótulos **Abrir app** e **Gerenciar app** foram encurtados para **Abrir** e **Gerenciar**, melhorando o encaixe em telas estreitas sem alterar suas funções.
+- Quando o pacote instalado não possui atividade inicial, **Abrir** permanece visível porém desabilitado, mantendo o conjunto de ações estável e claro.
+- A pasta atualmente aberta passa a ser observada com `FileObserver`; criações, downloads concluídos, exclusões e movimentações feitas por outros aplicativos atualizam a listagem automaticamente.
+- Eventos repetidos do sistema de arquivos são consolidados com debounce curto para evitar releituras excessivas durante gravações.
+- O observador acompanha a navegação entre diretórios, é desligado em Favoritos e ao perder acesso aos arquivos, e é encerrado junto com o `ViewModel`.
+- README, tela Sobre, documentação, validações e `github-manager.json` sincronizados.
+- Versão sincronizada para `0.1.0-alpha.70` / `versionCode 70`.
+
 ## 0.1.0-alpha.69
 
 - Visualizador interno de imagens evoluído para uma experiência de galeria sem sair da pasta atual, preservando anterior/próxima e o contador de posição.

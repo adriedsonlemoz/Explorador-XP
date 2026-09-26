@@ -1,24 +1,29 @@
 {
-  "version_build": "0.1.0-alpha.69",
-  "version_code": 69,
-  "manager_version": "0.1.0-alpha.69",
+  "version_build": "0.1.0-alpha.70",
+  "version_code": 70,
+  "manager_version": "0.1.0-alpha.70",
   "application_id": "com.exploradorxp.app",
-  "scope": "Visualizador de imagens: galeria, zoom/pan, rotação, tela cheia, EXIF, compartilhar e Lixeira",
+  "scope": "Inspector APK: ações em uma linha; Explorer: atualização automática da pasta aberta",
   "checks": [
     {
-      "name": "image_viewer_logic_jvm",
+      "name": "apk_action_layout_static",
       "status": "passed",
-      "details": "ImageViewerLogic compilado e executado isoladamente com kotlinc/JVM; limites de zoom, duplo toque e escolha de imagem após remoção passaram."
+      "details": "Inspector APK reorganizado para Reinstalar/Abrir/Gerenciar na mesma Row quando há pacote instalado; Abrir/Gerenciar usam rótulos reduzidos."
     },
     {
-      "name": "kotlin_parser_internal_viewer",
+      "name": "current_directory_observer_static",
       "status": "passed",
-      "details": "Varredura com kotlinc não encontrou erros de parser/sintaxe em InternalViewer.kt; referências Android/Compose ficam não resolvidas sem SDK/classpath, como esperado."
+      "details": "CurrentDirectoryObserver acompanha CREATE/CLOSE_WRITE/DELETE/MOVED_FROM/MOVED_TO/DELETE_SELF/MOVE_SELF e o ViewModel aplica debounce de 350 ms."
     },
     {
-      "name": "kotlin_parser_main_activity",
+      "name": "current_directory_observer_compile_stub",
       "status": "passed",
-      "details": "Varredura com kotlinc não encontrou erros de parser/sintaxe em MainActivity.kt."
+      "details": "CurrentDirectoryObserver.kt compilou com kotlinc usando stub mínimo de android.os.FileObserver, confirmando a sintaxe e os tipos locais do novo helper."
+    },
+    {
+      "name": "kotlin_parser_modified_files",
+      "status": "passed",
+      "details": "Varredura com kotlinc não encontrou diagnósticos de parser/sintaxe em ExplorerViewModel.kt, InternalViewer.kt e ExplorerScreen.kt; referências Android/Compose permanecem sem classpath completo, como esperado."
     },
     {
       "name": "json",
@@ -33,29 +38,14 @@
       "status": "passed"
     },
     {
-      "name": "drawable_references",
-      "status": "passed",
-      "details": "129 referências R.drawable verificadas, sem recurso ausente."
-    },
-    {
-      "name": "raster_assets_unchanged",
-      "status": "passed",
-      "details": "172 arquivos raster comparados com a alpha.68 por SHA-256; nenhuma alteração."
-    },
-    {
-      "name": "github_workflows_unchanged",
-      "status": "passed",
-      "details": "2 workflows comparados com a alpha.68; nenhuma alteração."
-    },
-    {
       "name": "version_metadata",
       "status": "passed",
-      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG e tela Sobre sincronizados para alpha.69/versionCode 69."
+      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, documentação e tela Sobre sincronizados para alpha.70/versionCode 70."
     },
     {
       "name": "android_full_build",
       "status": "not_run",
-      "reason": "O projeto não inclui gradlew e o ambiente atual não possui Android SDK/Gradle configurados."
+      "reason": "O projeto não inclui gradlew e o ambiente atual não possui Gradle/Android SDK configurados para executar o build completo."
     }
   ]
 }
