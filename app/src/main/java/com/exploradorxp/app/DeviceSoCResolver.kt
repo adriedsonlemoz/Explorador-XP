@@ -18,6 +18,7 @@ internal object DeviceSoCResolver {
         val gpu: String? = null,
         val processNm: Int? = null,
         val matchedCatalog: Boolean = false,
+        val matchedAlias: String? = null,
     ) {
         val processLabel: String? get() = processNm?.let { "$it nm" }
 
@@ -28,10 +29,20 @@ internal object DeviceSoCResolver {
             get() = listOfNotNull(manufacturer?.takeIf { it.isNotBlank() }, technicalId.takeIf { it.isNotBlank() })
                 .joinToString(" ")
                 .ifBlank { technicalId }
+
+        val identitySourceLabel: String
+            get() = if (matchedCatalog) {
+                "Android + catálogo local (identificador exato)"
+            } else {
+                "Android (SOC_MODEL/HARDWARE)"
+            }
+
+        val catalogSourceLabel: String?
+            get() = if (matchedCatalog) "Catálogo local (${matchedAlias ?: technicalId})" else null
     }
 
     private data class CatalogEntry(
-        val commercialName: String,
+        val commercialName: String?,
         val manufacturer: String,
         val aliases: Set<String>,
         val gpu: String? = null,
@@ -39,7 +50,11 @@ internal object DeviceSoCResolver {
     )
 
     private val catalog = listOf(
-        CatalogEntry("Helio P35", "MediaTek", aliases("MT6765"), "PowerVR GE8320", 12),
+        // MT6765 identifica uma família usada por mais de um nome comercial.
+        // Não promovemos automaticamente para “Helio P35”, pois o identificador sozinho
+        // não diferencia com segurança todas as variantes. GPU/processo permanecem apenas
+        // como metadados do catálogo e a interface deixa a origem explícita.
+        CatalogEntry(null, "MediaTek", aliases("MT6765"), "PowerVR GE8320", 12),
         CatalogEntry("Helio G35", "MediaTek", aliases("MT6765G"), "PowerVR GE8320", 12),
         CatalogEntry("Helio P22", "MediaTek", aliases("MT6762"), "PowerVR GE8320", 12),
         CatalogEntry("Helio A22", "MediaTek", aliases("MT6761"), "PowerVR GE8320", 12),
@@ -81,8 +96,11 @@ internal object DeviceSoCResolver {
             .filter { it.isNotBlank() }
             .distinct()
 
-        val entry = candidates.firstNotNullOfOrNull(entriesByAlias::get)
-        if (entry != null) {
+        val matchedCandidate = candidates.firstNotNullOfOrNull { candidate ->
+            entriesByAlias[candidate]?.let { entry -> candidate to entry }
+        }
+        if (matchedCandidate != null) {
+            val (matchedAlias, entry) = matchedCandidate
             return Identity(
                 commercialName = entry.commercialName,
                 manufacturer = entry.manufacturer,
@@ -90,6 +108,7 @@ internal object DeviceSoCResolver {
                 gpu = entry.gpu,
                 processNm = entry.processNm,
                 matchedCatalog = true,
+                matchedAlias = matchedAlias,
             )
         }
 

@@ -4,6 +4,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,7 +17,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -64,6 +67,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -85,6 +89,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private val DeviceNavy = Color(0xFF102C57)
@@ -167,6 +172,19 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
         }
     }
 
+    fun shareReport(current: DeviceInfoSnapshot) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Explorador XP — diagnóstico do dispositivo")
+            putExtra(Intent.EXTRA_TEXT, current.toAiReport())
+        }
+        runCatching {
+            context.startActivity(Intent.createChooser(intent, "Compartilhar relatório do dispositivo"))
+        }.onFailure {
+            Toast.makeText(context, "Não foi possível compartilhar o relatório.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     BackHandler(onBack = onDismiss)
 
     Column(
@@ -198,52 +216,71 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                 } else {
                     snapshot?.let { info ->
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(9.dp),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(rememberScrollState())
-                                .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 16.dp),
+                                .padding(start = 10.dp, end = 10.dp, top = 9.dp, bottom = 13.dp),
                         ) {
                             DeviceHero(info)
                             DeviceUsageCards(info)
 
                             DeviceSection(
-                                title = "Sistema",
+                                title = "Sistema e processador",
                                 icon = Icons.Rounded.Settings,
                                 iconTint = DeviceBlue,
                             ) {
                                 val socIdentity = DeviceSoCResolver.resolve(info.socManufacturer, info.socModel, info.hardware)
                                 InfoRow("Android", "${info.androidVersion} • API ${info.apiLevel}")
                                 SectionDivider()
-                                InfoRow("Atualização de segurança", info.securityPatch)
+                                InfoRow("Patch de segurança", info.securityPatch)
                                 SectionDivider()
                                 ProcessorInfoRow(socIdentity)
                                 SectionDivider()
-                                InfoRow("Fabricante", socIdentity.manufacturer ?: "Não disponível")
+                                InfoRow("Fabricante do SoC", socIdentity.manufacturer ?: info.socManufacturer ?: "Não disponível")
                                 SectionDivider()
-                                InfoRow("Identificador", socIdentity.technicalId)
+                                InfoRow("Modelo / ID do SoC", socIdentity.technicalId)
                                 SectionDivider()
-                                InfoRow("CPU", "${info.cpuCores} núcleos • ${if (info.is64Bit) "64 bits" else "32 bits"}")
+                                InfoRow("Núcleos detectados", info.cpuCores.toString())
                                 SectionDivider()
-                                InfoRow("Arquitetura", info.supportedAbis.firstOrNull() ?: "Não disponível")
+                                InfoRow("Arquitetura física", "Não disponível pela API pública")
                                 SectionDivider()
-                                InfoRow("Frequência", cpuFrequencySummary(info))
-                                socIdentity.gpu?.let {
+                                InfoRow("ABI principal do sistema", info.supportedAbis.firstOrNull() ?: "Não disponível")
+                                SectionDivider()
+                                InfoRow("ABIs do sistema", abiListLabel(info.supportedAbis))
+                                SectionDivider()
+                                InfoRow("Suporte do sistema", systemBitnessSummary(info))
+                                SectionDivider()
+                                InfoRow(
+                                    "Processo do app",
+                                    "${info.appRuntimeArchitecture} • ${if (info.appProcessIs64Bit) "64 bits" else "32 bits"}",
+                                )
+                                SectionDivider()
+                                InfoRow("ABI do aplicativo", "Não disponível pela API pública")
+                                SectionDivider()
+                                InfoRow("Arquitetura do kernel", info.kernelArchitecture)
+                                SectionDivider()
+                                InfoRow("Frequências", cpuFrequencySummary(info))
+                                SectionDivider()
+                                InfoRow("GPU", gpuSummary(info))
+                                if (gpuSourceSummary(info) != "Não disponível") {
                                     SectionDivider()
-                                    InfoRow("GPU", it)
-                                }
-                                socIdentity.processLabel?.let {
-                                    SectionDivider()
-                                    InfoRow("Fabricação", it)
+                                    InfoRow("Origem da GPU", gpuSourceSummary(info))
                                 }
                                 SectionDivider()
-                                InfoRow("Hardware", info.hardware)
+                                InfoRow("Fabricação", socIdentity.processLabel ?: "Não disponível")
+                                socIdentity.catalogSourceLabel?.let { source ->
+                                    SectionDivider()
+                                    InfoRow("Origem da fabricação", source)
+                                }
+                                SectionDivider()
+                                InfoRow("Hardware Android", info.hardware)
                                 SectionDivider()
                                 InfoRow("Tela", displayLabel(info))
                             }
 
                             DeviceSection(
-                                title = "Conectividade",
+                                title = "Conectividade e SIM",
                                 icon = Icons.Rounded.Wifi,
                                 iconTint = DevicePurple,
                             ) {
@@ -253,15 +290,15 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                                 SectionDivider()
                                 InfoRow("Wi-Fi", wifiDetailsLabel(info))
                                 SectionDivider()
-                                InfoRow("Rede móvel", mobileDetailsLabel(info))
+                                InfoRow("Operadora", info.carrierName)
+                                SectionDivider()
+                                InfoRow("Tecnologia móvel", info.mobileNetworkType)
+                                SectionDivider()
+                                InfoRow("Sinal móvel", mobileSignalSummary(info))
                                 SectionDivider()
                                 InfoRow("SIM", simDetailsLabel(info))
                                 SectionDivider()
-                                InfoRow("eSIM", if (info.esimSupported) buildString {
-                                    append("Suportado")
-                                    if (info.esimMepSupported) append(" • múltiplos perfis")
-                                    else if (info.esimEnabled) append(" • gerenciador ativo")
-                                } else "Não detectado")
+                                InfoRow("eSIM", esimDetailsLabel(info))
                                 SectionDivider()
                                 InfoRow("Bluetooth", when {
                                     info.hasBluetoothLe -> "Clássico + BLE"
@@ -277,21 +314,49 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                                 icon = Icons.Rounded.BatteryFull,
                                 iconTint = DeviceGreen,
                             ) {
-                                InfoRow("Carga", info.batteryPercent?.let { "$it%" } ?: "Não disponível")
+                                InfoRow("Nível", info.batteryPercent?.let { "$it%" } ?: "Não disponível")
                                 SectionDivider()
                                 InfoRow("Estado", info.batteryStatus)
                                 SectionDivider()
-                                InfoRow("Fonte", info.batterySource)
-                                if (info.batterySource != "Bateria") {
-                                    Spacer(Modifier.height(8.dp))
+                                InfoRow("Fonte de alimentação", info.batterySource)
+                                info.batteryTemperatureC?.let { value ->
+                                    SectionDivider()
+                                    InfoRow("Temperatura", String.format(Locale.forLanguageTag("pt-BR"), "%.1f °C", value))
+                                }
+                                info.batteryVoltageMv?.let { value ->
+                                    SectionDivider()
+                                    InfoRow("Tensão", "$value mV")
+                                }
+                                info.batteryCurrentMicroamps?.let { value ->
+                                    SectionDivider()
+                                    InfoRow("Corrente instantânea", formatBatteryCurrent(value))
+                                }
+                                if (info.batterySource != "Não conectado") {
+                                    Spacer(Modifier.height(6.dp))
                                     BatteryPowerCallout(info)
                                 }
+                            }
+
+                            DeviceSection(
+                                title = "Diagnóstico rápido",
+                                icon = Icons.Rounded.CheckCircle,
+                                iconTint = DeviceGreen,
+                            ) {
+                                QuickDiagnosticGrid(info)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "“Não detectado” indica apenas que o recurso não foi exposto pelo Android; não significa defeito.",
+                                    color = DeviceMuted,
+                                    fontSize = 9.5.sp,
+                                    lineHeight = 12.sp,
+                                )
                             }
 
                             DeviceSection(
                                 title = "Recursos",
                                 icon = Icons.Rounded.Explore,
                                 iconTint = DeviceBlue,
+                                initiallyExpanded = false,
                             ) {
                                 CapabilityGrid(info)
                             }
@@ -309,6 +374,7 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                             ShareDeviceCard(
                                 enabled = !loading,
                                 onCopy = { copySummary(info) },
+                                onShareReport = { shareReport(info) },
                                 onSaveImage = { imageLauncher.launch(deviceInfoImageFileName()) },
                                 onShareImage = { shareImage(info) },
                             )
@@ -362,12 +428,12 @@ private fun DeviceInfoHeader(
                     listOf(Color(0xFF2F92F6), XpBlue, XpBlueDark),
                 ),
             )
-            .padding(start = 10.dp, end = 6.dp, top = 7.dp, bottom = 7.dp),
+            .padding(start = 9.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(34.dp)
+                .size(30.dp)
                 .background(Color.White.copy(alpha = .16f), RoundedCornerShape(4.dp))
                 .border(1.dp, Color.White.copy(alpha = .34f), RoundedCornerShape(4.dp)),
         ) {
@@ -375,28 +441,28 @@ private fun DeviceInfoHeader(
                 imageVector = Icons.Rounded.Info,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(21.dp),
             )
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 "Informações do dispositivo",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = 15.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 "Dados reais informados pelo Android",
                 color = Color.White.copy(alpha = .84f),
-                fontSize = 11.5.sp,
+                fontSize = 10.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconButton(onClick = onRefresh, enabled = !loading, modifier = Modifier.size(36.dp)) {
+        IconButton(onClick = onRefresh, enabled = !loading, modifier = Modifier.size(32.dp)) {
             if (loading) {
                 CircularProgressIndicator(
                     color = Color.White,
@@ -404,7 +470,7 @@ private fun DeviceInfoHeader(
                     modifier = Modifier.size(18.dp),
                 )
             } else {
-                Icon(Icons.Rounded.Refresh, contentDescription = "Atualizar", tint = Color.White, modifier = Modifier.size(21.dp))
+                Icon(Icons.Rounded.Refresh, contentDescription = "Atualizar", tint = Color.White, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -413,69 +479,58 @@ private fun DeviceInfoHeader(
 @Composable
 private fun DeviceHero(info: DeviceInfoSnapshot) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 Brush.linearGradient(
                     listOf(Color.White, Color(0xFFF6FAFF), Color(0xFFE7F3FF)),
                 ),
-                RoundedCornerShape(16.dp),
+                RoundedCornerShape(14.dp),
             )
-            .border(1.dp, Color(0xFFC8DDF3), RoundedCornerShape(16.dp))
-            .padding(14.dp),
+            .border(1.dp, Color(0xFFC8DDF3), RoundedCornerShape(14.dp))
+            .padding(11.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(54.dp)
                     .background(
                         Brush.linearGradient(listOf(Color(0xFFEEF6FF), Color(0xFFD8EAFE))),
-                        RoundedCornerShape(16.dp),
+                        RoundedCornerShape(14.dp),
                     )
-                    .border(1.dp, Color(0xFFBDD8F4), RoundedCornerShape(16.dp)),
+                    .border(1.dp, Color(0xFFBDD8F4), RoundedCornerShape(14.dp)),
             ) {
                 Icon(
                     imageVector = Icons.Rounded.PhoneAndroid,
                     contentDescription = null,
                     tint = DeviceBlue,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(34.dp),
                 )
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = info.deviceName,
-                    fontSize = 22.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     color = DeviceText,
                     maxLines = 2,
-                    lineHeight = 24.sp,
+                    lineHeight = 21.sp,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
                 Text(
                     text = "${info.manufacturer.smartTitle()} • ${info.model}",
                     color = DeviceMuted,
-                    fontSize = 13.sp,
+                    fontSize = 11.5.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(7.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(DeviceGreen, CircleShape),
-                    )
-                    Spacer(Modifier.width(5.dp))
-                    Text("Dispositivo ativo", color = Color(0xFF247A3C), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                }
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             HeroSpecChip(
                 icon = Icons.Rounded.PhoneAndroid,
                 tint = DeviceGreen,
@@ -504,15 +559,15 @@ private fun HeroSpecChip(icon: ImageVector, tint: Color, text: String, modifier:
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
         modifier = modifier
-            .background(Color.White.copy(alpha = .78f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 7.dp, vertical = 8.dp),
+            .background(Color.White.copy(alpha = .78f), RoundedCornerShape(9.dp))
+            .padding(horizontal = 5.dp, vertical = 6.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(5.dp))
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(4.dp))
         Text(
             text,
             color = DeviceText,
-            fontSize = 10.5.sp,
+            fontSize = 9.5.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -522,11 +577,11 @@ private fun HeroSpecChip(icon: ImageVector, tint: Color, text: String, modifier:
 
 @Composable
 private fun DeviceUsageCards(info: DeviceInfoSnapshot) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
         UsageCard(
-            title = "Memória",
-            value = "${humanBytes(info.ramAvailableBytes)} livre",
-            subtitle = "de ${humanBytes(info.ramTotalBytes)}",
+            title = "RAM",
+            value = "${humanBytes(info.ramAvailableBytes)} disponíveis",
+            subtitle = buildRamPercentSubtitle(info.ramAvailablePercent, info.ramUsedPercent, info.ramTotalBytes),
             fraction = fractionUsed(info.ramUsedBytes, info.ramTotalBytes),
             icon = Icons.Rounded.Memory,
             accent = DevicePurple,
@@ -534,8 +589,8 @@ private fun DeviceUsageCards(info: DeviceInfoSnapshot) {
         )
         UsageCard(
             title = "Armazenamento",
-            value = "${humanBytes(info.storageAvailableBytes)} livre",
-            subtitle = "de ${humanBytes(info.storageTotalBytes)}",
+            value = "${humanBytes(info.storageAvailableBytes)} livres",
+            subtitle = buildPercentSubtitle(info.storageAvailablePercent, info.storageUsedPercent, info.storageTotalBytes),
             fraction = fractionUsed(info.storageUsedBytes, info.storageTotalBytes),
             icon = Icons.Rounded.Storage,
             accent = DeviceGreen,
@@ -544,7 +599,7 @@ private fun DeviceUsageCards(info: DeviceInfoSnapshot) {
         UsageCard(
             title = "Bateria",
             value = info.batteryPercent?.let { "$it%" } ?: "N/D",
-            subtitle = info.batteryStatus,
+            subtitle = if (info.batterySource == "Não conectado") info.batteryStatus else "${info.batteryStatus} • ${info.batterySource}",
             fraction = ((info.batteryPercent ?: 0) / 100f).coerceIn(0f, 1f),
             icon = Icons.Rounded.BatteryFull,
             accent = DeviceOrange,
@@ -564,39 +619,47 @@ private fun UsageCard(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
-            .background(Color.White, RoundedCornerShape(13.dp))
-            .border(1.dp, DeviceBorder, RoundedCornerShape(13.dp))
-            .padding(9.dp),
+            .background(Color.White, RoundedCornerShape(12.dp))
+            .border(1.dp, DeviceBorder, RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 7.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(28.dp)
-                    .background(accent.copy(alpha = .12f), RoundedCornerShape(9.dp)),
+                    .size(24.dp)
+                    .background(accent.copy(alpha = .12f), RoundedCornerShape(7.dp)),
             ) {
-                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
             }
-            Spacer(Modifier.width(5.dp))
-            Text(title, color = DeviceMuted, fontSize = 9.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.width(4.dp))
+            Text(title, color = DeviceMuted, fontSize = 8.8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Text(
             value,
             color = DeviceText,
-            fontSize = 12.5.sp,
+            fontSize = 10.7.sp,
+            lineHeight = 12.sp,
             fontWeight = FontWeight.Bold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         LinearProgressIndicator(
             progress = { fraction },
             color = accent,
             trackColor = Color(0xFFE6EDF6),
-            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+            modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
         )
-        Text(subtitle, color = DeviceMuted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            subtitle,
+            color = DeviceMuted,
+            fontSize = 8.2.sp,
+            lineHeight = 10.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -612,9 +675,9 @@ private fun DeviceSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(15.dp))
-            .border(1.dp, DeviceBorder, RoundedCornerShape(15.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .background(Color.White, RoundedCornerShape(13.dp))
+            .border(1.dp, DeviceBorder, RoundedCornerShape(13.dp))
+            .padding(horizontal = 10.dp, vertical = 7.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -622,18 +685,18 @@ private fun DeviceSection(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp))
                 .clickable { expanded = !expanded }
-                .padding(vertical = 3.dp),
+                .padding(vertical = 2.dp),
         ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(34.dp)
-                    .background(iconTint.copy(alpha = .12f), RoundedCornerShape(10.dp)),
+                    .size(30.dp)
+                    .background(iconTint.copy(alpha = .12f), RoundedCornerShape(9.dp)),
             ) {
                 Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(21.dp))
             }
-            Spacer(Modifier.width(8.dp))
-            Text(title, fontWeight = FontWeight.Bold, color = DeviceText, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(7.dp))
+            Text(title, fontWeight = FontWeight.Bold, color = DeviceText, fontSize = 14.sp, modifier = Modifier.weight(1f))
             Icon(
                 if (expanded) Icons.Rounded.ExpandMore else Icons.Rounded.ChevronRight,
                 contentDescription = if (expanded) "Recolher $title" else "Expandir $title",
@@ -642,28 +705,28 @@ private fun DeviceSection(
             )
         }
         if (expanded) {
-            Spacer(Modifier.height(7.dp))
+            Spacer(Modifier.height(5.dp))
             content()
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(2.dp))
         }
     }
 }
 
 @Composable
 private fun InfoRow(label: String, value: String) {
-    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Text(
             label,
             color = DeviceMuted,
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
+            fontSize = 10.5.sp,
+            lineHeight = 13.sp,
             modifier = Modifier.weight(.42f).padding(end = 8.dp),
         )
         Text(
             value,
             color = DeviceText,
-            fontSize = 11.5.sp,
-            lineHeight = 15.sp,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(.58f),
         )
@@ -672,30 +735,36 @@ private fun InfoRow(label: String, value: String) {
 
 @Composable
 private fun ProcessorInfoRow(identity: DeviceSoCResolver.Identity) {
-    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Text(
             "Processador",
             color = DeviceMuted,
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
+            fontSize = 10.5.sp,
+            lineHeight = 13.sp,
             modifier = Modifier.weight(.42f).padding(end = 8.dp),
         )
         Column(modifier = Modifier.weight(.58f)) {
             Text(
-                identity.primaryLabel,
+                if (identity.commercialName != null) identity.primaryLabel else identity.technicalLabel,
                 color = DeviceText,
-                fontSize = 13.sp,
-                lineHeight = 16.sp,
+                fontSize = 12.5.sp,
+                lineHeight = 15.sp,
                 fontWeight = FontWeight.Bold,
             )
             if (identity.commercialName != null) {
                 Text(
                     identity.technicalLabel,
                     color = DeviceMuted,
-                    fontSize = 10.5.sp,
-                    lineHeight = 14.sp,
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
                 )
             }
+            Text(
+                "Fonte: ${identity.identitySourceLabel}",
+                color = DeviceMuted,
+                fontSize = 8.8.sp,
+                lineHeight = 11.sp,
+            )
         }
     }
 }
@@ -712,7 +781,7 @@ private fun BatteryPowerCallout(info: DeviceInfoSnapshot) {
         modifier = Modifier
             .fillMaxWidth()
             .background(DeviceGreenSoft, RoundedCornerShape(11.dp))
-            .padding(horizontal = 10.dp, vertical = 9.dp),
+            .padding(horizontal = 9.dp, vertical = 7.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -722,7 +791,7 @@ private fun BatteryPowerCallout(info: DeviceInfoSnapshot) {
         }
         Spacer(Modifier.width(8.dp))
         Text(
-            if (info.batteryStatus == "Carregada") "Bateria carregada e conectada à energia" else "Dispositivo conectado à energia elétrica",
+            if (info.batteryStatus == "Completa") "Bateria completa e conectada à energia" else "Fonte detectada: ${info.batterySource}",
             color = Color(0xFF26723B),
             fontSize = 10.5.sp,
             fontWeight = FontWeight.Medium,
@@ -762,33 +831,272 @@ private fun CapabilityGrid(info: DeviceInfoSnapshot) {
 }
 
 @Composable
-private fun SensorGrid(info: DeviceInfoSnapshot) {
-    val sensors = listOf(
-        CapabilityUi("Acelerômetro", info.hasAccelerometer, Icons.Rounded.Sensors),
+private fun QuickDiagnosticGrid(info: DeviceInfoSnapshot) {
+    val items = listOf(
+        CapabilityUi("Câmera", info.hasCamera, Icons.Rounded.CameraAlt),
+        CapabilityUi("Bluetooth", info.hasBluetooth, Icons.Rounded.Bluetooth),
         CapabilityUi("Giroscópio", info.hasGyroscope, Icons.Rounded.ScreenRotation),
-        CapabilityUi("Bússola", info.hasMagnetometer, Icons.Rounded.Explore),
-        CapabilityUi("Luz ambiente", info.hasLightSensor, Icons.Rounded.Sensors),
-        CapabilityUi("Proximidade", info.hasProximitySensor, Icons.Rounded.Sensors),
-        CapabilityUi("Barômetro", info.hasBarometer, Icons.Rounded.Sensors),
-        CapabilityUi("Contador de passos", info.hasStepCounter, Icons.Rounded.Sensors),
-        CapabilityUi("Passos em tempo real", info.hasStepDetector, Icons.Rounded.Sensors),
-        CapabilityUi("Gravidade", info.hasGravitySensor, Icons.Rounded.Sensors),
-        CapabilityUi("Movimento linear", info.hasLinearAcceleration, Icons.Rounded.Sensors),
-        CapabilityUi("Rotação 3D", info.hasRotationVector, Icons.Rounded.ScreenRotation),
-        CapabilityUi("Temperatura", info.hasAmbientTemperature, Icons.Rounded.Sensors),
-        CapabilityUi("Umidade", info.hasRelativeHumidity, Icons.Rounded.Sensors),
+        CapabilityUi("NFC", info.hasNfc, Icons.Rounded.Nfc),
     )
-
-    sensors.chunked(3).forEach { rowItems ->
+    items.chunked(2).forEach { rowItems ->
         Row(
             horizontalArrangement = Arrangement.spacedBy(7.dp),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         ) {
-            rowItems.forEach { sensor ->
-                CapabilityTile(sensor, Modifier.weight(1f))
+            rowItems.forEach { item ->
+                DiagnosticTile(item, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticTile(item: CapabilityUi, modifier: Modifier = Modifier) {
+    val accent = if (item.available) DeviceGreen else Color(0xFF8A98AA)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .background(if (item.available) Color(0xFFF0FAF3) else DeviceGraySoft, RoundedCornerShape(10.dp))
+            .border(1.dp, if (item.available) Color(0xFFC4E6CE) else Color(0xFFDDE3EA), RoundedCornerShape(10.dp))
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+    ) {
+        Icon(
+            if (item.available) Icons.Rounded.CheckCircle else Icons.Rounded.RemoveCircleOutline,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(17.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Column(Modifier.weight(1f)) {
+            Text(item.name, color = DeviceText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(
+                if (item.available) "Disponível" else "Não detectado",
+                color = if (item.available) Color(0xFF277A3E) else DeviceMuted,
+                fontSize = 8.8.sp,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private data class SensorTileDefinition(
+    val name: String,
+    val type: Int,
+    val icon: ImageVector,
+)
+
+@Composable
+private fun SensorGrid(info: DeviceInfoSnapshot) {
+    val definitions = listOf(
+        SensorTileDefinition("Acelerômetro", Sensor.TYPE_ACCELEROMETER, Icons.Rounded.Sensors),
+        SensorTileDefinition("Giroscópio", Sensor.TYPE_GYROSCOPE, Icons.Rounded.ScreenRotation),
+        SensorTileDefinition("Bússola", Sensor.TYPE_MAGNETIC_FIELD, Icons.Rounded.Explore),
+        SensorTileDefinition("Luz ambiente", Sensor.TYPE_LIGHT, Icons.Rounded.Sensors),
+        SensorTileDefinition("Proximidade", Sensor.TYPE_PROXIMITY, Icons.Rounded.Sensors),
+        SensorTileDefinition("Barômetro", Sensor.TYPE_PRESSURE, Icons.Rounded.Sensors),
+        SensorTileDefinition("Contador de passos", Sensor.TYPE_STEP_COUNTER, Icons.Rounded.Sensors),
+        SensorTileDefinition("Detector de passos", Sensor.TYPE_STEP_DETECTOR, Icons.Rounded.Sensors),
+        SensorTileDefinition("Gravidade", Sensor.TYPE_GRAVITY, Icons.Rounded.Sensors),
+        SensorTileDefinition("Movimento linear", Sensor.TYPE_LINEAR_ACCELERATION, Icons.Rounded.Sensors),
+        SensorTileDefinition("Rotação 3D", Sensor.TYPE_ROTATION_VECTOR, Icons.Rounded.ScreenRotation),
+        SensorTileDefinition("Temperatura ambiente", Sensor.TYPE_AMBIENT_TEMPERATURE, Icons.Rounded.Sensors),
+        SensorTileDefinition("Umidade relativa", Sensor.TYPE_RELATIVE_HUMIDITY, Icons.Rounded.Sensors),
+    )
+    var selectedSensor by remember { mutableStateOf<DeviceSensorInfo?>(null) }
+
+    definitions.chunked(3).forEach { rowItems ->
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        ) {
+            rowItems.forEach { definition ->
+                val details = info.sensorDetails.firstOrNull { it.type == definition.type }
+                SensorTile(
+                    definition = definition,
+                    details = details,
+                    selected = selectedSensor == details && details != null,
+                    onClick = {
+                        selectedSensor = if (selectedSensor == details) null else details
+                    },
+                    modifier = Modifier.weight(1f),
+                )
             }
             repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
         }
+    }
+
+    selectedSensor?.let { sensor ->
+        Spacer(Modifier.height(7.dp))
+        SensorDetailsPanel(
+            sensorInfo = sensor,
+            onClose = { selectedSensor = null },
+        )
+    }
+}
+
+@Composable
+private fun SensorTile(
+    definition: SensorTileDefinition,
+    details: DeviceSensorInfo?,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val available = details != null
+    val accent = if (available) DeviceGreen else Color(0xFFAAB5C4)
+    val shape = RoundedCornerShape(10.dp)
+    var tileModifier = modifier
+        .background(
+            when {
+                selected -> Color(0xFFE5F2FF)
+                available -> Color(0xFFF0FAF3)
+                else -> DeviceGraySoft
+            },
+            shape,
+        )
+        .border(
+            1.dp,
+            when {
+                selected -> DeviceBlue
+                available -> Color(0xFFC4E6CE)
+                else -> Color(0xFFDDE3EA)
+            },
+            shape,
+        )
+    if (available) tileModifier = tileModifier.clickable(onClick = onClick)
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = tileModifier.padding(horizontal = 6.dp, vertical = 7.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(25.dp).background(if (selected) DeviceBlue else accent, CircleShape),
+            ) {
+                Icon(definition.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            }
+            Spacer(Modifier.width(4.dp))
+            Text(
+                definition.name,
+                color = DeviceText,
+                fontSize = 8.7.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                lineHeight = 10.sp,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                if (available) Icons.Rounded.CheckCircle else Icons.Rounded.RemoveCircleOutline,
+                contentDescription = null,
+                tint = if (selected) DeviceBlue else accent,
+                modifier = Modifier.size(11.dp),
+            )
+            Spacer(Modifier.width(3.dp))
+            Text(
+                when {
+                    !available -> "Não detectado"
+                    selected -> "Detalhes abertos"
+                    else -> "Disponível • toque"
+                },
+                color = if (available) Color(0xFF277A3E) else DeviceMuted,
+                fontSize = 7.8.sp,
+                lineHeight = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SensorDetailsPanel(
+    sensorInfo: DeviceSensorInfo,
+    onClose: () -> Unit,
+) {
+    val context = LocalContext.current
+    val sensorManager = remember(context) { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
+    val sensor = remember(sensorInfo) {
+        sensorManager.getSensorList(sensorInfo.type).firstOrNull { candidate ->
+            candidate.name == sensorInfo.name &&
+                candidate.vendor == sensorInfo.vendor &&
+                candidate.version == sensorInfo.version
+        } ?: sensorManager.getSensorList(sensorInfo.type).firstOrNull()
+    }
+    var liveValues by remember(sensorInfo) { mutableStateOf<List<Float>?>(null) }
+    var liveAvailable by remember(sensorInfo) { mutableStateOf(sensor != null) }
+
+    DisposableEffect(sensor) {
+        if (sensor == null) {
+            liveAvailable = false
+            onDispose { }
+        } else {
+            val listener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent) {
+                    liveValues = event.values.toList()
+                }
+
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+            }
+            liveAvailable = sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            onDispose { sensorManager.unregisterListener(listener, sensor) }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF7FAFF), RoundedCornerShape(11.dp))
+            .border(1.dp, Color(0xFFC8DCF5), RoundedCornerShape(11.dp))
+            .padding(9.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Detalhes reais do sensor",
+                color = DeviceNavy,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                "Ocultar",
+                color = DeviceBlue,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable(onClick = onClose).padding(4.dp),
+            )
+        }
+        SectionDivider()
+        InfoRow("Nome", sensorInfo.name)
+        SectionDivider()
+        InfoRow("Fabricante", sensorInfo.vendor)
+        SectionDivider()
+        InfoRow("Versão", sensorInfo.version.toString())
+        SectionDivider()
+        InfoRow("Tipo Android", sensorInfo.stringType)
+        SectionDivider()
+        InfoRow("Resolução", formatSensorMetric(sensorInfo.resolution, sensorInfo.type))
+        SectionDivider()
+        InfoRow("Alcance máximo", formatSensorMetric(sensorInfo.maximumRange, sensorInfo.type))
+        SectionDivider()
+        InfoRow("Consumo", formatSensorPower(sensorInfo.powerMa))
+        SectionDivider()
+        InfoRow("Atraso mínimo", "${sensorInfo.minDelayUs} µs")
+        SectionDivider()
+        InfoRow("Modo de relatório", sensorReportingModeLabel(sensorInfo.reportingMode))
+        SectionDivider()
+        InfoRow("Wake-up", if (sensorInfo.wakeUpSensor) "Sim" else "Não")
+        SectionDivider()
+        InfoRow(
+            "Leitura atual",
+            when {
+                !liveAvailable -> "Não disponível para leitura em tempo real"
+                liveValues == null -> "Aguardando evento do SensorManager…"
+                else -> formatLiveSensorValues(sensorInfo.type, liveValues.orEmpty())
+            },
+        )
     }
 }
 
@@ -848,27 +1156,21 @@ private fun ExplorerVersionCard(info: DeviceInfoSnapshot) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(15.dp))
-            .border(1.dp, DeviceBorder, RoundedCornerShape(15.dp))
-            .padding(12.dp),
+            .background(Color.White, RoundedCornerShape(13.dp))
+            .border(1.dp, DeviceBorder, RoundedCornerShape(13.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(36.dp).background(DeviceBlue, RoundedCornerShape(11.dp)),
+            modifier = Modifier.size(32.dp).background(DeviceBlue, RoundedCornerShape(9.dp)),
         ) {
-            Icon(Icons.Rounded.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(21.dp))
+            Icon(Icons.Rounded.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
         }
-        Spacer(Modifier.width(9.dp))
+        Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
-            Text("Explorador XP", color = DeviceText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("Versão", color = DeviceMuted, fontSize = 10.sp)
+            Text("Explorador XP ${info.appVersionName} (${info.appVersionCode})", color = DeviceText, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+            Text("Coleta: ${collectionTimeLabel(info)}", color = DeviceMuted, fontSize = 9.sp)
         }
-        Text(
-            "${info.appVersionName} (${info.appVersionCode})",
-            color = DeviceText,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }
 
@@ -876,98 +1178,80 @@ private fun ExplorerVersionCard(info: DeviceInfoSnapshot) {
 private fun ShareDeviceCard(
     enabled: Boolean,
     onCopy: () -> Unit,
+    onShareReport: () -> Unit,
     onSaveImage: () -> Unit,
     onShareImage: () -> Unit,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(9.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(16.dp))
-            .border(1.dp, DeviceBorder, RoundedCornerShape(16.dp))
-            .padding(12.dp),
+            .background(Color.White, RoundedCornerShape(14.dp))
+            .border(1.dp, DeviceBorder, RoundedCornerShape(14.dp))
+            .padding(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(36.dp).background(DevicePurple.copy(alpha = .12f), RoundedCornerShape(11.dp)),
+                modifier = Modifier.size(32.dp).background(DevicePurple.copy(alpha = .12f), RoundedCornerShape(9.dp)),
             ) {
-                Icon(Icons.Rounded.Share, contentDescription = null, tint = DevicePurple, modifier = Modifier.size(21.dp))
+                Icon(Icons.Rounded.Share, contentDescription = null, tint = DevicePurple, modifier = Modifier.size(18.dp))
             }
-            Spacer(Modifier.width(9.dp))
+            Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text("Compartilhar informações", fontWeight = FontWeight.Bold, color = DeviceNavy, fontSize = 14.sp)
+                Text("Copiar e compartilhar", fontWeight = FontWeight.Bold, color = DeviceNavy, fontSize = 12.5.sp)
                 Text(
-                    "Copie um resumo, salve a ficha em PNG ou compartilhe diretamente.",
+                    "Resumo, relatório técnico e imagem usam somente os dados exibidos nesta tela.",
                     color = DeviceMuted,
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
+                    fontSize = 9.sp,
+                    lineHeight = 11.5.sp,
                 )
             }
         }
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            if (maxWidth >= 420.dp) {
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = onCopy, enabled = enabled, shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).height(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Copiar", fontSize = 10.5.sp)
-                    }
-                    OutlinedButton(
-                        onClick = onSaveImage, enabled = enabled, shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).height(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Salvar PNG", fontSize = 10.5.sp)
-                    }
-                    Button(
-                        onClick = onShareImage, enabled = enabled,
-                        colors = ButtonDefaults.buttonColors(containerColor = DevicePurple),
-                        shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f).height(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Compartilhar", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = onCopy,
-                        enabled = enabled,
-                        shape = RoundedCornerShape(11.dp),
-                        modifier = Modifier.weight(1f).height(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text("Copiar", fontSize = 11.sp)
-                    }
-                    OutlinedButton(
-                        onClick = onSaveImage,
-                        enabled = enabled,
-                        shape = RoundedCornerShape(11.dp),
-                        modifier = Modifier.weight(1f).height(42.dp),
-                    ) {
-                        Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text("Salvar PNG", fontSize = 11.sp)
-                    }
-                }
-                Button(
-                    onClick = onShareImage,
-                    enabled = enabled,
-                    colors = ButtonDefaults.buttonColors(containerColor = DevicePurple),
-                    shape = RoundedCornerShape(11.dp),
-                    modifier = Modifier.fillMaxWidth().height(42.dp),
-                ) {
-                    Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Compartilhar", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = onCopy,
+                enabled = enabled,
+                shape = RoundedCornerShape(9.dp),
+                modifier = Modifier.weight(1f).height(39.dp),
+            ) {
+                Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Copiar", fontSize = 9.5.sp)
+            }
+            OutlinedButton(
+                onClick = onShareReport,
+                enabled = enabled,
+                shape = RoundedCornerShape(9.dp),
+                modifier = Modifier.weight(1f).height(39.dp),
+            ) {
+                Icon(Icons.Rounded.Description, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Relatório", fontSize = 9.5.sp)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = onSaveImage,
+                enabled = enabled,
+                shape = RoundedCornerShape(9.dp),
+                modifier = Modifier.weight(1f).height(39.dp),
+            ) {
+                Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Salvar imagem", fontSize = 9.5.sp)
+            }
+            Button(
+                onClick = onShareImage,
+                enabled = enabled,
+                colors = ButtonDefaults.buttonColors(containerColor = DevicePurple),
+                shape = RoundedCornerShape(9.dp),
+                modifier = Modifier.weight(1f).height(39.dp),
+            ) {
+                Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Compart. imagem", fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -995,9 +1279,9 @@ private fun AiReportCard(enabled: Boolean, onExport: () -> Unit) {
             }
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
-                Text("Relatório para IA", fontWeight = FontWeight.Bold, color = DeviceNavy, fontSize = 14.sp)
+                Text("Diagnóstico completo", fontWeight = FontWeight.Bold, color = DeviceNavy, fontSize = 13.sp)
                 Text(
-                    "Detalhes técnicos extras para diagnóstico, sem identificadores pessoais ou lista dos seus arquivos.",
+                    "Relatório técnico com origem dos dados e campos não disponíveis explicitamente marcados.",
                     color = DeviceMuted,
                     fontSize = 10.sp,
                     lineHeight = 13.sp,
@@ -1013,7 +1297,7 @@ private fun AiReportCard(enabled: Boolean, onExport: () -> Unit) {
         ) {
             Icon(Icons.Rounded.Description, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(7.dp))
-            Text("Exportar relatório para IA", fontWeight = FontWeight.Bold)
+            Text("Exportar diagnóstico completo", fontWeight = FontWeight.Bold, fontSize = 11.sp)
             Spacer(Modifier.width(5.dp))
             Icon(Icons.Rounded.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -1029,19 +1313,91 @@ private fun wifiDetailsLabel(info: DeviceInfoSnapshot): String {
     }
 }
 
-private fun mobileDetailsLabel(info: DeviceInfoSnapshot): String = buildString {
-    when {
-        info.mobileNetworkType != "Não disponível" -> append(info.mobileNetworkType)
-        info.cellularActive -> append("Rede móvel")
-        else -> append("Não ativa")
-    }
-    if (info.carrierName != "Não disponível") append(" • ${info.carrierName}")
-    if (!info.cellularActive && info.mobileNetworkType != "Não disponível") append(" • em espera")
+private fun simDetailsLabel(info: DeviceInfoSnapshot): String = when {
+    info.simSlotCount <= 0 -> "Nenhum slot/modem reportado"
+    info.simSlotCount == 1 -> "${info.simReadyCount} pronto de 1 slot/modem reportado"
+    else -> "${info.simReadyCount} prontos de ${info.simSlotCount} slots/modems reportados"
 }
 
-private fun simDetailsLabel(info: DeviceInfoSnapshot): String = when {
-    info.simSlotCount <= 0 -> "Não detectado"
-    else -> "${info.simSlotCount} slot(s) • ${info.simReadyCount} pronto(s)"
+private fun esimDetailsLabel(info: DeviceInfoSnapshot): String = when {
+    !info.esimSupported -> "Não detectado"
+    info.esimMepSupported -> "Suportado • múltiplos perfis compatíveis"
+    info.esimEnabled -> "Suportado • gerenciador ativo"
+    else -> "Suportado pelo aparelho"
+}
+
+private fun abiListLabel(values: List<String>): String = values.joinToString(", ").ifBlank { "Não disponível" }
+
+private fun buildRamPercentSubtitle(availablePercent: Int?, usedPercent: Int?, totalBytes: Long): String = buildString {
+    append("de ${humanBytes(totalBytes)}")
+    if (availablePercent != null && usedPercent != null) append(" • $availablePercent% disponível • $usedPercent% usado")
+}
+
+private fun buildPercentSubtitle(freePercent: Int?, usedPercent: Int?, totalBytes: Long): String = buildString {
+    append("de ${humanBytes(totalBytes)}")
+    if (freePercent != null && usedPercent != null) append(" • $freePercent% livre • $usedPercent% usado")
+}
+
+private fun formatSensorPower(powerMa: Float): String = if (powerMa.isFinite() && powerMa >= 0f) {
+    "${String.format(Locale.forLanguageTag("pt-BR"), "%.3f", powerMa).trimTrailingSensorZeros()} mA"
+} else {
+    "Não disponível"
+}
+
+private fun formatSensorMetric(value: Float, type: Int): String {
+    if (!value.isFinite()) return "Não disponível"
+    val number = String.format(Locale.forLanguageTag("pt-BR"), "%.4f", value).trimTrailingSensorZeros()
+    val unit = sensorUnit(type)
+    return if (unit == null) number else "$number $unit"
+}
+
+private fun formatLiveSensorValues(type: Int, values: List<Float>): String {
+    if (values.isEmpty()) return "Aguardando evento do SensorManager…"
+    val labels = when (values.size) {
+        1 -> listOf("v")
+        2 -> listOf("x", "y")
+        3 -> listOf("x", "y", "z")
+        4 -> listOf("x", "y", "z", "w")
+        else -> values.indices.map { "v${it + 1}" }
+    }
+    val unit = sensorUnit(type)
+    val body = values.mapIndexed { index, value ->
+        val formatted = if (value.isFinite()) {
+            String.format(Locale.forLanguageTag("pt-BR"), "%.4f", value).trimTrailingSensorZeros()
+        } else {
+            "N/D"
+        }
+        "${labels.getOrElse(index) { "v${index + 1}" }}=$formatted"
+    }.joinToString(" • ")
+    return if (unit == null) body else "$body $unit"
+}
+
+private fun sensorUnit(type: Int): String? = when (type) {
+    Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GRAVITY, Sensor.TYPE_LINEAR_ACCELERATION -> "m/s²"
+    Sensor.TYPE_GYROSCOPE -> "rad/s"
+    Sensor.TYPE_MAGNETIC_FIELD -> "µT"
+    Sensor.TYPE_LIGHT -> "lx"
+    Sensor.TYPE_PROXIMITY -> "cm"
+    Sensor.TYPE_PRESSURE -> "hPa"
+    Sensor.TYPE_AMBIENT_TEMPERATURE -> "°C"
+    Sensor.TYPE_RELATIVE_HUMIDITY -> "%"
+    Sensor.TYPE_STEP_COUNTER -> "passos"
+    else -> null
+}
+
+private fun sensorReportingModeLabel(mode: Int): String = when (mode) {
+    Sensor.REPORTING_MODE_CONTINUOUS -> "Contínuo"
+    Sensor.REPORTING_MODE_ON_CHANGE -> "Quando muda"
+    Sensor.REPORTING_MODE_ONE_SHOT -> "Evento único"
+    Sensor.REPORTING_MODE_SPECIAL_TRIGGER -> "Gatilho especial"
+    else -> "Não disponível ($mode)"
+}
+
+private fun String.trimTrailingSensorZeros(): String {
+    val comma = lastIndexOf(',')
+    if (comma < 0) return this
+    val trimmed = trimEnd('0').trimEnd(',')
+    return trimmed.ifBlank { "0" }
 }
 
 private fun displayLabel(info: DeviceInfoSnapshot): String {

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.0-alpha.82
+
+### Informações do dispositivo
+- Revisada a detecção de CPU/arquitetura para não tratar `armeabi-v7a` como prova de hardware físico de 32 bits. A tela agora separa ABIs suportadas pelo sistema, suporte 32/64 bits, bitness real do processo do app, arquitetura de runtime e arquitetura do kernel; arquitetura física e ABI específica do aplicativo ficam como **Não disponível** quando não são fornecidas por API pública confiável.
+- O resolvedor de SoC ficou conservador: o identificador genérico `MT6765` não é mais promovido automaticamente para Helio P35. Nome comercial só aparece quando há alias exato não ambíguo; GPU/processo vindos do catálogo local mostram sua origem.
+- A GPU passa a usar primeiro o valor real `OpenGL ES GL_RENDERER`; catálogo local é apenas fallback explícito. Frequências continuam sendo exibidas somente quando os arquivos `cpufreq` podem ser lidos.
+- RAM e armazenamento agora mostram livre/total e percentuais livre/usado. O armazenamento é identificado como volume utilizável informado pelo Android, sem confundir com capacidade comercial anunciada.
+- Bateria agora diferencia **Carregando / Descarregando / Completa / Não conectado** e acrescenta temperatura, tensão, corrente instantânea e fonte apenas quando o Android fornece esses valores. Saúde, capacidade, ciclos e autonomia não são inventados.
+- Conectividade/SIM ganhou texto natural para operadora, tecnologia, sinal quando acessível, SIMs prontos e eSIM, sempre tolerando falta de permissão/API sem crash.
+- Sensores mantêm a grade e agora abrem detalhes reais do `SensorManager`, incluindo nome, fabricante, versão, resolução, alcance, consumo, modo e leitura em tempo real quando o sensor entrega eventos.
+- Adicionado **Diagnóstico rápido** para câmera, Bluetooth, giroscópio e NFC; ausência é apresentada como “Não detectado”, sem classificar automaticamente como defeito.
+- Cabeçalho, cards e espaçamentos da tela foram compactados para melhorar uso em telas pequenas.
+- Ações de copiar, compartilhar relatório, salvar/compartilhar imagem e exportar diagnóstico completo foram consolidadas. O relatório inclui data/hora, versão do app, fontes relevantes e “Não disponível” sem coletar IMEI, serial, Android ID, MAC, localização ou arquivos pessoais.
+
+### Metadados
+- Versão sincronizada para `0.1.0-alpha.82` / `versionCode 82` em Gradle, `github-manager.json`, `app_identity.json`, `VERSION`, README, ReleaseNotes e documentação.
+
 ## 0.1.0-alpha.81
 
 ### Polimento de Armazenamento

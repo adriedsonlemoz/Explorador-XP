@@ -10,20 +10,51 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
+import android.opengl.EGL14
+import android.opengl.EGLConfig
+import android.opengl.EGLContext
+import android.opengl.EGLDisplay
+import android.opengl.EGLSurface
+import android.opengl.GLES20
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
+import android.os.Process
 import android.os.StatFs
 import android.provider.Settings
+import android.system.Os
 import android.telephony.TelephonyManager
 import android.telephony.euicc.EuiccManager
 import java.io.File
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
+/**
+ * Dados estáticos de um sensor exatamente como o SensorManager os expõe.
+ * Não há valores simulados nem preenchimento por catálogo.
+ */
+data class DeviceSensorInfo(
+    val type: Int,
+    val stringType: String,
+    val name: String,
+    val vendor: String,
+    val version: Int,
+    val resolution: Float,
+    val maximumRange: Float,
+    val powerMa: Float,
+    val minDelayUs: Int,
+    val maxDelayUs: Int,
+    val reportingMode: Int,
+    val wakeUpSensor: Boolean,
+    val fifoReservedEventCount: Int,
+    val fifoMaxEventCount: Int,
+)
 
 /**
  * Snapshot somente-leitura das informações que o próprio Android expõe ao aplicativo.
@@ -48,7 +79,12 @@ data class DeviceInfoSnapshot(
     val cpuCores: Int,
     val cpuMaxFrequenciesMhz: List<Int>,
     val supportedAbis: List<String>,
-    val is64Bit: Boolean,
+    val supported32BitAbis: List<String>,
+    val supported64BitAbis: List<String>,
+    val appProcessIs64Bit: Boolean,
+    val appRuntimeArchitecture: String,
+    val kernelArchitecture: String,
+    val gpuRenderer: String?,
     val ramTotalBytes: Long,
     val ramAvailableBytes: Long,
     val ramLow: Boolean,
@@ -63,6 +99,7 @@ data class DeviceInfoSnapshot(
     val batterySource: String,
     val batteryTemperatureC: Float?,
     val batteryVoltageMv: Int?,
+    val batteryCurrentMicroamps: Long?,
     val hasNfc: Boolean,
     val hasBluetooth: Boolean,
     val hasBluetoothLe: Boolean,
@@ -85,6 +122,7 @@ data class DeviceInfoSnapshot(
     val hasRelativeHumidity: Boolean,
     val sensorCount: Int,
     val sensorInventory: List<String>,
+    val sensorDetails: List<DeviceSensorInfo>,
     val hasRemovableStorage: Boolean,
     val networkTransport: String,
     val networkValidated: Boolean,
@@ -99,6 +137,8 @@ data class DeviceInfoSnapshot(
     val cellularActive: Boolean,
     val mobileNetworkType: String,
     val carrierName: String,
+    val mobileSignalLevel: Int?,
+    val mobileSignalDbm: Int?,
     val simSlotCount: Int,
     val simReadyCount: Int,
     val esimSupported: Boolean,
@@ -109,6 +149,10 @@ data class DeviceInfoSnapshot(
 ) {
     val ramUsedBytes: Long get() = (ramTotalBytes - ramAvailableBytes).coerceAtLeast(0L)
     val storageUsedBytes: Long get() = (storageTotalBytes - storageAvailableBytes).coerceAtLeast(0L)
+    val ramAvailablePercent: Int? get() = percentOf(ramAvailableBytes, ramTotalBytes)
+    val ramUsedPercent: Int? get() = percentOf(ramUsedBytes, ramTotalBytes)
+    val storageAvailablePercent: Int? get() = percentOf(storageAvailableBytes, storageTotalBytes)
+    val storageUsedPercent: Int? get() = percentOf(storageUsedBytes, storageTotalBytes)
 }
 
 object DeviceInfoCollector {
@@ -120,6 +164,8 @@ object DeviceInfoCollector {
         val activityManager = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val memoryInfo = ActivityManager.MemoryInfo().also(activityManager::getMemoryInfo)
 
+        // Capacidade do volume utilizável pelo Android neste ponto de montagem. Não é a capacidade
+        // comercial anunciada pelo fabricante do aparelho.
         val storageRoot = Environment.getExternalStorageDirectory()
         val storage = StatFs(storageRoot.absolutePath)
         val storageTotal = storage.blockCountLong * storage.blockSizeLong
@@ -136,6 +182,8 @@ object DeviceInfoCollector {
         val batteryIntent = runCatching {
             appContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         }.getOrNull()
+        val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+        val batteryStatusCode = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
 
         val batteryLevel = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val batteryScale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
@@ -143,19 +191,22 @@ object DeviceInfoCollector {
             ((batteryLevel * 100f) / batteryScale).toInt().coerceIn(0, 100)
         } else null
 
-        val batteryStatus = when (batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1)) {
+        val batteryStatus = when (batteryStatusCode) {
             BatteryManager.BATTERY_STATUS_CHARGING -> "Carregando"
-            BatteryManager.BATTERY_STATUS_FULL -> "Carregada"
-            BatteryManager.BATTERY_STATUS_DISCHARGING -> "Em uso"
-            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "Conectada, sem carregar"
+            BatteryManager.BATTERY_STATUS_FULL -> "Completa"
+            BatteryManager.BATTERY_STATUS_DISCHARGING -> "Descarregando"
+            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> if (plugged != 0) "Conectado, sem carregar" else "Não conectado"
+            BatteryManager.BATTERY_STATUS_UNKNOWN -> if (plugged == 0) "Não conectado" else "Não disponível"
             else -> "Não disponível"
         }
 
-        val batterySource = when (batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)) {
-            BatteryManager.BATTERY_PLUGGED_AC -> "Carregador"
-            BatteryManager.BATTERY_PLUGGED_USB -> "USB"
-            BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Sem fio"
-            else -> "Bateria"
+        val batterySource = when {
+            plugged and BatteryManager.BATTERY_PLUGGED_AC != 0 -> "Tomada (AC)"
+            plugged and BatteryManager.BATTERY_PLUGGED_USB != 0 -> "USB"
+            plugged and BatteryManager.BATTERY_PLUGGED_WIRELESS != 0 -> "Sem fio"
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                plugged and BatteryManager.BATTERY_PLUGGED_DOCK != 0 -> "Dock"
+            else -> "Não conectado"
         }
 
         val batteryTemperatureRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
@@ -164,6 +215,12 @@ object DeviceInfoCollector {
             .takeIf { it != Int.MIN_VALUE && it != 0 }
             ?.div(10f)
         val batteryVoltage = batteryIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1)?.takeIf { it > 0 }
+        val batteryManager = appContext.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        val batteryCurrentMicroamps = runCatching {
+            batteryManager?.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+        }.getOrNull()?.takeUnless { value ->
+            value == Long.MIN_VALUE || value == Int.MIN_VALUE.toLong()
+        }
 
         val deviceName = runCatching {
             Settings.Global.getString(appContext.contentResolver, "device_name")
@@ -178,16 +235,51 @@ object DeviceInfoCollector {
         val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         fun hasSensor(type: Int): Boolean = sensorManager.getDefaultSensor(type) != null
         val sensors = runCatching { sensorManager.getSensorList(Sensor.TYPE_ALL) }.getOrDefault(emptyList())
-        val sensorCount = sensors.size
-        val sensorInventory = sensors.mapIndexed { index, sensor ->
-            "${index + 1}|type=${sensor.type}|name=${reportValue(sensor.name)}|vendor=${reportValue(sensor.vendor)}|version=${sensor.version}"
+        val sensorDetails = sensors.map { sensor ->
+            DeviceSensorInfo(
+                type = sensor.type,
+                stringType = sensor.stringType.orEmpty().ifBlank { "Não disponível" },
+                name = sensor.name.orEmpty().ifBlank { "Não disponível" },
+                vendor = sensor.vendor.orEmpty().ifBlank { "Não disponível" },
+                version = sensor.version,
+                resolution = sensor.resolution,
+                maximumRange = sensor.maximumRange,
+                powerMa = sensor.power,
+                minDelayUs = sensor.minDelay,
+                maxDelayUs = sensor.maxDelay,
+                reportingMode = sensor.reportingMode,
+                wakeUpSensor = sensor.isWakeUpSensor,
+                fifoReservedEventCount = sensor.fifoReservedEventCount,
+                fifoMaxEventCount = sensor.fifoMaxEventCount,
+            )
+        }
+        val sensorInventory = sensorDetails.mapIndexed { index, sensor ->
+            buildString {
+                append("${index + 1}|type=${sensor.type}")
+                append("|string_type=${reportValue(sensor.stringType)}")
+                append("|name=${reportValue(sensor.name)}")
+                append("|vendor=${reportValue(sensor.vendor)}")
+                append("|version=${sensor.version}")
+                append("|resolution=${sensor.resolution}")
+                append("|max_range=${sensor.maximumRange}")
+                append("|power_ma=${sensor.powerMa}")
+                append("|min_delay_us=${sensor.minDelayUs}")
+                append("|max_delay_us=${sensor.maxDelayUs}")
+                append("|reporting_mode=${sensor.reportingMode}")
+                append("|wake_up=${sensor.wakeUpSensor}")
+            }
         }
 
         val socManufacturer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MANUFACTURER else null
         val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL else null
         val abis = Build.SUPPORTED_ABIS?.toList().orEmpty()
+        val abis32 = Build.SUPPORTED_32_BIT_ABIS?.toList().orEmpty()
+        val abis64 = Build.SUPPORTED_64_BIT_ABIS?.toList().orEmpty()
         val cpuCores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
         val cpuFrequencies = readCpuMaxFrequenciesMhz(cpuCores)
+        val appRuntimeArchitecture = System.getProperty("os.arch").orEmpty().ifBlank { "Não disponível" }
+        val kernelArchitecture = runCatching { Os.uname().machine }.getOrNull().orEmpty().ifBlank { "Não disponível" }
+        val gpuRenderer = readGpuRenderer()
 
         val connectivityManager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val activeNetwork = runCatching { connectivityManager.activeNetwork }.getOrNull()
@@ -257,6 +349,15 @@ object DeviceInfoCollector {
         } else {
             "Não disponível"
         }
+        val signalStrength = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && telephonyManager != null) {
+            runCatching { telephonyManager.signalStrength }.getOrNull()
+        } else null
+        val mobileSignalLevel = signalStrength?.level?.takeIf { it in 0..4 }
+        val mobileSignalDbm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            signalStrength?.cellSignalStrengths
+                ?.mapNotNull { strength -> strength.dbm.takeUnless { it == Int.MAX_VALUE } }
+                ?.maxOrNull()
+        } else null
 
         val esimManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             appContext.getSystemService(Context.EUICC_SERVICE) as? EuiccManager
@@ -291,7 +392,12 @@ object DeviceInfoCollector {
             cpuCores = cpuCores,
             cpuMaxFrequenciesMhz = cpuFrequencies,
             supportedAbis = abis,
-            is64Bit = abis.any { it.contains("64") },
+            supported32BitAbis = abis32,
+            supported64BitAbis = abis64,
+            appProcessIs64Bit = Process.is64Bit(),
+            appRuntimeArchitecture = appRuntimeArchitecture,
+            kernelArchitecture = kernelArchitecture,
+            gpuRenderer = gpuRenderer,
             ramTotalBytes = memoryInfo.totalMem,
             ramAvailableBytes = memoryInfo.availMem,
             ramLow = memoryInfo.lowMemory,
@@ -306,6 +412,7 @@ object DeviceInfoCollector {
             batterySource = batterySource,
             batteryTemperatureC = batteryTemperature,
             batteryVoltageMv = batteryVoltage,
+            batteryCurrentMicroamps = batteryCurrentMicroamps,
             hasNfc = packageManager.hasSystemFeature(PackageManager.FEATURE_NFC),
             hasBluetooth = packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH),
             hasBluetoothLe = packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE),
@@ -326,8 +433,9 @@ object DeviceInfoCollector {
             hasRotationVector = hasSensor(Sensor.TYPE_ROTATION_VECTOR),
             hasAmbientTemperature = hasSensor(Sensor.TYPE_AMBIENT_TEMPERATURE),
             hasRelativeHumidity = hasSensor(Sensor.TYPE_RELATIVE_HUMIDITY),
-            sensorCount = sensorCount,
+            sensorCount = sensors.size,
             sensorInventory = sensorInventory,
+            sensorDetails = sensorDetails,
             hasRemovableStorage = removable,
             networkTransport = networkTransport,
             networkValidated = networkValidated,
@@ -342,6 +450,8 @@ object DeviceInfoCollector {
             cellularActive = cellularActive,
             mobileNetworkType = mobileNetworkType,
             carrierName = carrierName,
+            mobileSignalLevel = mobileSignalLevel,
+            mobileSignalDbm = mobileSignalDbm,
             simSlotCount = simSlotCount,
             simReadyCount = simReadyCount,
             esimSupported = esimSupported,
@@ -366,6 +476,66 @@ object DeviceInfoCollector {
         raw >= 100_000_000L -> (raw / 1_000_000L).toInt() // Hz
         raw >= 100_000L -> (raw / 1_000L).toInt() // kHz (padrão sysfs)
         else -> raw.toInt() // já em MHz
+    }
+
+    /**
+     * Obtém o renderer que o driver OpenGL ES realmente expõe. Se não for possível criar um
+     * contexto gráfico mínimo, retorna null e a UI pode recorrer ao catálogo local identificado.
+     */
+    private fun readGpuRenderer(): String? {
+        var display: EGLDisplay = EGL14.EGL_NO_DISPLAY
+        var context: EGLContext = EGL14.EGL_NO_CONTEXT
+        var surface: EGLSurface = EGL14.EGL_NO_SURFACE
+        return try {
+            display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+            if (display == EGL14.EGL_NO_DISPLAY) return null
+            val versions = IntArray(2)
+            if (!EGL14.eglInitialize(display, versions, 0, versions, 1)) return null
+            EGL14.eglBindAPI(EGL14.EGL_OPENGL_ES_API)
+
+            val configAttributes = intArrayOf(
+                EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+                EGL14.EGL_SURFACE_TYPE, EGL14.EGL_PBUFFER_BIT,
+                EGL14.EGL_RED_SIZE, 8,
+                EGL14.EGL_GREEN_SIZE, 8,
+                EGL14.EGL_BLUE_SIZE, 8,
+                EGL14.EGL_NONE,
+            )
+            val configs = arrayOfNulls<EGLConfig>(1)
+            val configCount = IntArray(1)
+            if (!EGL14.eglChooseConfig(display, configAttributes, 0, configs, 0, 1, configCount, 0)) return null
+            val config = configs.firstOrNull() ?: return null
+
+            context = EGL14.eglCreateContext(
+                display,
+                config,
+                EGL14.EGL_NO_CONTEXT,
+                intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL14.EGL_NONE),
+                0,
+            )
+            if (context == EGL14.EGL_NO_CONTEXT) return null
+
+            surface = EGL14.eglCreatePbufferSurface(
+                display,
+                config,
+                intArrayOf(EGL14.EGL_WIDTH, 1, EGL14.EGL_HEIGHT, 1, EGL14.EGL_NONE),
+                0,
+            )
+            if (surface == EGL14.EGL_NO_SURFACE) return null
+            if (!EGL14.eglMakeCurrent(display, surface, surface, context)) return null
+
+            GLES20.glGetString(GLES20.GL_RENDERER)?.trim()?.takeIf { it.isNotBlank() }
+        } catch (_: Throwable) {
+            null
+        } finally {
+            if (display != EGL14.EGL_NO_DISPLAY) {
+                runCatching { EGL14.eglMakeCurrent(display, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT) }
+                if (surface != EGL14.EGL_NO_SURFACE) runCatching { EGL14.eglDestroySurface(display, surface) }
+                if (context != EGL14.EGL_NO_CONTEXT) runCatching { EGL14.eglDestroyContext(display, context) }
+                runCatching { EGL14.eglTerminate(display) }
+                runCatching { EGL14.eglReleaseThread() }
+            }
+        }
     }
 
     private fun wifiBandLabel(frequencyMhz: Int): String = when (frequencyMhz) {
@@ -407,8 +577,10 @@ object DeviceInfoCollector {
 fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     val socIdentity = DeviceSoCResolver.resolve(socManufacturer, socModel, hardware)
     appendLine("EXPLORADOR XP - RELATORIO DO DISPOSITIVO")
-    appendLine("schema_version=3")
+    appendLine("schema_version=4")
     appendLine("generated_at=$collectedAt")
+    appendLine("explorador_xp_version=${reportValue(appVersionName)}")
+    appendLine("explorador_xp_version_code=$appVersionCode")
     appendLine("purpose=diagnostico_tecnico_e_analise_por_ia")
     appendLine()
     appendLine("[privacy]")
@@ -422,11 +594,22 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("contains_bssid=false")
     appendLine("contains_phone_number=false")
     appendLine("contains_user_files=false")
-    appendLine("note=O relatorio contem apenas informacoes de hardware, sistema, conectividade e estado geral expostas pelo Android.")
+    appendLine("contains_user_defined_device_name=false")
+    appendLine("note=O relatorio contem apenas informacoes de hardware, sistema, conectividade e estado geral expostas por APIs do Android ou fontes locais explicitamente identificadas.")
+    appendLine()
+    appendLine("[sources]")
+    appendLine("device_and_build=android.os.Build")
+    appendLine("soc=Build.SOC_MANUFACTURER/Build.SOC_MODEL quando disponivel; Build.HARDWARE como fallback tecnico")
+    appendLine("gpu=${reportValue(gpuSourceSummary(this@toAiReport))}")
+    appendLine("cpu_frequency=sysfs cpufreq quando legivel")
+    appendLine("ram=ActivityManager.MemoryInfo")
+    appendLine("storage=StatFs do volume de armazenamento utilizavel pelo Android")
+    appendLine("battery=ACTION_BATTERY_CHANGED + BatteryManager")
+    appendLine("network=ConnectivityManager/TelephonyManager; campos sujeitos a permissao e suporte do aparelho")
+    appendLine("sensors=SensorManager")
     appendLine()
     appendLine("[device]")
-    appendLine("name=${reportValue(deviceName)}")
-    appendLine("manufacturer=${reportValue(manufacturer)}")
+        appendLine("manufacturer=${reportValue(manufacturer)}")
     appendLine("model=${reportValue(model)}")
     appendLine("device_code=${reportValue(deviceCode)}")
     appendLine("product=${reportValue(product)}")
@@ -438,46 +621,60 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("build_display=${reportValue(buildDisplay)}")
     appendLine("build_fingerprint=${reportValue(buildFingerprint)}")
     appendLine("kernel=${reportValue(kernelVersion)}")
+    appendLine("kernel_architecture=${reportValue(kernelArchitecture)}")
     appendLine()
     appendLine("[processor]")
-    appendLine("commercial_name=${reportValue(socIdentity.commercialName ?: "Nao identificado com seguranca")}")
+    appendLine("commercial_name=${reportValue(socIdentity.commercialName ?: "Nao disponivel")}")
+    appendLine("commercial_name_source=${reportValue(if (socIdentity.commercialName != null) socIdentity.identitySourceLabel else "Nao disponivel")}")
     appendLine("soc_manufacturer=${reportValue(socManufacturer ?: "Nao disponivel")}")
     appendLine("soc_model=${reportValue(socModel ?: "Nao disponivel")}")
     appendLine("resolved_manufacturer=${reportValue(socIdentity.manufacturer ?: "Nao disponivel")}")
     appendLine("technical_id=${reportValue(socIdentity.technicalId)}")
-    appendLine("gpu=${reportValue(socIdentity.gpu ?: "Nao disponivel")}")
-    appendLine("manufacturing_process=${reportValue(socIdentity.processLabel ?: "Nao disponivel")}")
-    appendLine("commercial_name_catalog_match=${socIdentity.matchedCatalog}")
     appendLine("hardware=${reportValue(hardware)}")
+    appendLine("physical_hardware_architecture=Nao disponivel pela API publica do Android")
     appendLine("cpu_cores=$cpuCores")
-    appendLine("is_64_bit=$is64Bit")
-    appendLine("primary_abi=${reportValue(supportedAbis.firstOrNull() ?: "Nao disponivel")}")
-    appendLine("supported_abis=${supportedAbis.joinToString(",")}")
-    appendLine("cpu_max_frequencies_mhz=${cpuMaxFrequenciesMhz.joinToString(",")}")
+    appendLine("system_primary_abi=${reportValue(supportedAbis.firstOrNull() ?: "Nao disponivel")}")
+    appendLine("system_supported_abis=${reportList(supportedAbis)}")
+    appendLine("system_supported_32_bit_abis=${reportList(supported32BitAbis)}")
+    appendLine("system_supported_64_bit_abis=${reportList(supported64BitAbis)}")
+    appendLine("system_bitness_support=${reportValue(systemBitnessSummary(this@toAiReport))}")
+    appendLine("app_process_bitness=${if (appProcessIs64Bit) 64 else 32}")
+    appendLine("app_runtime_architecture=${reportValue(appRuntimeArchitecture)}")
+    appendLine("app_abi=Nao disponivel pela API publica; nao inferido a partir da ABI do sistema")
+    appendLine("cpu_max_frequencies_mhz=${cpuMaxFrequenciesMhz.joinToString(",").ifBlank { "Nao disponivel" }}")
     appendLine("cpu_frequency_summary=${reportValue(cpuFrequencySummary(this@toAiReport))}")
+    appendLine("gpu=${reportValue(gpuSummary(this@toAiReport))}")
+    appendLine("gpu_source=${reportValue(gpuSourceSummary(this@toAiReport))}")
+    appendLine("manufacturing_process=${reportValue(socIdentity.processLabel ?: "Nao disponivel")}")
+    appendLine("manufacturing_process_source=${reportValue(socIdentity.catalogSourceLabel ?: "Nao disponivel")}")
     appendLine()
     appendLine("[memory]")
     appendLine("ram_total_bytes=$ramTotalBytes")
     appendLine("ram_total_human=${humanBytes(ramTotalBytes)}")
     appendLine("ram_available_bytes=$ramAvailableBytes")
     appendLine("ram_available_human=${humanBytes(ramAvailableBytes)}")
+    appendLine("ram_available_percent=${ramAvailablePercent ?: "Nao disponivel"}")
     appendLine("ram_used_bytes=$ramUsedBytes")
     appendLine("ram_used_human=${humanBytes(ramUsedBytes)}")
+    appendLine("ram_used_percent=${ramUsedPercent ?: "Nao disponivel"}")
     appendLine("android_low_memory=$ramLow")
     appendLine()
     appendLine("[storage_internal]")
+    appendLine("scope=volume utilizavel detectado pelo Android; nao representa necessariamente a capacidade comercial anunciada")
     appendLine("total_bytes=$storageTotalBytes")
     appendLine("total_human=${humanBytes(storageTotalBytes)}")
     appendLine("available_bytes=$storageAvailableBytes")
     appendLine("available_human=${humanBytes(storageAvailableBytes)}")
+    appendLine("available_percent=${storageAvailablePercent ?: "Nao disponivel"}")
     appendLine("used_bytes=$storageUsedBytes")
     appendLine("used_human=${humanBytes(storageUsedBytes)}")
+    appendLine("used_percent=${storageUsedPercent ?: "Nao disponivel"}")
     appendLine("removable_storage_detected=$hasRemovableStorage")
     appendLine()
     appendLine("[display]")
     appendLine("resolution_px=${displayWidthPx}x${displayHeightPx}")
     appendLine("density_dpi=$densityDpi")
-    appendLine("refresh_rate_hz=${formatOneDecimal(refreshRateHz)}")
+    appendLine("refresh_rate_hz=${if (refreshRateHz > 0f) formatOneDecimal(refreshRateHz) else "Nao disponivel"}")
     appendLine()
     appendLine("[battery]")
     appendLine("percent=${batteryPercent ?: "Nao disponivel"}")
@@ -485,6 +682,7 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("power_source=${reportValue(batterySource)}")
     appendLine("temperature_c=${batteryTemperatureC?.let(::formatOneDecimal) ?: "Nao disponivel"}")
     appendLine("voltage_mv=${batteryVoltageMv ?: "Nao disponivel"}")
+    appendLine("current_now_microamps=${batteryCurrentMicroamps ?: "Nao disponivel"}")
     appendLine()
     appendLine("[connectivity]")
     appendLine("active_transport=${reportValue(networkTransport)}")
@@ -500,7 +698,9 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("cellular_active=$cellularActive")
     appendLine("mobile_network_type=${reportValue(mobileNetworkType)}")
     appendLine("carrier=${reportValue(carrierName)}")
-    appendLine("sim_slot_count=$simSlotCount")
+    appendLine("mobile_signal_level_0_to_4=${mobileSignalLevel ?: "Nao disponivel"}")
+    appendLine("mobile_signal_dbm=${mobileSignalDbm ?: "Nao disponivel"}")
+    appendLine("sim_slot_or_modem_count=$simSlotCount")
     appendLine("sim_ready_count=$simReadyCount")
     appendLine("esim_supported=$esimSupported")
     appendLine("euicc_manager_enabled=$esimEnabled")
@@ -537,30 +737,40 @@ fun DeviceInfoSnapshot.toAiReport(): String = buildString {
     appendLine("[explorador_xp]")
     appendLine("version_name=${reportValue(appVersionName)}")
     appendLine("version_code=$appVersionCode")
+    appendLine("collection_time=${reportValue(collectedAt)}")
     appendLine()
     appendLine("[ai_guidance]")
     appendLine("Preferir os campos numericos *_bytes para calculos e os campos *_human para explicacoes ao usuario.")
-    appendLine("Nao inferir capacidade inexistente quando um campo estiver como Nao disponivel.")
-    appendLine("SSID, BSSID, numero de telefone, IMEI, IMSI, ICCID e localizacao nao sao coletados.")
-    appendLine("Os valores representam o estado informado pelo Android no momento generated_at.")
+    appendLine("Nao inferir arquitetura fisica, ABI do aplicativo, capacidade da bateria, saude, ciclos ou autonomia quando o Android nao os fornecer.")
+    appendLine("Dados de GPU/processo vindos do catalogo local sao explicitamente identificados como tal e so sao usados em correspondencia exata de identificador.")
+    appendLine("SSID, BSSID, numero de telefone, IMEI, IMSI, ICCID, serial, Android ID, MAC, localizacao e nome personalizado do aparelho nao sao exportados.")
+    appendLine("Os valores representam o estado informado no momento generated_at; alguns campos podem ficar Nao disponivel por permissao, driver ou limitacao da API.")
 }
 
 fun DeviceInfoSnapshot.toShareSummary(): String = buildString {
     val socIdentity = DeviceSoCResolver.resolve(socManufacturer, socModel, hardware)
     appendLine("Explorador XP — Informações do dispositivo")
-    appendLine("${deviceName} • ${manufacturer.smartReportTitle()} ${model}")
+    appendLine("Coleta: ${collectionTimeLabel(this@toShareSummary)}")
+    appendLine("${manufacturer.smartReportTitle()} • ${model}")
     appendLine("Android ${androidVersion} • API ${apiLevel} • Patch ${securityPatch}")
-    appendLine("Processador: ${if (socIdentity.commercialName != null) "${socIdentity.commercialName} • ${socIdentity.technicalLabel}" else socIdentity.technicalLabel}")
-    socIdentity.gpu?.let { appendLine("GPU: $it") }
-    socIdentity.processLabel?.let { appendLine("Fabricação: $it") }
-    appendLine("CPU: ${cpuCores} núcleos • ${if (is64Bit) "64 bits" else "32 bits"} • ${supportedAbis.firstOrNull() ?: "ABI N/D"}")
-    if (cpuMaxFrequenciesMhz.isNotEmpty()) appendLine("Clock: ${cpuFrequencySummary(this@toShareSummary)}")
-    appendLine("RAM: ${humanBytes(ramTotalBytes)} • ${humanBytes(ramAvailableBytes)} livre")
-    appendLine("Armazenamento: ${humanBytes(storageTotalBytes)} • ${humanBytes(storageAvailableBytes)} livre")
+    appendLine("Processador/SoC: ${socIdentity.technicalLabel}")
+    socIdentity.commercialName?.let { appendLine("Nome comercial: $it • fonte: catálogo local por identificador exato") }
+    appendLine("GPU: ${gpuSummary(this@toShareSummary)} • fonte: ${gpuSourceSummary(this@toShareSummary)}")
+    socIdentity.processLabel?.let { appendLine("Fabricação: $it • fonte: ${socIdentity.catalogSourceLabel ?: "Não disponível"}") }
+    appendLine("CPU: ${cpuCores} núcleos • processo do app ${if (appProcessIs64Bit) "64 bits" else "32 bits"}")
+    appendLine("ABI principal do sistema: ${supportedAbis.firstOrNull() ?: "Não disponível"}")
+    appendLine("Suporte do sistema: ${systemBitnessSummary(this@toShareSummary)}")
+    appendLine("Arquitetura física: Não disponível pela API pública do Android")
+    if (cpuMaxFrequenciesMhz.isNotEmpty()) appendLine("Clock detectado: ${cpuFrequencySummary(this@toShareSummary)}")
+    appendLine("RAM: ${humanBytes(ramAvailableBytes)} disponíveis de ${humanBytes(ramTotalBytes)} • ${ramAvailablePercent?.let { "$it% disponível" } ?: "percentual N/D"}")
+    appendLine("Armazenamento utilizável: ${humanBytes(storageAvailableBytes)} livres de ${humanBytes(storageTotalBytes)} • ${storageAvailablePercent?.let { "$it% livre" } ?: "percentual N/D"}")
     appendLine("Tela: ${displayWidthPx} × ${displayHeightPx}px${if (refreshRateHz > 0f) " • ${refreshRateHz.toInt()} Hz" else ""}")
-    appendLine("Bateria: ${batteryPercent?.let { "$it%" } ?: "N/D"} • $batteryStatus")
+    appendLine("Bateria: ${batteryPercent?.let { "$it%" } ?: "N/D"} • $batteryStatus${if (batterySource != "Não conectado") " • $batterySource" else ""}")
+    batteryTemperatureC?.let { appendLine("Temperatura da bateria: ${formatOneDecimal(it)} °C") }
+    batteryVoltageMv?.let { appendLine("Tensão da bateria: $it mV") }
+    batteryCurrentMicroamps?.let { appendLine("Corrente instantânea: ${formatBatteryCurrent(it)}") }
     appendLine("Conexão: ${connectivitySummary(this@toShareSummary)}")
-    appendLine("SIM: $simReadyCount pronto(s) de $simSlotCount • eSIM ${if (esimSupported) "suportado" else "não detectado"}")
+    appendLine("SIM: ${simReadyCount} pronto(s) de ${simSlotCount} slot(s)/modem(ns) reportado(s) • eSIM ${if (esimSupported) "suportado" else "não detectado"}")
     appendLine("Sensores detectados: $sensorCount")
     appendLine("Gerado pelo Explorador XP ${appVersionName}")
 }
@@ -609,6 +819,46 @@ fun cpuFrequencySummary(info: DeviceInfoSnapshot): String {
     }
 }
 
+fun systemBitnessSummary(info: DeviceInfoSnapshot): String = when {
+    info.supported32BitAbis.isNotEmpty() && info.supported64BitAbis.isNotEmpty() -> "32 e 64 bits"
+    info.supported64BitAbis.isNotEmpty() -> "64 bits"
+    info.supported32BitAbis.isNotEmpty() -> "32 bits"
+    else -> "Não disponível"
+}
+
+fun gpuSummary(info: DeviceInfoSnapshot): String {
+    if (!info.gpuRenderer.isNullOrBlank()) return info.gpuRenderer
+    val identity = DeviceSoCResolver.resolve(info.socManufacturer, info.socModel, info.hardware)
+    return identity.gpu ?: "Não disponível"
+}
+
+fun gpuSourceSummary(info: DeviceInfoSnapshot): String {
+    if (!info.gpuRenderer.isNullOrBlank()) return "OpenGL ES (GL_RENDERER)"
+    val identity = DeviceSoCResolver.resolve(info.socManufacturer, info.socModel, info.hardware)
+    return if (identity.gpu != null && identity.matchedCatalog) {
+        identity.catalogSourceLabel ?: "Catálogo local"
+    } else {
+        "Não disponível"
+    }
+}
+
+fun formatBatteryCurrent(microamps: Long): String {
+    val ma = microamps / 1000.0
+    val decimals = if (abs(ma) >= 100.0) 0 else 1
+    return String.format(Locale.forLanguageTag("pt-BR"), "%.${decimals}f mA", ma)
+}
+
+fun mobileSignalSummary(info: DeviceInfoSnapshot): String = when {
+    info.mobileSignalDbm != null && info.mobileSignalLevel != null -> "${info.mobileSignalDbm} dBm • nível ${info.mobileSignalLevel}/4"
+    info.mobileSignalDbm != null -> "${info.mobileSignalDbm} dBm"
+    info.mobileSignalLevel != null -> "Nível ${info.mobileSignalLevel}/4"
+    else -> "Não disponível"
+}
+
+fun collectionTimeLabel(info: DeviceInfoSnapshot): String = runCatching {
+    OffsetDateTime.parse(info.collectedAt).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))
+}.getOrDefault(info.collectedAt)
+
 fun connectivitySummary(info: DeviceInfoSnapshot): String = when {
     info.wifiActive -> buildString {
         append("Wi-Fi")
@@ -626,6 +876,12 @@ fun connectivitySummary(info: DeviceInfoSnapshot): String = when {
     info.vpnActive -> "VPN"
     else -> info.networkTransport
 }
+
+private fun percentOf(part: Long, total: Long): Int? = if (total > 0L) {
+    ((part.toDouble() / total.toDouble()) * 100.0).roundToInt().coerceIn(0, 100)
+} else null
+
+private fun reportList(values: List<String>): String = values.joinToString(",").ifBlank { "Nao disponivel" }
 
 private fun reportValue(value: String): String = value
     .replace("\\", "\\\\")

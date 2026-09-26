@@ -38,7 +38,7 @@ object DeviceInfoShare {
 
         // Resumo do aparelho
         drawCard(canvas, paint, left, 300f, right, 500f)
-        drawText(canvas, paint, info.deviceName, 92f, 365f, 44f, Color.rgb(20, 39, 68), true)
+        drawText(canvas, paint, info.model, 92f, 365f, 44f, Color.rgb(20, 39, 68), true)
         drawText(canvas, paint, "${info.manufacturer} • ${info.model}", 92f, 414f, 27f, Color.rgb(97, 113, 138), false)
         drawText(canvas, paint, "Android ${info.androidVersion}  •  ${humanBytes(info.ramTotalBytes)} RAM  •  ${humanBytes(info.storageTotalBytes)}", 92f, 467f, 27f, Color.rgb(11, 92, 189), true)
 
@@ -49,9 +49,11 @@ object DeviceInfoShare {
             listOf(
                 "Android" to "${info.androidVersion} • API ${info.apiLevel}",
                 "Patch de segurança" to info.securityPatch,
-                "Processador" to processorForShare(info),
-                "CPU" to "${info.cpuCores} núcleos • ${if (info.is64Bit) "64 bits" else "32 bits"}",
-                "Arquitetura" to (info.supportedAbis.firstOrNull() ?: "Não disponível"),
+                "Processador/SoC" to processorForShare(info),
+                "CPU" to "${info.cpuCores} núcleos • app ${if (info.appProcessIs64Bit) "64 bits" else "32 bits"}",
+                "ABI do sistema" to (info.supportedAbis.firstOrNull() ?: "Não disponível"),
+                "Suporte do sistema" to systemBitnessSummary(info),
+                "GPU" to gpuSummary(info),
                 "Frequência" to cpuFrequencySummary(info),
                 "Tela" to "${info.displayWidthPx} × ${info.displayHeightPx}px${if (info.refreshRateHz > 0f) " • ${info.refreshRateHz.toInt()} Hz" else ""}",
             ),
@@ -60,11 +62,12 @@ object DeviceInfoShare {
         y = drawInfoBlock(
             canvas, paint, left, y, right, "Estado atual",
             listOf(
-                "RAM livre" to humanBytes(info.ramAvailableBytes),
-                "Armazenamento livre" to humanBytes(info.storageAvailableBytes),
+                "RAM" to "${humanBytes(info.ramAvailableBytes)} disponíveis de ${humanBytes(info.ramTotalBytes)}${info.ramAvailablePercent?.let { " • $it% disponível" } ?: ""}",
+                "Armazenamento" to "${humanBytes(info.storageAvailableBytes)} livres de ${humanBytes(info.storageTotalBytes)}${info.storageAvailablePercent?.let { " • $it% livre" } ?: ""}",
                 "Bateria" to (info.batteryPercent?.let { "$it% • ${info.batteryStatus}" } ?: info.batteryStatus),
                 "Conexão" to connectivitySummary(info),
-                "SIM / eSIM" to "${info.simReadyCount}/${info.simSlotCount} pronto(s) • eSIM ${if (info.esimSupported) "sim" else "não"}",
+                "Sinal móvel" to mobileSignalSummary(info),
+                "SIM / eSIM" to "${info.simReadyCount} pronto(s) de ${info.simSlotCount} slot(s)/modem(ns) • eSIM ${if (info.esimSupported) "suportado" else "não detectado"}",
                 "Sensores detectados" to info.sensorCount.toString(),
             ),
         )
@@ -107,7 +110,7 @@ object DeviceInfoShare {
             y += 78f
         }
 
-        drawText(canvas, paint, "Gerado pelo Explorador XP ${info.appVersionName}", left, height - 92f, 23f, Color.rgb(97, 113, 138), false)
+        drawText(canvas, paint, "Gerado pelo Explorador XP ${info.appVersionName} • coleta ${collectionTimeLabel(info)}", left, height - 92f, 21f, Color.rgb(97, 113, 138), false)
         drawText(canvas, paint, "Sem IMEI, serial, Android ID, MAC, localização ou arquivos pessoais.", left, height - 52f, 20f, Color.rgb(97, 113, 138), false)
         return bitmap
     }

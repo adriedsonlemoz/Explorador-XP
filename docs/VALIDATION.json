@@ -1,79 +1,79 @@
 {
-  "version_build": "0.1.0-alpha.81",
-  "version_code": 81,
-  "manager_version": "0.1.0-alpha.81",
+  "version_build": "0.1.0-alpha.82",
+  "version_code": 82,
+  "manager_version": "0.1.0-alpha.82",
   "application_id": "com.exploradorxp.app",
-  "scope": "Polimento visual do ícone de armazenamento e compactação dos cartões por tipo",
+  "scope": "Precisão técnica, diagnóstico e exportação da tela Informações do dispositivo",
   "checks": [
     {
-      "name": "help_full_screen_static",
+      "name": "cpu_architecture_no_abi_guess",
       "status": "passed",
-      "details": "HelpManualScreen usa fillMaxSize + BackHandler, rodapé fixo com contagem de tópicos/Fechar e não usa XpModalWindow/Dialog."
+      "details": "A arquitetura física não é inferida de armeabi-v7a/arm64-v8a. A coleta separa SUPPORTED_ABIS, SUPPORTED_32_BIT_ABIS, SUPPORTED_64_BIT_ABIS, Process.is64Bit(), os.arch e Os.uname().machine; ABI específica do aplicativo fica Não disponível quando não há API pública confiável."
     },
     {
-      "name": "storage_full_screen_static",
+      "name": "soc_catalog_conservative",
       "status": "passed",
-      "details": "StorageDetailsScreen usa fillMaxSize + BackHandler, rodapé fixo e substitui a tela principal enquanto aberta; não usa XpModalWindow/Dialog."
+      "details": "MT6765 permanece identificador técnico e não é promovido automaticamente para Helio P35. O resolvedor puro foi compilado com kotlinc e um teste de comportamento confirmou MT6765 sem nome comercial e aliases exatos conhecidos funcionando."
     },
     {
-      "name": "storage_metric_sources_static",
+      "name": "gpu_and_process_sources",
       "status": "passed",
-      "details": "Capacidade total/usada/livre permanece derivada de StatFs; scannedFiles/scannedBytes são produzidos somente pela travessia de arquivos enumerados e alimentam o universo analisado."
+      "details": "GPU usa primeiro OpenGL ES GL_RENDERER obtido de contexto EGL/Pbuffer; fallback de GPU e processo de fabricação só vem do catálogo local em identificador exato e a origem é exibida/relatada."
     },
     {
-      "name": "storage_category_denominator_static",
+      "name": "ram_storage_metrics",
       "status": "passed",
-      "details": "Percentuais dos cartões por tipo usam somente analysis.scannedBytes como denominador, sem misturar com totalBytes do dispositivo."
+      "details": "RAM usa ActivityManager.MemoryInfo e armazenamento usa StatFs do volume utilizável pelo Android. Livre/disponível, usado e percentuais são calculados somente a partir desses valores, sem converter para capacidade comercial do aparelho."
     },
     {
-      "name": "storage_category_limit_static",
+      "name": "battery_real_fields",
       "status": "passed",
-      "details": "buildStorageDisplayCategories mantém até quatro categorias específicas e agrega o restante em um único cartão Outros, retornando no máximo cinco cartões."
+      "details": "Estado/fonte vêm de ACTION_BATTERY_CHANGED; temperatura, tensão e nível são lidos do broadcast e corrente de BatteryManager.BATTERY_PROPERTY_CURRENT_NOW quando suportada. Saúde, capacidade, ciclos e autonomia não são gerados."
     },
     {
-      "name": "storage_counts_static",
+      "name": "network_sim_safe_access",
       "status": "passed",
-      "details": "scannedFiles incrementa somente para File.isFile; diretórios não entram na contagem de arquivos. O ranking de pastas acumula os mesmos arquivos analisados."
+      "details": "Operadora, tecnologia e SIM usam TelephonyManager e sinal é tentado somente por API suportada com falhas/permissões tratadas por runCatching. A interface usa slots/modems reportados e eSIM detectado, sem estimar valores ausentes."
     },
     {
-      "name": "storage_partial_scan_static",
+      "name": "sensor_details_live",
       "status": "passed",
-      "details": "A análise incrementa inaccessibleDirectories somente quando File.listFiles() retorna null; a interface não estima bytes/arquivos ausentes e só marca parcial quando essa condição foi observada."
+      "details": "A grade usa sensores reais do SensorManager. Sensores disponíveis abrem painel com nome, fabricante, versão, resolução, alcance, consumo, atrasos/modo e leitura SensorEventListener; sensores ausentes permanecem Não detectado."
     },
     {
-      "name": "storage_refresh_previous_result_static",
+      "name": "quick_diagnostics",
       "status": "passed",
-      "details": "Uma atualização preserva o último StorageAnalysis válido enquanto a nova varredura roda, identifica o resultado como anterior e só o substitui após sucesso."
+      "details": "Diagnóstico rápido mostra Câmera, Bluetooth, Giroscópio e NFC como Disponível/Não detectado e informa explicitamente que ausência não significa defeito."
+    },
+    {
+      "name": "report_and_sharing",
+      "status": "passed",
+      "details": "Há ações para Copiar, Compartilhar relatório, Salvar imagem, Compartilhar imagem e Exportar diagnóstico completo. Relatório inclui coleta, versão, fontes e campos Não disponível; nome personalizado do aparelho também foi removido das saídas compartilhadas."
+    },
+    {
+      "name": "privacy_contract",
+      "status": "passed",
+      "details": "Relatório não exporta IMEI, serial, Android ID, MAC, localização, SSID/BSSID, número de telefone, nome personalizado do aparelho ou arquivos pessoais."
     },
     {
       "name": "update_highlights_policy_static",
       "status": "passed",
-      "details": "PreferencesStore persiste o último versionCode apresentado; MainActivity exige atualização real do pacote e versionCode novo antes de mostrar UpdateHighlightsScreen, marcando a versão como vista na primeira exibição."
+      "details": "PreferencesStore continua comparando o versionCode atual com o último apresentado e MainActivity marca a versão como vista na primeira exibição, mantendo Novidades uma única vez após atualização real."
     },
     {
-      "name": "workflow_release_per_version_static",
+      "name": "metadata_sync",
       "status": "passed",
-      "details": "gerar-apk.yml continua criando/uploadando APK diretamente em uma GitHub prerelease por tag v<versionName>, sem actions/upload-artifact."
+      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes e documentação estão sincronizados para 0.1.0-alpha.82/versionCode 82."
     },
     {
-      "name": "storage_header_icon_fit_static",
+      "name": "format_validation",
       "status": "passed",
-      "details": "O ícone de Armazenamento interno usa Box dedicado de 37dp, imagem de 33dp, margem interna e ContentScale.Fit, sem crop/clipping explícito."
+      "details": "JSON, XML e workflows YAML foram parseados com sucesso; validações estáticas das invariantes desta etapa passaram e não há APK dentro do código-fonte."
     },
     {
-      "name": "storage_category_compact_cards_static",
-      "status": "passed",
-      "details": "Cartões por tipo usam padding vertical reduzido, ícone de 21dp, espaçamento de 6dp e contagem/porcentagem em uma única linha, mantendo no máximo cinco cartões."
-    },
-    {
-      "name": "version_metadata",
-      "status": "passed",
-      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, ReleaseNotes e documentação estão sincronizados para alpha.81/versionCode 81."
-    },
-    {
-      "name": "android_full_build",
+      "name": "android_unit_lint_build",
       "status": "not_run",
-      "reason": "O ZIP não inclui gradlew e o ambiente atual não possui Gradle/Android SDK configurados; foram executadas validações estáticas em substituição ao build completo."
+      "reason": "O ZIP não contém gradlew e o ambiente atual não possui Gradle nem Android SDK/android.jar configurados. O resolvedor Kotlin puro foi compilado, mas testes Android/JVM completos, lint e assemble dependem desse toolchain."
     }
   ]
 }

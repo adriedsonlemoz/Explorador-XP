@@ -18,10 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "O ícone de Armazenamento interno foi ajustado para não parecer recortado em telas com diferentes densidades.",
-                "Os cartões de Vídeos, Imagens, Áudio, APK e Outros ficaram mais baixos e compactos.",
-                "Tamanho, quantidade de arquivos e porcentagem continuam visíveis, agora com melhor aproveitamento vertical.",
-                "A lógica e os números da análise de armazenamento foram preservados sem misturar dados do dispositivo com arquivos analisados.",
+                "Informações do dispositivo agora separa arquitetura, ABIs do sistema e bitness real do processo do aplicativo sem deduzir a arquitetura física.",
+                "CPU/SoC, GPU e processo de fabricação agora mostram a origem do dado e evitam nomes comerciais ambíguos.",
+                "RAM, armazenamento, bateria, rede e SIM ganharam métricas mais claras usando somente valores realmente expostos pelo Android.",
+                "Sensores disponíveis agora podem mostrar fabricante, resolução, alcance, consumo e leituras reais do SensorManager.",
+                "Foi adicionado um diagnóstico rápido de recursos e o relatório técnico passou a acompanhar os novos campos e suas fontes.",
             )
         )
 }
