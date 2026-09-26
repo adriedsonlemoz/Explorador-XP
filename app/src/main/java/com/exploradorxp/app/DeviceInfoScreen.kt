@@ -775,7 +775,8 @@ private fun DeviceOriginLabel(text: String) {
         fontWeight = FontWeight.Bold,
         color = DeviceMuted,
         letterSpacing = .6.sp,
-        modifier = Modifier.padding(start = 3.dp, top = 2.dp, bottom = (-3).dp),
+        // Compose exige padding não negativo; -3.dp derrubava a tela na primeira composição.
+        modifier = Modifier.padding(start = 3.dp, top = 2.dp),
     )
 }
 

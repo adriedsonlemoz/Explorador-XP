@@ -2,7 +2,10 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.91` (`versionCode 91`)  
+**Versão atual:** `0.1.0-alpha.92` (`versionCode 92`)  
+
+- A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
+- As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.
 
 - A alpha.91 corrige o erro de compilação reportado no workflow **Gerar APK 86** em `DeviceInfoScreen.kt`: o fallback `DeviceImageResult.Unavailable` agora fornece `reason`, `checkedAtEpochMs` e `fromCache`, exatamente como a classe exige.
 - A nova tela **Armazenamento** da alpha.90 e todas as funções anteriores foram preservadas sem regressão funcional.

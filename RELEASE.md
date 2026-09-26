@@ -1,15 +1,14 @@
-# Explorador XP 0.1.0-alpha.91
+# Explorador XP 0.1.0-alpha.92
 
 ## Correção
 
-- Corrigido o erro de compilação identificado no workflow **Gerar APK 86**.
-- `DeviceInfoScreen` construía `DeviceImageResult.Unavailable` sem os parâmetros obrigatórios `checkedAtEpochMs` e `fromCache`; a chamada agora usa a assinatura completa.
-- A correção mantém o comportamento de segurança da tela **Informações do dispositivo**: em falha de coleta, o app mostra fallback amigável em vez de encerrar.
+- Corrigido o fechamento de **Ferramentas > Informações do dispositivo** ao mostrar o conteúdo. O rótulo `DeviceOriginLabel` usava `padding` inferior negativo, rejeitado pelo Compose durante o desenho da tela.
+- O espaçamento inválido foi removido; a proteção de falhas na coleta do Android continua disponível.
 
-## Preservado
+## Novidades e funções preservadas
 
-- A tela **Armazenamento** redesenhada na alpha.90 permanece intacta.
-- Aplicativos instalados, instalador/visualizador de APK, Lixeira, análise de armazenamento e demais funções anteriores não foram removidos.
+- A tela de novidades na primeira abertura após atualização descreve a correção e as funções recentes.
+- Busca opcional do nome e da imagem do modelo pela internet, modo offline, Armazenamento renovado e Aplicativos instalados continuam disponíveis.
 
-Versão: `0.1.0-alpha.91`  
-Version code: `91`
+Versão: `0.1.0-alpha.92`  
+Version code: `92`

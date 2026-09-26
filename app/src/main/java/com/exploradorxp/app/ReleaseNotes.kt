@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigido um erro de compilação no fallback de Informações do dispositivo: a resposta de imagem indisponível agora usa todos os campos obrigatórios da estrutura interna.",
-                "A proteção contra falhas de Informações do dispositivo continua ativa: em erro de coleta, a tela deve mostrar uma mensagem amigável em vez de fechar o aplicativo.",
-                "A nova tela Armazenamento da alpha.90 e todas as funções anteriores foram preservadas.",
+                "Corrigido o fechamento ao abrir Ferramentas > Informações do dispositivo. Um espaçamento inválido na interface causava o erro ao mostrar os dados do aparelho.",
+                "A busca opcional do nome e da imagem do modelo pela internet continua disponível, com fonte indicada e funcionamento offline.",
+                "A tela Armazenamento renovada, Aplicativos instalados e as demais ferramentas continuam disponíveis.",
             )
         )
 }

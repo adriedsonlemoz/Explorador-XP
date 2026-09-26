@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.92
+
+- Corrigido o fechamento imediato de **Ferramentas > Informações do dispositivo** causado por `Modifier.padding(bottom = (-3).dp)` no rótulo `DeviceOriginLabel`. O Compose exige margens internas não negativas; o erro ocorria ao desenhar o conteúdo após a coleta e escapava do tratamento de exceções de leitura dos dados.
+- Removido o espaçamento inválido sem alterar a identificação local/remota do modelo nem a busca opcional da imagem via Wikidata/Wikimedia Commons.
+- Atualizadas as novidades mostradas na primeira abertura após a atualização e em **Sobre > Novidades desta versão**, incluindo esta correção e as funções recentes.
+- Versão sincronizada para `0.1.0-alpha.92` / `versionCode 92` em Gradle, VERSION, metadados, documentação e notas da versão.
+
 ## 0.1.0-alpha.91
 
 - Corrigido o erro de compilação do workflow **Gerar APK 86** em `DeviceInfoScreen.kt`.
