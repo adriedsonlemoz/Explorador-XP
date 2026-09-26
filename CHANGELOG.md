@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0-alpha.71
+
+- Adicionada a tela **Novidades da atualização**, com identidade visual do Explorador XP e conteúdo rolável da versão atual.
+- A tela de novidades é exibida somente na **primeira abertura normal após uma atualização**; o `versionCode` visualizado fica persistido para impedir repetição nas aberturas seguintes.
+- A marcação acontece quando a tela é apresentada, portanto fechar o aplicativo antes de tocar em **Continuar** não faz a tela reaparecer na segunda abertura.
+- Aberturas iniciadas por **Abrir com** (`ACTION_VIEW`) e a entrada de benchmark não são interrompidas pela tela; a novidade permanece pendente até a próxima abertura normal.
+- As notas da versão foram centralizadas em `ReleaseNotes.kt` e alimentam tanto a tela automática quanto **Sobre > Novidades desta versão**, evitando textos divergentes.
+- **Informações do dispositivo** deixou de usar `XpModalWindow` e agora é uma tela de área completa, com cabeçalho, conteúdo rolável e rodapé próprios dentro da área útil do aplicativo.
+- O botão/gesto Voltar fecha a tela de informações do dispositivo e retorna ao Explorer, preservando a navegação atual.
+- README, documentação, validações e `github-manager.json` sincronizados.
+- Versão sincronizada para `0.1.0-alpha.71` / `versionCode 71`.
+
 ## 0.1.0-alpha.70
 
 - Inspector de APK reorganizado para manter **Reinstalar**, **Abrir** e **Gerenciar** na mesma linha quando o pacote já está instalado.

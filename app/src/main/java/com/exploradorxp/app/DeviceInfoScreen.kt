@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -100,7 +101,7 @@ private val DevicePurple = Color(0xFF7754E8)
 private val DeviceOrange = Color(0xFFF3A11B)
 
 @Composable
-fun DeviceInfoDialog(onDismiss: () -> Unit) {
+fun DeviceInfoScreen(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var refreshKey by remember { mutableIntStateOf(0) }
@@ -166,169 +167,178 @@ fun DeviceInfoDialog(onDismiss: () -> Unit) {
         }
     }
 
-    XpModalWindow(
-        onDismiss = onDismiss,
-        maxWidth = 680,
-        heightFraction = 0.88f,
-        background = DeviceSurface,
-        header = {
-            DeviceInfoHeader(
-                loading = loading,
-                onRefresh = { refreshKey++ },
-                onDismiss = onDismiss,
-            )
-        },
-        footer = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    if (loading) "Atualizando informações…" else "Role para ver todos os detalhes",
-                    color = DeviceMuted,
-                    fontSize = 10.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
-            }
-        },
+    BackHandler(onBack = onDismiss)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DeviceSurface),
     ) {
-        if (loading && snapshot == null) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxSize().padding(44.dp),
-            ) {
-                CircularProgressIndicator(color = DeviceBlue)
-                Spacer(Modifier.height(12.dp))
-                Text("Lendo informações do aparelho…", color = DeviceMuted, fontSize = 13.sp)
-            }
-        } else {
-            snapshot?.let { info ->
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 16.dp),
-                ) {
-                    DeviceHero(info)
-                    DeviceUsageCards(info)
-
-                    DeviceSection(
-                        title = "Sistema",
-                        icon = Icons.Rounded.Settings,
-                        iconTint = DeviceBlue,
+        DeviceInfoHeader(
+            loading = loading,
+            onRefresh = { refreshKey++ },
+            onDismiss = onDismiss,
+        )
+        HorizontalDivider(color = XpChromeBorder)
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(DeviceSurface),
+        ) {
+                if (loading && snapshot == null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxSize().padding(44.dp),
                     ) {
-                        val socIdentity = DeviceSoCResolver.resolve(info.socManufacturer, info.socModel, info.hardware)
-                        InfoRow("Android", "${info.androidVersion} • API ${info.apiLevel}")
-                        SectionDivider()
-                        InfoRow("Atualização de segurança", info.securityPatch)
-                        SectionDivider()
-                        ProcessorInfoRow(socIdentity)
-                        SectionDivider()
-                        InfoRow("Fabricante", socIdentity.manufacturer ?: "Não disponível")
-                        SectionDivider()
-                        InfoRow("Identificador", socIdentity.technicalId)
-                        SectionDivider()
-                        InfoRow("CPU", "${info.cpuCores} núcleos • ${if (info.is64Bit) "64 bits" else "32 bits"}")
-                        SectionDivider()
-                        InfoRow("Arquitetura", info.supportedAbis.firstOrNull() ?: "Não disponível")
-                        SectionDivider()
-                        InfoRow("Frequência", cpuFrequencySummary(info))
-                        socIdentity.gpu?.let {
-                            SectionDivider()
-                            InfoRow("GPU", it)
+                        CircularProgressIndicator(color = DeviceBlue)
+                        Spacer(Modifier.height(12.dp))
+                        Text("Lendo informações do aparelho…", color = DeviceMuted, fontSize = 13.sp)
+                    }
+                } else {
+                    snapshot?.let { info ->
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 16.dp),
+                        ) {
+                            DeviceHero(info)
+                            DeviceUsageCards(info)
+
+                            DeviceSection(
+                                title = "Sistema",
+                                icon = Icons.Rounded.Settings,
+                                iconTint = DeviceBlue,
+                            ) {
+                                val socIdentity = DeviceSoCResolver.resolve(info.socManufacturer, info.socModel, info.hardware)
+                                InfoRow("Android", "${info.androidVersion} • API ${info.apiLevel}")
+                                SectionDivider()
+                                InfoRow("Atualização de segurança", info.securityPatch)
+                                SectionDivider()
+                                ProcessorInfoRow(socIdentity)
+                                SectionDivider()
+                                InfoRow("Fabricante", socIdentity.manufacturer ?: "Não disponível")
+                                SectionDivider()
+                                InfoRow("Identificador", socIdentity.technicalId)
+                                SectionDivider()
+                                InfoRow("CPU", "${info.cpuCores} núcleos • ${if (info.is64Bit) "64 bits" else "32 bits"}")
+                                SectionDivider()
+                                InfoRow("Arquitetura", info.supportedAbis.firstOrNull() ?: "Não disponível")
+                                SectionDivider()
+                                InfoRow("Frequência", cpuFrequencySummary(info))
+                                socIdentity.gpu?.let {
+                                    SectionDivider()
+                                    InfoRow("GPU", it)
+                                }
+                                socIdentity.processLabel?.let {
+                                    SectionDivider()
+                                    InfoRow("Fabricação", it)
+                                }
+                                SectionDivider()
+                                InfoRow("Hardware", info.hardware)
+                                SectionDivider()
+                                InfoRow("Tela", displayLabel(info))
+                            }
+
+                            DeviceSection(
+                                title = "Conectividade",
+                                icon = Icons.Rounded.Wifi,
+                                iconTint = DevicePurple,
+                            ) {
+                                InfoRow("Conexão atual", connectivitySummary(info))
+                                SectionDivider()
+                                InfoRow("Internet", if (info.networkValidated) "Conectada" else if (info.networkTransport == "Sem conexão") "Sem conexão" else "Sem validação")
+                                SectionDivider()
+                                InfoRow("Wi-Fi", wifiDetailsLabel(info))
+                                SectionDivider()
+                                InfoRow("Rede móvel", mobileDetailsLabel(info))
+                                SectionDivider()
+                                InfoRow("SIM", simDetailsLabel(info))
+                                SectionDivider()
+                                InfoRow("eSIM", if (info.esimSupported) buildString {
+                                    append("Suportado")
+                                    if (info.esimMepSupported) append(" • múltiplos perfis")
+                                    else if (info.esimEnabled) append(" • gerenciador ativo")
+                                } else "Não detectado")
+                                SectionDivider()
+                                InfoRow("Bluetooth", when {
+                                    info.hasBluetoothLe -> "Clássico + BLE"
+                                    info.hasBluetooth -> "Clássico"
+                                    else -> "Não disponível"
+                                })
+                                SectionDivider()
+                                InfoRow("VPN", if (info.vpnActive) "Ativa" else "Não ativa")
+                            }
+
+                            DeviceSection(
+                                title = "Bateria",
+                                icon = Icons.Rounded.BatteryFull,
+                                iconTint = DeviceGreen,
+                            ) {
+                                InfoRow("Carga", info.batteryPercent?.let { "$it%" } ?: "Não disponível")
+                                SectionDivider()
+                                InfoRow("Estado", info.batteryStatus)
+                                SectionDivider()
+                                InfoRow("Fonte", info.batterySource)
+                                if (info.batterySource != "Bateria") {
+                                    Spacer(Modifier.height(8.dp))
+                                    BatteryPowerCallout(info)
+                                }
+                            }
+
+                            DeviceSection(
+                                title = "Recursos",
+                                icon = Icons.Rounded.Explore,
+                                iconTint = DeviceBlue,
+                            ) {
+                                CapabilityGrid(info)
+                            }
+
+                            DeviceSection(
+                                title = "Sensores • ${info.sensorCount} detectados",
+                                icon = Icons.Rounded.Sensors,
+                                iconTint = DevicePurple,
+                            ) {
+                                SensorGrid(info)
+                            }
+
+                            ExplorerVersionCard(info)
+
+                            ShareDeviceCard(
+                                enabled = !loading,
+                                onCopy = { copySummary(info) },
+                                onSaveImage = { imageLauncher.launch(deviceInfoImageFileName()) },
+                                onShareImage = { shareImage(info) },
+                            )
+
+                            AiReportCard(
+                                enabled = !loading,
+                                onExport = { exportLauncher.launch(deviceInfoExportFileName()) },
+                            )
                         }
-                        socIdentity.processLabel?.let {
-                            SectionDivider()
-                            InfoRow("Fabricação", it)
-                        }
-                        SectionDivider()
-                        InfoRow("Hardware", info.hardware)
-                        SectionDivider()
-                        InfoRow("Tela", displayLabel(info))
                     }
-
-                    DeviceSection(
-                        title = "Conectividade",
-                        icon = Icons.Rounded.Wifi,
-                        iconTint = DevicePurple,
-                    ) {
-                        InfoRow("Conexão atual", connectivitySummary(info))
-                        SectionDivider()
-                        InfoRow("Internet", if (info.networkValidated) "Conectada" else if (info.networkTransport == "Sem conexão") "Sem conexão" else "Sem validação")
-                        SectionDivider()
-                        InfoRow("Wi-Fi", wifiDetailsLabel(info))
-                        SectionDivider()
-                        InfoRow("Rede móvel", mobileDetailsLabel(info))
-                        SectionDivider()
-                        InfoRow("SIM", simDetailsLabel(info))
-                        SectionDivider()
-                        InfoRow("eSIM", if (info.esimSupported) buildString {
-                            append("Suportado")
-                            if (info.esimMepSupported) append(" • múltiplos perfis")
-                            else if (info.esimEnabled) append(" • gerenciador ativo")
-                        } else "Não detectado")
-                        SectionDivider()
-                        InfoRow("Bluetooth", when {
-                            info.hasBluetoothLe -> "Clássico + BLE"
-                            info.hasBluetooth -> "Clássico"
-                            else -> "Não disponível"
-                        })
-                        SectionDivider()
-                        InfoRow("VPN", if (info.vpnActive) "Ativa" else "Não ativa")
-                    }
-
-                    DeviceSection(
-                        title = "Bateria",
-                        icon = Icons.Rounded.BatteryFull,
-                        iconTint = DeviceGreen,
-                    ) {
-                        InfoRow("Carga", info.batteryPercent?.let { "$it%" } ?: "Não disponível")
-                        SectionDivider()
-                        InfoRow("Estado", info.batteryStatus)
-                        SectionDivider()
-                        InfoRow("Fonte", info.batterySource)
-                        if (info.batterySource != "Bateria") {
-                            Spacer(Modifier.height(8.dp))
-                            BatteryPowerCallout(info)
-                        }
-                    }
-
-                    DeviceSection(
-                        title = "Recursos",
-                        icon = Icons.Rounded.Explore,
-                        iconTint = DeviceBlue,
-                    ) {
-                        CapabilityGrid(info)
-                    }
-
-                    DeviceSection(
-                        title = "Sensores • ${info.sensorCount} detectados",
-                        icon = Icons.Rounded.Sensors,
-                        iconTint = DevicePurple,
-                    ) {
-                        SensorGrid(info)
-                    }
-
-                    ExplorerVersionCard(info)
-
-                    ShareDeviceCard(
-                        enabled = !loading,
-                        onCopy = { copySummary(info) },
-                        onSaveImage = { imageLauncher.launch(deviceInfoImageFileName()) },
-                        onShareImage = { shareImage(info) },
-                    )
-
-                    AiReportCard(
-                        enabled = !loading,
-                        onExport = { exportLauncher.launch(deviceInfoExportFileName()) },
-                    )
                 }
-            }
+        }
+        HorizontalDivider(color = XpChromeBorder)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpChrome)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Text(
+                if (loading) "Atualizando informações…" else "Role para ver todos os detalhes",
+                color = DeviceMuted,
+                fontSize = 10.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onDismiss)
         }
     }
 

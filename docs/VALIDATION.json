@@ -1,29 +1,29 @@
 {
-  "version_build": "0.1.0-alpha.70",
-  "version_code": 70,
-  "manager_version": "0.1.0-alpha.70",
+  "version_build": "0.1.0-alpha.71",
+  "version_code": 71,
+  "manager_version": "0.1.0-alpha.71",
   "application_id": "com.exploradorxp.app",
-  "scope": "Inspector APK: ações em uma linha; Explorer: atualização automática da pasta aberta",
+  "scope": "Tela de novidades por atualização e Informações do dispositivo em tela completa",
   "checks": [
     {
-      "name": "apk_action_layout_static",
+      "name": "update_highlights_policy_static",
       "status": "passed",
-      "details": "Inspector APK reorganizado para Reinstalar/Abrir/Gerenciar na mesma Row quando há pacote instalado; Abrir/Gerenciar usam rótulos reduzidos."
+      "details": "PreferencesStore persiste o último versionCode apresentado; MainActivity exige atualização real do pacote, abertura normal e versionCode novo antes de mostrar UpdateHighlightsScreen."
     },
     {
-      "name": "current_directory_observer_static",
+      "name": "update_highlights_single_source",
       "status": "passed",
-      "details": "CurrentDirectoryObserver acompanha CREATE/CLOSE_WRITE/DELETE/MOVED_FROM/MOVED_TO/DELETE_SELF/MOVE_SELF e o ViewModel aplica debounce de 350 ms."
+      "details": "ReleaseNotes.kt é usado pela tela automática e por Sobre > Novidades desta versão."
     },
     {
-      "name": "current_directory_observer_compile_stub",
+      "name": "external_open_not_interrupted_static",
       "status": "passed",
-      "details": "CurrentDirectoryObserver.kt compilou com kotlinc usando stub mínimo de android.os.FileObserver, confirmando a sintaxe e os tipos locais do novo helper."
+      "details": "A elegibilidade da tela automática exige externalOpenRequest == null e ignora também a entrada de desempenho."
     },
     {
-      "name": "kotlin_parser_modified_files",
+      "name": "device_info_full_screen_static",
       "status": "passed",
-      "details": "Varredura com kotlinc não encontrou diagnósticos de parser/sintaxe em ExplorerViewModel.kt, InternalViewer.kt e ExplorerScreen.kt; referências Android/Compose permanecem sem classpath completo, como esperado."
+      "details": "DeviceInfoScreen usa fillMaxSize e não usa XpModalWindow/Dialog; ExplorerScreen substitui a área principal enquanto a tela está aberta e BackHandler retorna ao Explorer."
     },
     {
       "name": "json",
@@ -40,7 +40,7 @@
     {
       "name": "version_metadata",
       "status": "passed",
-      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, documentação e tela Sobre sincronizados para alpha.70/versionCode 70."
+      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, documentação e notas internas sincronizados para alpha.71/versionCode 71."
     },
     {
       "name": "android_full_build",

@@ -34,6 +34,15 @@ class PreferencesStore(context: Context) {
         prefs.edit().putBoolean(KEY_FOLDERS_FIRST, enabled).apply()
     }
 
+    fun lastSeenUpdateVersionCode(): Int = prefs.getInt(KEY_LAST_SEEN_UPDATE_VERSION_CODE, -1)
+
+    fun shouldShowUpdateHighlights(currentVersionCode: Int, installedThroughUpdate: Boolean): Boolean =
+        installedThroughUpdate && currentVersionCode > lastSeenUpdateVersionCode()
+
+    fun markUpdateVersionSeen(versionCode: Int) {
+        prefs.edit().putInt(KEY_LAST_SEEN_UPDATE_VERSION_CODE, versionCode).apply()
+    }
+
     fun addRecent(file: File) {
         val items = recents().toMutableList()
         items.remove(file.absolutePath)
@@ -59,5 +68,6 @@ class PreferencesStore(context: Context) {
         private const val KEY_RECENTS = "recents"
         private const val KEY_SHOW_HIDDEN = "show_hidden"
         private const val KEY_FOLDERS_FIRST = "folders_first"
+        private const val KEY_LAST_SEEN_UPDATE_VERSION_CODE = "last_seen_update_version_code"
     }
 }

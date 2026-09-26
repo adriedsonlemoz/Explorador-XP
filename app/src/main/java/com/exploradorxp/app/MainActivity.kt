@@ -164,6 +164,26 @@ private fun ExplorerApp(
     var viewerFolderImagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     var externalOpenLoading by remember(externalOpenRequest?.id) { mutableStateOf(externalOpenRequest != null) }
     var initialDirectoryHandled by remember(initialDirectoryPath) { mutableStateOf(false) }
+    val preferences = remember(context) { PreferencesStore(context) }
+    val installedThroughUpdate = remember(context) {
+        runCatching {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.lastUpdateTime > packageInfo.firstInstallTime
+        }.getOrDefault(false)
+    }
+    val updatePromptEligible = remember(externalOpenRequest?.id, initialDirectoryPath, installedThroughUpdate) {
+        externalOpenRequest == null &&
+            initialDirectoryPath.isNullOrBlank() &&
+            preferences.shouldShowUpdateHighlights(BuildConfig.VERSION_CODE, installedThroughUpdate)
+    }
+    var showUpdateHighlights by rememberSaveable { mutableStateOf(updatePromptEligible) }
+
+    LaunchedEffect(showUpdateHighlights) {
+        if (showUpdateHighlights) {
+            // A regra é por primeira abertura após a atualização, não por clique no botão.
+            preferences.markUpdateVersionSeen(BuildConfig.VERSION_CODE)
+        }
+    }
 
     val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         accessGranted = hasFileAccess(context)
@@ -267,6 +287,13 @@ private fun ExplorerApp(
                 state.currentDir.absolutePath == performanceTargetPath &&
                 !state.loading
         }
+    }
+
+    if (showUpdateHighlights) {
+        UpdateHighlightsScreen(
+            onContinue = { showUpdateHighlights = false },
+        )
+        return
     }
 
     if (externalOpenLoading) {

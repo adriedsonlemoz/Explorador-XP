@@ -2,8 +2,9 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.70` (`versionCode 70`)  
+**Versão atual:** `0.1.0-alpha.71` (`versionCode 71`)  
 
+- A alpha.71 adiciona uma **tela de novidades pós-atualização**, exibida automaticamente somente na primeira abertura normal após cada nova versão, e transforma **Informações do dispositivo** em uma tela de área completa dentro do app, eliminando o comportamento de pop-up. As notas da versão agora usam uma fonte única compartilhada com **Sobre > Novidades desta versão**.
 - A alpha.70 reorganiza as **ações do inspector de APK** para manter **Reinstalar / Abrir / Gerenciar** na mesma linha em apps já instalados e adiciona **atualização automática da pasta aberta** por observação do sistema de arquivos, fazendo downloads/criações/movimentos/exclusões externos aparecerem sem sair e entrar novamente no diretório.
 - A alpha.69 evolui o **visualizador de imagens** para uma galeria completa da pasta atual: zoom por pinça/duplo toque, pan, rotação, tela cheia com controles auto-ocultáveis, contador, painel Info com resolução/EXIF, compartilhamento e envio para a Lixeira sem sair da imagem. A navegação continua restrita ao diretório aberto e arquivos externos/temporários permanecem protegidos contra exclusão.
 - A alpha.68 transforma o editor de texto/código em uma sessão com **múltiplas abas** para arquivos locais da mesma pasta. As abas preservam texto, seleção e histórico recente de desfazer/refazer ao alternar, mostram `*` quando há mudanças, permitem salvar/descartar ao fechar uma aba e oferecem **Salvar todas e sair** quando mais de um documento foi alterado. Se uma versão no disco mudar enquanto uma aba suja estiver em segundo plano, a sobrescrita é bloqueada e o editor orienta usar **Salvar como**. A edição também ganha **Indentar/Recuar** para seleção inteira, suporte a TAB/Shift+TAB e opções persistentes para ligar/desligar autoindentação e fechamento automático de pares.

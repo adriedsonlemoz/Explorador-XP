@@ -185,6 +185,11 @@ fun ExplorerScreen(
     val advancedSearch by advancedSearchState.collectAsStateWithLifecycle()
     val displayedItems = if (advancedSearch.active) advancedSearch.results else state.items
 
+    if (showDeviceInfo) {
+        DeviceInfoScreen(onDismiss = { showDeviceInfo = false })
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -505,7 +510,6 @@ fun ExplorerScreen(
         onOpenHelp = { showAbout = false; showManual = true },
         onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
     )
-    if (showDeviceInfo) DeviceInfoDialog(onDismiss = { showDeviceInfo = false })
     TrashDialogHost(
         visible = showTrash,
         stateFlow = trashState,
@@ -1541,11 +1545,7 @@ private fun AboutDialog(
 
             Spacer(Modifier.height(10.dp))
             AboutSectionCard("Novidades desta versão", R.drawable.file_new) {
-                listOf(
-                    "No inspector de APK, Reinstalar, Abrir e Gerenciar ficam alinhados na mesma linha quando o aplicativo já está instalado.",
-                    "Os rótulos de ações do APK foram encurtados para Abrir e Gerenciar, preservando os mesmos destinos e verificações.",
-                    "A pasta atualmente aberta agora é monitorada em tempo real: arquivos baixados, criados, movidos ou removidos por outros apps aparecem automaticamente sem precisar sair e entrar novamente.",
-                ).forEach { change ->
+                ReleaseNotes.current.changes.forEach { change ->
                     Text(
                         "• $change",
                         fontSize = 11.5.sp,
