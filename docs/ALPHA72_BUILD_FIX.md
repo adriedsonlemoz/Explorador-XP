@@ -1,4 +1,4 @@
-# Explorador XP 0.1.0-alpha.73
+# Explorador XP 0.1.0-alpha.72
 
 ## Correção de build
 
@@ -10,4 +10,4 @@ Erro corrigido:
 - `InternalViewer.kt:40:43 Unresolved reference horizontalScroll`
 - `InternalViewer.kt:600:22 Unresolved reference horizontalScroll`
 
-Versão: `0.1.0-alpha.73` / `versionCode 72`.
+Versão: `0.1.0-alpha.72` / `versionCode 72`.

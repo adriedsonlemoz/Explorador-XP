@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-alpha.74
+
+### Correção do ícone / build
+- Corrigida a falha `Android resource linking failed` em `:app:processDebugResources`.
+- Restaurada a declaração válida `<color name="launcher_blue">#087CF0</color>` em `values/colors.xml`.
+- Os quatro Adaptive Icons de API 26+ e API 33+ continuam usando o novo ícone oficial com fundo azul sólido.
+- Mantidos foreground centralizado, margem de segurança e fallbacks legacy/round.
+- Versão sincronizada para `0.1.0-alpha.74` / `versionCode 74`.
+
 ## 0.1.0-alpha.73
 
 - Novo ícone oficial do Explorador XP aplicado ao aplicativo.
@@ -8,12 +17,12 @@
 - Ícones legacy e round regenerados em mdpi, hdpi, xhdpi, xxhdpi e xxxhdpi.
 - Versão sincronizada para `versionCode 73`.
 
-## 0.1.0-alpha.73
+## 0.1.0-alpha.72
 
 ### Correções
 - Corrigida falha de compilação em `InternalViewer.kt`: `horizontalScroll` agora usa o import correto de `androidx.compose.foundation.horizontalScroll`.
 - Corrigidos os erros `Unresolved reference 'horizontalScroll'` reportados pelo workflow Gerar APK.
-- Versão sincronizada para `0.1.0-alpha.73` / `versionCode 72`.
+- Versão sincronizada para `0.1.0-alpha.72` / `versionCode 72`.
 
 ## 0.1.0-alpha.71
 

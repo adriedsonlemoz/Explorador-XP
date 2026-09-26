@@ -18,10 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Nova tela de novidades aparece automaticamente uma única vez após cada atualização do aplicativo.",
-                "A tela de novidades respeita a identidade visual do Explorador XP e não interrompe arquivos recebidos pelo Abrir com.",
-                "Informações do dispositivo deixou de abrir como pop-up e agora ocupa toda a área disponível do aplicativo.",
-                "As novidades da versão foram centralizadas para manter a tela automática e Sobre sempre com o mesmo conteúdo.",
+                "Novo ícone oficial do Explorador XP aplicado ao Android com suporte a Adaptive Icon.",
+                "Corrigida a integração do ícone que fazia o build falhar ao localizar a cor launcher_blue.",
+                "O ícone mantém margem de segurança para não cortar a pasta e a lupa em formatos circulares ou arredondados.",
+                "Ícones legacy e round continuam disponíveis para launchers e versões antigas do Android.",
             ),
         )
 }

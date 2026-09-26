@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.73",
-  "version_code": 71,
-  "manager_version": "0.1.0-alpha.73",
+  "version_build": "0.1.0-alpha.74",
+  "version_code": 74,
+  "manager_version": "0.1.0-alpha.74",
   "application_id": "com.exploradorxp.app",
-  "scope": "Tela de novidades por atualização e Informações do dispositivo em tela completa",
+  "scope": "Correção da integração do novo ícone Android e do link de recursos AAPT2",
   "checks": [
     {
       "name": "update_highlights_policy_static",
@@ -51,6 +51,16 @@
       "name": "Correção de compilação horizontalScroll",
       "status": "PASS",
       "details": "InternalViewer.kt usa androidx.compose.foundation.horizontalScroll; corrige Unresolved reference no compileDebugKotlin."
+    },
+    {
+      "name": "launcher_blue_resource",
+      "status": "passed",
+      "details": "values/colors.xml declara launcher_blue=#087CF0 e todos os Adaptive Icons referenciam esse recurso existente."
+    },
+    {
+      "name": "adaptive_icon_resources",
+      "status": "passed",
+      "details": "ic_launcher.xml e ic_launcher_round.xml existem em mipmap-anydpi-v26 e mipmap-anydpi-v33 e referenciam foreground/background válidos."
     }
   ]
 }
