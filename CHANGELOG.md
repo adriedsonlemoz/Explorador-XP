@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.0-alpha.86
+
+- Adicionado **Ferramentas > Aplicativos instalados** com lista pesquisável e filtros Todos/Usuário/Sistema.
+- Cada item mostra ícone real do pacote instalado, nome, packageName, versão/versionCode, estado e tamanho disponível.
+- Adicionada ordenação por nome ou tamanho, preservando a resposta imediata da lista enquanto estatísticas detalhadas são carregadas.
+- Integração com `StorageStatsManager`: com **Acesso ao uso**, mostra aplicativo/código, dados, cache e total sem somar cache duas vezes; sem autorização, usa somente os bytes reais dos APKs base/splits instalados e identifica esse valor como APK.
+- A ficha do app mostra tipo (usuário/sistema/sistema atualizado), estado, SDK mínimo/alvo, datas reais de instalação/atualização, instalador quando reportado pelo Android e permissões declaradas com estado de concessão.
+- Adicionadas ações Abrir aplicativo, Desinstalar/Remover atualizações pelo fluxo oficial do Android, Detalhes no Android e Copiar nome do pacote.
+- **Limpar dados** respeita as restrições do Android: apps comuns não podem apagar diretamente dados privados de outros pacotes, então a ação explica a limitação e abre os detalhes oficiais para conclusão pelo usuário.
+- O próprio Explorador XP não oferece auto-desinstalação dentro do módulo para evitar encerrar o gerenciador no meio da operação.
+- Declarado `PACKAGE_USAGE_STATS` somente para permitir que o usuário conceda opcionalmente Acesso ao uso; o módulo funciona sem essa autorização.
+- Adicionados testes da filtragem, pesquisa, ordenação por tamanho, cálculo de total e formatação de bytes do gerenciador.
+- Versão sincronizada para `0.1.0-alpha.86` / `versionCode 86` em Gradle, `VERSION`, `app_identity.json`, `github-manager.json`, README, ReleaseNotes, RELEASE e validação.
+
 ## 0.1.0-alpha.85
 
 ### Gerenciamento de aplicativos/APKs

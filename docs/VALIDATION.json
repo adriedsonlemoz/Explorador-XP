@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.85",
-  "version_code": 85,
-  "manager_version": "0.1.0-alpha.85",
+  "version_build": "0.1.0-alpha.86",
+  "version_code": 86,
+  "manager_version": "0.1.0-alpha.86",
   "application_id": "com.exploradorxp.app",
-  "scope": "Gerenciamento de aplicativos/APKs: desinstalação direta e fluxo assistido de instalação de versão anterior, preservando funções existentes",
+  "scope": "Ferramentas > Aplicativos instalados: lista, armazenamento, permissões e ações seguras sobre apps de usuário/sistema, preservando funções existentes",
   "checks": [
     {
       "name": "cpu_architecture_no_abi_guess",
@@ -63,7 +63,7 @@
     {
       "name": "metadata_sync",
       "status": "passed",
-      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.85/versionCode 85."
+      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.86/versionCode 86."
     },
     {
       "name": "format_validation",
@@ -194,6 +194,51 @@
       "name": "alpha85_static_integrity",
       "status": "passed",
       "details": "Validação final: 5 JSONs e 80 XMLs parseados; 83 referências R.drawable resolvidas sem ausências; zero PNG/JPG/WebP/GIF em app/src/main; REQUEST_DELETE_PACKAGES presente uma única vez; ações antigas Abrir/Gerenciar/Compartilhar/Manifesto preservadas; nenhum APK, AAB, keystore ou chave privada incluído."
+    },
+    {
+      "name": "installed_apps_manager_entry",
+      "status": "passed",
+      "details": "Ferramentas inclui Aplicativos instalados sem remover Configurações ou Informações do dispositivo; a tela é adicional e preserva os fluxos existentes."
+    },
+    {
+      "name": "installed_apps_list_real_data",
+      "status": "passed",
+      "details": "A lista usa PackageManager para label, packageName, versionName/versionCode, flags de sistema/atualizado, estado enabled, SDKs, datas e ícone real do pacote. Não existe catálogo inventado de aplicativos."
+    },
+    {
+      "name": "installed_apps_storage_policy",
+      "status": "passed",
+      "details": "Sem Acesso ao uso, o tamanho exibido é rotulado APK e soma apenas sourceDir/splitSourceDirs existentes. Com autorização do usuário, StorageStatsManager fornece appBytes/dataBytes/cacheBytes; total = appBytes + dataBytes porque dataBytes já inclui cache."
+    },
+    {
+      "name": "installed_apps_usage_access_optional",
+      "status": "passed",
+      "details": "PACKAGE_USAGE_STATS foi declarado para o AppOps de Acesso ao uso, mas o módulo funciona sem a concessão e oferece atalho explícito às configurações somente para estatísticas completas."
+    },
+    {
+      "name": "installed_apps_safe_actions",
+      "status": "passed",
+      "details": "Desinstalação usa ACTION_UNINSTALL_PACKAGE com confirmação do Android; apps do sistema são tratados como potencialmente bloqueados/remoção de atualizações. Limpar dados não usa API oculta: explica a restrição e abre ACTION_APPLICATION_DETAILS_SETTINGS."
+    },
+    {
+      "name": "installed_apps_permissions",
+      "status": "passed",
+      "details": "A ficha carrega requestedPermissions do PackageManager e verifica concessão por checkPermission; ausência/falha resulta em lista vazia, sem inferir permissões."
+    },
+    {
+      "name": "installed_apps_logic_tests",
+      "status": "passed",
+      "details": "Foram adicionados testes JVM para filtros Usuário/Sistema, pesquisa por nome/pacote, ordenação por tamanho real/fallback APK, total sem dupla contagem de cache e formatação de bytes. A lógica pura foi compilada com kotlinc e um runner independente executou 10/10 checks com sucesso."
+    },
+    {
+      "name": "alpha86_static_integrity",
+      "status": "passed",
+      "details": "Validação final da alpha.86: 5 JSONs e 80 XMLs parseados; 83 referências R.drawable resolvidas sem ausências; zero PNG/JPG/WebP/GIF em app/src/main; PACKAGE_USAGE_STATS e QUERY_ALL_PACKAGES presentes; nenhum cache de apps ou dados coletados foi incluído no fonte."
+    },
+    {
+      "name": "installed_apps_local_privacy",
+      "status": "passed",
+      "details": "InstalledAppsManager usa PackageManager, StorageStatsManager e Settings locais; não contém endpoint HTTP nem envia lista de pacotes, permissões ou estatísticas de armazenamento pela rede."
     }
   ]
 }

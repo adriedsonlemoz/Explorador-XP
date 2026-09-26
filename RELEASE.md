@@ -1,23 +1,26 @@
-# Explorador XP 0.1.0-alpha.85
+# Explorador XP 0.1.0-alpha.86
 
-## Gerenciamento direto de aplicativos
+## Gerenciador de aplicativos instalados
 
-O visualizador de APK ganhou uma ação **Desinstalar** para aplicativos já instalados. A ação abre diretamente a confirmação de remoção do Android, sem exigir que o usuário passe primeiro pela tela de detalhes do aplicativo.
+**Ferramentas > Aplicativos instalados** agora abre um módulo próprio para consultar e gerenciar os pacotes presentes no aparelho. A tela usa lista, busca por nome/pacote, filtros **Todos / Usuário / Sistema** e ordenação por nome ou tamanho. Cada linha exibe o ícone fornecido pelo aplicativo instalado, nome, packageName, versão, estado e tamanho disponível.
 
-## Instalação de versão anterior
+## Armazenamento sem valores inventados
 
-Quando o APK selecionado possui `versionCode` menor que o aplicativo instalado, o Explorador XP identifica o downgrade e mostra a comparação das duas versões. Ao confirmar **Instalar versão anterior**, o aplicativo:
+Sem autorização especial, o Explorador XP soma apenas os arquivos APK base/splits que o Android informa e identifica esse número como **APK**. Quando o usuário concede **Acesso ao uso**, o módulo consulta `StorageStatsManager` e apresenta **Aplicativo/código**, **Dados**, **Cache** e **Total**. Como `dataBytes` já inclui cache, o Total usa código + dados e não soma cache novamente.
 
-1. alerta que a desinstalação pode apagar dados locais;
-2. solicita ao Android a remoção da versão instalada;
-3. verifica se o pacote realmente deixou de estar instalado;
-4. somente então abre o instalador para o APK antigo.
+## Detalhes e ações
 
-Se a remoção for cancelada ou falhar, o APK antigo não é aberto automaticamente. O Explorador XP também não tenta auto-downgrade do próprio pacote, pois se remover encerraria o processo antes da continuação.
+A ficha de cada pacote mostra tipo do aplicativo, versão/versionCode, SDK mínimo/alvo, datas de instalação e atualização, instalador quando informado pelo Android e permissões declaradas com o estado concedido/não concedido. Também oferece **Abrir aplicativo**, **Desinstalar**, **Copiar nome do pacote** e **Detalhes no Android**.
 
-## Compatibilidade preservada
+Em aplicativos do sistema, a ação de remoção é apresentada como **Desinstalar / remover atualizações** e o Android decide se o pacote pode ser removido, se apenas as atualizações podem ser revertidas ou se a operação deve ser bloqueada. Não há tentativa de remoção silenciosa.
 
-Permanecem disponíveis instalação normal, atualização, reinstalação, Abrir, Gerenciar/Detalhes do app, comparação de versões e assinaturas, permissões, compartilhamento, localização, cópia de pacote/SHA-256, extração de ícone e resumo do manifesto.
+## Limpar dados
 
-Versão: `0.1.0-alpha.85`  
-versionCode: `85`
+O Android não permite que um aplicativo comum apague diretamente os dados privados de outro pacote. Por isso **Limpar dados** explica essa restrição e abre os detalhes oficiais do aplicativo para o usuário concluir a operação. Nenhuma API oculta, root ou comando privilegiado foi incluído.
+
+## Compatibilidade
+
+Todas as funções existentes do Explorador XP foram preservadas, incluindo explorador de arquivos, Lixeira, armazenamento, busca avançada, editor, visualizadores, Informações do dispositivo e inspector/instalador de APK com desinstalação e downgrade assistido.
+
+Versão: `0.1.0-alpha.86`  
+versionCode: `86`

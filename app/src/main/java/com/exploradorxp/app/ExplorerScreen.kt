@@ -179,6 +179,7 @@ fun ExplorerScreen(
     var showAbout by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showDeviceInfo by remember { mutableStateOf(false) }
+    var showInstalledApps by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     var showStorageDetails by remember { mutableStateOf(false) }
     var archiveExtractTarget by remember { mutableStateOf<Pair<File, Boolean>?>(null) }
@@ -189,6 +190,11 @@ fun ExplorerScreen(
 
     if (showDeviceInfo) {
         DeviceInfoScreen(onDismiss = { showDeviceInfo = false })
+        return
+    }
+
+    if (showInstalledApps) {
+        InstalledAppsManagerScreen(onDismiss = { showInstalledApps = false })
         return
     }
 
@@ -818,6 +824,11 @@ private fun XpHeader(
                             }
                         }
                         XpMenuDivider()
+                        XpMenuItem("Aplicativos instalados", R.drawable.file_apk) {
+                            toolsMenu = false
+                            showInstalledApps = true
+                        }
+                        XpMenuDivider()
                         XpMenuItem("Configurações", R.drawable.settings) {
                             toolsMenu = false
                             onShowSettings()
@@ -1392,6 +1403,7 @@ private fun HelpManualScreen(onDismiss: () -> Unit) {
         "Compactar ZIP" to "Selecione um ou vários arquivos/pastas e use o atalho ZIP da barra de seleção. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
         "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A pasta interna e artefatos de lixeira do sistema ficam ocultos da navegação comum. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
         "Armazenamento" to "A barra inferior mostra os valores gerais do volume informados pelo Android. Na tela Armazenamento, esses números ficam separados dos arquivos efetivamente analisados pelo Explorador XP. Categorias e pastas usam somente o conjunto que pôde ser enumerado; áreas protegidas não são estimadas.",
+        "Aplicativos instalados" to "Em Ferramentas > Aplicativos instalados você pode pesquisar apps de usuário e do sistema, consultar versão, tamanho, SDK, datas, instalador e permissões. Sem Acesso ao uso, o tamanho mostrado é somente o dos APKs instalados; com essa autorização, o Android também fornece código, dados e cache. Desinstalar usa a confirmação do sistema. Por proteção do Android, Limpar dados abre os detalhes oficiais do aplicativo para você concluir a ação.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
         "Favoritos" to "Adicione arquivos ou pastas aos Favoritos pelo menu de opções. A lista fica disponível no menu Favoritos do cabeçalho.",
         "Visualizadores" to "Imagens, textos e códigos, HTML, PDF, ZIP, áudio, vídeo e APK podem abrir dentro do Explorador XP. O visualizador APK compara a versão instalada, assinatura, Android/CPU e permissões antes de chamar o instalador do sistema; a permissão de fonte desconhecida é guiada quando necessária. ZIP permite navegar, pesquisar, selecionar e extrair itens.",
