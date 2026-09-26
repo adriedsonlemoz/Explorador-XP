@@ -2,9 +2,10 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.77` (`versionCode 77`)  
+**Versão atual:** `0.1.0-alpha.78` (`versionCode 78`)  
 
 
+- A alpha.78 compacta a tela de inspeção/instalação de APK, padroniza seu botão **Fechar** e muda o workflow para uma **release por versão**, fazendo as versões novas aparecerem no topo do histórico.
 - A alpha.77 padroniza os controles de fechamento: remove o X vermelho dos cabeçalhos e usa **Fechar/Cancelar na parte inferior**. Também corrige o teste SHA-256 do inspetor de APK que bloqueava o workflow de build.
 - A alpha.75 evolui o **inspector/instalador de APK**: compara APK × instalado (versão, SDK, tamanho, assinatura e permissões), destaca permissões novas/removidas, calcula o SHA-256 real do arquivo e adiciona ações de compartilhar, abrir localização, copiar dados, extrair ícone e consultar um resumo do AndroidManifest.
 - A tela **Novidades da atualização** continua automática na primeira abertura após cada atualização e usa `ReleaseNotes.kt` como fonte única, portanto o conteúdo muda junto com cada versão.
@@ -253,7 +254,7 @@ Na alpha.11, o ícone do aplicativo foi substituído pelo novo desenho grafite/d
 
 ## Build
 
-Abra o projeto no Android Studio e sincronize o Gradle. O workflow `.github/workflows/gerar-apk.yml` executa testes JVM e lint e, em seguida, gera um APK `performance` instalável (Release otimizado com R8/`shrinkResources`, assinado com chave debug enquanto o projeto está em alpha) e o publica diretamente como asset da prerelease `explorador-xp-dev` — sem empacotar o APK em ZIP de artifact.
+Abra o projeto no Android Studio e sincronize o Gradle. O workflow `.github/workflows/gerar-apk.yml` executa testes JVM e lint e, em seguida, gera um APK `performance` instalável (Release otimizado com R8/`shrinkResources`, assinado com chave debug enquanto o projeto está em alpha) e o publica diretamente em uma prerelease própria da versão (`v<versionName>`), preservando o histórico e evitando acumular todos os APKs em uma única release — sem empacotar o APK em ZIP de artifact.
 
 ## Observação
 

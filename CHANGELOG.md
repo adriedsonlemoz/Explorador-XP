@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0-alpha.78
+
+### Tela de APK
+- Compactadas margens, paddings, cartões, linhas de compatibilidade e botões para aproveitar melhor a altura do aparelho.
+- A comparação APK × instalado agora inicia recolhida e pode ser expandida com um toque, deixando as ações e os blocos principais mais próximos sem remover informações.
+- O rodapé do visualizador passou a usar `XpDialogButton` com ícone e o mesmo padrão de **Fechar** adotado em Informações do dispositivo e demais telas.
+
+### GitHub Releases
+- O workflow `Gerar APK` não acumula mais versões dentro da tag fixa `explorador-xp-dev`.
+- Cada versão passa a usar a própria tag (`v<versionName>`) e a própria prerelease, preservando o histórico e fazendo a versão recém-publicada aparecer como release mais recente.
+- Reexecuções da mesma versão substituem somente o APK daquela mesma release com `--clobber`.
+- Versão sincronizada para `0.1.0-alpha.78` / `versionCode 78`.
+
 ## 0.1.0-alpha.77
 
 ### Padronização do fechamento

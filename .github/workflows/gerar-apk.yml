@@ -82,22 +82,22 @@ jobs:
           test -n "$APP_VERSION"
           APK_NAME="Explorador-XP-${APP_VERSION}-performance.apk"
           cp app/build/outputs/apk/performance/app-performance.apk "$APK_NAME"
+          RELEASE_TAG="v${APP_VERSION}"
           echo "APK_NAME=$APK_NAME" >> "$GITHUB_ENV"
           echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
 
-      - name: Atualizar tag de desenvolvimento
+      - name: Publicar release da versão
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -f explorador-xp-dev
-          git push origin -f explorador-xp-dev
-
-      - name: Publicar APK direto na prerelease
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release view explorador-xp-dev >/dev/null 2>&1 || \
-            gh release create explorador-xp-dev --title "Explorador XP - Desenvolvimento" --prerelease --notes "Build de desenvolvimento otimizada para teste de desempenho."
-          gh release upload explorador-xp-dev "$APK_NAME" --clobber
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$APK_NAME" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$APK_NAME" \
+              --target "$GITHUB_SHA" \
+              --title "Explorador XP ${APP_VERSION}" \
+              --prerelease \
+              --notes "APK performance assinado do Explorador XP ${APP_VERSION}."
+          fi

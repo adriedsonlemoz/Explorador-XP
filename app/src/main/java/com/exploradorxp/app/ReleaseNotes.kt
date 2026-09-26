@@ -18,11 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Padronizado o fechamento das telas: o X vermelho do topo foi removido das janelas e telas do Explorador XP.",
-                "Informações do dispositivo e Lixeira voltaram a usar o botão Fechar na barra inferior, mantendo o mesmo padrão visual.",
-                "O visualizador interno também passa a fechar pela barra inferior, sem o X vermelho no cabeçalho.",
-                "Diálogos de ação continuam usando Cancelar/Fechar na parte inferior; abas e painéis internos mantêm seus controles próprios.",
-                "Corrigido o teste do inspetor de APK que ainda chamava o nome antigo da função SHA-256 e fazia o workflow falhar.",
+                "A tela de APK ficou mais compacta, com menos margens e espaços entre os cartões para aproveitar melhor a altura da tela.",
+                "A comparação com o aplicativo instalado inicia recolhida e continua disponível com um toque, reduzindo a necessidade de rolagem na abertura.",
+                "O botão Fechar do visualizador foi padronizado com o mesmo botão XP inferior usado nas demais telas, incluindo o ícone de fechamento.",
+                "O workflow do GitHub agora cria uma release separada para cada versão, preservando o histórico e fazendo as versões novas aparecerem como releases mais recentes.",
             )
         )
 }

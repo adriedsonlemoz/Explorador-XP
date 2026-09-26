@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.77",
-  "version_code": 77,
-  "manager_version": "0.1.0-alpha.77",
+  "version_build": "0.1.0-alpha.78",
+  "version_code": 78,
+  "manager_version": "0.1.0-alpha.78",
   "application_id": "com.exploradorxp.app",
-  "scope": "Padronização dos controles de fechamento e correção do teste SHA-256 do inspetor de APK",
+  "scope": "Compactação da tela de APK, padronização do Fechar e release GitHub por versão",
   "checks": [
     {
       "name": "update_highlights_policy_static",
@@ -111,6 +111,16 @@
       "name": "apk_inspector_sha256_test",
       "status": "passed",
       "details": "ApkInspectorSupportTest referencia sha256ApkFile."
+    },
+    {
+      "name": "apk_viewer_compact_layout",
+      "status": "passed",
+      "details": "Comparação inicia recolhida, espaçamentos principais foram reduzidos e o rodapé usa XpDialogButton para Fechar."
+    },
+    {
+      "name": "github_release_per_version",
+      "status": "passed",
+      "details": "Workflow usa RELEASE_TAG=v${APP_VERSION}, cria uma prerelease por versão e usa --clobber apenas em reexecuções da mesma release."
     }
   ]
 }

@@ -832,7 +832,7 @@ private fun ApkViewer(
     var pendingInstallAfterPermission by remember(file.absolutePath) { mutableStateOf(false) }
     var permissionsExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var technicalExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
-    var comparisonExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(true) }
+    var comparisonExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var moreActionsExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var manifestExpanded by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     val key = "${file.absolutePath}:${file.lastModified()}:$resumeRevision"
@@ -927,13 +927,13 @@ private fun ApkViewer(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         when (val state = loadState) {
             ViewerLoadState.Loading -> {
                 Spacer(Modifier.height(20.dp))
                 CircularProgressIndicator(color = XpBlue)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
                 Text("Analisando APK, assinatura, permissões e compatibilidade...", color = XpTextSecondary, fontSize = 12.sp)
             }
             is ViewerLoadState.Error -> {
@@ -942,9 +942,9 @@ private fun ApkViewer(
                     contentDescription = null,
                     modifier = Modifier.size(82.dp),
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(file.name, fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(state.message, color = XpTextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(14.dp))
                 ApkPrimaryButton(
@@ -1001,28 +1001,28 @@ private fun ApkViewer(
                         .fillMaxWidth()
                         .background(Color(0xFFF3F7FC), RoundedCornerShape(12.dp))
                         .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(12.dp))
-                        .padding(13.dp),
+                        .padding(10.dp),
                 ) {
                     if (info.iconBitmap != null) {
                         Image(
                             bitmap = info.iconBitmap.asImageBitmap(),
                             contentDescription = info.appName,
-                            modifier = Modifier.size(82.dp).clip(RoundedCornerShape(18.dp)),
+                            modifier = Modifier.size(70.dp).clip(RoundedCornerShape(16.dp)),
                             contentScale = ContentScale.Fit,
                         )
                     } else {
                         Image(
                             painter = androidx.compose.ui.res.painterResource(R.drawable.file_apk_large),
                             contentDescription = null,
-                            modifier = Modifier.size(76.dp),
+                            modifier = Modifier.size(66.dp),
                         )
                     }
-                    Spacer(Modifier.width(13.dp))
+                    Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
                             info.appName,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
+                            fontSize = 18.sp,
                             color = Color(0xFF152A48),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
@@ -1043,7 +1043,7 @@ private fun ApkViewer(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        Spacer(Modifier.height(7.dp))
+                        Spacer(Modifier.height(5.dp))
                         Box(
                             modifier = Modifier
                                 .background(
@@ -1063,7 +1063,7 @@ private fun ApkViewer(
                                     },
                                     RoundedCornerShape(6.dp),
                                 )
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                .padding(horizontal = 7.dp, vertical = 3.dp),
                         ) {
                             Text(
                                 if (blockedReason != null) "Atenção necessária" else relationLabel,
@@ -1075,7 +1075,7 @@ private fun ApkViewer(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Row(
                     verticalAlignment = Alignment.Top,
@@ -1090,7 +1090,7 @@ private fun ApkViewer(
                             if (blockedReason == null) Color(0xFF91B996) else Color(0xFFE4A47F),
                             RoundedCornerShape(9.dp),
                         )
-                        .padding(10.dp),
+                        .padding(horizontal = 9.dp, vertical = 7.dp),
                 ) {
                     CachedResourceIcon(
                         if (blockedReason == null) R.drawable.check else R.drawable.warning,
@@ -1109,13 +1109,13 @@ private fun ApkViewer(
                 }
 
                 if (info.installedVersion != null) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(6.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color.White, RoundedCornerShape(10.dp))
                             .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 13.dp, vertical = 9.dp),
+                            .padding(horizontal = 11.dp, vertical = 7.dp),
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -1154,13 +1154,13 @@ private fun ApkViewer(
                         }
                     }
                 } else {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(6.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color.White, RoundedCornerShape(10.dp))
                             .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 13.dp, vertical = 9.dp),
+                            .padding(horizontal = 11.dp, vertical = 7.dp),
                     ) {
                         Text("Versão", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
@@ -1170,14 +1170,14 @@ private fun ApkViewer(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFFF7F9FC), RoundedCornerShape(10.dp))
                         .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 12.dp, vertical = 9.dp),
+                        .padding(horizontal = 11.dp, vertical = 7.dp),
                 ) {
                     Text("Compatibilidade e segurança", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(5.dp))
@@ -1210,7 +1210,7 @@ private fun ApkViewer(
                 }
 
                 if (info.newPermissions.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(6.dp))
                     Row(
                         verticalAlignment = Alignment.Top,
                         modifier = Modifier
@@ -1226,7 +1226,7 @@ private fun ApkViewer(
                             )
                             .padding(10.dp),
                     ) {
-                        CachedResourceIcon(R.drawable.warning, null, modifier = Modifier.size(19.dp), contentScale = ContentScale.Fit)
+                        CachedResourceIcon(R.drawable.warning, null, modifier = Modifier.size(17.dp), contentScale = ContentScale.Fit)
                         Spacer(Modifier.width(8.dp))
                         Text(
                             buildString {
@@ -1252,14 +1252,14 @@ private fun ApkViewer(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.White, RoundedCornerShape(10.dp))
                         .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 13.dp, vertical = 9.dp),
+                        .padding(horizontal = 11.dp, vertical = 7.dp),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1304,7 +1304,7 @@ private fun ApkViewer(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Column(
                     modifier = Modifier
@@ -1312,7 +1312,7 @@ private fun ApkViewer(
                         .background(Color.White, RoundedCornerShape(10.dp))
                         .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
                         .clickable { permissionsExpanded = !permissionsExpanded }
-                        .padding(horizontal = 13.dp, vertical = 10.dp),
+                        .padding(horizontal = 11.dp, vertical = 7.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f)) {
@@ -1351,7 +1351,7 @@ private fun ApkViewer(
                             }
                         }
                         if (info.removedPermissions.isNotEmpty()) {
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(6.dp))
                             Text("Removidas nesta versão", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF53657B))
                             info.removedPermissions.forEach { permission ->
                                 ApkPermissionLine(permission, status = "removida")
@@ -1360,7 +1360,7 @@ private fun ApkViewer(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Column(
                     modifier = Modifier
@@ -1370,7 +1370,7 @@ private fun ApkViewer(
                         .padding(10.dp),
                 ) {
                     Text("Ações", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                     if (info.installedVersion != null) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             ApkPrimaryButton(
@@ -1434,14 +1434,14 @@ private fun ApkViewer(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.White, RoundedCornerShape(10.dp))
                         .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 9.dp),
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1451,7 +1451,7 @@ private fun ApkViewer(
                         Text(if (moreActionsExpanded) "▲" else "▼", fontSize = 11.sp, color = XpBlueDark)
                     }
                     if (moreActionsExpanded) {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             ApkPrimaryButton("Compartilhar", R.drawable.share, false, Modifier.weight(1f), onClick = onShare)
                             ApkPrimaryButton("Localização", R.drawable.folder_open, false, Modifier.weight(1f), onClick = onOpenFolder)
@@ -1492,13 +1492,13 @@ private fun ApkViewer(
                 }
 
                 if (manifestExpanded) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(6.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color(0xFFF7F9FC), RoundedCornerShape(10.dp))
                             .border(1.dp, Color(0xFFC5D4E6), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 13.dp, vertical = 10.dp),
+                            .padding(horizontal = 11.dp, vertical = 7.dp),
                     ) {
                         Text("Resumo do AndroidManifest", color = Color(0xFF183363), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Text("Informações interpretadas pelo Android; não é o XML bruto do pacote.", color = XpTextSecondary, fontSize = 10.sp)
@@ -1544,11 +1544,11 @@ private fun ApkStatusLine(
         ok -> Color(0xFF356B3D)
         else -> Color(0xFF9A4D28)
     }
-    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
-        CachedResourceIcon(icon, null, modifier = Modifier.size(17.dp), contentScale = ContentScale.Fit)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        CachedResourceIcon(icon, null, modifier = Modifier.size(16.dp), contentScale = ContentScale.Fit)
         Spacer(Modifier.width(7.dp))
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF53657B), modifier = Modifier.width(86.dp))
-        Text(value, fontSize = 11.sp, color = valueColor, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF53657B), modifier = Modifier.width(82.dp))
+        Text(value, fontSize = 10.5.sp, color = valueColor, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
     }
 }
 
@@ -1612,11 +1612,11 @@ private fun ApkInfoLine(label: String, value: String) {
 
 @Composable
 private fun ApkComparisonLine(label: String, installed: String, apk: String) {
-    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-        Text(label, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, color = Color(0xFF53657B), modifier = Modifier.width(92.dp))
+    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(label, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, color = Color(0xFF53657B), modifier = Modifier.width(84.dp))
         Column(Modifier.weight(1f)) {
-            Text("Instalado: $installed", fontSize = 10.5.sp, color = XpTextSecondary)
-            Text("APK: $apk", fontSize = 11.5.sp, color = Color(0xFF202B38), fontWeight = FontWeight.Medium)
+            Text("Instalado: $installed", fontSize = 10.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("APK: $apk", fontSize = 10.5.sp, color = Color(0xFF202B38), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -1670,13 +1670,13 @@ private fun ApkPrimaryButton(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
         modifier = modifier
-            .height(42.dp)
-            .clip(RoundedCornerShape(7.dp))
+            .height(38.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(background)
             .border(
                 1.dp,
                 if (!enabled) Color(0xFFBFC5CC) else if (primary) Color(0xFF0D5DB6) else Color(0xFF9DB4CF),
-                RoundedCornerShape(7.dp),
+                RoundedCornerShape(6.dp),
             )
             .clickable(enabled = enabled, interactionSource = interactionSource, indication = null, onClick = onClick)
             .padding(horizontal = 10.dp),
@@ -1750,7 +1750,11 @@ private fun ViewerStatusBar(
     val parent = remember(file.absolutePath) { file.parentFile?.name.orEmpty() }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().height(28.dp).background(XpChrome).border(1.dp, XpChromeBorder).padding(horizontal = 8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(XpChrome)
+            .border(1.dp, XpChromeBorder)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
         Text(
             text = if (parent.isBlank()) extension else "$parent  •  $extension",
@@ -1767,7 +1771,11 @@ private fun ViewerStatusBar(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 8.dp),
         )
-        ViewerActionButton("Fechar", onClick = onClose)
+        XpDialogButton(
+            "Fechar",
+            iconRes = R.drawable.close,
+            onClick = onClose,
+        )
     }
 }
 
