@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.87
+
+- Corrigido o erro de compilação `Unresolved reference 'showInstalledApps'` reportado no workflow **Gerar APK 83**.
+- `XpHeader` agora recebe `onShowInstalledApps: () -> Unit` e apenas dispara essa callback; o estado `showInstalledApps` continua pertencendo à tela principal, onde está no escopo correto.
+- Preservado integralmente o módulo **Ferramentas > Aplicativos instalados** introduzido na alpha.86 e todas as funções anteriores do aplicativo.
+- Versão sincronizada para `0.1.0-alpha.87` / `versionCode 87` em Gradle, `VERSION`, `app_identity.json`, `github-manager.json`, README, ReleaseNotes, RELEASE e VALIDATION.
+
 ## 0.1.0-alpha.86
 
 - Adicionado **Ferramentas > Aplicativos instalados** com lista pesquisável e filtros Todos/Usuário/Sistema.

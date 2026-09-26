@@ -317,6 +317,7 @@ fun ExplorerScreen(
             onShowAbout = { showAbout = true },
             onShowSettings = { showSettings = true },
             onShowDeviceInfo = { showDeviceInfo = true },
+            onShowInstalledApps = { showInstalledApps = true },
             selectedArchive = state.selectedPaths.singleOrNull()?.let(::File)?.takeIf { it.isFile && it.extension.equals("zip", ignoreCase = true) },
             onOpenSelectedArchive = { target -> onClearSelection(); onOpenTarget(target) },
             onOpenExternalSelectedArchive = { target -> onClearSelection(); onOpenExternalTarget(target) },
@@ -633,6 +634,7 @@ private fun XpHeader(
     onShowAbout: () -> Unit,
     onShowSettings: () -> Unit,
     onShowDeviceInfo: () -> Unit,
+    onShowInstalledApps: () -> Unit,
     selectedArchive: File?,
     onOpenSelectedArchive: (File) -> Unit,
     onOpenExternalSelectedArchive: (File) -> Unit,
@@ -826,7 +828,7 @@ private fun XpHeader(
                         XpMenuDivider()
                         XpMenuItem("Aplicativos instalados", R.drawable.file_apk) {
                             toolsMenu = false
-                            showInstalledApps = true
+                            onShowInstalledApps()
                         }
                         XpMenuDivider()
                         XpMenuItem("Configurações", R.drawable.settings) {

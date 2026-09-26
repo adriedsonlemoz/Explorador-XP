@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.86",
-  "version_code": 86,
-  "manager_version": "0.1.0-alpha.86",
+  "version_build": "0.1.0-alpha.87",
+  "version_code": 87,
+  "manager_version": "0.1.0-alpha.87",
   "application_id": "com.exploradorxp.app",
-  "scope": "Ferramentas > Aplicativos instalados: lista, armazenamento, permissões e ações seguras sobre apps de usuário/sistema, preservando funções existentes",
+  "scope": "Correção de compilação do acesso a Ferramentas > Aplicativos instalados, preservando integralmente o módulo alpha.86 e funções existentes",
   "checks": [
     {
       "name": "cpu_architecture_no_abi_guess",
@@ -63,7 +63,7 @@
     {
       "name": "metadata_sync",
       "status": "passed",
-      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.86/versionCode 86."
+      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.87/versionCode 87."
     },
     {
       "name": "format_validation",
@@ -76,9 +76,14 @@
       "details": "DeviceIdentity.kt, DeviceImage.kt e os três novos testes foram compilados com kotlinc usando stubs mínimos de APIs Android/JSON/JUnit. Um runner puro executou 15 checks de correspondência, colisão, fabricante, ambiguidade, imagem, política offline, cache e parser CSV com 15/15 aprovados."
     },
     {
+      "name": "alpha87_installed_apps_header_scope_fix",
+      "status": "passed",
+      "details": "O log Gerar APK 83 reportou ExplorerScreen.kt:829 Unresolved reference 'showInstalledApps'. XpHeader agora recebe onShowInstalledApps: () -> Unit, a chamada principal fornece { showInstalledApps = true } no escopo proprietário e o menu apenas invoca a callback. A referência fora de escopo foi removida sem retirar o módulo alpha.86."
+    },
+    {
       "name": "android_unit_lint_build",
       "status": "not_run",
-      "reason": "O ambiente local não possui Gradle/Android SDK/android.jar. Nesta etapa foram executadas validações estáticas, compilação Kotlin isolada da lógica pura e verificações de recursos/metadados; o assemble Android completo deve ser confirmado pelo workflow do projeto."
+      "reason": "O ambiente local não possui Gradle/Android SDK/android.jar. O erro do workflow Gerar APK 83 foi corrigido por inspeção do log e validação estrutural do escopo/callback; o assemble Android completo deve ser confirmado pelo workflow do projeto."
     },
     {
       "name": "device_identity_exact_match",
@@ -239,6 +244,11 @@
       "name": "installed_apps_local_privacy",
       "status": "passed",
       "details": "InstalledAppsManager usa PackageManager, StorageStatsManager e Settings locais; não contém endpoint HTTP nem envia lista de pacotes, permissões ou estatísticas de armazenamento pela rede."
+    },
+    {
+      "name": "alpha87_static_integrity",
+      "status": "passed",
+      "details": "Validação final da alpha.87: 5 JSONs e 80 XMLs parseados; 83 referências R.drawable resolvidas sem ausências; zero PNG/JPG/WebP/GIF em app/src/main; callback onShowInstalledApps presente no XpHeader e referência direta showInstalledApps removida do seu escopo; módulo Aplicativos instalados preservado."
     }
   ]
 }

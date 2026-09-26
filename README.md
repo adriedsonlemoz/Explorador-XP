@@ -2,8 +2,10 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.86` (`versionCode 86`)  
+**Versão atual:** `0.1.0-alpha.87` (`versionCode 87`)  
 
+
+- A alpha.87 corrige o erro de compilação do menu **Ferramentas > Aplicativos instalados**. O estado da tela principal não é mais acessado diretamente pelo `XpHeader`; a abertura do módulo passa por uma callback dedicada (`onShowInstalledApps`), seguindo o mesmo padrão de Configurações e Informações do dispositivo. Nenhuma função da alpha.86 foi removida.
 
 - A alpha.86 adiciona **Ferramentas > Aplicativos instalados**, um gerenciador em lista para apps de usuário e do sistema. A lista mostra ícone real, nome, pacote, versão, estado e tamanho; com Acesso ao uso concedido, a ficha separa código, dados e cache via APIs oficiais do Android. Também reúne SDK, datas, origem da instalação, permissões e ações para abrir, desinstalar, copiar pacote, limpar dados via tela oficial do Android e abrir os detalhes do sistema. Nenhum tamanho é estimado quando a API não fornece o valor.
 
