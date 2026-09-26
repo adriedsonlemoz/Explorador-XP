@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigida a abertura de Ferramentas > Aplicativos instalados: o cabeçalho agora recebe uma ação dedicada para abrir o módulo, eliminando o erro de compilação causado por acesso a estado fora do escopo.",
-                "O gerenciador de aplicativos da alpha.86 foi preservado integralmente, incluindo lista, busca, filtros, tamanhos, permissões e ações seguras de abrir/desinstalar/limpar dados via Android.",
-                "As demais funções do Explorador XP permanecem inalteradas nesta versão de correção.",
+                "A tela Armazenamento foi recriada como um painel mais limpo: capacidade usada/livre/total, atalho direto para Aplicativos instalados, ações rápidas, categorias em lista, maiores pastas e arquivos grandes.",
+                "O módulo Aplicativos instalados ganhou uma orientação mais clara para liberar Acesso ao uso. A mensagem amarela abre Informações do Explorador XP e explica o caminho dos 3 pontos > Permitir configurações restritas quando o Android exigir essa etapa.",
+                "Após Novidades, a atualização mostra uma explicação única sobre Acesso ao uso quando a autorização ainda não estiver liberada. O recurso continua opcional e nenhuma função anterior foi removida.",
             )
         )
 }

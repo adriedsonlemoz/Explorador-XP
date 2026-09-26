@@ -184,6 +184,24 @@ private fun ExplorerApp(
             preferences.shouldShowUpdateHighlights(BuildConfig.VERSION_CODE, installedThroughUpdate)
     }
     var showUpdateHighlights by rememberSaveable { mutableStateOf(updatePromptEligible) }
+    val usageAccessInitiallyGranted = remember(context) {
+        InstalledAppsRepository(context.applicationContext).hasUsageAccess()
+    }
+    val usageAccessEducationEligible = remember(
+        installedThroughUpdate,
+        usageAccessInitiallyGranted,
+    ) {
+        UsageAccessEducationPolicy.shouldShow(
+            installedThroughUpdate = installedThroughUpdate,
+            currentVersionCode = BuildConfig.VERSION_CODE,
+            lastSeenEducationVersionCode = preferences.lastSeenUsageAccessEducationVersionCode(),
+            hasUsageAccess = usageAccessInitiallyGranted,
+        )
+    }
+    var showUsageAccessEducation by rememberSaveable {
+        mutableStateOf(!updatePromptEligible && usageAccessEducationEligible)
+    }
+    var usageAccessEducationGranted by remember { mutableStateOf(usageAccessInitiallyGranted) }
 
     LaunchedEffect(showUpdateHighlights) {
         if (showUpdateHighlights) {
@@ -205,6 +223,10 @@ private fun ExplorerApp(
             viewModel.refresh()
             viewModel.loadTrash()
         }
+    }
+
+    val usageAccessSettingsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        usageAccessEducationGranted = InstalledAppsRepository(context.applicationContext).hasUsageAccess()
     }
 
     fun requestFileAccess() {
@@ -298,7 +320,39 @@ private fun ExplorerApp(
 
     if (showUpdateHighlights) {
         UpdateHighlightsScreen(
-            onContinue = { showUpdateHighlights = false },
+            onContinue = {
+                showUpdateHighlights = false
+                if (usageAccessEducationEligible) showUsageAccessEducation = true
+            },
+        )
+        return
+    }
+
+    if (showUsageAccessEducation) {
+        UsageAccessEducationScreen(
+            hasUsageAccess = usageAccessEducationGranted,
+            onOpenAppInfo = {
+                val intent = Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:${context.packageName}"),
+                )
+                runCatching { usageAccessSettingsLauncher.launch(intent) }
+                    .onFailure { Toast.makeText(context, "Não foi possível abrir as informações do Explorador XP.", Toast.LENGTH_SHORT).show() }
+            },
+            onOpenUsageAccess = {
+                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
+                runCatching { usageAccessSettingsLauncher.launch(intent) }
+                    .onFailure {
+                        runCatching { usageAccessSettingsLauncher.launch(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
+                            .onFailure { Toast.makeText(context, "Não foi possível abrir Acesso ao uso.", Toast.LENGTH_SHORT).show() }
+                    }
+            },
+            onContinue = {
+                preferences.markUsageAccessEducationSeen(BuildConfig.VERSION_CODE)
+                showUsageAccessEducation = false
+            },
         )
         return
     }

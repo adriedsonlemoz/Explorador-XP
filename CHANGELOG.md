@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0-alpha.88
+
+- Tela **Armazenamento** recriada com novo painel de capacidade, atalho para **Aplicativos instalados**, ações rápidas, categorias em lista, maiores pastas e arquivos grandes.
+- Preservados análise, atualização/cancelamento, abertura de pastas/arquivos e Lixeira; nenhum dado protegido é estimado.
+- A mensagem amarela de **Acesso ao uso** em Aplicativos instalados agora explica configurações restritas e abre diretamente **Informações do Explorador XP**, mantendo também um atalho para **Acesso ao uso**.
+- Adicionada orientação pós-atualização, exibida depois de **Novidades** uma única vez quando aplicável e o Acesso ao uso ainda não estiver concedido.
+- A orientação explica que, em aparelhos que aplicam a proteção, pode ser necessário abrir os 3 pontos no canto superior direito das Informações do app e escolher **Permitir configurações restritas**; o texto avisa que nomes/posição podem variar por fabricante/Android.
+- Acesso ao uso continua opcional: sem ele, o módulo usa apenas o tamanho real de `sourceDir`/`splitSourceDirs`; com ele, consulta `StorageStatsManager`.
+- Todas as funções da alpha.87 foram preservadas.
+- Versão sincronizada para `0.1.0-alpha.88` / `versionCode 88`.
+
 ## 0.1.0-alpha.87
 
 - Corrigido o erro de compilação `Unresolved reference 'showInstalledApps'` reportado no workflow **Gerar APK 83**.

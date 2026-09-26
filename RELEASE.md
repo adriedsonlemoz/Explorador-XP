@@ -1,16 +1,23 @@
-# Explorador XP 0.1.0-alpha.87
+# Explorador XP 0.1.0-alpha.88
 
-## Correção de compilação
+## Armazenamento recriado
 
-Esta versão corrige o erro encontrado no workflow **Gerar APK 83**:
+A tela **Armazenamento** foi reconstruída como um painel de uso mais limpo. O cabeçalho mostra usado, livre, total e percentual com dados gerais fornecidos pelo Android. Logo abaixo existe um atalho dedicado para **Aplicativos instalados**, além de ações rápidas para Lixeira e análise.
 
-`ExplorerScreen.kt:829:29 Unresolved reference 'showInstalledApps'`
+A análise detalhada continua local e conserva as funções existentes: categorias, maiores pastas, arquivos grandes, atualização/cancelamento, abertura de itens e indicação de diretórios inacessíveis. A interface deixa explícito que categorias e rankings consideram somente os arquivos que o Android permitiu enumerar; valores de áreas protegidas não são inventados.
 
-O menu **Ferramentas > Aplicativos instalados** estava dentro do composable `XpHeader`, enquanto o estado `showInstalledApps` pertence à tela principal. A alpha.87 mantém o estado no componente proprietário e passa ao cabeçalho apenas a callback `onShowInstalledApps`, seguindo o mesmo padrão já usado para Configurações e Informações do dispositivo.
+## Aplicativos instalados e Acesso ao uso
 
-## Funções preservadas
+O aviso amarelo do gerenciador foi refeito. Sem Acesso ao uso, ele explica que o tamanho completo não está disponível e oferece duas rotas: **Informações do Explorador XP** e **Acesso ao uso**. Em Androids que bloqueiam configurações especiais para aplicativos instalados por APK, a orientação informa que pode ser necessário abrir os 3 pontos nas Informações do app e escolher **Permitir configurações restritas** antes de liberar Acesso ao uso.
 
-O gerenciador de aplicativos da alpha.86 permanece completo: lista pesquisável, filtros Usuário/Sistema, ícones, versão, tamanho, estatísticas via `StorageStatsManager`, permissões e ações seguras. Nenhuma função anterior do Explorador XP foi removida nesta etapa.
+Após **Novidades da atualização**, a alpha.88 pode exibir uma tela educativa única quando o app veio de uma atualização e o Acesso ao uso ainda não foi concedido. O usuário pode continuar sem conceder. Essa autorização não é necessária para navegar pelos arquivos nem para listar aplicativos; sem ela o Explorador XP continua mostrando o tamanho dos APKs realmente encontrados.
 
-Versão: `0.1.0-alpha.87`  
-versionCode: `87`
+## Compatibilidade
+
+- Nenhuma função existente foi removida.
+- O fluxo de Novidades continua uma vez por atualização.
+- A nova orientação de Acesso ao uso tem controle próprio para não reaparecer em todas as futuras versões.
+- Não foi adicionada coleta de dados pessoais nem tráfego de rede para o gerenciador de aplicativos.
+
+Versão: `0.1.0-alpha.88`  
+Version code: `88`

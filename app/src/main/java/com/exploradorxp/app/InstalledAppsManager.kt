@@ -339,30 +339,72 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
             )
             if (!usageAccess) {
                 Spacer(Modifier.height(7.dp))
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFFFFF8E6), RoundedCornerShape(6.dp))
-                        .border(1.dp, Color(0xFFE5C468), RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFFFF8E6))
+                        .border(1.dp, Color(0xFFE5C468), RoundedCornerShape(8.dp))
                         .clickable {
+                            val intent = Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:${context.packageName}"),
+                            )
+                            runCatching { settingsLauncher.launch(intent) }
+                                .onFailure { Toast.makeText(context, "Não foi possível abrir as informações do Explorador XP.", Toast.LENGTH_SHORT).show() }
+                        }
+                        .padding(10.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        CachedResourceIcon(R.drawable.warning, "Acesso necessário", Modifier.size(19.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Acesso ao uso ainda não liberado",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF6A4C00),
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "Sem esse acesso, o Explorador XP mostra somente o tamanho real dos APKs. Para ver código, dados e cache, o Android precisa liberar Acesso ao uso.",
+                                fontSize = 10.3.sp,
+                                lineHeight = 14.sp,
+                                color = Color(0xFF5D4B16),
+                            )
+                            Spacer(Modifier.height(5.dp))
+                            Text(
+                                "Se o Android disser que a configuração é restrita: toque nesta mensagem, abra os 3 pontos no canto superior direito de Informações do app e escolha “Permitir configurações restritas”. O nome pode variar conforme o aparelho.",
+                                fontSize = 9.8.sp,
+                                lineHeight = 13.5.sp,
+                                color = Color(0xFF735D25),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        AppManagerAccessButton(
+                            label = "Informações do Explorador XP",
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            val intent = Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:${context.packageName}"),
+                            )
+                            runCatching { settingsLauncher.launch(intent) }
+                                .onFailure { Toast.makeText(context, "Não foi possível abrir as informações do Explorador XP.", Toast.LENGTH_SHORT).show() }
+                        }
+                        AppManagerAccessButton(
+                            label = "Acesso ao uso",
+                            modifier = Modifier.weight(1f),
+                        ) {
                             val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
                                 data = Uri.parse("package:${context.packageName}")
                             }
                             runCatching { settingsLauncher.launch(intent) }
                                 .onFailure { settingsLauncher.launch(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
                         }
-                        .padding(9.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CachedResourceIcon(R.drawable.info, "Informação", Modifier.size(18.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text(
-                        "Tamanho completo indisponível. Toque para conceder Acesso ao uso; sem ele, o Explorador XP mostra apenas o tamanho dos APKs instalados.",
-                        fontSize = 10.5.sp,
-                        lineHeight = 14.sp,
-                        color = Color(0xFF5D4B16),
-                        modifier = Modifier.weight(1f),
-                    )
+                    }
                 }
             } else if (storageLoading) {
                 Spacer(Modifier.height(6.dp))
@@ -449,6 +491,32 @@ private fun AppManagerChip(label: String, selected: Boolean, onClick: () -> Unit
             .padding(horizontal = 9.dp, vertical = 6.dp),
     ) {
         Text(label, fontSize = 10.5.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, color = Color(0xFF27435F))
+    }
+}
+
+
+@Composable
+private fun AppManagerAccessButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.White.copy(alpha = .72f))
+            .border(1.dp, Color(0xFFD4B95D), RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+    ) {
+        Text(
+            label,
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF624B0C),
+            maxLines = 2,
+        )
     }
 }
 
