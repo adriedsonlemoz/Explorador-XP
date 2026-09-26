@@ -1,7 +1,7 @@
 {
-  "version_build": "0.1.0-alpha.71",
+  "version_build": "0.1.0-alpha.72",
   "version_code": 71,
-  "manager_version": "0.1.0-alpha.71",
+  "manager_version": "0.1.0-alpha.72",
   "application_id": "com.exploradorxp.app",
   "scope": "Tela de novidades por atualização e Informações do dispositivo em tela completa",
   "checks": [
@@ -46,6 +46,11 @@
       "name": "android_full_build",
       "status": "not_run",
       "reason": "O projeto não inclui gradlew e o ambiente atual não possui Gradle/Android SDK configurados para executar o build completo."
+    },
+    {
+      "name": "Correção de compilação horizontalScroll",
+      "status": "PASS",
+      "details": "InternalViewer.kt usa androidx.compose.foundation.horizontalScroll; corrige Unresolved reference no compileDebugKotlin."
     }
   ]
 }

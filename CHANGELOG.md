@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.72
+
+### Correções
+- Corrigida falha de compilação em `InternalViewer.kt`: `horizontalScroll` agora usa o import correto de `androidx.compose.foundation.horizontalScroll`.
+- Corrigidos os erros `Unresolved reference 'horizontalScroll'` reportados pelo workflow Gerar APK.
+- Versão sincronizada para `0.1.0-alpha.72` / `versionCode 72`.
+
 ## 0.1.0-alpha.71
 
 - Adicionada a tela **Novidades da atualização**, com identidade visual do Explorador XP e conteúdo rolável da versão atual.
