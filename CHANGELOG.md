@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0-alpha.78
+## 0.1.0-alpha.79
 
 ### Tela de APK
 - Compactadas margens, paddings, cartões, linhas de compatibilidade e botões para aproveitar melhor a altura do aparelho.
@@ -11,7 +11,7 @@
 - O workflow `Gerar APK` não acumula mais versões dentro da tag fixa `explorador-xp-dev`.
 - Cada versão passa a usar a própria tag (`v<versionName>`) e a própria prerelease, preservando o histórico e fazendo a versão recém-publicada aparecer como release mais recente.
 - Reexecuções da mesma versão substituem somente o APK daquela mesma release com `--clobber`.
-- Versão sincronizada para `0.1.0-alpha.78` / `versionCode 78`.
+- Versão sincronizada para `0.1.0-alpha.79` / `versionCode 79`.
 
 ## 0.1.0-alpha.77
 

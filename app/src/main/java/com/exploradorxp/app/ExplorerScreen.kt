@@ -203,6 +203,15 @@ fun ExplorerScreen(
         return
     }
 
+    if (showAbout) {
+        AboutScreen(
+            onDismiss = { showAbout = false },
+            onOpenHelp = { showAbout = false; showManual = true },
+            onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
+        )
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -518,11 +527,6 @@ fun ExplorerScreen(
     }
 
     if (showManual) HelpManualDialog(onDismiss = { showManual = false })
-    if (showAbout) AboutDialog(
-        onDismiss = { showAbout = false },
-        onOpenHelp = { showAbout = false; showManual = true },
-        onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
-    )
     StorageDetailsDialogHost(
         visible = showStorageDetails,
         stateFlow = storageScanState,
@@ -1452,7 +1456,7 @@ private fun HelpTopic(
 }
 
 @Composable
-private fun AboutDialog(
+private fun AboutScreen(
     onDismiss: () -> Unit,
     onOpenHelp: () -> Unit,
     onOpenDeviceInfo: () -> Unit,
@@ -1460,45 +1464,23 @@ private fun AboutDialog(
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
 
-    XpModalWindow(
-        onDismiss = onDismiss,
-        maxWidth = 520,
-        heightFraction = 0.84f,
-        header = { XpDialogTitle("Sobre o Explorador XP", onDismiss) },
-        footer = {
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val compact = maxWidth < 355.dp
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    XpDialogButton(
-                        "Ajuda",
-                        modifier = Modifier.weight(1f),
-                        iconRes = R.drawable.help,
-                        onClick = onOpenHelp,
-                    )
-                    XpDialogButton(
-                        if (compact) "Info técnica" else "Informações técnicas",
-                        modifier = Modifier.weight(1f),
-                        iconRes = R.drawable.device_mobile,
-                        onClick = onOpenDeviceInfo,
-                    )
-                    XpDialogButton(
-                        "Fechar",
-                        modifier = Modifier.weight(1f),
-                        iconRes = R.drawable.close,
-                        onClick = onDismiss,
-                    )
-                }
-            }
-        },
+    BackHandler(onBack = onDismiss)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
     ) {
+        XpDialogTitle("Sobre o Explorador XP", onDismiss)
+        HorizontalDivider(color = XpChromeBorder)
+
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
+                .fillMaxWidth()
+                .background(Color(0xFFF6F8FB))
                 .verticalScroll(rememberScrollState())
-                .padding(14.dp),
+                .padding(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 androidx.compose.foundation.Image(
@@ -1558,6 +1540,39 @@ private fun AboutDialog(
                         modifier = Modifier.padding(bottom = 5.dp),
                     )
                 }
+            }
+        }
+
+        HorizontalDivider(color = XpChromeBorder)
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(XpChrome)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            val compact = maxWidth < 355.dp
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                XpDialogButton(
+                    "Ajuda",
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.help,
+                    onClick = onOpenHelp,
+                )
+                XpDialogButton(
+                    if (compact) "Info técnica" else "Informações técnicas",
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.device_mobile,
+                    onClick = onOpenDeviceInfo,
+                )
+                XpDialogButton(
+                    "Fechar",
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.close,
+                    onClick = onDismiss,
+                )
             }
         }
     }

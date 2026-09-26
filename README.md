@@ -2,7 +2,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.78` (`versionCode 78`)  
+**Versão atual:** `0.1.0-alpha.79` (`versionCode 79`)  
 
 
 - A alpha.78 compacta a tela de inspeção/instalação de APK, padroniza seu botão **Fechar** e muda o workflow para uma **release por versão**, fazendo as versões novas aparecerem no topo do histórico.

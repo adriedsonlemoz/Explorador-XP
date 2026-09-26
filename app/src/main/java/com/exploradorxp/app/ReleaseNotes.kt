@@ -18,10 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "A tela de APK ficou mais compacta, com menos margens e espaços entre os cartões para aproveitar melhor a altura da tela.",
-                "A comparação com o aplicativo instalado inicia recolhida e continua disponível com um toque, reduzindo a necessidade de rolagem na abertura.",
-                "O botão Fechar do visualizador foi padronizado com o mesmo botão XP inferior usado nas demais telas, incluindo o ícone de fechamento.",
-                "O workflow do GitHub agora cria uma release separada para cada versão, preservando o histórico e fazendo as versões novas aparecerem como releases mais recentes.",
+                "A tela Sobre o Explorador XP agora abre como tela completa, no mesmo padrão adotado para a Lixeira e Informações do dispositivo.",
+                "O layout Sobre deixou de usar popup/modal e passou a ocupar toda a área útil do aplicativo, mantendo o estilo XP.",
+                "Ajuda, Informações técnicas e Fechar continuam disponíveis na barra inferior padronizada.",
+                "Versão e documentação foram sincronizadas para a alpha.79.",
             )
         )
 }
