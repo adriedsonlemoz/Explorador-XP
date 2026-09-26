@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.81
+
+### Polimento de Armazenamento
+- Corrigida a apresentação do ícone de **Armazenamento interno**: o bitmap agora é renderizado dentro de uma área dedicada, com `ContentScale.Fit` e margem interna, evitando a aparência de recorte/encostamento nas bordas em densidades menores.
+- Os cartões de **Por tipo de arquivo** foram compactados: ícones menores, padding vertical reduzido, menor espaçamento entre cartões e contagem/porcentagem reunidas em uma única linha secundária.
+- As métricas e a lógica da análise não foram alteradas; tamanhos, contagens e percentuais continuam usando exclusivamente o conjunto efetivamente analisado.
+- Versão sincronizada para `0.1.0-alpha.81` / `versionCode 81`.
+
 ## 0.1.0-alpha.80
 
 ### Ajuda e Armazenamento

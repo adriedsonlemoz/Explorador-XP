@@ -2,8 +2,10 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.80` (`versionCode 80`)  
+**Versão atual:** `0.1.0-alpha.81` (`versionCode 81`)  
 
+
+- A alpha.81 faz um polimento visual da tela **Armazenamento**: o ícone do armazenamento ganha uma área própria com ajuste `Fit` e margem interna para não parecer recortado em densidades menores, e os cartões de Vídeos/Imagens/Áudio/APK/Outros ficam mais baixos e compactos sem remover tamanho, contagem ou porcentagem.
 
 - A alpha.80 transforma **Ajuda** e **Armazenamento** em telas completas no mesmo padrão da Lixeira/Sobre/Informações do dispositivo. A análise de armazenamento agora separa explicitamente os valores gerais do Android dos arquivos efetivamente analisados, usa cartões compactos por tipo (máximo de 5), mantém o último resultado válido durante atualizações e identifica varreduras parciais quando diretórios realmente retornam inacessíveis.
 

@@ -3079,12 +3079,20 @@ private fun StorageDetailsScreen(
                 .background(XpChrome)
                 .padding(horizontal = 10.dp, vertical = 7.dp),
         ) {
-            androidx.compose.foundation.Image(
-                painterResource(R.drawable.drive_storage),
-                null,
-                modifier = Modifier.size(31.dp),
-            )
-            Spacer(Modifier.width(8.dp))
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(37.dp),
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(R.drawable.drive_storage),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(33.dp)
+                        .padding(1.dp),
+                )
+            }
+            Spacer(Modifier.width(7.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text("Armazenamento interno", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
                 Text(
@@ -3399,9 +3407,9 @@ private fun StorageCategoryCards(categories: List<StorageCategorySummary>, total
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val columns = if (maxWidth >= 360.dp) 2 else 1
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             categories.chunked(columns).forEach { rowItems ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                     rowItems.forEach { category ->
                         StorageCategoryCard(category, totalBytes, Modifier.weight(1f))
                     }
@@ -3422,32 +3430,35 @@ private fun StorageCategoryCard(category: StorageCategorySummary, totalBytes: Lo
         modifier = modifier
             .background(Color.White, RoundedCornerShape(8.dp))
             .border(1.dp, Color(0xFFCAD8E8), RoundedCornerShape(8.dp))
-            .padding(9.dp),
+            .padding(horizontal = 8.dp, vertical = 7.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.foundation.Image(
                 painterResource(storageCategoryIcon(category.key)),
                 null,
-                modifier = Modifier.size(25.dp),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(21.dp),
             )
-            Spacer(Modifier.width(7.dp))
+            Spacer(Modifier.width(6.dp))
             Text(
                 category.label,
-                fontSize = 12.sp,
+                fontSize = 11.5.sp,
                 fontWeight = FontWeight.Bold,
                 color = XpBlueDark,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.height(6.dp))
-        Text(formatBytes(category.bytes), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
+        Spacer(Modifier.height(4.dp))
+        Text(formatBytes(category.bytes), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
+        Spacer(Modifier.height(1.dp))
         Text(
-            "${category.fileCount} ${if (category.fileCount == 1) "arquivo" else "arquivos"}",
-            fontSize = 10.5.sp,
+            "${category.fileCount} ${if (category.fileCount == 1) "arquivo" else "arquivos"} • $percent%",
+            fontSize = 9.5.sp,
             color = XpTextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
-        Text("$percent% dos analisados", fontSize = 9.5.sp, color = Color(0xFF66788F))
     }
 }
 

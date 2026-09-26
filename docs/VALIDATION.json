@@ -1,9 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.80",
-  "version_code": 80,
-  "manager_version": "0.1.0-alpha.80",
+  "version_build": "0.1.0-alpha.81",
+  "version_code": 81,
+  "manager_version": "0.1.0-alpha.81",
   "application_id": "com.exploradorxp.app",
-  "scope": "Ajuda e Armazenamento em tela completa, métricas de armazenamento coerentes e cartões compactos por tipo",
+  "scope": "Polimento visual do ícone de armazenamento e compactação dos cartões por tipo",
   "checks": [
     {
       "name": "help_full_screen_static",
@@ -56,9 +56,19 @@
       "details": "gerar-apk.yml continua criando/uploadando APK diretamente em uma GitHub prerelease por tag v<versionName>, sem actions/upload-artifact."
     },
     {
+      "name": "storage_header_icon_fit_static",
+      "status": "passed",
+      "details": "O ícone de Armazenamento interno usa Box dedicado de 37dp, imagem de 33dp, margem interna e ContentScale.Fit, sem crop/clipping explícito."
+    },
+    {
+      "name": "storage_category_compact_cards_static",
+      "status": "passed",
+      "details": "Cartões por tipo usam padding vertical reduzido, ícone de 21dp, espaçamento de 6dp e contagem/porcentagem em uma única linha, mantendo no máximo cinco cartões."
+    },
+    {
       "name": "version_metadata",
       "status": "passed",
-      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, ReleaseNotes e documentação estão sincronizados para alpha.80/versionCode 80."
+      "details": "app/build.gradle.kts, github-manager.json, README, CHANGELOG, ReleaseNotes e documentação estão sincronizados para alpha.81/versionCode 81."
     },
     {
       "name": "android_full_build",

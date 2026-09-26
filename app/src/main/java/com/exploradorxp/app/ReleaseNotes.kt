@@ -18,11 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Ajuda agora abre em tela completa, mantendo os tópicos expansíveis e o botão Fechar na barra inferior.",
-                "Armazenamento agora abre em tela completa e mantém análise, cancelamento e abertura das pastas encontradas.",
-                "A análise por tipo foi redesenhada em cartões compactos, com no máximo cinco categorias visíveis.",
-                "Os números agora diferenciam claramente o armazenamento total informado pelo Android dos arquivos efetivamente analisados pelo Explorador XP.",
-                "Contagens e porcentagens foram revisadas para usar apenas o mesmo conjunto de arquivos analisados, sem estimar dados inacessíveis.",
+                "O ícone de Armazenamento interno foi ajustado para não parecer recortado em telas com diferentes densidades.",
+                "Os cartões de Vídeos, Imagens, Áudio, APK e Outros ficaram mais baixos e compactos.",
+                "Tamanho, quantidade de arquivos e porcentagem continuam visíveis, agora com melhor aproveitamento vertical.",
+                "A lógica e os números da análise de armazenamento foram preservados sem misturar dados do dispositivo com arquivos analisados.",
             )
         )
 }
