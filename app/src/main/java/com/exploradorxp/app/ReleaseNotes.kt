@@ -18,10 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigida a falha de compilação relatada no workflow Gerar APK 89.",
-                "Definidos limites de segurança para ZIP, extração, preview e arquivos externos.",
-                "Cache de pré-visualizações agora elimina arquivos antigos e controla o espaço total utilizado.",
-                "Mantidas as proteções de substituição de arquivos e visualização HTML introduzidas na versão anterior.",
+                "Nova busca de aparelhos pela rede Wi-Fi: Ferramentas > Rede local > Procurar aparelhos.",
+                "Servidor WebDAV anunciado automaticamente enquanto você compartilhar uma pasta.",
+                "Escolher um aparelho preenche o endereço, mas sempre exige senha e conferência do SHA-256.",
+                "Busca encerrada ao sair da tela para economizar bateria; conexão manual continua disponível.",
             )
         )
 }

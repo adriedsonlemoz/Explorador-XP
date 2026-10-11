@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.0-alpha.96
+
+- Adicionada descoberta manual de servidores WebDAV HTTPS por NSD/mDNS (`_webdavs._tcp.`), mostrando nome e endereço de cada aparelho na mesma rede.
+- O servidor anuncia seu serviço apenas quando ativado; interrompe o anúncio ao parar o compartilhamento. Não divulga senha, fingerprint nem nomes de pastas.
+- A opção **Usar** preenche o endereço encontrado, apaga credenciais e fingerprint anteriores e encerra a busca; conexão continua exigindo senha e pin SHA-256 conferidos presencialmente.
+- Multicast Wi-Fi habilitado exclusivamente durante a busca, com liberação ao parar/fechar a tela; tratamento de falhas e de callbacks atrasados. IPs públicos, loopback, portas inválidas e formatos ambíguos não entram na seleção.
+- Quatro novos testes de validação de endereços descobertos. Atualizados versão 96, README, metadados, release e novidades.
+- Sem SMB2/3 ou sincronização nesta etapa. Build Android no GitHub Actions e testes reais entre dois aparelhos continuam pendentes.
+
+## 0.1.0-alpha.95
+
+- Implementado **Ferramentas > Rede local (WebDAV)** com cliente e servidor na mesma rede: selecionar/remover pastas pela Storage Access Framework (SAF), navegar em pastas remotas e baixar arquivos para documentos escolhidos pelo usuário.
+- Servidor WebDAV sobre TLS 1.2/1.3 com certificado gerado no Android Keystore, pin SHA-256 validado pelo cliente e autenticação Basic **somente sob HTTPS**, senha forte de sessão renovada a cada ativação.
+- Envio de arquivo opcional, desativado por padrão, via gravação temporária e sem substituir nomes existentes; limite de 4 GiB, cancelamento e limpeza em falhas; DELETE/MKCOL não são expostos.
+- Servidor restrito a clientes de IP privado/local, com limite de conexões ativas, fila limitada e serviço em primeiro plano iniciado manualmente.
+- Endereços públicos, HTTP não criptografado e redirecionamentos são recusados no cliente. Não há SMB, descoberta automática ou sincronização nesta primeira entrega.
+- Atualizados versionCode 95, metadados, README, novidades, release e testes de sanitização de caminhos.
+- Validação Android completa e testes entre dois aparelhos pendentes no GitHub Actions/dispositivos reais.
+
 ## 0.1.0-alpha.94
 
 - Corrigidos os 13 erros de compilação `Unresolved reference` do workflow **Gerar APK 89** em `ArchiveManager.kt` e `MainActivity.kt`.

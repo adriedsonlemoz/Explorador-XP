@@ -1,10 +1,10 @@
-> **Versão atual:** 0.1.0-alpha.94 (`versionCode 94`). Correção do build da alpha.93: limites ZIP/cache e função de limpeza de pré-visualização agora definidos e testados. Mantidas as proteções de cópia/substituição, ZIP e WebView da alpha.93. **Acesso a arquivos pela rede local:** adiado para a próxima versão funcional (alpha.95), após validação do build. Veja [RELEASE.md](RELEASE.md).
+> **Versão atual:** 0.1.0-alpha.96 (`versionCode 96`). Descoberta opcional de servidores WebDAV HTTPS na rede local via mDNS (Android NSD), com anúncio somente enquanto o compartilhamento está ligado. Busca iniciada/parada manualmente e autenticação TLS/SHA-256 mantida. Compilação Android completa ainda não validada. Veja [RELEASE.md](RELEASE.md).
 
 # Explorador XP
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.92` (`versionCode 92`)  
+**Versão atual:** `0.1.0-alpha.96` (`versionCode 96`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.
@@ -300,3 +300,17 @@ O cabeçalho reproduz de forma mais fiel a estrutura do Explorer do Windows XP, 
 - Informações do dispositivo usa somente o X vermelho superior para fechar; o botão inferior foi removido.
 - Lixeira convertida de popup para tela completa, mantendo o padrão visual do Explorador XP.
 - Corrigido o build Kotlin removendo a ambiguidade entre helpers SHA-256 do inspetor de APK e do editor/abertura externa.
+
+
+
+## Descoberta de dispositivos (alpha.96)
+
+Em **Ferramentas > Rede local (WebDAV)**, toque em **Procurar aparelhos** para localizar serviços `_webdavs._tcp.` anunciados pela rede Wi-Fi (mDNS). O Explorador XP anuncia o próprio servidor **somente enquanto o compartilhamento estiver ativado**. Escolher **Usar** preenche o URL HTTPS, limpa credenciais e o SHA-256 anteriores e interrompe a busca. Confira o SHA-256 e informe a senha **diretamente no aparelho remoto** antes de conectar; mDNS não é prova de identidade. Você também pode continuar conectando manualmente por IP quando a rede bloquear multicast. A busca é encerrada ao fechar a tela para economizar bateria. Sem SMB2/SMB3 nesta versão.
+
+## Rede local (alpha.95)
+
+Em **Ferramentas > Rede local (WebDAV)**, escolha uma ou mais pastas com o seletor oficial do Android e ative o servidor. O serviço expõe somente as pastas autorizadas através de **HTTPS na porta 18843**, usuário `xp` e senha forte temporária mostrada na própria tela. Informe no outro aparelho o endereço, a senha e a impressão digital SHA-256 do certificado. Para proteger a conta contra interceptação, confirme a impressão digital diretamente no aparelho que compartilha.
+
+O acesso remoto aceita apenas **HTTPS em endereço privado/local**, exige a impressão SHA-256 exata do certificado e não segue redirecionamentos. O cliente WebDAV permite navegar, baixar documentos via seletor **Salvar como** do Android e enviar arquivos a uma pasta remota quando o servidor autorizar. Ao enviar, **não substitui arquivos existentes**. O servidor trabalha em modo somente leitura por padrão; envio precisa ser habilitado explicitamente. A pasta só pode ser removida ou alterada com o servidor desligado. O compartilhamento é manual e para ao desligar o servidor ou quando o Android encerrar o serviço.
+
+Limitações desta primeira implementação: sem SMB/CIFS, sem descoberta automática, sem exclusão/renomeação remota e sem sincronização. Não faz acesso à internet nem contorna restrições SAF. Uma pasta compartilhada por Android é acessível em outro Android ou cliente WebDAV compatível. O servidor requer notificação em primeiro plano e o Android 15 pode impor limite de duração a serviços de sincronização de dados. Deve ser validado em dois dispositivos reais antes de uso com dados importantes.

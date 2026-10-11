@@ -179,6 +179,7 @@ fun ExplorerScreen(
     var showAbout by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showDeviceInfo by remember { mutableStateOf(false) }
+    var showNetworkExplorer by remember { mutableStateOf(false) }
     var showInstalledApps by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     var showStorageDetails by remember { mutableStateOf(false) }
@@ -187,6 +188,11 @@ fun ExplorerScreen(
     var showAdvancedSearchFilters by remember { mutableStateOf(false) }
     val advancedSearch by advancedSearchState.collectAsStateWithLifecycle()
     val displayedItems = if (advancedSearch.active) advancedSearch.results else state.items
+
+    if (showNetworkExplorer) {
+        NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false })
+        return
+    }
 
     if (showDeviceInfo) {
         DeviceInfoScreen(onDismiss = { showDeviceInfo = false })
@@ -321,6 +327,7 @@ fun ExplorerScreen(
             onShowAbout = { showAbout = true },
             onShowSettings = { showSettings = true },
             onShowDeviceInfo = { showDeviceInfo = true },
+            onShowNetwork = { showNetworkExplorer = true },
             onShowInstalledApps = { showInstalledApps = true },
             selectedArchive = state.selectedPaths.singleOrNull()?.let(::File)?.takeIf { it.isFile && it.extension.equals("zip", ignoreCase = true) },
             onOpenSelectedArchive = { target -> onClearSelection(); onOpenTarget(target) },
@@ -638,6 +645,7 @@ private fun XpHeader(
     onShowAbout: () -> Unit,
     onShowSettings: () -> Unit,
     onShowDeviceInfo: () -> Unit,
+    onShowNetwork: () -> Unit,
     onShowInstalledApps: () -> Unit,
     selectedArchive: File?,
     onOpenSelectedArchive: (File) -> Unit,
@@ -833,6 +841,10 @@ private fun XpHeader(
                         XpMenuItem("Aplicativos instalados", R.drawable.file_apk) {
                             toolsMenu = false
                             onShowInstalledApps()
+                        }
+                        XpMenuItem("Rede local (WebDAV)", R.drawable.device_mobile) {
+                            toolsMenu = false
+                            onShowNetwork()
                         }
                         XpMenuDivider()
                         XpMenuItem("Configurações", R.drawable.settings) {
