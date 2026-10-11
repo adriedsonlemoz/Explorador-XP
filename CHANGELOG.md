@@ -1,3 +1,11 @@
+## 0.1.0-alpha.103 — 2026-10-11
+
+- Corrigido erro de compilação Kotlin no workflow **Gerar APK 96** (`:app:compileDebugKotlin`): `ExplorerQuickAccess.kt:206:70 Unresolved reference 'ensureActive'`.
+- Adicionado `import kotlinx.coroutines.ensureActive`, exigido pelo uso de `currentCoroutineContext().ensureActive()` no laço de cópia da galeria, preservando o cancelamento cooperativo.
+- Nenhuma mudança de comportamento prevista em Fotos/Vídeos, Aplicativos Instalados, WebDAV, SMB2/3 ou QR Code.
+- `versionCode 103`, `versionName`, README, CHANGELOG, RELEASE, notas exibidas no app, identidade do projeto e documentação de validação sincronizados.
+- Compilação Android completa e testes de hardware ainda precisam ser executados no GitHub Actions e em dispositivos reais.
+
 ## 0.1.0-alpha.102 — 2026-10-11
 
 - Aplicativos Instalados: resumo compacto com quatro ações Abrir/Limpar/Remover/Sistema perto do nome e estado corrigido para Habilitado/Desativado. Excluir/limpar respeita as telas e confirmações do Android.

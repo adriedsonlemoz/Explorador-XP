@@ -1,39 +1,39 @@
 {
-  "version_build": "0.1.0-alpha.102",
-  "version_code": 102,
-  "manager_version": "0.1.0-alpha.102",
+  "version_build": "0.1.0-alpha.103",
+  "version_code": 103,
+  "manager_version": "0.1.0-alpha.103",
   "application_id": "com.exploradorxp.app",
-  "scope": "Galeria de fotos/vídeos; aplicativos instalados compactos; QR para conexão WebDAV local autenticada.",
+  "scope": "Correção de compilação Kotlin de ExplorerQuickAccess.kt após workflow Gerar APK 96; preservadas Galeria, Aplicativos e QR.",
   "checks": [
     {
-      "name": "qr_payload_jvm",
+      "name": "github_actions_build96_error",
+      "status": "confirmed",
+      "details": "Falha em :app:compileDebugKotlin, ExplorerQuickAccess.kt:206:70, Unresolved reference 'ensureActive'."
+    },
+    {
+      "name": "coroutine_extension_import",
+      "status": "fixed",
+      "details": "Incluído import kotlinx.coroutines.ensureActive para resolver CoroutineContext.ensureActive() utilizado com currentCoroutineContext()."
+    },
+    {
+      "name": "coroutine_cli_compilation",
       "status": "passed",
-      "details": "9 verificações Kotlin/JVM de formato, round-trip e rejeição de QR inválido."
+      "details": "Trecho representativo com currentCoroutineContext().ensureActive() compilado via kotlinc com kotlinx-coroutines-core-jvm.jar real."
     },
     {
-      "name": "kotlin_psi_modified_sources",
+      "name": "project_metadata_consistency",
       "status": "passed",
-      "details": "Análise sintática Kotlin dos arquivos alterados, sem erros PSI."
+      "details": "VersionCode 103, README/CHANGELOG/RELEASE/ReleaseNotes e identidades sincronizados; 81 XML e 6 JSON válidos."
     },
     {
-      "name": "xml_json_validity",
-      "status": "passed",
-      "details": "Validade estrutural de XML/JSON do projeto."
-    },
-    {
-      "name": "alpha102_android_gradle_assemble",
+      "name": "alpha103_android_gradle_assemble",
       "status": "not_run",
-      "details": "Gradle e Android SDK indisponíveis no ambiente local; executar GitHub Actions."
+      "details": "Gradle Android e SDK indisponíveis no ambiente local; executar GitHub Actions."
     },
     {
-      "name": "qr_real_camera_wifi",
+      "name": "network_and_gallery_physical_tests",
       "status": "not_run",
-      "details": "Requer dois celulares com APK alpha.102 instalado e servidor WebDAV ativo."
-    },
-    {
-      "name": "gallery_real_media_thumbnails",
-      "status": "not_run",
-      "details": "Validar em dispositivo as permissões, miniaturas e rolagem de milhares de itens."
+      "details": "Validar QR, rede WebDAV/SMB, galeria e fluxos de cópia em aparelhos reais."
     }
   ]
 }

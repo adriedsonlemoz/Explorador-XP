@@ -18,6 +18,7 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
+                "Correção do build 96: referência ensureActive resolvida no carregamento e cópia da galeria.",
                 "Aplicativos Instalados: ações Abrir, Limpar, Remover e Sistema compactas junto ao nome.",
                 "Estado do aplicativo passa a indicar Habilitado ou Desativado, sem confundir com execução.",
                 "Fotos e Vídeos: miniaturas reais, tamanhos de arquivos, grade/lista, paginação e seleção múltipla.",

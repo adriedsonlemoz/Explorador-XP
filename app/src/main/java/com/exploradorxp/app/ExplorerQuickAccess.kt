@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 import java.io.FileInputStream
 import androidx.activity.compose.BackHandler
 import android.provider.MediaStore

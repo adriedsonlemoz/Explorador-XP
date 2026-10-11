@@ -1,14 +1,13 @@
-# Explorador XP 0.1.0-alpha.102
+# Explorador XP 0.1.0-alpha.103
 
-## Galeria, aplicativos instalados e QR de rede
+## Correção de compilação: build Gerar APK 96
 
-- **Aplicativos Instalados:** ações compactas Abrir, Limpar, Remover e Sistema junto ao cabeçalho, mantendo as confirmações do Android.
-- **Fotos e Vídeos:** miniaturas, tamanho, grade/lista, paginação e seleção para copiar múltiplos arquivos a uma pasta autorizada sem substituir arquivos existentes.
-- **Rede WebDAV HTTPS:** ao compartilhar uma pasta, mostrar um QR com endereço IP local, senha temporária e impressão SHA-256. No aparelho cliente, usar "Ler QR Code" para preencher os dados e confirmar manualmente a conexão.
-- **Segurança:** QR contém segredo de acesso; não divulgar nem fotografar publicamente. A senha perde a validade quando o servidor é desligado.
-- Cliente SMB2/SMB3 e recursos anteriores preservados.
+- Corrigida a referência não resolvida `ensureActive` em `ExplorerQuickAccess.kt`, causada pela ausência do import da extensão `kotlinx.coroutines.ensureActive`.
+- Mantido cancelamento cooperativo na cópia de arquivos selecionados da galeria.
+- Mantidas as melhorias da alpha.102: Aplicativos Instalados compacto, Fotos/Vídeos com miniaturas e QR de conexão WebDAV HTTPS.
+- Funcionalidades anteriores SMB2/SMB3, rede WebDAV e barra inferior também preservadas.
 
-**Versão:** `0.1.0-alpha.102`  
-**Version code:** `102`
+**Versão:** `0.1.0-alpha.103`  
+**Version code:** `103`
 
-**Validação:** testes locais do payload QR e sintaxe aprovados. Build Android completo e testes entre dispositivos pendentes.
+**Validação:** falha comprovada no log do build 96; testes locais descritos em `docs/VALIDATION.json`. A compilação Android completa no GitHub Actions e os testes físicos ainda são necessários.
