@@ -18,10 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigidos erros de compilação do cliente WebDAV identificados no build Gerar APK 91.",
-                "Cliente HTTPS mantém a restrição de DNS local e a conferência do certificado SHA-256.",
-                "Parser WebDAV reforçado contra XML malicioso e entidades externas.",
-                "Compartilhamento de pastas e busca de dispositivos na rede Wi-Fi permanecem disponíveis.",
+                "Nova barra inferior fixa com atalhos Fotos, Vídeos, Downloads, Rede e Lixeira, inclusive nas telas internas.",
+                "Downloads e Lixeira saíram da barra superior; agora ela oferece Atualizar e Favoritos/Colar.",
+                "Fotos e Vídeos acessam arquivos do índice de mídia Android em diversas pastas.",
+                "Rede local ganhou painel organizado e botão + com busca automática, IP, compartilhamento e aviso sobre SMB futuro.",
+                "Cliente e servidor WebDAV HTTPS, pin SHA-256 e descoberta Wi-Fi permanecem preservados.",
             )
         )
 }

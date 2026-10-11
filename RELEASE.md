@@ -1,14 +1,14 @@
-# Explorador XP 0.1.0-alpha.97
+# Explorador XP 0.1.0-alpha.98
 
-## Correção de compilação: Gerar APK 91
+## Interface: atalhos fixos e central de rede
 
-- Corrigida incompatibilidade do `.dns { }` com OkHttp 4.12.0, usando implementação explícita de `okhttp3.Dns`.
-- Corrigidas referências XML indisponíveis para o Android, com propriedades JAXP literais opcionais.
-- Preservados bloqueio de DOCTYPE, entidades externas, XInclude e DTD externo; adicionada proteção extra no `EntityResolver`.
-- Adicionados testes unitários para XML WebDAV válido e rejeição de conteúdo com entidades.
-- Permanecem os recursos das alpha.95/96: cliente/servidor WebDAV HTTPS, seleção de pastas, pin SHA-256 do certificado e descoberta mDNS.
+- Barra de atalhos fixa no rodapé do explorador e telas internas, com Fotos, Vídeos, Downloads, Rede e Lixeira.
+- Downloads e Lixeira retirados da barra superior; Atualizar e Favoritos/Colar usam o espaço.
+- Fotos/Vídeos listam até 600 entradas indexadas pelo MediaStore Android, inclusive fora de DCIM e Movies.
+- Rede local agora abre em painel com ações separadas e botão **+**: busca automática WebDAV, conexão por IP, compartilhar pasta e uma tela informativa para Windows/SMB (ainda não implementado).
+- Segurança WebDAV HTTPS e conexões já existentes preservadas.
 
-**Validação:** compilação Kotlin/JVM isolada e testes locais (consultar `docs/VALIDATION.json`); APK completo e execução em dois Androids ainda pendentes.
+**Validação:** revisão estática e verificações locais; compilação Android completa e testes físicos pendentes.
 
-Versão: `0.1.0-alpha.97`  
-Version code: `97`
+Versão: `0.1.0-alpha.98`  
+Version code: `98`

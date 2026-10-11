@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-alpha.98
+
+- Nova barra inferior fixa no explorador e nas telas internas (Rede, Lixeira, Configurações, Ajuda, Armazenamento, Dispositivo, Aplicativos, Fotos e Vídeos), com atalhos Fotos, Vídeos, Downloads, Rede e Lixeira.
+- Downloads e Lixeira removidos dos botões da barra superior. Espaço utilizado por **Atualizar** e **Favoritos**; quando há itens copiados, Favoritos cede lugar a **Colar**.
+- Atalhos Fotos e Vídeos consultam o MediaStore do Android em diferentes pastas, sem leitura completa dos arquivos em memória; limite de até 600 resultados por categoria por abertura.
+- Tela Rede local reorganizada como central de dispositivos/compartilhamentos, com botão flutuante **+** para **Busca automática**, **Conectar por IP (WebDAV)**, **Windows / SMB (futuro)** e **Compartilhar pasta**. Operações de upload/download e pin SHA-256 foram mantidas nas telas específicas.
+- Nenhuma implementação SMB2/SMB3 adicionada. Mantida a política HTTPS, seleção SAF, senha temporária e descoberta NSD/mDNS.
+- Atualizadas dicas de ajuda, README, notas, metadados e versionCode 98. Testes em aparelhos e Gradle Android completo continuam pendentes.
+
+
 ## 0.1.0-alpha.97
 
 - Corrigida a compilação do workflow **Gerar APK 91** (`:app:compileDebugKotlin`): chamada `.dns { ... }` substituída por `object : okhttp3.Dns` com `override fun lookup(hostname: String): List<InetAddress>`, compatível com OkHttp 4.12.0/Kotlin. Preservada a restrição a hosts e endereços locais resolvidos inicialmente.

@@ -180,6 +180,7 @@ fun ExplorerScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showDeviceInfo by remember { mutableStateOf(false) }
     var showNetworkExplorer by remember { mutableStateOf(false) }
+    var mediaShortcut by remember { mutableStateOf<MediaShortcutKind?>(null) }
     var showInstalledApps by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     var showStorageDetails by remember { mutableStateOf(false) }
@@ -189,80 +190,84 @@ fun ExplorerScreen(
     val advancedSearch by advancedSearchState.collectAsStateWithLifecycle()
     val displayedItems = if (advancedSearch.active) advancedSearch.results else state.items
 
-    if (showNetworkExplorer) {
-        NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false })
-        return
+    // Navegação fixa: mantém a barra de atalhos visível em todas as telas internas.
+    fun navigateShortcut(destination: ExplorerQuickDestination) {
+        showNetworkExplorer = false
+        showDeviceInfo = false
+        showInstalledApps = false
+        showSettings = false
+        showTrash = false
+        showAbout = false
+        showManual = false
+        showStorageDetails = false
+        mediaShortcut = null
+        when (destination) {
+            ExplorerQuickDestination.PHOTOS -> mediaShortcut = MediaShortcutKind.PHOTOS
+            ExplorerQuickDestination.VIDEOS -> mediaShortcut = MediaShortcutKind.VIDEOS
+            ExplorerQuickDestination.DOWNLOADS -> onTabChange(ExplorerTab.DOWNLOADS)
+            ExplorerQuickDestination.NETWORK -> showNetworkExplorer = true
+            ExplorerQuickDestination.TRASH -> { showTrash = true; onLoadTrash() }
+        }
     }
 
-    if (showDeviceInfo) {
-        DeviceInfoScreen(onDismiss = { showDeviceInfo = false })
-        return
-    }
-
-    if (showInstalledApps) {
-        InstalledAppsManagerScreen(onDismiss = { showInstalledApps = false })
-        return
-    }
-
-    if (showSettings) {
-        AppSettingsScreen(onDismiss = { showSettings = false })
-        return
-    }
-
-    if (showTrash) {
-        TrashScreenHost(
-            stateFlow = trashState,
-            onDismiss = { showTrash = false },
-            onRefresh = onLoadTrash,
-            onRestore = onRestoreTrashItem,
-            onDeletePermanently = onDeleteTrashItem,
-            onEmpty = onEmptyTrash,
-        )
-        return
-    }
-
-    if (showAbout) {
-        AboutScreen(
-            onDismiss = { showAbout = false },
-            onOpenHelp = { showAbout = false; showManual = true },
-            onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
-        )
-        return
-    }
-
-    if (showManual) {
-        HelpManualScreen(onDismiss = { showManual = false })
-        return
-    }
-
-    if (showStorageDetails) {
-        StorageDetailsScreenHost(
-            stateFlow = storageScanState,
-            fallbackInfo = state.storageInfo,
-            onDismiss = { analyzing ->
-                if (analyzing) onCancelStorageAnalysis()
-                showStorageDetails = false
-            },
-            onRefresh = { onAnalyzeStorage(true) },
-            onCancel = onCancelStorageAnalysis,
-            onOpenFolder = { folder ->
-                showStorageDetails = false
-                onNavigateTo(folder)
-            },
-            onOpenFile = { file ->
-                showStorageDetails = false
-                onOpenTarget(file)
-            },
-            onOpenTrash = {
-                showStorageDetails = false
-                showTrash = true
-                onLoadTrash()
-            },
-            onOpenInstalledApps = {
-                showStorageDetails = false
-                showInstalledApps = true
-            },
-        )
+    val secondaryPage = showNetworkExplorer || showDeviceInfo || showInstalledApps ||
+        showSettings || showTrash || showAbout || showManual || showStorageDetails || mediaShortcut != null
+    if (secondaryPage) {
+        Column(modifier = modifier.fillMaxSize().background(XpBackground)) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    mediaShortcut != null -> MediaShortcutScreen(
+                        kind = mediaShortcut!!,
+                        accessGranted = accessGranted,
+                        onRequestAccess = onRequestAccess,
+                        onDismiss = { mediaShortcut = null },
+                        onOpenFile = onOpenTarget,
+                    )
+                    showNetworkExplorer -> NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false })
+                    showDeviceInfo -> DeviceInfoScreen(onDismiss = { showDeviceInfo = false })
+                    showInstalledApps -> InstalledAppsManagerScreen(onDismiss = { showInstalledApps = false })
+                    showSettings -> AppSettingsScreen(onDismiss = { showSettings = false })
+                    showTrash -> TrashScreenHost(
+                        stateFlow = trashState,
+                        onDismiss = { showTrash = false },
+                        onRefresh = onLoadTrash,
+                        onRestore = onRestoreTrashItem,
+                        onDeletePermanently = onDeleteTrashItem,
+                        onEmpty = onEmptyTrash,
+                    )
+                    showAbout -> AboutScreen(
+                        onDismiss = { showAbout = false },
+                        onOpenHelp = { showAbout = false; showManual = true },
+                        onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
+                    )
+                    showManual -> HelpManualScreen(onDismiss = { showManual = false })
+                    showStorageDetails -> StorageDetailsScreenHost(
+                        stateFlow = storageScanState,
+                        fallbackInfo = state.storageInfo,
+                        onDismiss = { analyzing ->
+                            if (analyzing) onCancelStorageAnalysis()
+                            showStorageDetails = false
+                        },
+                        onRefresh = { onAnalyzeStorage(true) },
+                        onCancel = onCancelStorageAnalysis,
+                        onOpenFolder = { folder -> showStorageDetails = false; onNavigateTo(folder) },
+                        onOpenFile = { file -> showStorageDetails = false; onOpenTarget(file) },
+                        onOpenTrash = { showStorageDetails = false; showTrash = true; onLoadTrash() },
+                        onOpenInstalledApps = { showStorageDetails = false; showInstalledApps = true },
+                    )
+                }
+            }
+            ExplorerQuickAccessBar(
+                active = when {
+                    mediaShortcut == MediaShortcutKind.PHOTOS -> ExplorerQuickDestination.PHOTOS
+                    mediaShortcut == MediaShortcutKind.VIDEOS -> ExplorerQuickDestination.VIDEOS
+                    showNetworkExplorer -> ExplorerQuickDestination.NETWORK
+                    showTrash -> ExplorerQuickDestination.TRASH
+                    else -> null
+                },
+                onNavigate = ::navigateShortcut,
+            )
+        }
         return
     }
 
@@ -302,7 +307,6 @@ fun ExplorerScreen(
             onFoldersFirstChange = onFoldersFirstChange,
             onNavigateTo = onNavigateTo,
             storageLocations = state.storageLocations,
-            onOpenDownloads = { onTabChange(ExplorerTab.DOWNLOADS) },
             onOpenFavorites = { onTabChange(ExplorerTab.FAVORITES) },
             selectionCount = state.selectedPaths.size,
             onCopySelection = onCopy,
@@ -437,6 +441,10 @@ fun ExplorerScreen(
                 showStorageDetails = true
                 onAnalyzeStorage(false)
             },
+        )
+        ExplorerQuickAccessBar(
+            active = if (state.tab == ExplorerTab.DOWNLOADS) ExplorerQuickDestination.DOWNLOADS else null,
+            onNavigate = ::navigateShortcut,
         )
     }
 
@@ -629,7 +637,6 @@ private fun XpHeader(
     onFoldersFirstChange: (Boolean) -> Unit,
     onNavigateTo: (File) -> Unit,
     storageLocations: List<StorageLocation>,
-    onOpenDownloads: () -> Unit,
     onOpenFavorites: () -> Unit,
     selectionCount: Int,
     onCopySelection: () -> Unit,
@@ -953,19 +960,12 @@ private fun XpHeader(
                             }
                         }
                     }
+                    XpClassicToolButton(R.drawable.refresh, "Atualizar", true, onRefresh, Modifier.weight(1f), compact = true)
                     if (canPaste) {
                         XpClassicToolButton(R.drawable.paste, "Colar", true, onPaste, Modifier.weight(1f), compact = true)
                     } else {
-                        XpClassicToolButton(R.drawable.folder_downloads, "Downloads", true, onOpenDownloads, Modifier.weight(1f), compact = true)
+                        XpClassicToolButton(R.drawable.favorites, "Favoritos", true, onOpenFavorites, Modifier.weight(1f), compact = true)
                     }
-                    XpClassicToolButton(
-                        if (trashHasItems) R.drawable.trash_full else R.drawable.trash_empty,
-                        "Lixeira",
-                        true,
-                        onOpenTrash,
-                        Modifier.weight(1f),
-                        compact = true,
-                    )
                 }
             }
         }
@@ -1414,10 +1414,10 @@ private fun SectionTitle(title: String, icon: Int) {
 private fun HelpManualScreen(onDismiss: () -> Unit) {
     var expandedTopic by remember { mutableStateOf("Começando") }
     val topics = listOf(
-        "Começando" to "Use a barra superior para voltar, avançar, ir ao Início, subir uma pasta, pesquisar, criar novos itens, abrir Downloads e acessar a Lixeira. Atualizar fica no menu Exibir. Toque em um arquivo para abrir e segure para selecionar.",
+        "Começando" to "Use a barra superior para navegar e operar arquivos; Fotos, Vídeos, Downloads, Rede e Lixeira ficam na barra inferior fixa. Atualizar fica no menu Exibir. Toque em um arquivo para abrir e segure para selecionar.",
         "Navegação" to "O campo Endereço funciona como caminho navegável. Toque em uma parte do caminho para voltar diretamente até ela. A seta ao lado do endereço permite trocar entre armazenamentos detectados.",
         "Arquivos e pastas" to "A lista e a grade mostram o tipo do arquivo, tamanho e outras informações úteis. O botão de opções abre ações como copiar, mover, renomear, excluir, compartilhar, favoritar e ver propriedades.",
-        "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Downloads é temporariamente substituído por Colar.",
+        "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Colar aparece na barra superior.",
         "Compactar ZIP" to "Selecione um ou vários arquivos/pastas e use o atalho ZIP da barra de seleção. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
         "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A pasta interna e artefatos de lixeira do sistema ficam ocultos da navegação comum. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
         "Armazenamento" to "A barra inferior mostra os valores gerais do volume informados pelo Android. Na tela Armazenamento, esses números ficam separados dos arquivos efetivamente analisados pelo Explorador XP. Categorias e pastas usam somente o conjunto que pôde ser enumerado; áreas protegidas não são estimadas.",

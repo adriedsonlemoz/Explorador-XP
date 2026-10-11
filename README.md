@@ -1,10 +1,12 @@
-> **Versão atual:** 0.1.0-alpha.97 (`versionCode 97`). Corrigidos erros de compilação de DNS OkHttp e XMLConstants identificados no workflow Gerar APK 91. Compartilhamento HTTPS, cliente WebDAV e descoberta mDNS permanecem incluídos; compilação Android completa ainda não validada. Veja [RELEASE.md](RELEASE.md).
+> **Versão atual:** 0.1.0-alpha.98 (`versionCode 98`). Barra inferior fixa com Fotos, Vídeos, Downloads, Rede e Lixeira; central de rede com botão + e ações separadas. Mantidos WebDAV HTTPS e descoberta mDNS. Build Android completo ainda pendente. Veja [RELEASE.md](RELEASE.md).
 
 # Explorador XP
 
+**alpha.98 (navegação):** barra de atalhos sempre visível no rodapé das telas internas com Fotos, Vídeos, Downloads, Rede e Lixeira. O topo agora prioriza Atualizar, Favoritos ou Colar. Rede local ganhou central com botão **+**, busca automática, conexão por IP e compartilhamento em etapas separadas. Windows/SMB está sinalizado como futuro, não funcional.
+
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.97` (`versionCode 97`)  
+**Versão atual:** `0.1.0-alpha.98` (`versionCode 98`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

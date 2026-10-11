@@ -1,34 +1,29 @@
 {
-  "version_build": "0.1.0-alpha.97",
-  "version_code": 97,
-  "manager_version": "0.1.0-alpha.97",
+  "version_build": "0.1.0-alpha.98",
+  "version_code": 98,
+  "manager_version": "0.1.0-alpha.98",
   "application_id": "com.exploradorxp.app",
-  "scope": "Correção de compilação do cliente WebDAV HTTPS após logs do GitHub Actions Gerar APK 91 (DNS e XMLConstants)",
+  "scope": "Barra inferior persistente, atalhos MediaStore e reorganização da tela de Rede local",
   "checks": [
     {
-      "name": "kotlin_xml_parser",
-      "status": "local_jvm_passed",
-      "details": "3 testes executados com kotlinc/JVM: multistatus WebDAV válido, recusa de DOCTYPE e de entidade externa."
-    },
-    {
-      "name": "dns_compatibility",
-      "status": "kotlin_stubs_compiled",
-      "details": "NetworkDavClient, NetworkDavXmlParser e NetworkSharePaths compilados com kotlinc 1.9 usando contratos simulados de Android e OkHttp (inclusive okhttp3.Dns). Não substitui compilação Gradle real."
-    },
-    {
-      "name": "project_structure",
+      "name": "source_structure",
       "status": "passed",
-      "details": "81 XML e 6 JSON validados; VERSION, Gradle, metadados, README, CHANGELOG e RELEASE sincronizados com versionCode 97."
+      "details": "Kotlin PSI sem erros sintáticos nos 4 arquivos Kotlin modificados e novo teste; 81 XML, 6 JSON e recursos drawable referenciados verificados; versões Gradle/VERSION/README/RELEASE/metadados sincronizadas; verificações estáticas de navegação passaram."
     },
     {
-      "name": "gradle_build",
-      "status": "not_run",
-      "details": "Compilação Android completa não disponível localmente; executar Gerar APK no GitHub Actions."
+      "name": "unit_test_regressions",
+      "status": "added_not_run",
+      "details": "ExplorerQuickAccessTest.kt adiciona 2 testes JUnit para ordem dos atalhos e exclusão da Lixeira do índice MediaStore; sem Gradle local para executar."
     },
     {
-      "name": "network_integration",
+      "name": "android_gradle_build",
       "status": "not_run",
-      "details": "Funcionalidade WebDAV HTTPS não testada em dispositivos físicos."
+      "details": "Sem Gradle/Android SDK no ambiente. Executar workflow Gerar APK."
+    },
+    {
+      "name": "android_device_ui",
+      "status": "not_run",
+      "details": "Validar toque, volta, mídia, barra inferior e rede em dispositivo real."
     }
   ]
 }
