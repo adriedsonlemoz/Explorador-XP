@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import android.provider.DocumentsContract
 import okhttp3.Call
 import okhttp3.Credentials
+import okhttp3.Dns
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -20,9 +21,9 @@ import org.w3c.dom.Element
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.InetAddress
+import java.net.UnknownHostException
 import java.net.URI
 import java.util.concurrent.TimeUnit
-import javax.xml.parsers.DocumentBuilderFactory
 
 internal data class NetworkRemoteEntry(
     val name: String,
@@ -55,7 +56,15 @@ internal class NetworkDavClient(endpoint: String, fingerprint: String, private v
         val (ssl, trust) = NetworkTls.pinnedClientContext(fingerprint)
         client = OkHttpClient.Builder()
             .sslSocketFactory(ssl.socketFactory, trust)
-            .dns { hostname -> if (hostname == parsed.host) resolvedLocal else throw java.net.UnknownHostException("Host externo não autorizado") }
+            .dns(object : Dns {
+                override fun lookup(hostname: String): List<InetAddress> {
+                    if (!hostname.equals(parsed.host, ignoreCase = true)) {
+                        throw UnknownHostException("Host externo não autorizado")
+                    }
+                    // Retorna os IPs privados capturados na criação do cliente, evitando rebinding DNS.
+                    return resolvedLocal
+                }
+            })
             // Safe exclusively with exact SHA-256 DER pin verified by the custom TrustManager.
             .hostnameVerifier { _, _ -> true }
             .connectTimeout(12, TimeUnit.SECONDS)
@@ -108,18 +117,7 @@ internal class NetworkDavClient(endpoint: String, fingerprint: String, private v
     }
 
     private fun parseMultistatus(xml: ByteArray, parentPath: List<String>): List<NetworkRemoteEntry> {
-        val factory = DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-            setFeature("http://xml.org/sax/features/external-general-entities", false)
-            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-            setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-            isXIncludeAware = false
-            isExpandEntityReferences = false
-            runCatching { setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "") }
-            runCatching { setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_SCHEMA, "") }
-        }
-        val doc = factory.newDocumentBuilder().parse(xml.inputStream())
+        val doc = NetworkDavXmlParser.parse(xml)
         val nodes = doc.getElementsByTagNameNS("DAV:", "response")
         val result = mutableListOf<NetworkRemoteEntry>()
         for (i in 0 until nodes.length) {

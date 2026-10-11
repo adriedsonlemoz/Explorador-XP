@@ -1,10 +1,10 @@
-> **Versão atual:** 0.1.0-alpha.96 (`versionCode 96`). Descoberta opcional de servidores WebDAV HTTPS na rede local via mDNS (Android NSD), com anúncio somente enquanto o compartilhamento está ligado. Busca iniciada/parada manualmente e autenticação TLS/SHA-256 mantida. Compilação Android completa ainda não validada. Veja [RELEASE.md](RELEASE.md).
+> **Versão atual:** 0.1.0-alpha.97 (`versionCode 97`). Corrigidos erros de compilação de DNS OkHttp e XMLConstants identificados no workflow Gerar APK 91. Compartilhamento HTTPS, cliente WebDAV e descoberta mDNS permanecem incluídos; compilação Android completa ainda não validada. Veja [RELEASE.md](RELEASE.md).
 
 # Explorador XP
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.96` (`versionCode 96`)  
+**Versão atual:** `0.1.0-alpha.97` (`versionCode 97`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

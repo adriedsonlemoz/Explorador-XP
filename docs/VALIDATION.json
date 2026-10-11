@@ -1,34 +1,34 @@
 {
-  "version_build": "0.1.0-alpha.96",
-  "version_code": 96,
-  "manager_version": "0.1.0-alpha.96",
+  "version_build": "0.1.0-alpha.97",
+  "version_code": 97,
+  "manager_version": "0.1.0-alpha.97",
   "application_id": "com.exploradorxp.app",
-  "scope": "Descoberta mDNS/NSD para servidor e cliente WebDAV HTTPS e filtros de IP local",
+  "scope": "Correção de compilação do cliente WebDAV HTTPS após logs do GitHub Actions Gerar APK 91 (DNS e XMLConstants)",
   "checks": [
     {
-      "name": "kotlin_discovery_endpoints",
+      "name": "kotlin_xml_parser",
       "status": "local_jvm_passed",
-      "details": "4 testes unitários executados com kotlinc e Assertions JUnit simuladas."
+      "details": "3 testes executados com kotlinc/JVM: multistatus WebDAV válido, recusa de DOCTYPE e de entidade externa."
     },
     {
-      "name": "kotlin_discovery_stubs",
+      "name": "dns_compatibility",
       "status": "kotlin_stubs_compiled",
-      "details": "NetworkDiscovery e filtros de IP compilados com Kotlin 1.9, stubs Android e coroutines. Simulações locais de mDNS: anúncio/parada, descoberta, filtro de IP público, perda de serviço e callbacks obsoletos passaram."
+      "details": "NetworkDavClient, NetworkDavXmlParser e NetworkSharePaths compilados com kotlinc 1.9 usando contratos simulados de Android e OkHttp (inclusive okhttp3.Dns). Não substitui compilação Gradle real."
     },
     {
       "name": "project_structure",
       "status": "passed",
-      "details": "81 XML e 6 JSON parseados; VERSION, Gradle, metadados, README e RELEASE sincronizados."
+      "details": "81 XML e 6 JSON validados; VERSION, Gradle, metadados, README, CHANGELOG e RELEASE sincronizados com versionCode 97."
     },
     {
       "name": "gradle_build",
       "status": "not_run",
-      "details": "Android SDK e Gradle não estão disponíveis; executar Gerar APK no GitHub Actions."
+      "details": "Compilação Android completa não disponível localmente; executar Gerar APK no GitHub Actions."
     },
     {
       "name": "network_integration",
       "status": "not_run",
-      "details": "Testes mDNS e WebDAV HTTPS reais entre dois dispositivos Android pendentes."
+      "details": "Funcionalidade WebDAV HTTPS não testada em dispositivos físicos."
     }
   ]
 }

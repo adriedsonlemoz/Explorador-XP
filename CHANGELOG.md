@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.97
+
+- Corrigida a compilação do workflow **Gerar APK 91** (`:app:compileDebugKotlin`): chamada `.dns { ... }` substituída por `object : okhttp3.Dns` com `override fun lookup(hostname: String): List<InetAddress>`, compatível com OkHttp 4.12.0/Kotlin. Preservada a restrição a hosts e endereços locais resolvidos inicialmente.
+- Substituídas as referências não existentes `javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD` e `ACCESS_EXTERNAL_SCHEMA` por URIs JAXP literais opcionais, mantendo recursos anti-XXE obrigatórios e *EntityResolver* que recusa entidades externas. Parser extraído para `NetworkDavXmlParser.kt`.
+- Incluídos três testes unitários de parsing WebDAV/DOCTYPE/entidades externas (`NetworkDavXmlParserTest`).
+- Versionamento sequencial atualizado para `0.1.0-alpha.97` e `versionCode 97`; mantidos o servidor WebDAV HTTPS, a descoberta mDNS/NSD e as funcionalidades anteriores.
+- Validação: testes Kotlin/JVM locais e verificações estruturais; compilação Android completa e testes entre aparelhos seguem pendentes.
+
 ## 0.1.0-alpha.96
 
 - Adicionada descoberta manual de servidores WebDAV HTTPS por NSD/mDNS (`_webdavs._tcp.`), mostrando nome e endereço de cada aparelho na mesma rede.

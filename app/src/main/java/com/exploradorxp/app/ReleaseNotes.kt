@@ -18,10 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Nova busca de aparelhos pela rede Wi-Fi: Ferramentas > Rede local > Procurar aparelhos.",
-                "Servidor WebDAV anunciado automaticamente enquanto você compartilhar uma pasta.",
-                "Escolher um aparelho preenche o endereço, mas sempre exige senha e conferência do SHA-256.",
-                "Busca encerrada ao sair da tela para economizar bateria; conexão manual continua disponível.",
+                "Corrigidos erros de compilação do cliente WebDAV identificados no build Gerar APK 91.",
+                "Cliente HTTPS mantém a restrição de DNS local e a conferência do certificado SHA-256.",
+                "Parser WebDAV reforçado contra XML malicioso e entidades externas.",
+                "Compartilhamento de pastas e busca de dispositivos na rede Wi-Fi permanecem disponíveis.",
             )
         )
 }
