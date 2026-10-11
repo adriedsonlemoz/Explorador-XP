@@ -1,34 +1,39 @@
 {
-  "version_build": "0.1.0-alpha.100",
-  "version_code": 100,
-  "manager_version": "0.1.0-alpha.100",
+  "version_build": "0.1.0-alpha.101",
+  "version_code": 101,
+  "manager_version": "0.1.0-alpha.101",
   "application_id": "com.exploradorxp.app",
-  "scope": "Cliente SMB2/SMB3 e cópia seletiva por Wi-Fi, compartilhamento Android",
+  "scope": "Correção R8 SMBJ/MBassador do build 94. Melhorias de galeria/aplicativos apenas no backlog.",
   "checks": [
     {
-      "name": "kotlin_syntax",
-      "status": "passed_local",
-      "details": "Análise Kotlin PSI de 7 arquivos novos/alterados sem erros; compilação isolada do cliente SMB com interfaces Android/SMBJ simuladas."
+      "name": "ci_alpha100_unit_tests",
+      "status": "passed_in_prior_ci",
+      "details": "Workflow Gerar APK 94, :app:testDebugUnitTest concluiu com BUILD SUCCESSFUL."
     },
     {
-      "name": "smb_address_pure",
-      "status": "passed_local",
-      "details": "6 grupos de verificações de IP privado, compartilhamento e caminhos remotos executados em Kotlin/JVM."
+      "name": "ci_alpha100_android_lint",
+      "status": "passed_in_prior_ci",
+      "details": "Workflow Gerar APK 94, :app:lintDebug concluiu com BUILD SUCCESSFUL."
     },
     {
-      "name": "resource_validation",
-      "status": "passed_local",
-      "details": "81 XML e 6 JSON válidos."
+      "name": "r8_missing_types_alpha100",
+      "status": "detected",
+      "details": "Falha em minifyPerformanceWithR8: 7 classes javax.el e 6 org.ietf.jgss, referências transitivas SMBJ/MBassador."
     },
     {
-      "name": "android_gradle_build",
+      "name": "r8_specific_rules_alpha101",
+      "status": "verified_static",
+      "details": "Foram adicionadas 13 regras individuais -dontwarn para as 13 classes identificadas; sem -dontwarn amplo nem desativação do R8."
+    },
+    {
+      "name": "alpha101_gradle_assemble_performance",
       "status": "not_run",
-      "details": "Gradle e SDK Android não estão disponíveis no ambiente."
+      "details": "Requer Android SDK/Gradle ou Github Actions; execução completa não disponível localmente."
     },
     {
-      "name": "android_device_smb",
+      "name": "smb_authenticated_device_test",
       "status": "not_run",
-      "details": "Testes reais em Android e servidor SMB não realizados."
+      "details": "Autenticação SMB e cópia seletiva ainda precisam ser validadas em aparelho real."
     }
   ]
 }

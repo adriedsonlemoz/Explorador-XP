@@ -1,3 +1,10 @@
+## 0.1.0-alpha.101 — 2026-10-11
+
+- Corrigida a configuração do R8 na variante `performance` após a falha do workflow **Gerar APK 94** (`:app:minifyPerformanceWithR8`), que reportou 13 classes ausentes de `javax.el` e `org.ietf.jgss` transitivas da SMBJ/MBassador.
+- Incluídas apenas regras `-dontwarn` para as 13 classes opcionais reportadas. Mantidas otimização/minificação, assinatura, cliente SMB2/3 por credenciais e WebDAV; autenticação Kerberos/GSS não é suportada no cliente Android.
+- Melhorias planejadas, **não implementadas nesta versão**: reorganizar os quatro botões em Aplicativos Instalados e transformar o atalho Fotos em galeria com miniaturas, tamanhos e paginação.
+- Testes unitários e lint da alpha.100 passaram no workflow 94. Ainda é necessário validar `assemblePerformance` da alpha.101 no GitHub Actions.
+
 ## 0.1.0-alpha.100 — 2026-10-11
 
 - Cliente SMB2/SMB3 somente leitura com assinatura SMB, IP privado, usuário/senha e nome do compartilhamento.

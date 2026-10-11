@@ -1,16 +1,14 @@
-# Explorador XP 0.1.0-alpha.100
+# Explorador XP 0.1.0-alpha.101
 
-## Acesso Wi-Fi: SMB2/SMB3 e cópia seletiva
+## Correção de compilação R8, build 94
 
-- Cliente SMB2/SMB3 somente leitura para pastas compartilhadas de Windows, NAS e Android com servidor SMB ativo.
-- Conexão por IP privado, nome do compartilhamento, usuário e senha; assinatura SMB obrigatória.
-- Descoberta opcional de anúncios `_smb._tcp.` via mDNS, mantendo conexão manual por IP.
-- Navegação por pastas e seleção de vários arquivos remotos para copiar para pasta escolhida no Android, sem sobrescrever nomes existentes.
-- Integração com Android Sharesheet para envio avulso via Quick Share ou apps compatíveis, sem instalar Explorador XP no destinatário.
-- Interface WebDAV, compartilhamento HTTPS/TLS e barra de atalhos preservados.
-- Não é possível navegar em armazenamento de celular sem serviço de compartilhamento e autorização.
+- Corrigidos 13 avisos de classes ausentes que impediam `:app:minifyPerformanceWithR8`.
+- Regras restritas em `app/proguard-rules.pro` para referências Java EL (MBassador) e GSS/Kerberos (SMBJ) indisponíveis no Android.
+- R8/minificação e assinatura do APK permanecem habilitados; não são adicionadas bibliotecas Java SE incompatíveis.
+- Permanecem disponíveis cliente SMB2/SMB3 com autenticação por usuário/senha, WebDAV HTTPS, cópia seletiva, Quick Share, atalhos inferiores e central de rede.
+- Sem alterações nas telas de Aplicativos Instalados e Galeria. Essas melhorias estão registradas em `docs/BACKLOG_UI_ALPHA102.md`.
 
-**Validação:** verificação sintática e testes JVM locais de endereços/caminhos. Compilação Gradle do APK e teste real Android/SMB ainda pendentes.
+**Validação:** no workflow 94 da alpha.100, `testDebugUnitTest` e `lintDebug` foram bem-sucedidos, porém `minifyPerformanceWithR8` falhou. A alpha.101 ainda exige execução de `gradle :app:assemblePerformance` e teste de conexão SMB em dispositivo.
 
-Versão: `0.1.0-alpha.100`  
-Version code: `100`
+Versão: `0.1.0-alpha.101`  
+Version code: `101`

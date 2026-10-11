@@ -1,4 +1,4 @@
-> **Versão atual:** 0.1.0-alpha.100 (`versionCode 100`). Cliente SMB2/SMB3 somente leitura, seleção múltipla para copiar arquivos por Wi-Fi, anúncio mDNS SMB opcional e envio pelo compartilhamento do Android. Build Android completo pendente.
+> **Versão atual:** 0.1.0-alpha.101 (`versionCode 101`). Corrige a falha R8 `minifyPerformanceWithR8` do build 94, preservando a rede SMB/WebDAV. Os testes e o lint da alpha.100 passaram no CI; o APK da alpha.101 precisa de nova compilação.
 
 # Explorador XP
 
@@ -10,7 +10,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.100` (`versionCode 100`)  
+**Versão atual:** `0.1.0-alpha.101` (`versionCode 101`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

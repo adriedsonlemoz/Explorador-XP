@@ -1,3 +1,8 @@
+## Planejamento atualizado em 2026-10-11
+
+- Alpha.101: correção específica do R8/SMBJ do build 94; não alterar interfaces de Aplicativos Instalados e Fotos nesta versão.
+- Após confirmar APK e as transferências: implementar o backlog de `docs/BACKLOG_UI_ALPHA102.md` (botões compactos em Aplicativos Instalados, galeria Fotos com miniaturas, tamanho e paginação).
+
 # Próximas etapas
 
 ## Próxima etapa técnica
