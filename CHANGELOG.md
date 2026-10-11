@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.94
+
+- Corrigidos os 13 erros de compilação `Unresolved reference` do workflow **Gerar APK 89** em `ArchiveManager.kt` e `MainActivity.kt`.
+- Centralizados limites ZIP (20.000 entradas, 8 GiB), preview (512 MiB), cache total (1 GiB) e abertura de arquivo externo (4 GiB) em `ArchiveResourceLimits.kt`.
+- Implementada limpeza dos previews antigos/excedentes, preservando o preview ativo e estágios recentes; adicionados testes unitários.
+- Versão sincronizada em Gradle, metadados, changelog, README, release e novidades com `versionCode 94`.
+- Acesso remoto via Wi-Fi postergado para a próxima versão funcional **alpha.95**, após validação do build.
+
 ## 0.1.0-alpha.93
 
 - Corrigidas substituições em **copiar/mover** com staging no mesmo diretório e backup recuperável durante a troca: falhas de cópia ou cancelamento antes da confirmação não destroem o destino.

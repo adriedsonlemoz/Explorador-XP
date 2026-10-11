@@ -18,11 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Cópias, movimentos e substituições agora preparam o arquivo antes da troca, preservando o original em caso de falha.",
-                "Extração ZIP reforçada: substituição recuperável, limite de expansão e pré-visualização com cache limitado.",
-                "Preview HTML e JavaScript mais seguro: scripts desligados inicialmente, ativação manual e sem rede ou acesso a arquivos locais.",
-                "Busca avançada atualiza os resultados por lotes, reduzindo classificações repetidas.",
-                "Consultas online de identificação do dispositivo agora exigem ativação manual nas preferências.",
+                "Corrigida a falha de compilação relatada no workflow Gerar APK 89.",
+                "Definidos limites de segurança para ZIP, extração, preview e arquivos externos.",
+                "Cache de pré-visualizações agora elimina arquivos antigos e controla o espaço total utilizado.",
+                "Mantidas as proteções de substituição de arquivos e visualização HTML introduzidas na versão anterior.",
             )
         )
 }

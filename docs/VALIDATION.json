@@ -1,39 +1,34 @@
 {
-  "version_build": "0.1.0-alpha.93",
-  "version_code": 93,
-  "manager_version": "0.1.0-alpha.93",
+  "version_build": "0.1.0-alpha.94",
+  "version_code": 94,
+  "manager_version": "0.1.0-alpha.94",
   "application_id": "com.exploradorxp.app",
-  "scope": "Substituição segura, ZIP, WebView, cache, privacidade e roadmap de rede",
+  "scope": "Correção do build 89: limites ZIP/cache e limpeza de previews, sem acesso remoto",
   "checks": [
     {
-      "name": "version_sync",
+      "name": "build89_missing_references",
       "status": "static_checked",
-      "details": "Gradle, VERSION, app_identity, github-manager, RELEASE, README, CHANGELOG e ReleaseNotes atualizados."
+      "details": "Todas as 13 referências reportadas nos logs possuem declaração. ArchiveManager.kt e SafeFileCommit.kt passaram em compilação isolada Kotlin/JVM com stubs Zip4j; MainActivity.kt não compilada localmente por ausência do Android SDK."
     },
     {
-      "name": "staged_copy_and_zip",
-      "status": "static_checked",
-      "details": "Cópias e extrações são escritas antes do commit; testes unitários adicionados para troca e interrupção."
-    },
-    {
-      "name": "webview_isolation",
-      "status": "static_checked",
-      "details": "JavaScript depende de opt-in; bloqueio de arquivos/content/rede no preview."
+      "name": "cache_policy",
+      "status": "passed_local_jvm",
+      "details": "Política compilada com kotlinc; quatro testes de limites, preservação do preview ativo, expiração e tamanho global passaram na JVM local."
     },
     {
       "name": "gradle_build",
       "status": "not_run",
-      "details": "Ambiente sem Gradle/Android SDK; build e lint exigem execução em Android Studio ou CI."
+      "details": "Build Android completo requer Gradle e Android SDK; executar GitHub Actions."
     },
     {
       "name": "unit_tests",
       "status": "not_run",
-      "details": "Foram adicionados testes, ainda não executados sob Gradle/JUnit Android."
+      "details": "Testes JUnit incluídos, requerem Gradle/JUnit."
     },
     {
       "name": "real_device",
       "status": "not_run",
-      "details": "Operações não foram exercitadas em Android real com cartão SD, pouco armazenamento e cancelamento."
+      "details": "Validar armazenamento, ZIP e cancelamento em dispositivo Android real."
     }
   ]
 }

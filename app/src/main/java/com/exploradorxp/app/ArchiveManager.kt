@@ -463,17 +463,18 @@ internal object ArchiveManager {
                 append(zipFile.lastModified())
             }
             val previewRoot = File(cacheRoot, "archive-preview")
-            trimArchivePreviewCache(previewRoot, archiveKey)
             val previewDir = File(previewRoot, archiveKey).apply {
                 check(exists() || mkdirs()) { "Não foi possível preparar o cache de pré-visualização." }
             }
             val entryKey = normalizedPath.hashCode().toUInt().toString(16)
             val target = File(previewDir, "${entryKey}_$safeName")
             val expectedBytes = header.uncompressedSize.coerceAtLeast(0L)
+            runCatching { trimArchivePreviewCache(previewRoot, archiveKey, target.name) }
             require(expectedBytes <= MAX_PREVIEW_BYTES) {
                 "Pré-visualização limitada a ${archiveFormatBytes(MAX_PREVIEW_BYTES)}. Extraia o arquivo para abri-lo."
             }
             if (target.isFile && (expectedBytes <= 0L || target.length() == expectedBytes)) {
+                target.setLastModified(System.currentTimeMillis())
                 onProgress(
                     ArchiveProgress(
                         percent = 100,
@@ -520,6 +521,7 @@ internal object ArchiveManager {
                 }
                 coroutineContext.ensureActive()
                 commitStagedItem(temp, target)
+                runCatching { trimArchivePreviewCache(previewRoot, archiveKey, target.name) }
                 emitProgress(
                     onProgress,
                     completed = 1,

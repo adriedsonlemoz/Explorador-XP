@@ -1,20 +1,19 @@
-# Explorador XP 0.1.0-alpha.93
+# Explorador XP 0.1.0-alpha.94
 
-## Confiabilidade e segurança
+## Correção de compilação do workflow Gerar APK 89
 
-- **Copiar, mover e substituir:** primeiro prepara a nova cópia em arquivo/pasta temporário; só então troca o destino, com backup de recuperação durante a operação. Falhas antes do commit preservam o arquivo antigo e removem a cópia temporária.
-- **ZIP:** extração em temporários, substituição recuperável e proteção contra expansão de arquivos e arquivos de pré-visualização enormes. São aceitas no máximo 20.000 entradas e até 8 GiB de bytes descompactados em uma operação; preview de até 512 MiB por item.
-- **Preview HTML/JS:** JavaScript desativado por padrão, ativável manualmente no editor. Sem acesso do preview a arquivos locais, content providers ou rede. Imagens/estilos externos não carregam no modo seguro.
-- **Abertura externa:** cópia temporária limitada a 4 GiB por arquivo, com verificação de espaço a cada bloco.
-- **Busca avançada:** atualização em lotes para não ordenar o mesmo conjunto repetidamente.
-- **Privacidade:** buscas online por imagem/identificação do dispositivo ficam desligadas por padrão em novas instalações, mas a preferência existente é respeitada. Backup Android do app foi desativado.
+- Resolvidos 13 erros `Unresolved reference` em `ArchiveManager.kt` e `MainActivity.kt`.
+- Definidos em `ArchiveResourceLimits.kt` os limites de **20.000 entradas ZIP**, **8 GiB por extração**, **512 MiB por pré-visualização** e **4 GiB por arquivo externo temporário**.
+- Implementada `trimArchivePreviewCache`: limpeza de previews com mais de sete dias e política global de até **1 GiB** em cache privado. A pré-visualização atual e os temporários recentes em andamento são preservados.
+- Cache inspecionado antes de visualizar e após finalizar a extração do item; acesso a arquivo já em cache renova sua recência.
+- Adicionados testes unitários para limites, preservação de arquivo ativo, expiração e limite global de cache.
+- Sem mudanças no acesso a arquivos pela rede. O recurso fica planejado para `0.1.0-alpha.95`, após validação da correção atual.
 
-## Planejamento para 0.1.0-alpha.94 (não implementado nesta versão)
+## Mantido da versão alpha.93
 
-- Acesso aos arquivos de outro aparelho pela rede local Wi-Fi, com autenticação e permissões explícitas.
-- Avaliar suporte a SMB2/SMB3 ou WebDAV, mais descoberta opcional; evitar expor compartilhamentos sem autenticação. Testar em Android/Windows e respeitar acesso offline e economia de bateria.
+- Substituição de arquivos com staging/backup, extração ZIP protegida, WebView com preview restrito, limites de arquivos externos e consultas remotas opcionais.
 
-Versão: `0.1.0-alpha.93`  
-Version code: `93`
+Versão: `0.1.0-alpha.94`  
+Version code: `94`
 
-**Validação:** compile/teste no workflow GitHub Actions ou Android Studio antes de distribuir APK; o ZIP contém o código-fonte, não o APK assinado.
+**Validação:** erro de compilação diagnosticado a partir dos logs do GitHub Actions; testes locais de Kotlin foram executados para a política de cache. A compilação completa com Gradle/Android SDK e testes Android ainda precisam ser executados pelo workflow antes de distribuir o APK.
