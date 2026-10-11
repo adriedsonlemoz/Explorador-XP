@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0-alpha.93
+
+- Corrigidas substituições em **copiar/mover** com staging no mesmo diretório e backup recuperável durante a troca: falhas de cópia ou cancelamento antes da confirmação não destroem o destino.
+- Arquivos parciais são removidos em falhas de leitura ou gravação; snapshots de cópia agora validam os tamanhos lidos e sincronizam saída no disco.
+- ZIP extrai itens em staging, preserva destinos antigos até a conclusão, impõe teto de 8 GiB e 20.000 entradas na extração e teto de 512 MiB nas pré-visualizações, inclusive com metadados falsificados.
+- Preview HTML/CSS/JS isolado: JavaScript desativado inicialmente e ativação voluntária, URLs externas bloqueadas, sem rede, sem acesso ao filesystem ou content providers.
+- Abertura de arquivos externos no cache limitada a 4 GiB, com margem livre no armazenamento.
+- Busca avançada publica resultados em lotes, reduzindo classificações repetidas.
+- Padrão de busca online de dados do dispositivo alterado para desligado em instalações novas; backup Android desativado.
+- Roadmap para a alpha.94: acesso remoto autenticado aos arquivos de outro aparelho pela rede local, a definir SMB/WebDAV.
+- Versionamento sincronizado para `0.1.0-alpha.93` / `versionCode 93`.
+
+
 ## 0.1.0-alpha.92
 
 - Corrigido o fechamento imediato de **Ferramentas > Informações do dispositivo** causado por `Modifier.padding(bottom = (-3).dp)` no rótulo `DeviceOriginLabel`. O Compose exige margens internas não negativas; o erro ocorria ao desenhar o conteúdo após a coleta e escapava do tratamento de exceções de leitura dos dados.

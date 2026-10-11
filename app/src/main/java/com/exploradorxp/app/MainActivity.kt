@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -520,7 +521,25 @@ private suspend fun prepareExternalFile(context: Context, request: ExternalOpenR
 
         try {
             resolver.openInputStream(request.uri)?.use { input ->
-                destination.outputStream().buffered().use { output -> input.copyTo(output) }
+                destination.outputStream().buffered().use { output ->
+                    val buffer = ByteArray(256 * 1024)
+                    var copied = 0L
+                    while (true) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        if (read == 0) continue
+                        check(read.toLong() <= MAX_EXTERNAL_OPEN_CACHE_BYTES - copied) {
+                            "Arquivo externo muito grande para o cache temporário (limite de 4 GiB)."
+                        }
+                        copied += read
+                        // Do not consume all the remaining private storage.
+                        check(requestDir.usableSpace >= read.toLong() + 16L * 1024 * 1024) {
+                            "Espaço insuficiente no cache para abrir o arquivo externo."
+                        }
+                        output.write(buffer, 0, read)
+                    }
+                }
             } ?: throw IllegalStateException("O aplicativo de origem não forneceu acesso ao arquivo.")
         } catch (error: Throwable) {
             requestDir.deleteRecursively()

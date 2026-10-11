@@ -116,21 +116,32 @@ internal suspend fun copyFileOperationPlan(
             target.parentFile?.let { parent ->
                 check(parent.mkdirs() || parent.isDirectory) { "Não foi possível criar ${parent.name}." }
             }
-            FileInputStream(entry.source).use { input ->
-                FileOutputStream(target).use { output ->
-                    while (true) {
-                        coroutineContext.ensureActive()
-                        awaitIfPaused()
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        if (read == 0) continue
-                        output.write(buffer, 0, read)
-                        onProgress(target.name, read.toLong(), false)
+            try {
+                var written = 0L
+                FileInputStream(entry.source).use { input ->
+                    FileOutputStream(target).use { output ->
+                        while (true) {
+                            coroutineContext.ensureActive()
+                            awaitIfPaused()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            if (read == 0) continue
+                            output.write(buffer, 0, read)
+                            written += read
+                            onProgress(entry.source.name, read.toLong(), false)
+                        }
+                        output.fd.sync()
                     }
                 }
+                check(written == entry.bytes) { "O tamanho de ${entry.source.name} mudou durante a cópia. Repita a operação." }
+                if (entry.modifiedAt > 0L) target.setLastModified(entry.modifiedAt)
+                onProgress(entry.source.name, 0L, true)
+            } catch (error: Throwable) {
+                // No fluxo do Explorador a raiz de destino é um staging exclusivo.
+                // Limpar a folha também protege usos auxiliares desta rotina.
+                runCatching { target.delete() }
+                throw error
             }
-            if (entry.modifiedAt > 0L) target.setLastModified(entry.modifiedAt)
-            onProgress(target.name, 0L, true)
         }
     }
 }

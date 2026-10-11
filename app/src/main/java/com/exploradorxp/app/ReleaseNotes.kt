@@ -18,9 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigido o fechamento ao abrir Ferramentas > Informações do dispositivo. Um espaçamento inválido na interface causava o erro ao mostrar os dados do aparelho.",
-                "A busca opcional do nome e da imagem do modelo pela internet continua disponível, com fonte indicada e funcionamento offline.",
-                "A tela Armazenamento renovada, Aplicativos instalados e as demais ferramentas continuam disponíveis.",
+                "Cópias, movimentos e substituições agora preparam o arquivo antes da troca, preservando o original em caso de falha.",
+                "Extração ZIP reforçada: substituição recuperável, limite de expansão e pré-visualização com cache limitado.",
+                "Preview HTML e JavaScript mais seguro: scripts desligados inicialmente, ativação manual e sem rede ou acesso a arquivos locais.",
+                "Busca avançada atualiza os resultados por lotes, reduzindo classificações repetidas.",
+                "Consultas online de identificação do dispositivo agora exigem ativação manual nas preferências.",
             )
         )
 }

@@ -18,6 +18,7 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
@@ -73,6 +74,7 @@ import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -256,6 +258,8 @@ fun TextCodeEditorViewer(
     var searchState by remember(file.absolutePath) { mutableStateOf(EditorSearchState()) }
     var editorPreferences by remember { mutableStateOf(loadEditorPreferences(context)) }
     var previewRevision by remember(file.absolutePath) { mutableIntStateOf(0) }
+    // Executar scripts em código externo requer escolha explícita, por arquivo aberto.
+    var previewJavaScriptEnabled by remember(file.absolutePath) { mutableStateOf(false) }
     var previewSource by remember(file.absolutePath) { mutableStateOf("") }
     var previewError by remember(file.absolutePath) { mutableStateOf("") }
     var expectedExternalDigest by remember(file.absolutePath, externalOrigin?.uri) {
@@ -1494,6 +1498,7 @@ fun TextCodeEditorViewer(
                             extension = extension,
                             source = previewSource,
                             revision = previewRevision,
+                            scriptsEnabled = previewJavaScriptEnabled,
                             onError = { previewError = it },
                             modifier = Modifier.fillMaxSize(),
                         )
@@ -1515,6 +1520,9 @@ fun TextCodeEditorViewer(
                 onRefresh = ::refreshPreview,
                 onFullScreen = { onFullScreenChange(true) },
                 onCode = { viewMode = EditorViewMode.CODE },
+                canRunScripts = extension in setOf("html", "htm", "js", "mjs", "cjs"),
+                scriptsEnabled = previewJavaScriptEnabled,
+                onToggleScripts = { previewJavaScriptEnabled = !previewJavaScriptEnabled },
             )
         }
 
@@ -1533,6 +1541,8 @@ fun TextCodeEditorViewer(
             source = previewSource,
             revision = previewRevision,
             error = previewError,
+            scriptsEnabled = previewJavaScriptEnabled,
+            onToggleScripts = { previewJavaScriptEnabled = !previewJavaScriptEnabled },
             onError = { previewError = it },
             onRefresh = ::refreshPreview,
             onBackToCode = {
@@ -2866,13 +2876,13 @@ private fun WebPreview(
     extension: String,
     source: String,
     revision: Int,
+    scriptsEnabled: Boolean,
     onError: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val html = remember(source, extension, revision) { previewHtml(extension, source) }
-    val baseUrl = remember(file.parentFile?.absolutePath) {
-        file.parentFile?.toURI()?.toString() ?: "file:///"
-    }
+    // Um origin HTTPS sem acesso à rede evita file:// e recursos do armazenamento local.
+    val baseUrl = "https://appassets.androidplatform.net/preview/"
     var webView by remember(file.absolutePath) { mutableStateOf<WebView?>(null) }
 
     AndroidView(
@@ -2885,20 +2895,37 @@ private fun WebPreview(
                             onError("Falha ao carregar o preview: ${error?.description ?: "recurso indisponível"}")
                         }
                     }
+
+                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = true
+
+                    override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                        val scheme = request?.url?.scheme?.lowercase()
+                        // CSS, img, fetch(), frames e qualquer URL externa não têm acesso
+                        // à rede, content providers ou arquivos locais via WebView.
+                        return if (scheme == "data" || scheme == "about") null else
+                            WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream(ByteArray(0)))
+                    }
                 }
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
+                settings.javaScriptEnabled = scriptsEnabled
+                settings.javaScriptCanOpenWindowsAutomatically = false
+                settings.setSupportMultipleWindows(false)
+                settings.domStorageEnabled = false
+                settings.allowFileAccess = false
                 settings.allowContentAccess = false
+                settings.allowFileAccessFromFileURLs = false
+                settings.allowUniversalAccessFromFileURLs = false
+                settings.blockNetworkLoads = true
+                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
                 settings.loadsImagesAutomatically = true
                 webView = this
                 loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
             }
         },
         update = { view ->
-            val marker = "$revision:${source.hashCode()}:$extension"
+            val marker = "$revision:${source.hashCode()}:$extension:$scriptsEnabled"
             if (view.tag != marker) {
                 view.tag = marker
+                view.settings.javaScriptEnabled = scriptsEnabled
                 view.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
             }
         },
@@ -2935,13 +2962,24 @@ private fun previewHtml(extension: String, source: String): String = when (exten
 }
 
 @Composable
-private fun WebPreviewToolbar(onRefresh: () -> Unit, onFullScreen: () -> Unit, onCode: () -> Unit) {
+private fun WebPreviewToolbar(
+    onRefresh: () -> Unit,
+    onFullScreen: () -> Unit,
+    onCode: () -> Unit,
+    canRunScripts: Boolean,
+    scriptsEnabled: Boolean,
+    onToggleScripts: () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End,
         modifier = Modifier.fillMaxWidth().height(36.dp).background(XpPanel).border(1.dp, XpChromeBorder).padding(horizontal = 6.dp),
     ) {
         EditorButton("Código", onClick = onCode)
+        if (canRunScripts) {
+            Spacer(Modifier.width(5.dp))
+            EditorButton(if (scriptsEnabled) "JS: ligado" else "JS: desligado", onClick = onToggleScripts)
+        }
         Spacer(Modifier.width(5.dp))
         EditorButton("Atualizar", onClick = onRefresh)
         Spacer(Modifier.width(5.dp))
@@ -2956,6 +2994,8 @@ private fun FullScreenWebPreview(
     source: String,
     revision: Int,
     error: String,
+    scriptsEnabled: Boolean,
+    onToggleScripts: () -> Unit,
     onError: (String) -> Unit,
     onRefresh: () -> Unit,
     onBackToCode: () -> Unit,
@@ -2968,6 +3008,10 @@ private fun FullScreenWebPreview(
         ) {
             Text("Preview • ${file.name}", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             EditorButton("Código", onClick = onBackToCode)
+            if (extension in setOf("html", "htm", "js", "mjs", "cjs")) {
+                Spacer(Modifier.width(4.dp))
+                EditorButton(if (scriptsEnabled) "JS: ligado" else "JS: desligado", onClick = onToggleScripts)
+            }
             Spacer(Modifier.width(4.dp))
             EditorButton("Atualizar", onClick = onRefresh)
             Spacer(Modifier.width(4.dp))
@@ -2976,7 +3020,7 @@ private fun FullScreenWebPreview(
         if (error.isNotBlank()) {
             Text(error, color = Color(0xFF8A251D), fontSize = 11.sp, modifier = Modifier.fillMaxWidth().background(Color(0xFFFFE8E5)).padding(6.dp))
         }
-        WebPreview(file, extension, source, revision, onError, Modifier.weight(1f).fillMaxWidth())
+        WebPreview(file, extension, source, revision, scriptsEnabled, onError, Modifier.weight(1f).fillMaxWidth())
     }
 }
 

@@ -378,25 +378,37 @@ class FileRepository(
                         }
                         ConflictDecision.KEEP_BOTH -> target = uniqueTarget(destination, source.name)
                         ConflictDecision.REPLACE -> {
-                            val targetPlan = buildFileOperationPlan(target, awaitIfPaused)
-                            check(deleteFileOperationPlan(targetPlan, awaitIfPaused = awaitIfPaused)) { "Não foi possível substituir ${target.name}." }
+                            // A substituição é feita depois de copiar completamente para um temporário.
+                            // Não remova o destino nem a origem antes da confirmação.
                         }
                     }
                 }
 
-                if (clipboard.mode == ClipboardMode.CUT && source.renameTo(target)) {
+                if (clipboard.mode == ClipboardMode.CUT && !target.exists() && source.renameTo(target)) {
                     ticker.completePlan(plan, target.name)
                 } else {
-                    copyFileOperationPlan(
-                        plan = plan,
-                        targetRoot = target,
-                        onProgress = { name, bytesDelta, entryCompleted ->
-                            ticker.copyProgress(name, bytesDelta, entryCompleted)
-                        },
-                        awaitIfPaused = awaitIfPaused,
-                    )
+                    val stage = temporarySibling(target, "stage")
+                    try {
+                        copyFileOperationPlan(
+                            plan = plan,
+                            targetRoot = stage,
+                            onProgress = { name, bytesDelta, entryCompleted ->
+                                ticker.copyProgress(name, bytesDelta, entryCompleted)
+                            },
+                            awaitIfPaused = awaitIfPaused,
+                        )
+                        coroutineContext.ensureActive()
+                        awaitIfPaused()
+                        // No suspending point inside the two renames, to avoid cancellation
+                        // leaving the previous destination temporarily unavailable.
+                        commitStagedItem(stage, target)
+                    } finally {
+                        if (stage.exists()) deleteRecursively(stage)
+                    }
                     if (clipboard.mode == ClipboardMode.CUT) {
-                        check(deleteFileOperationPlan(plan, awaitIfPaused = awaitIfPaused)) { "O item foi copiado, mas não foi possível remover a origem." }
+                        check(deleteFileOperationPlan(plan, awaitIfPaused = awaitIfPaused)) {
+                            "A cópia está íntegra, mas não foi possível remover toda a origem. Verifique os dois locais."
+                        }
                     }
                     ticker.completePlan(plan, target.name)
                 }
@@ -430,6 +442,7 @@ class FileRepository(
             visitedDirectories += runCatching { directory.canonicalPath }.getOrElse { directory.absolutePath }
             var scanned = 0
             var lastEmitMs = 0L
+            var lastPublishedCount = 0
 
             while (pending.isNotEmpty()) {
                 coroutineContext.ensureActive()
@@ -469,8 +482,12 @@ class FileRepository(
                 }
 
                 val now = System.currentTimeMillis()
-                if (scanned % 100 == 0 || now - lastEmitMs >= 140L) {
+                // Evita ordenar milhares de resultados repetidamente quando só o
+                // contador de arquivos examinados avançou. A UI recebe lotes novos.
+                if (matches.size != lastPublishedCount &&
+                    (matches.size - lastPublishedCount >= 100 || now - lastEmitMs >= 300L)) {
                     lastEmitMs = now
+                    lastPublishedCount = matches.size
                     onProgress(scanned, sortSearchResults(matches, sortMode, foldersFirst))
                 }
             }

@@ -1,3 +1,5 @@
+> **Versão atual:** 0.1.0-alpha.93 (`versionCode 93`). Nesta versão, as substituições de arquivos são feitas com cópias temporárias e backup de recuperação, a extração ZIP ganhou limites de segurança e o WebView de preview usa scripts desligados inicialmente e sem rede/arquivos locais. **Próxima (alpha.94):** planejar acesso autenticado aos arquivos de outro aparelho na rede local (SMB/WebDAV). Veja [RELEASE.md](RELEASE.md).
+
 # Explorador XP
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.

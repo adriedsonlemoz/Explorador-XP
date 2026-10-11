@@ -50,7 +50,7 @@ class PreferencesStore(context: Context) {
         prefs.edit().putInt(KEY_LAST_SEEN_USAGE_ACCESS_EDUCATION_VERSION_CODE, versionCode).apply()
     }
 
-    fun deviceImagesEnabled(): Boolean = prefs.getBoolean(KEY_DEVICE_IMAGES_ENABLED, true)
+    fun deviceImagesEnabled(): Boolean = prefs.getBoolean(KEY_DEVICE_IMAGES_ENABLED, false)
 
     fun setDeviceImagesEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_DEVICE_IMAGES_ENABLED, enabled).apply()

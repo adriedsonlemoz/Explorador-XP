@@ -1,0 +1,379 @@
+{
+  "version_build": "0.1.0-alpha.92",
+  "version_code": 92,
+  "manager_version": "0.1.0-alpha.92",
+  "application_id": "com.exploradorxp.app",
+  "scope": "Correção da falha de composição em Informações do dispositivo e atualização das novidades da alpha.92",
+  "checks": [
+    {
+      "name": "cpu_architecture_no_abi_guess",
+      "status": "passed",
+      "details": "A arquitetura física não é inferida de armeabi-v7a/arm64-v8a. A coleta separa SUPPORTED_ABIS, SUPPORTED_32_BIT_ABIS, SUPPORTED_64_BIT_ABIS, Process.is64Bit(), os.arch e Os.uname().machine; ABI específica do aplicativo fica Não disponível quando não há API pública confiável."
+    },
+    {
+      "name": "soc_catalog_conservative",
+      "status": "passed",
+      "details": "MT6765 permanece identificador técnico e não é promovido automaticamente para Helio P35. O resolvedor puro foi compilado com kotlinc e um teste de comportamento confirmou MT6765 sem nome comercial e aliases exatos conhecidos funcionando."
+    },
+    {
+      "name": "gpu_and_process_sources",
+      "status": "passed",
+      "details": "GPU usa primeiro OpenGL ES GL_RENDERER obtido de contexto EGL/Pbuffer; fallback de GPU e processo de fabricação só vem do catálogo local em identificador exato e a origem é exibida/relatada."
+    },
+    {
+      "name": "ram_storage_metrics",
+      "status": "passed",
+      "details": "RAM usa ActivityManager.MemoryInfo e armazenamento usa StatFs do volume utilizável pelo Android. Livre/disponível, usado e percentuais são calculados somente a partir desses valores, sem converter para capacidade comercial do aparelho."
+    },
+    {
+      "name": "battery_real_fields",
+      "status": "passed",
+      "details": "Estado/fonte vêm de ACTION_BATTERY_CHANGED; temperatura, tensão e nível são lidos do broadcast e corrente de BatteryManager.BATTERY_PROPERTY_CURRENT_NOW quando suportada. Saúde, capacidade, ciclos e autonomia não são gerados."
+    },
+    {
+      "name": "network_sim_safe_access",
+      "status": "passed",
+      "details": "Operadora, tecnologia e SIM usam TelephonyManager e sinal é tentado somente por API suportada com falhas/permissões tratadas por runCatching. A interface usa slots/modems reportados e eSIM detectado, sem estimar valores ausentes."
+    },
+    {
+      "name": "sensor_details_live",
+      "status": "passed",
+      "details": "A grade usa sensores reais do SensorManager. Sensores disponíveis abrem painel com nome, fabricante, versão, resolução, alcance, consumo, atrasos/modo e leitura SensorEventListener; sensores ausentes permanecem Não detectado."
+    },
+    {
+      "name": "quick_diagnostics",
+      "status": "passed",
+      "details": "Diagnóstico rápido mostra Câmera, Bluetooth, Giroscópio e NFC como Disponível/Não detectado e informa explicitamente que ausência não significa defeito."
+    },
+    {
+      "name": "report_and_sharing",
+      "status": "passed",
+      "details": "Há ações para Copiar, Compartilhar relatório, Salvar imagem, Compartilhar imagem e Exportar diagnóstico completo. Relatório inclui coleta, versão, fontes e campos Não disponível; nome personalizado do aparelho também foi removido das saídas compartilhadas."
+    },
+    {
+      "name": "privacy_contract",
+      "status": "passed",
+      "details": "Relatório não exporta IMEI, serial, Android ID, MAC, localização, SSID/BSSID, número de telefone, nome personalizado do aparelho ou arquivos pessoais."
+    },
+    {
+      "name": "update_highlights_policy_static",
+      "status": "passed",
+      "details": "PreferencesStore continua comparando o versionCode atual com o último apresentado e MainActivity marca a versão como vista na primeira exibição, mantendo Novidades uma única vez após atualização real."
+    },
+    {
+      "name": "metadata_sync",
+      "status": "passed",
+      "details": "app/build.gradle.kts, VERSION, github-manager.json, app_identity.json, README, CHANGELOG, ReleaseNotes, RELEASE e documentação estão sincronizados para 0.1.0-alpha.92/versionCode 92."
+    },
+    {
+      "name": "format_validation",
+      "status": "passed",
+      "details": "JSON e todos os XML de recursos foram parseados com sucesso. A varredura alpha.83 resolveu 83 referências R.drawable entre 70 vetores diretos e 53 aliases, sem referência ausente e sem raster em app/src/main."
+    },
+    {
+      "name": "device_identity_isolated_kotlin_checks",
+      "status": "passed",
+      "details": "DeviceIdentity.kt, DeviceImage.kt e os três novos testes foram compilados com kotlinc usando stubs mínimos de APIs Android/JSON/JUnit. Um runner puro executou 15 checks de correspondência, colisão, fabricante, ambiguidade, imagem, política offline, cache e parser CSV com 15/15 aprovados."
+    },
+    {
+      "name": "alpha87_installed_apps_header_scope_fix",
+      "status": "passed",
+      "details": "O log Gerar APK 83 reportou ExplorerScreen.kt:829 Unresolved reference 'showInstalledApps'. XpHeader agora recebe onShowInstalledApps: () -> Unit, a chamada principal fornece { showInstalledApps = true } no escopo proprietário e o menu apenas invoca a callback. A referência fora de escopo foi removida sem retirar o módulo alpha.86."
+    },
+    {
+      "name": "android_unit_lint_build",
+      "status": "not_run",
+      "reason": "O ambiente local não possui Gradle/Android SDK/android.jar. Foram executadas validações estruturais, parsing de recursos e testes Kotlin isolados; o assemble Android completo deve ser confirmado pelo workflow do projeto."
+    },
+    {
+      "name": "device_identity_exact_match",
+      "status": "passed",
+      "details": "DeviceIdentityMatcher exige modelo exato e fabricante ou marca exatos; usa device apenas como desempate e retorna Não identificado quando ainda há nomes comerciais conflitantes."
+    },
+    {
+      "name": "redmi_a3_seed_mapping",
+      "status": "passed",
+      "details": "O catálogo local inclui Xiaomi/Redmi 23129RN51X -> Redmi A3. A correspondência foi mantida somente após confirmação do código de modelo e nome comercial em documentação pública da Xiaomi; o teste não deriva especificações adicionais dessa entrada."
+    },
+    {
+      "name": "google_play_catalog_update_architecture",
+      "status": "passed",
+      "details": "DeviceCatalogService aponta para o CSV público oficial supported_devices.csv, lê UTF-16LE, limita tamanho/timeouts, mantém apenas correspondências do aparelho atual e usa cache de 30 dias. Falhas retornam catálogo local/cache sem bloquear a UI."
+    },
+    {
+      "name": "wikidata_wikimedia_reliability",
+      "status": "passed",
+      "details": "DeviceImageMatcher só aceita uma única entidade com nome/alias exato, fabricante compatível e P18. Resultado ambíguo, fabricante divergente ou ausência de P18 usa fallback genérico."
+    },
+    {
+      "name": "image_cache_and_attribution",
+      "status": "passed",
+      "details": "DeviceImageCache separa a persistência do repositório/serviço. Thumbnail e metadados de Commons ficam em cache por 30 dias; detalhes preservam fonte, autor e licença quando fornecidos. Falhas transitórias de servidor/JSON/download não são persistidas como ausência definitiva de imagem."
+    },
+    {
+      "name": "external_lookup_setting",
+      "status": "passed",
+      "details": "Ferramentas > Configurações adiciona a preferência Buscar imagem do modelo pela internet. Desligada, DeviceInfoScreen usa somente catálogo local + Android e não chama refresh remoto nem DeviceImageRepository."
+    },
+    {
+      "name": "privacy_external_queries",
+      "status": "passed",
+      "details": "As consultas usam somente fabricante, marca, model, device e nome comercial. Não há IMEI, serial, Android ID, MAC, localização, telefone, operadora, SIM ou conteúdo de arquivos nos requests/logs."
+    },
+    {
+      "name": "network_permissions_and_offline",
+      "status": "passed",
+      "details": "INTERNET foi adicionado e ACCESS_NETWORK_STATE já existia. Rede ausente/sem validação cai para dados Android + catálogo/cache local sem derrubar a tela."
+    },
+    {
+      "name": "device_identity_tests_added",
+      "status": "passed",
+      "details": "Foram adicionados testes JVM para modelo encontrado/desconhecido, fabricante diferente, ambiguidade, desempate por device, política sem internet, imagem encontrada/inexistente/ambígua, fabricante divergente, cache fresco/expirado e CSV inválido."
+    },
+    {
+      "name": "vector_icon_resources_only",
+      "status": "passed",
+      "details": "Não há PNG/JPG/WebP em app/src/main/res. Ícones de interface e launcher usam VectorDrawable XML ou Material Icons vetoriais."
+    },
+    {
+      "name": "drawable_reference_integrity",
+      "status": "passed",
+      "details": "Todos os R.drawable referenciados no código resolvem para VectorDrawable direto ou alias em drawable_aliases.xml; nenhuma referência de drawable ficou sem recurso."
+    },
+    {
+      "name": "file_icon_category_mapping",
+      "status": "passed",
+      "details": "FileIconMapper agrupa extensões em categorias vetoriais coerentes e possui testes para documento, imagem, áudio, vídeo, ZIP, código, APK, desconhecido e pastas especiais."
+    },
+    {
+      "name": "bitmap_icon_cache_removed",
+      "status": "passed",
+      "details": "CachedResourceIcon não usa BitmapFactory, LruCache ou decodificação em Dispatchers.IO; a API permanece compatível e renderiza painterResource vetorial diretamente."
+    },
+    {
+      "name": "adaptive_launcher_vector",
+      "status": "passed",
+      "details": "Adaptive Icon API 26+ aponta para foreground vetorial; API 33+ também usa monochrome vetorial. Mipmaps raster antigos foram removidos."
+    },
+    {
+      "name": "legacy_text_icon_cleanup",
+      "status": "passed",
+      "details": "Marcadores visuais antigos usados como ícones (play, expandir/recolher, check e adicionar aba) foram trocados por recursos vetoriais. Separadores e pontuação textual permanecem texto."
+    },
+    {
+      "name": "alpha84_compile_log_fixes",
+      "status": "passed",
+      "details": "O log Explorador-XP-Gerar-APK-80 reportou três referências ausentes a HeroSpecChip em DeviceInfoScreen.kt e uma referência ausente a size em TextCodeEditorViewer.kt. O componente foi implementado e o import androidx.compose.foundation.layout.size foi adicionado; busca estática confirma que os símbolos agora possuem definição/import correspondente."
+    },
+    {
+      "name": "apk_direct_uninstall_flow",
+      "status": "passed",
+      "details": "O visualizador mantém Gerenciar e adiciona Desinstalar. A ação usa ACTION_UNINSTALL_PACKAGE com package: URI e EXTRA_RETURN_RESULT, precedida por confirmação interna; REQUEST_DELETE_PACKAGES foi declarado no manifesto."
+    },
+    {
+      "name": "apk_downgrade_assisted_flow",
+      "status": "passed",
+      "details": "ApkInstallPlan classifica downgrade compatível como REMOVE_THEN_INSTALL. O fluxo solicita desinstalação, confirma que o pacote saiu e só então chama o instalador do APK selecionado; cancelamento não dispara instalação."
+    },
+    {
+      "name": "apk_downgrade_data_warning",
+      "status": "passed",
+      "details": "O diálogo de downgrade mostra versão/versionCode instalada e selecionada e alerta explicitamente que a remoção pode apagar dados locais antes de continuar."
+    },
+    {
+      "name": "apk_self_downgrade_guard",
+      "status": "passed",
+      "details": "O plano retorna BLOCKED_SELF_DOWNGRADE para o próprio packageName do Explorador XP, evitando prometer continuação automática após o processo se desinstalar."
+    },
+    {
+      "name": "apk_existing_actions_preserved",
+      "status": "passed",
+      "details": "Instalar/Atualizar/Reinstalar, Abrir, Gerenciar, compartilhamento, localização, cópia de pacote/SHA-256, extração de ícone e manifesto permanecem no visualizador."
+    },
+    {
+      "name": "apk_install_plan_tests",
+      "status": "passed",
+      "details": "ApkInspectorSupport ganhou casos para downgrade após remoção, auto-downgrade bloqueado, upgrade direto, assinatura divergente e incompatibilidade. Um runner Kotlin isolado executou 6 verificações da decisão de instalação com 6/6 aprovadas."
+    },
+    {
+      "name": "alpha85_static_integrity",
+      "status": "passed",
+      "details": "Validação final: 5 JSONs e 80 XMLs parseados; 83 referências R.drawable resolvidas sem ausências; zero PNG/JPG/WebP/GIF em app/src/main; REQUEST_DELETE_PACKAGES presente uma única vez; ações antigas Abrir/Gerenciar/Compartilhar/Manifesto preservadas; nenhum APK, AAB, keystore ou chave privada incluído."
+    },
+    {
+      "name": "installed_apps_manager_entry",
+      "status": "passed",
+      "details": "Ferramentas inclui Aplicativos instalados sem remover Configurações ou Informações do dispositivo; a tela é adicional e preserva os fluxos existentes."
+    },
+    {
+      "name": "installed_apps_list_real_data",
+      "status": "passed",
+      "details": "A lista usa PackageManager para label, packageName, versionName/versionCode, flags de sistema/atualizado, estado enabled, SDKs, datas e ícone real do pacote. Não existe catálogo inventado de aplicativos."
+    },
+    {
+      "name": "installed_apps_storage_policy",
+      "status": "passed",
+      "details": "Sem Acesso ao uso, o tamanho exibido é rotulado APK e soma apenas sourceDir/splitSourceDirs existentes. Com autorização do usuário, StorageStatsManager fornece appBytes/dataBytes/cacheBytes; total = appBytes + dataBytes porque dataBytes já inclui cache."
+    },
+    {
+      "name": "installed_apps_usage_access_optional",
+      "status": "passed",
+      "details": "PACKAGE_USAGE_STATS foi declarado para o AppOps de Acesso ao uso, mas o módulo funciona sem a concessão e oferece atalho explícito às configurações somente para estatísticas completas."
+    },
+    {
+      "name": "installed_apps_safe_actions",
+      "status": "passed",
+      "details": "Desinstalação usa ACTION_UNINSTALL_PACKAGE com confirmação do Android; apps do sistema são tratados como potencialmente bloqueados/remoção de atualizações. Limpar dados não usa API oculta: explica a restrição e abre ACTION_APPLICATION_DETAILS_SETTINGS."
+    },
+    {
+      "name": "installed_apps_permissions",
+      "status": "passed",
+      "details": "A ficha carrega requestedPermissions do PackageManager e verifica concessão por checkPermission; ausência/falha resulta em lista vazia, sem inferir permissões."
+    },
+    {
+      "name": "installed_apps_logic_tests",
+      "status": "passed",
+      "details": "Foram adicionados testes JVM para filtros Usuário/Sistema, pesquisa por nome/pacote, ordenação por tamanho real/fallback APK, total sem dupla contagem de cache e formatação de bytes. A lógica pura foi compilada com kotlinc e um runner independente executou 10/10 checks com sucesso."
+    },
+    {
+      "name": "alpha86_static_integrity",
+      "status": "passed",
+      "details": "Validação final da alpha.86: 5 JSONs e 80 XMLs parseados; 83 referências R.drawable resolvidas sem ausências; zero PNG/JPG/WebP/GIF em app/src/main; PACKAGE_USAGE_STATS e QUERY_ALL_PACKAGES presentes; nenhum cache de apps ou dados coletados foi incluído no fonte."
+    },
+    {
+      "name": "installed_apps_local_privacy",
+      "status": "passed",
+      "details": "InstalledAppsManager usa PackageManager, StorageStatsManager e Settings locais; não contém endpoint HTTP nem envia lista de pacotes, permissões ou estatísticas de armazenamento pela rede."
+    },
+    {
+      "name": "alpha87_static_integrity",
+      "status": "passed",
+      "details": "Validação final da alpha.87: 5 JSONs e 80 XMLs parseados; 83 referências R.drawable resolvidas sem ausências; zero PNG/JPG/WebP/GIF em app/src/main; callback onShowInstalledApps presente no XpHeader e referência direta showInstalledApps removida do seu escopo; módulo Aplicativos instalados preservado."
+    },
+    {
+      "name": "alpha88_storage_dashboard_rebuild",
+      "status": "passed",
+      "details": "StorageDetailsScreen foi reconstruída com resumo usado/livre/total, percentual, atalho para Aplicativos instalados, Lixeira, analisar/cancelar, categorias em lista, maiores pastas e arquivos grandes; callbacks antigos de abrir pasta/arquivo/lixeira e análise foram preservados."
+    },
+    {
+      "name": "alpha88_storage_truthful_scope",
+      "status": "passed",
+      "details": "O novo painel mantém total do Android separado de scannedBytes/scannedFiles. Categorias e rankings usam somente StorageAnalysis; diretórios inacessíveis continuam declarados e não são estimados."
+    },
+    {
+      "name": "alpha88_usage_access_restricted_settings_guidance",
+      "status": "passed",
+      "details": "O aviso amarelo em Aplicativos instalados abre ACTION_APPLICATION_DETAILS_SETTINGS para o próprio Explorador XP, explica os 3 pontos > Permitir configurações restritas quando a opção existir e mantém ação separada para ACTION_USAGE_ACCESS_SETTINGS. O texto alerta que nomes e posição podem variar."
+    },
+    {
+      "name": "alpha88_post_update_usage_access_education",
+      "status": "passed",
+      "details": "UsageAccessEducationPolicy limita a explicação pós-Novidades a atualização real, versão >= 88, acesso ausente e orientação ainda não vista. PreferencesStore persiste a conclusão separadamente das Novidades. Um runner Kotlin isolado executou 4/4 cenários da política com sucesso."
+    },
+    {
+      "name": "alpha88_existing_features_preserved",
+      "status": "passed",
+      "details": "Ferramentas, gerenciador de aplicativos, visualizadores, instalador APK, informações do dispositivo, lixeira e operações de arquivo não foram removidos; o novo atalho de Aplicativos instalados é adicional."
+    },
+    {
+      "name": "alpha88_static_integrity",
+      "status": "passed",
+      "details": "Validação final: 5 JSONs e 80 XMLs parseados; 83 referências R.drawable resolvidas sem ausências; zero PNG/JPG/WebP/GIF em app/src/main; nenhum arquivo existente da alpha.87 foi removido; novos arquivos limitados à orientação/política/teste de Acesso ao uso e documentação alpha.88."
+    },
+    {
+      "name": "alpha88_installed_apps_logic_regression",
+      "status": "passed",
+      "details": "InstalledAppsLogic foi recompilado com kotlinc e o runner de regressão executou 6/6 verificações para filtros, pesquisa, tamanho total/fallback e formatação."
+    },
+    {
+      "name": "alpha89_installed_app_details_visual_refresh",
+      "status": "passed",
+      "details": "InstalledAppDetailsScreen recebeu novo cabeçalho visual, resumo em cartões para versão/armazenamento, seções com subtítulos e ações redesenhadas com melhor hierarquia sem remover comandos existentes."
+    },
+    {
+      "name": "alpha89_storage_breakdown_cards",
+      "status": "passed",
+      "details": "Quando StorageStatsManager fornece dados, a ficha do app destaca Total, Aplicativo/código, Dados e Cache em cartões separados; sem Acesso ao uso, o módulo continua exibindo somente os APKs reais e orienta a autorização opcional."
+    },
+    {
+      "name": "alpha89_device_info_fail_safe",
+      "status": "passed",
+      "details": "DeviceInfoScreen passou a capturar falhas de coleta/identificação com runCatching e exibir estado de erro amigável com opção de tentar novamente, evitando encerramento brusco ao abrir Ferramentas > Informações do dispositivo."
+    },
+    {
+      "name": "alpha89_existing_features_preserved",
+      "status": "passed",
+      "details": "Gerenciador de aplicativos, APK inspector, Armazenamento, Lixeira, visualizadores e Informações do dispositivo permanecem presentes; a alpha.89 apenas melhora visual e estabilidade."
+    },
+    {
+      "name": "alpha90_storage_ui_rebuild",
+      "status": "passed",
+      "details": "StorageDetailsScreen usa novo cabeçalho, indicador de uso, métricas, atalhos e seções V2 sem remover os callbacks existentes de análise, cancelamento, Lixeira, apps instalados, abertura de pastas e arquivos."
+    },
+    {
+      "name": "alpha90_storage_truthful_scope",
+      "status": "passed",
+      "details": "Capacidade total/uso continuam vindo de StorageInfo do Android; categorias, pastas e arquivos grandes usam somente StorageAnalysis.scannedBytes/scannedFiles e exibem diretórios inacessíveis sem estimativas."
+    },
+    {
+      "name": "alpha90_storage_existing_actions_preserved",
+      "status": "passed",
+      "details": "Aplicativos instalados, Analisar/Atualizar, Cancelar análise, Lixeira, abrir pasta e abrir arquivo continuam conectados aos mesmos callbacks da alpha.89."
+    },
+    {
+      "name": "alpha90_storage_last_scan_summary",
+      "status": "passed",
+      "details": "Quando existe análise válida, a tela mostra data/hora de conclusão, bytes analisados, arquivos e diretórios inacessíveis sem misturar esses valores com o total do volume."
+    },
+    {
+      "name": "alpha90_drawable_reference_integrity",
+      "status": "passed",
+      "details": "Varredura encontrou e corrigiu a referência inexistente R.drawable.storage herdada da alpha.89. Após a correção, 83/83 referências R.drawable resolvem para VectorDrawable direto ou alias existente."
+    },
+    {
+      "name": "alpha90_device_info_structure_integrity",
+      "status": "passed",
+      "details": "O bloco Compose de DeviceInfoScreen foi reequilibrado após a proteção de erro da alpha.89. Verificação léxica confirma parênteses, colchetes e chaves balanceados; kotlinc isolado não reportou erro de sintaxe."
+    },
+    {
+      "name": "alpha90_static_integrity",
+      "status": "passed",
+      "details": "Validação final: 5 JSONs e 80 XMLs válidos, 83 referências R.drawable sem ausências, zero PNG/JPG/WebP/GIF em app/src/main e nenhum arquivo existente da alpha.89 removido."
+    },
+    {
+      "name": "alpha90_kotlin_syntax_smoke",
+      "status": "passed",
+      "details": "ExplorerScreen.kt, InstalledAppsManager.kt, DeviceInfoScreen.kt e ReleaseNotes.kt foram passados pelo parser do kotlinc isoladamente; sem diagnósticos de sintaxe como expecting/unexpected tokens/unclosed."
+    },
+    {
+      "name": "alpha91_build86_device_image_fallback_fix",
+      "status": "passed",
+      "details": "O log Gerar APK 86 apontou DeviceInfoScreen.kt:167 com ausência de checkedAtEpochMs e fromCache. A construção DeviceImageResult.Unavailable agora passa reason, System.currentTimeMillis() e fromCache=false."
+    },
+    {
+      "name": "alpha91_unavailable_signature_sweep",
+      "status": "passed",
+      "details": "Varredura estática encontrou 8 construções DeviceImageResult.Unavailable; todas fornecem os três campos obrigatórios reason, checkedAtEpochMs e fromCache. Um checker Kotlin isolado da assinatura compilou e executou com sucesso."
+    },
+    {
+      "name": "alpha91_existing_features_preserved",
+      "status": "passed",
+      "details": "Comparação de caminhos com a alpha.90 confirma que a correção não removeu arquivos existentes; a tela Armazenamento alpha.90 e módulos anteriores permanecem presentes."
+    },
+    {
+      "name": "alpha92_device_info_negative_padding_removed",
+      "status": "passed",
+      "details": "DeviceOriginLabel era usado duas vezes por DeviceInfoScreen e tinha Modifier.padding(bottom = (-3).dp), inválido na composição. A implementação compartilhada agora usa somente padding positivo; varredura da tela confirma ausência de padding negativo."
+    },
+    {
+      "name": "alpha92_update_highlights_content",
+      "status": "passed",
+      "details": "ReleaseNotes.current descreve a correção real, a busca externa opcional da alpha.82 e as ferramentas recentes; a tela automática e Sobre > Novidades desta versão compartilham esse conteúdo. A política de exibição por versionCode não foi alterada."
+    },
+    {
+      "name": "alpha92_device_runtime_reproduction",
+      "status": "not_run",
+      "reason": "Sem Gradle, Android SDK e dispositivo/emulador no ambiente de edição; confirmar abertura no APK gerado pelo workflow e no aparelho após instalar."
+    }
+  ]
+}

@@ -244,6 +244,15 @@ internal object ArchiveManager {
             val allHeaders = zip.fileHeaders
             val headers = headersForSelection(allHeaders, selectedPaths)
             require(headers.isNotEmpty()) { "Nenhum item selecionado para extrair." }
+            require(headers.size <= MAX_ZIP_ENTRIES) { "ZIP com entradas demais (máximo $MAX_ZIP_ENTRIES)." }
+            var declaredBytes = 0L
+            headers.filterNot { it.isDirectory }.forEach { header ->
+                val size = header.uncompressedSize.coerceAtLeast(0L)
+                require(size <= MAX_EXTRACTED_BYTES - declaredBytes) {
+                    "ZIP excede o limite de ${archiveFormatBytes(MAX_EXTRACTED_BYTES)} para extração."
+                }
+                declaredBytes += size
+            }
 
             val baseDestination = if (createNamedFolder) {
                 val base = zipFile.nameWithoutExtension.ifBlank { "extraido" }
@@ -256,7 +265,7 @@ internal object ArchiveManager {
                 error("Não foi possível criar a pasta de extração.")
             }
 
-            val totalBytes = headers.filterNot { it.isDirectory }.sumOf { it.uncompressedSize.coerceAtLeast(0L) }
+            val totalBytes = declaredBytes
             val requiredWithMargin = totalBytes + (totalBytes / 50L).coerceAtLeast(1L * 1024L * 1024L)
             if (destinationParent.usableSpace in 1 until requiredWithMargin) {
                 error("Espaço insuficiente. Necessário aproximadamente ${archiveFormatBytes(requiredWithMargin)} e disponível ${archiveFormatBytes(destinationParent.usableSpace)}.")
@@ -295,7 +304,14 @@ internal object ArchiveManager {
                                     return@forEach
                                 }
                                 ArchiveConflictMode.REPLACE -> {
-                                    require(target.delete()) { "Não foi possível substituir ${target.name}." }
+                                    // Crie a nova pasta antes de substituir o arquivo conflitante.
+                                    val stage = temporarySibling(target, "stage")
+                                    try {
+                                        check(stage.mkdir()) { "Não foi possível preparar a nova pasta ${target.name}." }
+                                        commitStagedItem(stage, target)
+                                    } finally {
+                                        if (stage.exists()) stage.deleteRecursively()
+                                    }
                                 }
                                 ArchiveConflictMode.RENAME -> {
                                     target = uniqueDirectory(target)
@@ -320,7 +336,7 @@ internal object ArchiveManager {
                                     return@forEach
                                 }
                                 ArchiveConflictMode.REPLACE -> {
-                                    if (target.isDirectory) target.deleteRecursively() else target.delete()
+                                    // Preserve o destino até o novo conteúdo estar totalmente escrito.
                                 }
                                 ArchiveConflictMode.RENAME -> {
                                     target = uniqueFile(target)
@@ -329,15 +345,23 @@ internal object ArchiveManager {
                             }
                         }
 
+                        val stage = temporarySibling(target, "stage")
                         try {
                             zip.getInputStream(header).use { input ->
-                                FileOutputStream(target).use { output ->
+                                FileOutputStream(stage).use { output ->
                                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 4)
+                                    var entryBytes = 0L
                                     while (true) {
                                         coroutineContext.ensureActive()
                                         val read = input.read(buffer)
                                         if (read < 0) break
+                                        if (read == 0) continue
+                                        check(read.toLong() <= MAX_EXTRACTED_BYTES - copiedBytes &&
+                                            read.toLong() <= MAX_EXTRACTED_BYTES - entryBytes) {
+                                            "Extração interrompida: limite de ${archiveFormatBytes(MAX_EXTRACTED_BYTES)} excedido."
+                                        }
                                         output.write(buffer, 0, read)
+                                        entryBytes += read
                                         copiedBytes += read
                                         emitProgress(
                                             onProgress, completed, totalEntries, copiedBytes, totalBytes,
@@ -347,17 +371,14 @@ internal object ArchiveManager {
                                     output.fd.sync()
                                 }
                             }
+                            coroutineContext.ensureActive()
+                            commitStagedItem(stage, target)
                             extracted++
                             extractedFiles++
                             if (primaryExtractedFile == null) primaryExtractedFile = target
-                        } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                            // Remove o arquivo incompleto criado pela operação cancelada. Em modo
-                            // Substituir o original já não pode ser recuperado, por isso não fingimos rollback.
-                            runCatching { if (target.isFile) target.delete() }
-                            throw cancelled
-                        } catch (writeError: Throwable) {
-                            runCatching { if (target.isFile) target.delete() }
-                            throw writeError
+                        } finally {
+                            // Nunca apague o arquivo antigo em caso de falha ou cancelamento.
+                            if (stage.exists()) stage.delete()
                         }
                     }
                 } catch (t: Throwable) {
@@ -441,12 +462,17 @@ internal object ArchiveManager {
                 append('-')
                 append(zipFile.lastModified())
             }
-            val previewDir = File(cacheRoot, "archive-preview/$archiveKey").apply {
-                if (!exists()) mkdirs()
+            val previewRoot = File(cacheRoot, "archive-preview")
+            trimArchivePreviewCache(previewRoot, archiveKey)
+            val previewDir = File(previewRoot, archiveKey).apply {
+                check(exists() || mkdirs()) { "Não foi possível preparar o cache de pré-visualização." }
             }
             val entryKey = normalizedPath.hashCode().toUInt().toString(16)
             val target = File(previewDir, "${entryKey}_$safeName")
             val expectedBytes = header.uncompressedSize.coerceAtLeast(0L)
+            require(expectedBytes <= MAX_PREVIEW_BYTES) {
+                "Pré-visualização limitada a ${archiveFormatBytes(MAX_PREVIEW_BYTES)}. Extraia o arquivo para abri-lo."
+            }
             if (target.isFile && (expectedBytes <= 0L || target.length() == expectedBytes)) {
                 onProgress(
                     ArchiveProgress(
@@ -473,6 +499,10 @@ internal object ArchiveManager {
                             coroutineContext.ensureActive()
                             val read = input.read(buffer)
                             if (read < 0) break
+                            if (read == 0) continue
+                            check(read.toLong() <= MAX_PREVIEW_BYTES - copiedBytes) {
+                                "Pré-visualização excedeu o limite de ${archiveFormatBytes(MAX_PREVIEW_BYTES)}."
+                            }
                             output.write(buffer, 0, read)
                             copiedBytes += read
                             emitProgress(
@@ -489,8 +519,7 @@ internal object ArchiveManager {
                     }
                 }
                 coroutineContext.ensureActive()
-                if (target.exists() && !target.delete()) error("Não foi possível atualizar a pré-visualização temporária.")
-                require(temp.renameTo(target)) { "Não foi possível preparar o item para visualização." }
+                commitStagedItem(temp, target)
                 emitProgress(
                     onProgress,
                     completed = 1,
