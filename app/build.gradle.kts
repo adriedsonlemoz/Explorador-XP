@@ -13,8 +13,8 @@ android {
         applicationId = "com.exploradorxp.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 98
-        versionName = "0.1.0-alpha.98"
+        versionCode = 100
+        versionName = "0.1.0-alpha.100"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -100,6 +100,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("net.lingala.zip4j:zip4j:2.11.5")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // SMB2/SMB3 client for authorized Windows, NAS and Android shares.
+    implementation("com.hierynomus:smbj:0.14.0")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation("androidx.media3:media3-exoplayer:1.9.4")
     implementation("androidx.media3:media3-ui:1.9.4")

@@ -1,14 +1,16 @@
-# Explorador XP 0.1.0-alpha.98
+# Explorador XP 0.1.0-alpha.100
 
-## Interface: atalhos fixos e central de rede
+## Acesso Wi-Fi: SMB2/SMB3 e cópia seletiva
 
-- Barra de atalhos fixa no rodapé do explorador e telas internas, com Fotos, Vídeos, Downloads, Rede e Lixeira.
-- Downloads e Lixeira retirados da barra superior; Atualizar e Favoritos/Colar usam o espaço.
-- Fotos/Vídeos listam até 600 entradas indexadas pelo MediaStore Android, inclusive fora de DCIM e Movies.
-- Rede local agora abre em painel com ações separadas e botão **+**: busca automática WebDAV, conexão por IP, compartilhar pasta e uma tela informativa para Windows/SMB (ainda não implementado).
-- Segurança WebDAV HTTPS e conexões já existentes preservadas.
+- Cliente SMB2/SMB3 somente leitura para pastas compartilhadas de Windows, NAS e Android com servidor SMB ativo.
+- Conexão por IP privado, nome do compartilhamento, usuário e senha; assinatura SMB obrigatória.
+- Descoberta opcional de anúncios `_smb._tcp.` via mDNS, mantendo conexão manual por IP.
+- Navegação por pastas e seleção de vários arquivos remotos para copiar para pasta escolhida no Android, sem sobrescrever nomes existentes.
+- Integração com Android Sharesheet para envio avulso via Quick Share ou apps compatíveis, sem instalar Explorador XP no destinatário.
+- Interface WebDAV, compartilhamento HTTPS/TLS e barra de atalhos preservados.
+- Não é possível navegar em armazenamento de celular sem serviço de compartilhamento e autorização.
 
-**Validação:** revisão estática e verificações locais; compilação Android completa e testes físicos pendentes.
+**Validação:** verificação sintática e testes JVM locais de endereços/caminhos. Compilação Gradle do APK e teste real Android/SMB ainda pendentes.
 
-Versão: `0.1.0-alpha.98`  
-Version code: `98`
+Versão: `0.1.0-alpha.100`  
+Version code: `100`

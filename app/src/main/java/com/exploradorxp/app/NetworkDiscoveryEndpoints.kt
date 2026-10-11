@@ -2,6 +2,10 @@ package com.exploradorxp.app
 
 /** Pure IPv4 validation for untrusted mDNS discoveries. No DNS lookups or implicit trust. */
 internal object NetworkDiscoveryEndpoints {
+    /** Prefere qualquer endereço IPv4 privado utilizável no anúncio NSD, não só o primeiro. */
+    fun firstHttpsAddress(addresses: List<String>, port: Int): String? =
+        addresses.asSequence().mapNotNull { httpsAddress(it, port) }.firstOrNull()
+
     fun httpsAddress(ip: String, port: Int): String? {
         if (port !in 1..65535 || ip.length > 15) return null
         val parts = ip.split('.')

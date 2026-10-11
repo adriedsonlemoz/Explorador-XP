@@ -18,11 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Nova barra inferior fixa com atalhos Fotos, Vídeos, Downloads, Rede e Lixeira, inclusive nas telas internas.",
-                "Downloads e Lixeira saíram da barra superior; agora ela oferece Atualizar e Favoritos/Colar.",
-                "Fotos e Vídeos acessam arquivos do índice de mídia Android em diversas pastas.",
-                "Rede local ganhou painel organizado e botão + com busca automática, IP, compartilhamento e aviso sobre SMB futuro.",
-                "Cliente e servidor WebDAV HTTPS, pin SHA-256 e descoberta Wi-Fi permanecem preservados.",
+                "Rede Wi-Fi: abrir pastas SMB2/SMB3 em Windows, NAS ou Android com compartilhamento autorizado.",
+                "Informar IP, pasta compartilhada, usuário e senha; busca opcional de anúncios SMB na rede.",
+                "Selecionar vários arquivos remotos e copiar para uma pasta escolhida neste celular, sem substituir arquivos locais.",
+                "Enviar arquivos pelo compartilhamento do Android (Quick Share quando disponível).",
+                "WebDAV HTTPS e barra inferior fixa preservados; acesso exige compartilhamento ativo no outro aparelho.",
             )
         )
 }

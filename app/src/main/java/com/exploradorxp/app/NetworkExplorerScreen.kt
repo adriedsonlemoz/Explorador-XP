@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -65,7 +67,11 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
     val store = remember(context) { NetworkSharedFolders(context) }
     val discovery = remember(context) { NetworkServiceDiscovery(context) }
     val discoveryState by discovery.state.collectAsState()
-    DisposableEffect(discovery) { onDispose { discovery.stop() } }
+    val smbDiscovery = remember(context) { NetworkServiceDiscovery(context, "_smb._tcp.") }
+    val smbDiscoveryState by smbDiscovery.state.collectAsState()
+    DisposableEffect(discovery, smbDiscovery) {
+        onDispose { discovery.stop(); smbDiscovery.stop() }
+    }
     var folders by remember { mutableStateOf(store.list()) }
     val server by NetworkShareStatus.state.collectAsState()
     var allowUploads by remember { mutableStateOf(false) }
@@ -73,9 +79,18 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
     var fingerprint by remember { mutableStateOf("") }
     var secret by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("xp") }
-    var client by remember { mutableStateOf<NetworkDavClient?>(null) }
+    var client by remember { mutableStateOf<NetworkRemoteClient?>(null) }
+    var smbHost by remember { mutableStateOf("") }
+    var smbShare by remember { mutableStateOf("") }
+    var smbUsername by remember { mutableStateOf("") }
+    var smbPassword by remember { mutableStateOf("") }
+    var smbDomain by remember { mutableStateOf("") }
+    var selectedPaths by remember { mutableStateOf<Set<List<String>>>(emptySet()) }
     // Cancelar requisições remotas ao sair desta tela ou trocar de conexão.
-    DisposableEffect(client) { onDispose { client?.cancel() } }
+    DisposableEffect(client) {
+        val attached = client
+        onDispose { attached?.cancel() }
+    }
     var currentPath by remember { mutableStateOf<List<String>>(emptyList()) }
     var remoteItems by remember { mutableStateOf<List<NetworkRemoteEntry>>(emptyList()) }
     var selectedDownload by remember { mutableStateOf<NetworkRemoteEntry?>(null) }
@@ -91,7 +106,7 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
             (error.localizedMessage ?: "Não foi possível realizar a operação.")
     }
 
-    fun readRemote(remote: NetworkDavClient, path: List<String>) {
+    fun readRemote(remote: NetworkRemoteClient, path: List<String>) {
         scope.launch {
             busy = true
             message = ""
@@ -100,12 +115,13 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                 client = remote
                 currentPath = path
                 remoteItems = entries
+                selectedPaths = emptySet()
             } catch (error: Exception) { reportFailure(error) }
             finally { busy = false }
         }
     }
 
-    fun transfer(action: suspend (NetworkDavClient) -> Unit) {
+    fun transfer(action: suspend (NetworkRemoteClient) -> Unit) {
         val remote = client ?: return
         if (busy) return
         transferJob = scope.launch {
@@ -114,7 +130,7 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
             progress = "Iniciando transferência..."
             try {
                 action(remote)
-                message = "Transferência concluída."
+                if (message.isBlank()) message = "Transferência concluída."
                 progress = ""
                 remoteItems = withContext(Dispatchers.IO) { remote.list(currentPath) }
             } catch (error: Exception) {
@@ -149,6 +165,56 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                     }
                 }
             }
+        }
+    }
+    val copyToFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        val paths = selectedPaths.toSet()
+        val files = remoteItems.filter { !it.isDirectory && it.path in paths }
+        if (uri != null && files.isNotEmpty()) {
+            transfer { remote ->
+                withContext(Dispatchers.IO) {
+                    val folder = DocumentFile.fromTreeUri(context, uri)
+                        ?: throw java.io.IOException("Não foi possível abrir a pasta de destino.")
+                    if (!folder.canWrite()) throw java.io.IOException("Pasta de destino sem permissão de escrita.")
+                    var copied = 0
+                    var skipped = 0
+                    for ((index, file) in files.withIndex()) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        // Não substituir arquivos locais já existentes.
+                        if (!NetworkSharePaths.validName(file.name) || folder.findFile(file.name) != null) {
+                            skipped++
+                            continue
+                        }
+                        val document = folder.createFile("application/octet-stream", file.name)
+                            ?: throw java.io.IOException("Não foi possível criar ${file.name}.")
+                        try {
+                            remote.download(context, file, document.uri) { done, total ->
+                                scope.launch {
+                                    progress = "Arquivo ${index + 1}/${files.size}: ${file.name} • ${sizeLabel(done)} / ${sizeLabel(total)}"
+                                }
+                            }
+                            copied++
+                        } catch (error: Exception) {
+                            runCatching { document.delete() }
+                            throw error
+                        }
+                    }
+                    withContext(Dispatchers.Main) { message = "$copied arquivo(s) copiado(s); $skipped ignorado(s) por nome repetido ou inválido." }
+                }
+            }
+        }
+    }
+    val quickShare = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    clipData = ClipData.newUri(context.contentResolver, "Arquivo escolhido", uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(intent, "Enviar arquivo para outro aparelho"))
+            }.onFailure { message = it.localizedMessage ?: "Não há aplicativo de compartilhamento disponível." }
         }
     }
     val selectUpload = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -198,47 +264,53 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (page) {
                     NetworkPage.HOME -> {
-                        Text("Conexões e compartilhamentos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text("Conecte aparelhos pela rede Wi-Fi. Para adicionar uma conexão ou pasta, toque em +.",
+                        Text("Arquivos entre aparelhos", style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold)
+                        Text("O que você quer fazer?", style = MaterialTheme.typography.bodyMedium)
+                        NetworkHubAction("📱  Acessar outro celular",
+                            "Encontrar um celular que já está compartilhando uma pasta") {
+                            discovery.start(); page = NetworkPage.DISCOVERY
+                        }
+                        NetworkHubAction("📂  Compartilhar arquivos deste celular",
+                            "Escolha a pasta que o outro celular poderá abrir") { page = NetworkPage.SHARE }
+                        HorizontalDivider()
+                        Text("Neste celular", style = MaterialTheme.typography.titleMedium)
+                        Text(if (server.active) "🟢 Compartilhamento ligado" else "⚪ Compartilhamento desligado",
+                            fontWeight = FontWeight.Medium)
+                        Text(if (folders.isEmpty()) "Nenhuma pasta escolhida. Toque em Compartilhar para selecionar."
+                            else if (server.active) "${folders.size} pasta(s) disponível(is) para outros aparelhos."
+                            else "${folders.size} pasta(s) escolhida(s), mas ainda não disponível(is) na rede.",
                             style = MaterialTheme.typography.bodySmall)
-                        HorizontalDivider()
-                        Text("Meus compartilhamentos", style = MaterialTheme.typography.titleMedium)
-                        Text(if (server.active) "Servidor HTTPS ativo • ${folders.size} pasta(s) autorizada(s)" else
-                            "Servidor desligado • ${folders.size} pasta(s) selecionada(s)",
-                            style = MaterialTheme.typography.bodyMedium)
-                        if (folders.isEmpty()) Text("Nenhuma pasta autorizada.", style = MaterialTheme.typography.bodySmall)
-                        folders.forEach { folder ->
-                            Text("📁 ${folder.name}", style = MaterialTheme.typography.bodyMedium)
+                        if (server.active) {
+                            Text("Endereço: https://${server.addresses.firstOrNull() ?: "IP-DO-CELULAR"}:${NetworkDavServer.PORT}",
+                                style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = { page = NetworkPage.SHARE }) { Text("Ver dados para conectar") }
                         }
-                        OutlinedButton(onClick = { page = NetworkPage.SHARE }) { Text("Gerenciar compartilhamento") }
                         HorizontalDivider()
-                        Text("Dispositivos", style = MaterialTheme.typography.titleMedium)
-                        Text(if (client != null) "Conectado: $host" else "Nenhum dispositivo conectado.",
-                            style = MaterialTheme.typography.bodyMedium)
-                        if (client != null) OutlinedButton(onClick = { page = NetworkPage.REMOTE }) { Text("Abrir dispositivo conectado") }
-                        if (discoveryState.servers.isNotEmpty()) {
-                            discoveryState.servers.forEach { device ->
-                                NetworkHubAction("📱 ${device.serviceName}", device.url) {
-                                    host = device.url
-                                    fingerprint = ""
-                                    secret = ""
-                                    page = NetworkPage.MANUAL
-                                }
-                            }
-                        }
-                        Text("A busca é manual e a conexão exige autenticação e verificação do certificado.",
+                        Text("Outro aparelho", style = MaterialTheme.typography.titleMedium)
+                        if (client != null) {
+                            NetworkHubAction("📁  Abrir arquivos conectados", host) { page = NetworkPage.REMOTE }
+                        } else Text("Nenhum aparelho conectado. Abra 'Acessar outro celular' para começar.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedButton(onClick = { page = NetworkPage.MANUAL }) { Text("Conectar usando endereço IP") }
+                        Text("Importante: a busca encontra servidores WebDAV ativos, não todos os celulares da rede nem pastas do Windows.",
                             style = MaterialTheme.typography.bodySmall)
                     }
                     NetworkPage.SHARE -> {
-                        Text("Pastas deste celular", style = MaterialTheme.typography.titleMedium)
-                        Text("Somente pastas autorizadas são compartilhadas. O servidor inicia com escrita desativada.",
+                        Text("Compartilhar arquivos deste celular", style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold)
+                        Text("1. Escolha uma pasta.  2. Ative o compartilhamento.  3. Abra 'Acessar outro celular' no outro aparelho.",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Text("Suas outras pastas continuam privadas. Nada será compartilhado até você ativar.",
                             style = MaterialTheme.typography.bodySmall)
-                        if (folders.isEmpty()) Text("Nenhuma pasta autorizada.")
+                        HorizontalDivider()
+                        Text("1  Pastas escolhidas", style = MaterialTheme.typography.titleMedium)
+                        if (folders.isEmpty()) Text("Nenhuma pasta selecionada. Exemplo: escolha a pasta Download ou DCIM para compartilhar apenas seu conteúdo.")
                         folders.forEach { folder ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(folder.name, fontWeight = FontWeight.Medium)
-                                    Text("/dav/${folder.alias}/", style = MaterialTheme.typography.bodySmall)
+                                    Text("📁 ${folder.name}", fontWeight = FontWeight.Medium)
+                                    Text("Pasta disponível para leitura quando ativar", style = MaterialTheme.typography.bodySmall)
                                 }
                                 OutlinedButton(enabled = !server.active && !server.starting, onClick = {
                                     runCatching { store.remove(folder.alias); folders = store.list() }
@@ -247,64 +319,103 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                             }
                         }
                         OutlinedButton(enabled = !server.active && !server.starting,
-                            onClick = { pickShare.launch(null) }) { Text("Selecionar pasta") }
+                            onClick = { pickShare.launch(null) }) { Text("+ Escolher pasta") }
+                        HorizontalDivider()
+                        Text("2  Ligar compartilhamento", style = MaterialTheme.typography.titleMedium)
+                        Text(if (server.active) "🟢 Ligado: os arquivos das pastas acima podem ser acessados por quem tiver os dados da conexão."
+                            else "⚪ Desligado: o outro aparelho não consegue encontrar suas pastas.",
+                            style = MaterialTheme.typography.bodyMedium)
+                        if (!server.active) {
+                            Button(enabled = folders.isNotEmpty() && !server.starting, onClick = {
+                                message = ""; NetworkShareService.start(context, allowUploads)
+                            }) { Text(if (server.starting) "Iniciando..." else "Ativar compartilhamento") }
+                            if (folders.isEmpty()) Text("Escolha uma pasta primeiro para liberar este botão.",
+                                style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Button(onClick = { NetworkShareService.stop(context) }) { Text("Desligar compartilhamento") }
+                        }
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = allowUploads, enabled = !server.active && !server.starting,
                                 onCheckedChange = { allowUploads = it })
-                            Text("Permitir que outros dispositivos enviem arquivos (desativado por padrão)",
-                                style = MaterialTheme.typography.bodySmall)
+                            Text("Permitir receber novos arquivos (opcional). Por segurança, fica desligado.",
+                                modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                         }
                         if (server.active) {
-                            Text("Servidor ativo • ${if (server.uploadEnabled) "envio permitido" else "somente leitura"}")
-                            Text("Endereço: ${server.addresses.firstOrNull()?.let { "https://$it:${NetworkDavServer.PORT}" } ?: "Verifique o Wi-Fi"}")
+                            HorizontalDivider()
+                            Text("3  Conectar pelo outro aparelho", style = MaterialTheme.typography.titleMedium)
+                            Text("No outro celular: Rede > Acessar outro celular > Procurar. Se não aparecer, escolha Conectar por IP.",
+                                style = MaterialTheme.typography.bodySmall)
+                            Text("Endereço: ${server.addresses.firstOrNull()?.let { "https://$it:${NetworkDavServer.PORT}" } ?: "IP indisponível: confira Wi-Fi/hotspot"}")
+                            if (server.addresses.size > 1) {
+                                Text("Outros endereços possíveis (use o IP da rede Wi-Fi):", style = MaterialTheme.typography.bodySmall)
+                                server.addresses.drop(1).forEach { ip ->
+                                    Text("https://$ip:${NetworkDavServer.PORT}", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
                             Text("Usuário: xp")
                             Text("Senha temporária: ${server.password}")
-                            Text("SHA-256 do certificado: ${server.fingerprint}", style = MaterialTheme.typography.bodySmall)
+                            Text("Código de segurança SHA-256: ${server.fingerprint}", style = MaterialTheme.typography.bodySmall)
                             OutlinedButton(onClick = {
                                 val text = "Endereço: https://${server.addresses.firstOrNull() ?: "IP-DO-CELULAR"}:${NetworkDavServer.PORT}\n" +
                                     "Usuário: xp\nSenha: ${server.password}\nSHA-256: ${server.fingerprint}"
                                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                                     .setPrimaryClip(ClipData.newPlainText("Explorador XP conexão", text))
-                                message = "Dados copiados. Compartilhe apenas com aparelhos autorizados."
-                            }) { Text("Copiar dados da conexão") }
-                            Button(onClick = { NetworkShareService.stop(context) }) { Text("Desligar compartilhamento") }
-                        } else {
-                            Button(enabled = folders.isNotEmpty() && !server.starting, onClick = {
-                                message = ""; NetworkShareService.start(context, allowUploads)
-                            }) { Text(if (server.starting) "Iniciando..." else "Ativar compartilhamento") }
+                                message = "Dados copiados. A área de transferência contém a senha; não compartilhe com desconhecidos."
+                            }) { Text("Copiar dados para conectar") }
                         }
-                        if (server.error != null) Text("Servidor: ${server.error}", color = MaterialTheme.colorScheme.error)
-                        Text("Ao parar o servidor, as credenciais da sessão deixam de ser válidas.",
-                            style = MaterialTheme.typography.bodySmall)
+                        if (server.error != null) Text("Não foi possível compartilhar: ${server.error}",
+                            color = MaterialTheme.colorScheme.error)
                     }
                     NetworkPage.DISCOVERY -> {
-                        Text("Busca automática", style = MaterialTheme.typography.titleMedium)
-                        Text("Localiza anúncios WebDAV HTTPS no Wi-Fi. A descoberta não valida a identidade do aparelho.",
+                        Text("Encontrar outro celular", style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold)
+                        Text("No OUTRO celular, abra Explorador XP > Rede > Compartilhar arquivos, escolha uma pasta e toque em Ativar compartilhamento.",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Text("Depois, mantenha os dois na mesma rede Wi-Fi ou hotspot e procure aqui.",
                             style = MaterialTheme.typography.bodySmall)
                         if (discoveryState.searching) {
                             OutlinedButton(onClick = { discovery.stop() }) { Text("Parar busca") }
-                            if (discoveryState.servers.isEmpty()) Text("Procurando aparelhos compatíveis...")
                         } else {
-                            Button(onClick = { discovery.start() }) { Text("Iniciar busca") }
+                            Button(onClick = { discovery.start() }) { Text("Procurar novamente") }
+                        }
+                        if (discoveryState.servers.isEmpty()) {
+                            Text(if (discoveryState.searching) "Buscando compartilhamentos WebDAV ativos..."
+                                else "Nenhum compartilhamento encontrado.",
+                                style = MaterialTheme.typography.titleSmall)
+                            Text(when {
+                                discoveryState.addressFailures > 0 -> "Encontrei um anúncio, mas não consegui obter um endereço IPv4 local. Tente usar o IP exibido no outro celular."
+                                discoveryState.resolveFailures > 0 -> "Um aparelho respondeu, mas não foi possível obter o endereço dele. Confira o Wi-Fi dos dois celulares."
+                                else -> "Se o outro celular não ativou o compartilhamento, ele NÃO aparece nesta lista."
+                            }, style = MaterialTheme.typography.bodySmall)
+                            Text("Se já ativou: verifique se os dois estão na mesma rede, se o roteador permite aparelhos se comunicarem e se o servidor continua ligado.",
+                                style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Text("Compartilhamentos encontrados", style = MaterialTheme.typography.titleMedium)
                         }
                         discoveryState.servers.forEach { device ->
-                            NetworkHubAction(device.serviceName, device.url) {
+                            NetworkHubAction("📱 ${device.serviceName}", device.url) {
                                 client?.cancel(); client = null; currentPath = emptyList(); remoteItems = emptyList()
                                 host = device.url; fingerprint = ""; secret = ""
                                 discovery.stop(); page = NetworkPage.MANUAL
-                                message = "Confira a impressão SHA-256 no dispositivo remoto antes de conectar."
+                                message = "Confira o código SHA-256 mostrado no outro celular antes de conectar."
                             }
                         }
                         if (discoveryState.error != null) Text(discoveryState.error ?: "", color = MaterialTheme.colorScheme.error)
+                        HorizontalDivider()
+                        OutlinedButton(onClick = { discovery.stop(); page = NetworkPage.MANUAL }) {
+                            Text("Não apareceu? Conectar pelo IP")
+                        }
+                        Text("A busca encontra apenas servidores WebDAV HTTPS, como outro Explorador XP com compartilhamento ligado. Não encontra pastas Windows/SMB.",
+                            style = MaterialTheme.typography.bodySmall)
                     }
                     NetworkPage.MANUAL -> {
-                        Text("Conectar por endereço HTTPS", style = MaterialTheme.typography.titleMedium)
-                        Text("Para outro Explorador XP use https://IP:18843. Confira o SHA-256 exibido no outro aparelho.",
+                        Text("Conectar pelo endereço do outro aparelho", style = MaterialTheme.typography.titleMedium)
+                        Text("No outro celular, ative Compartilhar e copie os dados exibidos. Informe aqui endereço, código de segurança e senha. Exemplo: https://192.168.1.20:18843.",
                             style = MaterialTheme.typography.bodySmall)
                         OutlinedTextField(value = host, onValueChange = { host = it }, singleLine = true,
                             label = { Text("Endereço HTTPS e porta") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
                         OutlinedTextField(value = fingerprint, onValueChange = { fingerprint = it }, singleLine = true,
-                            label = { Text("SHA-256 do certificado remoto") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
+                            label = { Text("Código SHA-256 exibido no outro celular") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
                         OutlinedTextField(value = username, onValueChange = { username = it }, singleLine = true,
                             label = { Text("Usuário WebDAV") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
                         OutlinedTextField(value = secret, onValueChange = { secret = it }, singleLine = true,
@@ -325,7 +436,8 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                         }) { Text("Conectar") }
                     }
                     NetworkPage.REMOTE -> {
-                        Text("Conectado a: $host", style = MaterialTheme.typography.bodySmall)
+                        Text("Conectado a: ${if (client is NetworkSmbClient) "SMB $smbHost/$smbShare" else host}",
+                            style = MaterialTheme.typography.bodySmall)
                         Text("/${currentPath.joinToString("/")}", style = MaterialTheme.typography.titleMedium)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(enabled = !busy && client != null, onClick = {
@@ -333,6 +445,7 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                             }) { Text("Atualizar") }
                             OutlinedButton(enabled = !busy, onClick = {
                                 client?.cancel(); client = null; remoteItems = emptyList(); currentPath = emptyList()
+                                selectedPaths = emptySet()
                                 page = NetworkPage.HOME
                             }) { Text("Desconectar") }
                         }
@@ -340,17 +453,41 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                             client?.let { readRemote(it, currentPath.dropLast(1)) }
                         }) { Text("↑ Pasta anterior") }
                         if (remoteItems.isEmpty()) Text("Nenhum arquivo nesta pasta.")
+                        val selectable = remoteItems.filterNot { it.isDirectory }
+                        if (selectable.isNotEmpty()) {
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(enabled = !busy, onClick = {
+                                    selectedPaths = if (selectable.all { it.path in selectedPaths }) emptySet()
+                                    else selectable.map { it.path }.toSet()
+                                }) { Text(if (selectable.all { it.path in selectedPaths }) "Limpar seleção" else "Selecionar arquivos") }
+                                Text("${selectedPaths.size} selecionado(s)", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Button(enabled = !busy && selectedPaths.isNotEmpty(), onClick = {
+                                copyToFolder.launch(null)
+                            }) { Text("Copiar selecionados para uma pasta deste celular") }
+                        }
                         remoteItems.forEach { file ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text((if (file.isDirectory) "📁 " else "📄 ") + file.name,
-                                    modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                                if (!file.isDirectory) {
+                                    Checkbox(checked = file.path in selectedPaths, enabled = !busy,
+                                        onCheckedChange = { checked ->
+                                            selectedPaths = if (checked) selectedPaths + setOf(file.path)
+                                            else selectedPaths - setOf(file.path)
+                                        })
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text((if (file.isDirectory) "📁 " else "📄 ") + file.name,
+                                        style = MaterialTheme.typography.bodyMedium)
+                                    if (!file.isDirectory) Text(sizeLabel(file.size), style = MaterialTheme.typography.bodySmall)
+                                }
                                 OutlinedButton(enabled = !busy, onClick = {
                                     if (file.isDirectory) client?.let { readRemote(it, file.path) }
                                     else { selectedDownload = file; saveDownload.launch(file.name) }
-                                }) { Text(if (file.isDirectory) "Abrir" else "Baixar") }
+                                }) { Text(if (file.isDirectory) "Abrir" else "Salvar") }
                             }
                         }
-                        if (currentPath.isNotEmpty()) {
+                        if (currentPath.isNotEmpty() && client is NetworkDavClient) {
                             OutlinedButton(enabled = !busy, onClick = { selectUpload.launch(arrayOf("*/*")) }) {
                                 Text("Enviar arquivo para esta pasta")
                             }
@@ -359,11 +496,56 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                         }
                     }
                     NetworkPage.WINDOWS -> {
-                        Text("Compartilhamentos do Windows (SMB)", style = MaterialTheme.typography.titleMedium)
-                        Text("SMB2/SMB3 ainda não está implementado nesta versão. " +
-                            "A busca automática atual encontra servidores WebDAV HTTPS, não pastas Windows SMB.",
-                            style = MaterialTheme.typography.bodyMedium)
-                        OutlinedButton(onClick = { page = NetworkPage.MANUAL }) { Text("Conectar a WebDAV por IP") }
+                        Text("Acessar pasta compartilhada (SMB2/SMB3)", style = MaterialTheme.typography.titleLarge)
+                        Text("Funciona com Windows, NAS ou Android que tenha um servidor SMB ativo e autorizado. " +
+                            "Um celular comum sem compartilhamento NÃO oferece suas pastas pela rede.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Text("Procurar servidores SMB anunciados no Wi-Fi", style = MaterialTheme.typography.titleSmall)
+                        OutlinedButton(onClick = { if (smbDiscoveryState.searching) smbDiscovery.stop() else smbDiscovery.start() }) {
+                            Text(if (smbDiscoveryState.searching) "Parar busca SMB" else "Procurar SMB")
+                        }
+                        smbDiscoveryState.servers.forEach { device ->
+                            NetworkHubAction("🖥️ ${device.serviceName}", "IP: ${device.url}") {
+                                smbHost = device.url; smbDiscovery.stop()
+                            }
+                        }
+                        if (smbDiscoveryState.servers.isEmpty()) Text(
+                            if (smbDiscoveryState.searching) "Procurando anúncios SMB (mDNS)..."
+                            else "Se não aparecer, informe o IP manualmente. Nem todo Windows anuncia SMB por mDNS.",
+                            style = MaterialTheme.typography.bodySmall)
+                        smbDiscoveryState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                        OutlinedTextField(value = smbHost, onValueChange = { smbHost = it }, enabled = !busy,
+                            singleLine = true, label = { Text("IP do aparelho (ex.: 192.168.1.10)") }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = smbShare, onValueChange = { smbShare = it }, enabled = !busy,
+                            singleLine = true, label = { Text("Nome da pasta compartilhada (ex.: Publico)") }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = smbUsername, onValueChange = { smbUsername = it }, enabled = !busy,
+                            singleLine = true, label = { Text("Usuário autorizado") }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = smbPassword, onValueChange = { smbPassword = it }, enabled = !busy,
+                            singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                            label = { Text("Senha") }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = smbDomain, onValueChange = { smbDomain = it }, enabled = !busy,
+                            singleLine = true, label = { Text("Domínio (opcional)") }, modifier = Modifier.fillMaxWidth())
+                        Button(enabled = !busy && NetworkSmbAddress.privateIpv4(smbHost) &&
+                            NetworkSmbAddress.validShare(smbShare) && smbUsername.isNotBlank(), onClick = {
+                            scope.launch {
+                                busy = true; message = ""
+                                try {
+                                    val remote = withContext(Dispatchers.IO) {
+                                        NetworkSmbClient(smbHost.trim(), smbShare.trim(), smbUsername, smbPassword, smbDomain)
+                                    }
+                                    try {
+                                        val root = withContext(Dispatchers.IO) { remote.list(emptyList()) }
+                                        client?.cancel(); client = remote
+                                        currentPath = emptyList(); remoteItems = root; selectedPaths = emptySet()
+                                        smbDiscovery.stop(); page = NetworkPage.REMOTE
+                                    } catch (error: Exception) { remote.cancel(); throw error }
+                                } catch (error: Exception) { reportFailure(error) }
+                                finally { busy = false }
+                            }
+                        }) { Text("Conectar e abrir arquivos") }
+                        Text("Conexão SMB somente leitura no Explorador XP. A assinatura de mensagens é exigida; " +
+                            "a criptografia SMB3 depende também do servidor. Senhas não são salvas.",
+                            style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 if (busy) {
@@ -382,16 +564,19 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                     Text("+", fontSize = 30.sp, color = Color.White)
                 }
                 DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
-                    DropdownMenuItem(text = { Text("Busca automática") }, onClick = {
+                    DropdownMenuItem(text = { Text("Encontrar outro celular") }, onClick = {
                         showAddMenu = false; page = NetworkPage.DISCOVERY; discovery.start()
                     })
                     DropdownMenuItem(text = { Text("Conectar por IP / WebDAV") }, onClick = {
                         showAddMenu = false; discovery.stop(); page = NetworkPage.MANUAL
                     })
-                    DropdownMenuItem(text = { Text("Buscar Windows / SMB (futuro)") }, onClick = {
+                    DropdownMenuItem(text = { Text("Windows / Android SMB2/3") }, onClick = {
                         showAddMenu = false; discovery.stop(); page = NetworkPage.WINDOWS
                     })
-                    DropdownMenuItem(text = { Text("Compartilhar pasta") }, onClick = {
+                    DropdownMenuItem(text = { Text("Enviar via Quick Share / Android") }, onClick = {
+                        showAddMenu = false; quickShare.launch(arrayOf("*/*"))
+                    })
+                    DropdownMenuItem(text = { Text("Compartilhar arquivos deste celular") }, onClick = {
                         showAddMenu = false; discovery.stop(); page = NetworkPage.SHARE
                     })
                 }

@@ -1,12 +1,16 @@
-> **Versão atual:** 0.1.0-alpha.98 (`versionCode 98`). Barra inferior fixa com Fotos, Vídeos, Downloads, Rede e Lixeira; central de rede com botão + e ações separadas. Mantidos WebDAV HTTPS e descoberta mDNS. Build Android completo ainda pendente. Veja [RELEASE.md](RELEASE.md).
+> **Versão atual:** 0.1.0-alpha.100 (`versionCode 100`). Cliente SMB2/SMB3 somente leitura, seleção múltipla para copiar arquivos por Wi-Fi, anúncio mDNS SMB opcional e envio pelo compartilhamento do Android. Build Android completo pendente.
 
 # Explorador XP
 
-**alpha.98 (navegação):** barra de atalhos sempre visível no rodapé das telas internas com Fotos, Vídeos, Downloads, Rede e Lixeira. O topo agora prioriza Atualizar, Favoritos ou Colar. Rede local ganhou central com botão **+**, busca automática, conexão por IP e compartilhamento em etapas separadas. Windows/SMB está sinalizado como futuro, não funcional.
+**alpha.98 (navegação):** barra de atalhos sempre visível no rodapé das telas internas com Fotos, Vídeos, Downloads, Rede e Lixeira. O topo agora prioriza Atualizar, Favoritos ou Colar. Rede local ganhou central com botão **+**, busca automática, conexão por IP e compartilhamento em etapas separadas. Windows/SMB foi habilitado na alpha.100 para pastas autorizadas, ainda pendente de validação no Android.
+
+**alpha.99 (rede):** telas guiadas para acessar outro celular ou compartilhar uma pasta, mensagens de diagnóstico da busca, manutenção dos resultados após parar e seleção de IPv4 local entre múltiplos endereços NSD.
+
+**alpha.100 (rede):** cliente SMB2/SMB3 para pastas compartilhadas de outros aparelhos, seleção múltipla e cópia sem sobrescrita para diretório local, descoberta opcional de serviço SMB e envio pelo Android Sharesheet. Não acessa pastas de celulares sem servidor ativo ou autorização. Veja `docs/ALPHA100_SMB_WIFI_TRANSFER.md`.
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.98` (`versionCode 98`)  
+**Versão atual:** `0.1.0-alpha.100` (`versionCode 100`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

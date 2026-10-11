@@ -22,6 +22,12 @@ class NetworkDiscoveryEndpointsTest {
             .forEach { assertNull(it, NetworkDiscoveryEndpoints.httpsAddress(it, 18843)) }
     }
 
+    @Test fun choosesUsableIpv4EvenWhenFirstAddressIsNotLocal() {
+        assertEquals("https://192.168.0.12:18843", NetworkDiscoveryEndpoints.firstHttpsAddress(
+            listOf("8.8.8.8", "192.168.0.12", "10.0.0.3"), 18843))
+        assertNull(NetworkDiscoveryEndpoints.firstHttpsAddress(listOf("::1", "8.8.8.8"), 18843))
+    }
+
     @Test fun rejectsPortsOutOfRange() {
         assertNull(NetworkDiscoveryEndpoints.httpsAddress("192.168.0.2", 0))
         assertNull(NetworkDiscoveryEndpoints.httpsAddress("192.168.0.2", 65536))

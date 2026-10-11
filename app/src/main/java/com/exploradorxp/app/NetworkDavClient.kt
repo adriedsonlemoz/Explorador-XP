@@ -33,7 +33,7 @@ internal data class NetworkRemoteEntry(
 )
 
 /** Explicit HTTPS URL and SHA-256 certificate pin; no HTTP or unsecured fallback. */
-internal class NetworkDavClient(endpoint: String, fingerprint: String, private val password: String, private val username: String = "xp") {
+internal class NetworkDavClient(endpoint: String, fingerprint: String, private val password: String, private val username: String = "xp") : NetworkRemoteClient {
     companion object { private const val MAX_TRANSFER = 4L * 1024 * 1024 * 1024 }
     private val baseUrl: HttpUrl
     private val client: OkHttpClient
@@ -75,7 +75,7 @@ internal class NetworkDavClient(endpoint: String, fingerprint: String, private v
             .build()
     }
 
-    fun cancel() { activeCall?.cancel() }
+    override fun cancel() { activeCall?.cancel() }
 
     private fun urlFor(path: List<String>, directory: Boolean = false): HttpUrl {
         require(path.size <= 23 && path.all(NetworkSharePaths::validName)) { "Caminho remoto inválido" }
@@ -96,7 +96,7 @@ internal class NetworkDavClient(endpoint: String, fingerprint: String, private v
         return try { call.execute() } catch (error: Exception) { activeCall = null; throw error }
     }
 
-    fun list(path: List<String>): List<NetworkRemoteEntry> {
+    override fun list(path: List<String>): List<NetworkRemoteEntry> {
         val body = """<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:allprop/></d:propfind>"""
         val request = request(path, directory = true)
             .header("Depth", "1")
@@ -142,7 +142,7 @@ internal class NetworkDavClient(endpoint: String, fingerprint: String, private v
     }
 
     /** Destination is a new document selected through CreateDocument; remove it if transfer fails. */
-    fun download(context: Context, item: NetworkRemoteEntry, destination: Uri, progress: (Long, Long) -> Unit) {
+    override fun download(context: Context, item: NetworkRemoteEntry, destination: Uri, progress: (Long, Long) -> Unit) {
         require(!item.isDirectory)
         var success = false
         try {
@@ -175,7 +175,7 @@ internal class NetworkDavClient(endpoint: String, fingerprint: String, private v
     }
 
     /** Upload is only for a new file; server rejects overwriting existing user data. */
-    fun upload(context: Context, source: Uri, destinationDir: List<String>, progress: (Long, Long) -> Unit) {
+    override fun upload(context: Context, source: Uri, destinationDir: List<String>, progress: (Long, Long) -> Unit) {
         val resolver = context.contentResolver
         val cursor = resolver.query(source, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)
             ?: throw IOException("Não foi possível ler informações do arquivo")

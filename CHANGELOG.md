@@ -1,4 +1,23 @@
+## 0.1.0-alpha.100 — 2026-10-11
+
+- Cliente SMB2/SMB3 somente leitura com assinatura SMB, IP privado, usuário/senha e nome do compartilhamento.
+- Navegação SMB integrada ao browser de WebDAV e cópia seletiva de múltiplos arquivos para pasta Android escolhida pelo SAF, sem substituir arquivos existentes.
+- Busca opcional de anúncio SMB `_smb._tcp.` na rede; conexão por IP quando não há anúncio.
+- Quick Share pelo seletor nativo de compartilhamento do Android para envio de arquivos ao outro dispositivo sem instalar XP nele.
+- Corrigido o cancelamento do cliente anterior em `DisposableEffect`, mantendo o servidor remoto atual.
+- Versão/versionCode 100 sincronizados inclusive metadados que na alpha.99 ainda continham `98`.
+- Testes de endereços e caminhos SMB; build Android completo permanece pendente.
+
 # Changelog
+
+## 0.1.0-alpha.99
+
+- Rede local reorganizada com ações e instruções claras para acessar outro celular e compartilhar pastas.
+- Busca automática explica que encontra servidores WebDAV HTTPS ativos; fornece orientações quando nenhum serviço é encontrado e fallback por IP.
+- Descoberta mDNS/NSD: usa lista de endereços do serviço em Android 14+ e escolhe IPv4 privado, evitando descartar anúncios cujo primeiro endereço é IPv6.
+- Resultados preservados quando a busca é parada; diagnósticos de anúncio sem endereço utilizável e falha de resolução.
+- Barra inferior, arquivos locais, segurança HTTPS, PIN SHA-256 e compartilhamento de pastas preservados.
+- Versionamento `0.1.0-alpha.99` e `versionCode 99`. Build Android completo e testes físicos pendentes.
 
 ## 0.1.0-alpha.98
 

@@ -31,11 +31,19 @@ internal object NetworkShareStatus {
     val state = MutableStateFlow(NetworkServerState())
 
     fun localAddresses(): List<String> = runCatching {
+        // Preferir interfaces Wi-Fi/hotspot. Em alguns aparelhos VPN/dados móveis
+        // também têm IP privado e não servem para conectar outro celular via Wi-Fi.
         NetworkInterface.getNetworkInterfaces().toList()
             .filter { it.isUp && !it.isLoopback }
-            .flatMap { network -> network.inetAddresses.toList().filterIsInstance<Inet4Address>() }
-            .filter { it.isSiteLocalAddress }
-            .map { it.hostAddress ?: "" }.filter { it.isNotBlank() }.distinct()
+            .flatMap { network -> network.inetAddresses.toList().filterIsInstance<Inet4Address>()
+                .filter { it.isSiteLocalAddress }
+                .map { network.name.orEmpty() to (it.hostAddress ?: "") } }
+            .filter { it.second.isNotBlank() }
+            .sortedBy { (name, _) ->
+                if (name.startsWith("wlan") || name.startsWith("swlan") ||
+                    name.startsWith("ap") || name.startsWith("eth")) 0 else 1
+            }
+            .map { it.second }.distinct()
     }.getOrDefault(emptyList())
 }
 

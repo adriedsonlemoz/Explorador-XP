@@ -1,6 +1,7 @@
 package com.exploradorxp.app
 
 import android.content.Context
+import android.os.Build
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
@@ -56,6 +57,9 @@ internal data class NetworkDiscoveryState(
     val searching: Boolean = false,
     val servers: List<NetworkDiscoveredServer> = emptyList(),
     val error: String? = null,
+    val announcements: Int = 0,
+    val addressFailures: Int = 0,
+    val resolveFailures: Int = 0,
 )
 
 /**
@@ -63,7 +67,7 @@ internal data class NetworkDiscoveryState(
  * compatibility. Discovery results are untrusted: the user must separately enter the certificate
  * SHA-256 and session password before any HTTPS request can be made.
  */
-internal class NetworkServiceDiscovery(context: Context) {
+internal class NetworkServiceDiscovery(context: Context, private val serviceType: String = NetworkServiceAdvertiser.TYPE) {
     private val manager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
     private val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
     private val gate = Any()
@@ -76,6 +80,9 @@ internal class NetworkServiceDiscovery(context: Context) {
     private val pending = ArrayDeque<NsdServiceInfo>()
     private val found = linkedMapOf<String, NetworkDiscoveredServer>()
     private var multicast: WifiManager.MulticastLock? = null
+    private var announcements = 0
+    private var addressFailures = 0
+    private var resolveFailures = 0
 
     fun start() {
         synchronized(gate) {
@@ -86,6 +93,9 @@ internal class NetworkServiceDiscovery(context: Context) {
             resolving = false
             pending.clear()
             found.clear()
+            announcements = 0
+            addressFailures = 0
+            resolveFailures = 0
             state.value = NetworkDiscoveryState(searching = true)
         }
         val session = synchronized(gate) { epoch }
@@ -102,7 +112,10 @@ internal class NetworkServiceDiscovery(context: Context) {
                 override fun onServiceFound(serviceInfo: NsdServiceInfo) {
                     synchronized(gate) {
                         if (!active || epoch != session || pending.size >= 64) return
+                        // Um anúncio apenas indica que há um serviço, não que o endereço seja válido.
+                        announcements++
                         pending.addLast(serviceInfo)
+                        publish()
                         resolveNext()
                     }
                 }
@@ -125,7 +138,7 @@ internal class NetworkServiceDiscovery(context: Context) {
                 }
             }
             synchronized(gate) { listener = discovery }
-            manager.discoverServices(NetworkServiceAdvertiser.TYPE, NsdManager.PROTOCOL_DNS_SD, discovery)
+            manager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discovery)
         } catch (error: Exception) { fail(error.localizedMessage ?: "Descoberta indisponível") }
     }
 
@@ -139,18 +152,31 @@ internal class NetworkServiceDiscovery(context: Context) {
             manager.resolveService(info, object : NsdManager.ResolveListener {
                 override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
                     synchronized(gate) {
-                        if (epoch == session) { resolving = false; resolveNext() }
+                        if (epoch == session) {
+                            resolveFailures++
+                            publish()
+                            resolving = false
+                            resolveNext()
+                        }
                     }
                 }
                 override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
                     synchronized(gate) {
                         if (active && epoch == session) {
-                            val ipv4 = serviceInfo.host as? Inet4Address
-                            val url = ipv4?.hostAddress?.let { NetworkDiscoveryEndpoints.httpsAddress(it, serviceInfo.port) }
+                            // Em Android 14+, o DNS-SD pode devolver IPv6 como host principal
+                            // e IPv4 na lista de endereços. Antes descartávamos o anúncio todo.
+                            val addresses = if (Build.VERSION.SDK_INT >= 34) {
+                                serviceInfo.hostAddresses.orEmpty() + listOfNotNull(serviceInfo.host)
+                            } else listOfNotNull(serviceInfo.host)
+                            val ips = addresses.mapNotNull { (it as? Inet4Address)?.hostAddress }
+                            val url = if (serviceType == "_smb._tcp.") {
+                                // Apenas anúncios SMB na porta padrão, com IPv4 privado.
+                                if (serviceInfo.port == 445) ips.firstOrNull(NetworkSmbAddress::privateIpv4) else null
+                            } else NetworkDiscoveryEndpoints.firstHttpsAddress(ips, serviceInfo.port)
                             if (url != null) {
                                 found[serviceInfo.serviceName] = NetworkDiscoveredServer(serviceInfo.serviceName, url)
-                                publish()
-                            }
+                            } else addressFailures++
+                            publish()
                         }
                         if (epoch == session) {
                             resolving = false
@@ -160,15 +186,22 @@ internal class NetworkServiceDiscovery(context: Context) {
                 }
             })
         } catch (error: Exception) {
-            if (epoch == session) resolving = false
+            if (epoch == session) {
+                resolveFailures++
+                publish()
+                resolving = false
+            }
             android.util.Log.w("XP-Network", "Não foi possível resolver anúncio", error)
             if (epoch == session) resolveNext()
         }
     }
 
     private fun publish() {
-        state.value = NetworkDiscoveryState(searching = active,
-            servers = found.values.sortedBy { it.serviceName.lowercase() })
+        state.value = NetworkDiscoveryState(
+            searching = active, servers = found.values.sortedBy { it.serviceName.lowercase() },
+            announcements = announcements, addressFailures = addressFailures,
+            resolveFailures = resolveFailures
+        )
     }
 
     private fun fail(reason: String) {
@@ -179,6 +212,7 @@ internal class NetworkServiceDiscovery(context: Context) {
     fun stop() {
         val old: NsdManager.DiscoveryListener?
         val shouldStop: Boolean
+        val snapshot: NetworkDiscoveryState
         synchronized(gate) {
             active = false
             epoch++
@@ -187,8 +221,13 @@ internal class NetworkServiceDiscovery(context: Context) {
             shouldStop = started
             listener = null
             pending.clear()
-            found.clear()
-            state.value = NetworkDiscoveryState()
+            // Preservar resultados visíveis depois de tocar Parar busca.
+            snapshot = NetworkDiscoveryState(
+                searching = false, servers = found.values.sortedBy { it.serviceName.lowercase() },
+                announcements = announcements, addressFailures = addressFailures,
+                resolveFailures = resolveFailures
+            )
+            state.value = snapshot
         }
         if (old != null && shouldStop) runCatching { manager.stopServiceDiscovery(old) }
         runCatching { multicast?.release() }
