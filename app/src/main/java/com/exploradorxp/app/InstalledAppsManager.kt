@@ -693,18 +693,18 @@ private fun InstalledAppDetailsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(64.dp)
                             .background(Color(0xFFF0F6FF), RoundedCornerShape(18.dp))
                             .border(1.dp, Color(0xFFD4E3F5), RoundedCornerShape(18.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        InstalledAppIcon(app.packageName, Modifier.size(54.dp))
+                        InstalledAppIcon(app.packageName, Modifier.size(48.dp))
                     }
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
                             app.label,
-                            fontSize = 18.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF1C2F43),
                             maxLines = 2,
@@ -726,10 +726,28 @@ private fun InstalledAppDetailsScreen(
                                 contentColor = if (app.isSystem) Color(0xFF46607A) else Color(0xFF2F7445),
                             )
                             AppSummaryChip(
-                                text = if (app.enabled) "Ativo" else "Desativado",
+                                text = if (app.enabled) "Habilitado" else "Desativado",
                                 background = if (app.enabled) Color(0xFFEAF8EE) else Color(0xFFFFF3E7),
                                 contentColor = if (app.enabled) Color(0xFF2F7445) else Color(0xFF9B6400),
                             )
+                        }
+                        Spacer(Modifier.height(7.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            CompactAppAction("Abrir", R.drawable.file_apk, enabled = app.canLaunch,
+                                modifier = Modifier.weight(1f)) {
+                                context.packageManager.getLaunchIntentForPackage(app.packageName)?.let { intent ->
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    runCatching { context.startActivity(intent) }
+                                }
+                            }
+                            CompactAppAction("Limpar", R.drawable.delete, modifier = Modifier.weight(1f)) {
+                                showClearDataInfo = true
+                            }
+                            CompactAppAction("Remover", R.drawable.delete, enabled = !app.isOwnPackage,
+                                modifier = Modifier.weight(1f)) { showUninstallConfirm = true }
+                            CompactAppAction("Sistema", R.drawable.settings, modifier = Modifier.weight(1f)) {
+                                onOpenSystemDetails(app.packageName)
+                            }
                         }
                     }
                 }
@@ -827,7 +845,7 @@ private fun InstalledAppDetailsScreen(
                 AppDetailLine("Versão", versionLabel)
                 AppDetailLine("Version code", app.versionCode.toString())
                 AppDetailLine("Tipo", if (app.isUpdatedSystem) "Aplicativo do sistema atualizado" else if (app.isSystem) "Aplicativo do sistema" else "Aplicativo do usuário")
-                AppDetailLine("Estado", if (app.enabled) "Ativo" else "Desativado")
+                AppDetailLine("Estado", if (app.enabled) "Habilitado" else "Desativado")
                 AppDetailLine("Android alvo", "SDK ${app.targetSdk}")
                 AppDetailLine("Android mínimo", "SDK ${app.minSdk}")
                 AppDetailLine("Instalado", formatAppDate(app.firstInstallTime))
@@ -835,69 +853,15 @@ private fun InstalledAppDetailsScreen(
                 AppDetailLine("Instalador", app.installerPackage ?: "Não informado pelo Android")
             }
 
-            AppDetailsCard(
-                title = "Ações",
-                icon = R.drawable.settings,
-                subtitle = "Atalhos seguros que respeitam as proteções do Android",
-            ) {
-                if (app.canLaunch) {
-                    AppActionTile(
-                        label = "Abrir aplicativo",
-                        description = "Executar este app agora",
-                        icon = R.drawable.file_apk,
-                        onClick = {
-                            val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
-                            if (launchIntent != null) {
-                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                runCatching { context.startActivity(launchIntent) }
-                            }
-                        },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                AppActionTile(
-                    label = "Limpar dados",
-                    description = "Abrir os detalhes oficiais do Android para concluir a limpeza",
-                    icon = R.drawable.delete,
-                    onClick = { showClearDataInfo = true },
-                )
-                Spacer(Modifier.height(8.dp))
-                if (!app.isOwnPackage) {
-                    AppActionTile(
-                        label = if (app.isSystem) "Desinstalar / remover atualizações" else "Desinstalar",
-                        description = if (app.isSystem) "O próprio Android decidirá se pode remover o app ou apenas suas atualizações" else "Abrir a confirmação oficial de desinstalação",
-                        icon = R.drawable.delete,
-                        destructive = true,
-                        onClick = { showUninstallConfirm = true },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                AppActionTile(
-                    label = "Detalhes no Android",
-                    description = "Abrir a página oficial do aplicativo no sistema",
-                    icon = R.drawable.settings,
-                    onClick = { onOpenSystemDetails(app.packageName) },
-                )
-                Spacer(Modifier.height(8.dp))
-                AppActionTile(
-                    label = "Copiar nome do pacote",
-                    description = app.packageName,
-                    icon = R.drawable.copy,
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Pacote", app.packageName))
-                        Toast.makeText(context, "Nome do pacote copiado.", Toast.LENGTH_SHORT).show()
-                    },
-                )
-                if (app.isOwnPackage) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "A desinstalação do próprio Explorador XP não é oferecida aqui porque encerraria o gerenciador durante a operação.",
-                        fontSize = 10.sp,
-                        color = XpTextSecondary,
-                        lineHeight = 14.sp,
-                    )
-                }
+            // Ações principais já estão no cabeçalho, junto ao nome do app.
+            Row(Modifier.fillMaxWidth().clickable {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Pacote", app.packageName))
+                Toast.makeText(context, "Nome do pacote copiado.", Toast.LENGTH_SHORT).show()
+            }.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                CachedResourceIcon(R.drawable.copy, "Copiar pacote", Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Copiar identificador do pacote", fontSize = 11.sp, color = XpBlueDark)
             }
 
             AppDetailsCard(
@@ -986,6 +950,28 @@ private fun InstalledAppDetailsScreen(
                 Text("Cancelar", modifier = Modifier.clickable { showUninstallConfirm = false }.padding(10.dp))
             },
         )
+    }
+}
+
+@Composable
+private fun CompactAppAction(
+    label: String,
+    icon: Int,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .background(if (enabled) Color(0xFFEAF2FC) else Color(0xFFF0F1F3), RoundedCornerShape(7.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 6.dp, horizontal = 1.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        CachedResourceIcon(icon, label, Modifier.size(17.dp))
+        Text(label, color = if (enabled) XpBlueDark else XpTextSecondary,
+            fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

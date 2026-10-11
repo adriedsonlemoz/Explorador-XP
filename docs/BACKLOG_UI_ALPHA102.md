@@ -1,26 +1,37 @@
-# Backlog de interface após a alpha.101 (não implementado)
+# Backlog de interface: progresso da alpha.102
 
-Revisado em 2026-10-11, a partir da análise do código da alpha.100 e do pedido do usuário. Priorizar após confirmar build e testes básicos de rede/arquivos da alpha.101.
+Revisado em 2026-10-11, a partir da análise do código da alpha.100 e do pedido do usuário. Parte implementada no código-fonte da alpha.102; validar em dispositivo antes de encerrar tarefas restantes.
 
 ## Ferramentas > Aplicativos Instalados
 
-- [ ] Compactar o cabeçalho dos detalhes: ícone real à esquerda, nome e pacote à direita.
-- [ ] Subir os indicadores "Sistema/Usuário" e "Habilitado/Desativado" próximos ao nome. O indicador atual `enabled` **não** prova execução em segundo plano; não usar o termo "Ativo".
-- [ ] Colocar uma linha de quatro ações compactas junto ao cabeçalho: **Abrir**, **Limpar**, **Remover**, **Sistema**; ícones menores e rótulos curtos para caber em telas estreitas.
-- [ ] Manter a ação copiar pacote disponível por toque no identificador ou no painel Informações, sem criar um quinto botão.
-- [ ] **Limpar** abre a tela oficial do Android para gerenciar dados; o aplicativo não pode apagar dados privados de terceiros diretamente. **Remover** usa a confirmação de desinstalação do sistema. Respeitar apps do sistema e ações não disponíveis.
+- [x] Compactar o cabeçalho dos detalhes: ícone real à esquerda, nome e pacote à direita.
+- [x] Subir os indicadores "Sistema/Usuário" e "Habilitado/Desativado" próximos ao nome. O indicador atual `enabled` **não** prova execução em segundo plano; não usar o termo "Ativo".
+- [x] Colocar uma linha de quatro ações compactas junto ao cabeçalho: **Abrir**, **Limpar**, **Remover**, **Sistema**; ícones menores e rótulos curtos para caber em telas estreitas.
+- [x] Manter a ação copiar pacote disponível por toque no identificador ou no painel Informações, sem criar um quinto botão.
+- [x] **Limpar** abre a tela oficial do Android para gerenciar dados; o aplicativo não pode apagar dados privados de terceiros diretamente. **Remover** usa a confirmação de desinstalação do sistema. Respeitar apps do sistema e ações não disponíveis.
 - [ ] Testes de layout em telas pequenas, fontes grandes, acessibilidade e restrições de apps de sistema.
 
 ## Atalho Fotos > Galeria
 
-- [ ] Substituir ícones genéricos por miniaturas reais usando `MediaStore`/`ContentResolver.loadThumbnail` e aproveitar cache existente em `FileThumbnail.kt` quando compatível.
-- [ ] Exibir tamanho legível (KB/MB) e detalhes de resolução, data e pasta de origem.
-- [ ] Permitir alternar **Grade** e **Lista**, com carregamento paginado e miniaturas somente dos itens visíveis, sem limite arbitrário de 600 por abertura.
-- [ ] Agrupar por data e permitir seleção múltipla com operações copiar, mover, compartilhar e excluir, sempre com permissões Android.
-- [ ] Preservar o visualizador e o zoom existentes e evitar bloquear a interface durante a leitura de imagens.
-- [ ] Reaproveitar o mesmo padrão futuramente no atalho Vídeos, mostrando miniatura e duração.
+- [x] Substituir ícones genéricos por miniaturas reais usando cache e decodificação reduzida já existentes em `FileThumbnail.kt`; investigar `ContentResolver.loadThumbnail` para URIs content em atualização futura.
+- [x] Exibir tamanho legível (KB/MB) e nome da pasta de origem em lista.
+- [ ] Acrescentar resolução e agrupamento por data na galeria.
+- [x] Permitir alternar **Grade** e **Lista**, com carregamento paginado e miniaturas somente dos itens visíveis, sem limite arbitrário de 600 por abertura.
+- [x] Seleção múltipla com ações Copiar (SAF) e Enviar/Compartilhar (Android).
+- [ ] Implementar Mover e Excluir em lote com confirmação, Lixeira e segurança de permissões do Android.
+- [x] Preservar o visualizador e o zoom existentes e evitar bloquear a interface durante a leitura de imagens.
+- [x] Reaproveitar o mesmo padrão de miniaturas e tamanho no atalho Vídeos.
+- [ ] Exibir duração dos vídeos.
 - [ ] Testes de rolagem com milhares de itens, consumo de RAM, permissões parcialmente concedidas e pastas inacessíveis.
 
 ## Regra de entrega
 
 Não antecipar essas melhorias na alpha.101; ela é exclusiva da correção do build 94.
+
+## Rede > QR Code (alpha.102)
+
+- [x] Exibir QR com endereço, usuário, senha temporária e pin SHA-256 quando servidor HTTPS estiver ativo.
+- [x] Leitura por câmera no cliente; validar conteúdo e preencher campos sem conectar automaticamente.
+- [ ] Validar leitura e conexão real entre dois aparelhos e permissões da câmera.
+- [ ] Testar rolagem/miniaturas de milhares de imagens em aparelhos com pouca RAM.
+- [ ] Completar ações em lote adicionais (mover e excluir) respeitando o Android.

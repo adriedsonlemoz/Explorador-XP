@@ -1,3 +1,12 @@
+## 0.1.0-alpha.102 — 2026-10-11
+
+- Aplicativos Instalados: resumo compacto com quatro ações Abrir/Limpar/Remover/Sistema perto do nome e estado corrigido para Habilitado/Desativado. Excluir/limpar respeita as telas e confirmações do Android.
+- Atalho Fotos/Vídeos: galeria com miniaturas reais usando o cache existente, tamanhos em KB/MB, grade e lista, paginação em blocos de 96 e seleção múltipla para copiar por SAF sem sobrescrever arquivos existentes ou compartilhar pelo Android.
+- Rede WebDAV: novo QR Code contendo endereço local, senha temporária e pin SHA-256; leitor integrado pela câmera preenche campos e requer confirmação antes da conexão.
+- Segurança: parser QR restrito a IPs IPv4 privados, porta esperada, formato de senha e pin válido; não faz conexão automática, não grava segredo em preferências e o servidor só compartilha pastas autorizadas.
+- Mantidos SMB2/SMB3, WebDAV HTTPS, mDNS, navegação, atalhos e módulos anteriores.
+- Validação local: 9 casos Kotlin/JVM de QR e verificação sintática. Build Android Gradle e testes em dois celulares pendentes.
+
 ## 0.1.0-alpha.101 — 2026-10-11
 
 - Corrigida a configuração do R8 na variante `performance` após a falha do workflow **Gerar APK 94** (`:app:minifyPerformanceWithR8`), que reportou 13 classes ausentes de `javax.el` e `org.ietf.jgss` transitivas da SMBJ/MBassador.

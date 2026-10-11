@@ -1,14 +1,14 @@
-# Explorador XP 0.1.0-alpha.101
+# Explorador XP 0.1.0-alpha.102
 
-## Correção de compilação R8, build 94
+## Galeria, aplicativos instalados e QR de rede
 
-- Corrigidos 13 avisos de classes ausentes que impediam `:app:minifyPerformanceWithR8`.
-- Regras restritas em `app/proguard-rules.pro` para referências Java EL (MBassador) e GSS/Kerberos (SMBJ) indisponíveis no Android.
-- R8/minificação e assinatura do APK permanecem habilitados; não são adicionadas bibliotecas Java SE incompatíveis.
-- Permanecem disponíveis cliente SMB2/SMB3 com autenticação por usuário/senha, WebDAV HTTPS, cópia seletiva, Quick Share, atalhos inferiores e central de rede.
-- Sem alterações nas telas de Aplicativos Instalados e Galeria. Essas melhorias estão registradas em `docs/BACKLOG_UI_ALPHA102.md`.
+- **Aplicativos Instalados:** ações compactas Abrir, Limpar, Remover e Sistema junto ao cabeçalho, mantendo as confirmações do Android.
+- **Fotos e Vídeos:** miniaturas, tamanho, grade/lista, paginação e seleção para copiar múltiplos arquivos a uma pasta autorizada sem substituir arquivos existentes.
+- **Rede WebDAV HTTPS:** ao compartilhar uma pasta, mostrar um QR com endereço IP local, senha temporária e impressão SHA-256. No aparelho cliente, usar "Ler QR Code" para preencher os dados e confirmar manualmente a conexão.
+- **Segurança:** QR contém segredo de acesso; não divulgar nem fotografar publicamente. A senha perde a validade quando o servidor é desligado.
+- Cliente SMB2/SMB3 e recursos anteriores preservados.
 
-**Validação:** no workflow 94 da alpha.100, `testDebugUnitTest` e `lintDebug` foram bem-sucedidos, porém `minifyPerformanceWithR8` falhou. A alpha.101 ainda exige execução de `gradle :app:assemblePerformance` e teste de conexão SMB em dispositivo.
+**Versão:** `0.1.0-alpha.102`  
+**Version code:** `102`
 
-Versão: `0.1.0-alpha.101`  
-Version code: `101`
+**Validação:** testes locais do payload QR e sintaxe aprovados. Build Android completo e testes entre dispositivos pendentes.

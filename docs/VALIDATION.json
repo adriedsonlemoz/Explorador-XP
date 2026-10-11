@@ -1,39 +1,39 @@
 {
-  "version_build": "0.1.0-alpha.101",
-  "version_code": 101,
-  "manager_version": "0.1.0-alpha.101",
+  "version_build": "0.1.0-alpha.102",
+  "version_code": 102,
+  "manager_version": "0.1.0-alpha.102",
   "application_id": "com.exploradorxp.app",
-  "scope": "Correção R8 SMBJ/MBassador do build 94. Melhorias de galeria/aplicativos apenas no backlog.",
+  "scope": "Galeria de fotos/vídeos; aplicativos instalados compactos; QR para conexão WebDAV local autenticada.",
   "checks": [
     {
-      "name": "ci_alpha100_unit_tests",
-      "status": "passed_in_prior_ci",
-      "details": "Workflow Gerar APK 94, :app:testDebugUnitTest concluiu com BUILD SUCCESSFUL."
+      "name": "qr_payload_jvm",
+      "status": "passed",
+      "details": "9 verificações Kotlin/JVM de formato, round-trip e rejeição de QR inválido."
     },
     {
-      "name": "ci_alpha100_android_lint",
-      "status": "passed_in_prior_ci",
-      "details": "Workflow Gerar APK 94, :app:lintDebug concluiu com BUILD SUCCESSFUL."
+      "name": "kotlin_psi_modified_sources",
+      "status": "passed",
+      "details": "Análise sintática Kotlin dos arquivos alterados, sem erros PSI."
     },
     {
-      "name": "r8_missing_types_alpha100",
-      "status": "detected",
-      "details": "Falha em minifyPerformanceWithR8: 7 classes javax.el e 6 org.ietf.jgss, referências transitivas SMBJ/MBassador."
+      "name": "xml_json_validity",
+      "status": "passed",
+      "details": "Validade estrutural de XML/JSON do projeto."
     },
     {
-      "name": "r8_specific_rules_alpha101",
-      "status": "verified_static",
-      "details": "Foram adicionadas 13 regras individuais -dontwarn para as 13 classes identificadas; sem -dontwarn amplo nem desativação do R8."
-    },
-    {
-      "name": "alpha101_gradle_assemble_performance",
+      "name": "alpha102_android_gradle_assemble",
       "status": "not_run",
-      "details": "Requer Android SDK/Gradle ou Github Actions; execução completa não disponível localmente."
+      "details": "Gradle e Android SDK indisponíveis no ambiente local; executar GitHub Actions."
     },
     {
-      "name": "smb_authenticated_device_test",
+      "name": "qr_real_camera_wifi",
       "status": "not_run",
-      "details": "Autenticação SMB e cópia seletiva ainda precisam ser validadas em aparelho real."
+      "details": "Requer dois celulares com APK alpha.102 instalado e servidor WebDAV ativo."
+    },
+    {
+      "name": "gallery_real_media_thumbnails",
+      "status": "not_run",
+      "details": "Validar em dispositivo as permissões, miniaturas e rolagem de milhares de itens."
     }
   ]
 }

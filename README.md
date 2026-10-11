@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.101 (`versionCode 101`). Corrige a falha R8 `minifyPerformanceWithR8` do build 94, preservando a rede SMB/WebDAV. Os testes e o lint da alpha.100 passaram no CI; o APK da alpha.101 precisa de nova compilação.
+> **Versão atual:** 0.1.0-alpha.102 (`versionCode 102`). Galeria de Fotos/Vídeos com miniaturas, tamanhos e seleção; detalhes de Aplicativos Instalados compactados; rede WebDAV com conexão por QR Code. Código-fonte alterado e testes locais de QR executados; build Android completo e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.102 (interface + rede):** detalhes de Aplicativos Instalados com quatro ações pequenas ao lado do nome, estado **Habilitado/Desativado**; galeria de Fotos/Vídeos com miniaturas reais (cache existente), tamanhos, grade/lista, páginas de 96 itens e seleção múltipla com cópia para pasta SAF sem sobrescrever. Rede local permite mostrar QR com IP privado, porta, senha efêmera e SHA-256 e ler QR pela câmera de outro celular para preencher os dados antes de confirmar conexão. O QR contém senha e deve ser mostrado só a pessoas autorizadas. Instalar o APK no outro aparelho ainda é necessário para leitura integrada; SMB/WebDAV de terceiros exigem compartilhamento remoto ativo.
 
 **alpha.98 (navegação):** barra de atalhos sempre visível no rodapé das telas internas com Fotos, Vídeos, Downloads, Rede e Lixeira. O topo agora prioriza Atualizar, Favoritos ou Colar. Rede local ganhou central com botão **+**, busca automática, conexão por IP e compartilhamento em etapas separadas. Windows/SMB foi habilitado na alpha.100 para pastas autorizadas, ainda pendente de validação no Android.
 
@@ -10,7 +12,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.101` (`versionCode 101`)  
+**Versão atual:** `0.1.0-alpha.102` (`versionCode 102`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

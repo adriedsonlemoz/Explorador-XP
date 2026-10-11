@@ -5,6 +5,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import androidx.documentfile.provider.DocumentFile
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -100,6 +102,7 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
     var progress by remember { mutableStateOf("") }
     var page by remember { mutableStateOf(NetworkPage.HOME) }
     var showAddMenu by remember { mutableStateOf(false) }
+    var showQr by remember { mutableStateOf(false) }
 
     fun reportFailure(error: Throwable) {
         message = if (error is CancellationException) "Transferência cancelada." else
@@ -141,6 +144,26 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                 progress = ""
             }
         }
+    }
+
+    // QR lido pela câmera: preenchimento validado, sem conexão automática ou persistência da senha.
+    val scanQr = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let { text ->
+            runCatching { NetworkQrCode.parse(text) }
+                .onSuccess { connection ->
+                    client?.cancel(); client = null
+                    host = connection.endpoint; username = connection.username
+                    secret = connection.password; fingerprint = connection.fingerprint
+                    page = NetworkPage.MANUAL
+                    message = "QR reconhecido. Confira o endereço e toque em Conectar para autorizar."
+                }
+                .onFailure { error -> message = error.localizedMessage ?: "QR incompatível." }
+        }
+    }
+    fun openScanner() {
+        scanQr.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            .setPrompt("Leia o QR exibido pelo outro Explorador XP")
+            .setBeepEnabled(false).setOrientationLocked(false))
     }
 
     val pickShare = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -273,6 +296,8 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                         }
                         NetworkHubAction("📂  Compartilhar arquivos deste celular",
                             "Escolha a pasta que o outro celular poderá abrir") { page = NetworkPage.SHARE }
+                        NetworkHubAction("▦  Ler QR Code para conectar",
+                            "Aponte a câmera para o QR exibido no celular que compartilha") { openScanner() }
                         HorizontalDivider()
                         Text("Neste celular", style = MaterialTheme.typography.titleMedium)
                         Text(if (server.active) "🟢 Compartilhamento ligado" else "⚪ Compartilhamento desligado",
@@ -355,6 +380,21 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                             Text("Usuário: xp")
                             Text("Senha temporária: ${server.password}")
                             Text("Código de segurança SHA-256: ${server.fingerprint}", style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = { showQr = !showQr }) {
+                                Text(if (showQr) "Ocultar QR Code" else "Mostrar QR Code para conectar")
+                            }
+                            if (showQr) {
+                                val qrIp = server.addresses.firstOrNull { NetworkSmbAddress.privateIpv4(it) }
+                                if (qrIp != null) {
+                                    val connection = NetworkQrConnection(qrIp, "xp", server.password, server.fingerprint)
+                                    if (server.password.matches(Regex("[A-Za-z0-9_-]{32}")) &&
+                                        server.fingerprint.matches(Regex("[A-Fa-f0-9]{64}"))) {
+                                        NetworkQrPreview(connection)
+                                    } else Text("Não foi possível criar o QR. Confira os dados da rede.",
+                                        color = MaterialTheme.colorScheme.error)
+                                } else Text("Nenhum IP privado Wi-Fi disponível para gerar o QR.",
+                                    color = MaterialTheme.colorScheme.error)
+                            }
                             OutlinedButton(onClick = {
                                 val text = "Endereço: https://${server.addresses.firstOrNull() ?: "IP-DO-CELULAR"}:${NetworkDavServer.PORT}\n" +
                                     "Usuário: xp\nSenha: ${server.password}\nSHA-256: ${server.fingerprint}"
@@ -411,6 +451,9 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                     NetworkPage.MANUAL -> {
                         Text("Conectar pelo endereço do outro aparelho", style = MaterialTheme.typography.titleMedium)
                         Text("No outro celular, ative Compartilhar e copie os dados exibidos. Informe aqui endereço, código de segurança e senha. Exemplo: https://192.168.1.20:18843.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = { openScanner() }, enabled = !busy) { Text("▦ Ler QR Code pela câmera") }
+                        Text("Ao ler o QR, os dados serão preenchidos. Você ainda precisa confirmar a conexão.",
                             style = MaterialTheme.typography.bodySmall)
                         OutlinedTextField(value = host, onValueChange = { host = it }, singleLine = true,
                             label = { Text("Endereço HTTPS e porta") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
@@ -566,6 +609,9 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                 DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
                     DropdownMenuItem(text = { Text("Encontrar outro celular") }, onClick = {
                         showAddMenu = false; page = NetworkPage.DISCOVERY; discovery.start()
+                    })
+                    DropdownMenuItem(text = { Text("Ler QR Code de outro celular") }, onClick = {
+                        showAddMenu = false; discovery.stop(); openScanner()
                     })
                     DropdownMenuItem(text = { Text("Conectar por IP / WebDAV") }, onClick = {
                         showAddMenu = false; discovery.stop(); page = NetworkPage.MANUAL

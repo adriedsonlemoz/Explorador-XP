@@ -13,8 +13,8 @@ android {
         applicationId = "com.exploradorxp.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 101
-        versionName = "0.1.0-alpha.101"
+        versionCode = 102
+        versionName = "0.1.0-alpha.102"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -100,6 +100,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("net.lingala.zip4j:zip4j:2.11.5")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Geração e leitura de QR com câmera, sem enviar credenciais para serviços externos.
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     // SMB2/SMB3 client for authorized Windows, NAS and Android shares.
     implementation("com.hierynomus:smbj:0.14.0")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")

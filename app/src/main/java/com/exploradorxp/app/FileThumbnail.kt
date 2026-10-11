@@ -134,6 +134,30 @@ fun FileVisual(
     }
 }
 
+/** Miniatura já cacheada para os atalhos Fotos/Vídeos, sem carregar a imagem inteira. */
+@Composable
+internal fun GalleryFileThumbnail(file: File, isVideo: Boolean, size: Dp) {
+    val px = with(LocalDensity.current) { size.roundToPx().coerceAtLeast(48) }
+    val key = remember(file.absolutePath, file.lastModified(), isVideo, px) {
+        "${file.absolutePath}:${file.lastModified()}:$px:${if (isVideo) 1 else 0}"
+    }
+    var bitmap by remember(key) { mutableStateOf(FileThumbnailCache.peek(key)) }
+    LaunchedEffect(key) {
+        delay(if (isVideo) 140L else 55L)
+        bitmap = FileThumbnailCache.load(file, px, isVideo)
+    }
+    Box(Modifier.size(size).clip(RoundedCornerShape(6.dp)).background(Color(0xFFE3EBF4)),
+        contentAlignment = Alignment.Center) {
+        if (bitmap != null) {
+            Image(bitmap!!.asImageBitmap(), contentDescription = file.name,
+                modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+        } else {
+            CachedResourceIcon(if (isVideo) R.drawable.xp_file_video else R.drawable.xp_file_image,
+                file.name, Modifier.size((size.value * .55f).dp))
+        }
+    }
+}
+
 private fun decodeImageThumbnail(file: File, targetPx: Int): Bitmap? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(file.absolutePath, bounds)
