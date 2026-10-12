@@ -155,6 +155,13 @@ internal fun GalleryFileThumbnail(file: File, isVideo: Boolean, size: Dp) {
             CachedResourceIcon(if (isVideo) R.drawable.xp_file_video else R.drawable.xp_file_image,
                 file.name, Modifier.size((size.value * .55f).dp))
         }
+        if (isVideo) {
+            Box(Modifier.align(Alignment.Center).size((size.value * .32f).dp.coerceAtLeast(18.dp))
+                    .clip(CircleShape).background(Color(0xAA13233C)),
+                contentAlignment = Alignment.Center) {
+                CachedResourceIcon(R.drawable.xp_play, "Vídeo", Modifier.size(14.dp))
+            }
+        }
     }
 }
 

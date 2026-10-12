@@ -1,3 +1,14 @@
+## 0.1.0-alpha.108 — 2026-10-12
+
+- Galeria Fotos e Vídeos: barra de ações compacta com ícones Grade/Lista, Selecionar, Ordenar, Filtrar e Mais.
+- Seleção múltipla: Selecionar tudo em todos os resultados do filtro (inclusive páginas ainda não carregadas), Limpar e Inverter, com contador de itens.
+- Ordenação por data recente/antiga, tamanho maior/menor ou nome; filtros por Câmera, Capturas de tela, Downloads e Outras pastas.
+- Vídeos: duração sobre as miniaturas quando disponível no MediaStore, indicador de reprodução também quando a miniatura real não é produzida; resolução exibida nas linhas da lista quando informada pelo Android.
+- Seleção destacada na grade e na lista. Mantidos cópia SAF sem sobrescrita e compartilhamento Android, com limite de 100 arquivos por envio para evitar intent excessiva.
+- Miniaturas continuam com cache e paginação de 96 por vez; selecionar tudo coleta apenas caminhos e metadados em thread de I/O.
+- Adicionados testes unitários das regras de classificação; verificações locais Kotlin concluídas; build Android completo e testes físicos pendentes.
+- Rede SMB/WebDAV, pin SHA-256 e correções TLS da alpha.107 preservadas.
+
 ## 0.1.0-alpha.107 — 2026-10-12
 
 - Investigação de `TLS_HANDSHAKE` observado em teste com dois celulares, ainda sem logs completos para provar a causa raiz.

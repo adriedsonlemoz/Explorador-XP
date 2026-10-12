@@ -1,14 +1,16 @@
-# Explorador XP 0.1.0-alpha.107
+# Explorador XP 0.1.0-alpha.108
 
-## Diagnóstico e robustez TLS em Rede local
+## Galeria de Fotos e Vídeos: interface e organização
 
-- Servidor HTTPS apresenta somente a chave e o certificado usados no SHA-256 gerado para o QR Code.
-- Cliente conversa exclusivamente HTTP/1.1 com o servidor WebDAV interno, sem negociação HTTP/2 desnecessária.
-- Compartilhar mostra a última falha de negociação TLS recebida no servidor e permite copiar o diagnóstico sem IP ou credenciais.
-- Conectar por IP orienta comparar diagnóstico nos dois aparelhos.
-- Não desativa o TLS nem a verificação do certificado. Não é possível comprovar a causa específica do erro observado apenas pelo print.
+- Ferramentas de ícones: Grade/Lista, Selecionar, Ordenar, Filtrar e Mais.
+- Selecionar tudo em todos os resultados filtrados, inclusive páginas ainda não carregadas; Limpar/Inverter e contador.
+- Ordenação: recentes, antigos, maiores, menores e nome; filtros: câmera, capturas, downloads e outros.
+- Duração dos vídeos e dimensões quando disponíveis, com fallback de reprodução e destaques de seleção.
+- Seleção em segundo plano usando metadados; cache de thumbnails e páginas de 96 arquivos preservados.
+- Copiar por SAF sem sobrescrever; compartilhar pelo Android, limitado a 100 itens por envio.
+- Preservadas as correções de TLS/WebDAV da alpha.107 e os demais recursos SMB, rede e aplicativos.
 
-**Versão:** `0.1.0-alpha.107`  
-**Version code:** `107`
+**Versão:** `0.1.0-alpha.108`  
+**Version code:** `108`
 
-**Validação:** testes Kotlin locais e sintaxe verificados; build Android completo e autenticação entre dois aparelhos reais pendentes.
+**Validação:** testes puros Kotlin e análise sintática locais; **Gradle/Android completo e testes físicos pendentes**.

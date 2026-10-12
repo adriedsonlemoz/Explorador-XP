@@ -15,13 +15,14 @@ Revisado em 2026-10-11, a partir da análise do código da alpha.100 e do pedido
 
 - [x] Substituir ícones genéricos por miniaturas reais usando cache e decodificação reduzida já existentes em `FileThumbnail.kt`; investigar `ContentResolver.loadThumbnail` para URIs content em atualização futura.
 - [x] Exibir tamanho legível (KB/MB) e nome da pasta de origem em lista.
-- [ ] Acrescentar resolução e agrupamento por data na galeria.
+- [x] Exibir resolução quando disponível na galeria (alpha.108).
+- [ ] Agrupar por Hoje, Ontem e mês.
 - [x] Permitir alternar **Grade** e **Lista**, com carregamento paginado e miniaturas somente dos itens visíveis, sem limite arbitrário de 600 por abertura.
 - [x] Seleção múltipla com ações Copiar (SAF) e Enviar/Compartilhar (Android).
 - [ ] Implementar Mover e Excluir em lote com confirmação, Lixeira e segurança de permissões do Android.
 - [x] Preservar o visualizador e o zoom existentes e evitar bloquear a interface durante a leitura de imagens.
 - [x] Reaproveitar o mesmo padrão de miniaturas e tamanho no atalho Vídeos.
-- [ ] Exibir duração dos vídeos.
+- [x] Exibir duração dos vídeos no MediaStore (alpha.108).
 - [ ] Testes de rolagem com milhares de itens, consumo de RAM, permissões parcialmente concedidas e pastas inacessíveis.
 
 ## Regra de entrega

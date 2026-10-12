@@ -1,34 +1,39 @@
 {
-  "version_build": "0.1.0-alpha.107",
-  "version_code": 107,
-  "manager_version": "0.1.0-alpha.107",
+  "version_build": "0.1.0-alpha.108",
+  "version_code": 108,
+  "manager_version": "0.1.0-alpha.108",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.107: identidade única AndroidKeyStore do servidor HTTPS, HTTP/1.1, diagnóstico TLS no servidor e no cliente",
+  "scope": "Alpha.108: Galeria de fotos e vídeos, barra compacta, seleção total, filtros, ordenação e duração dos vídeos",
   "checks": [
     {
-      "name": "network_tls_diagnostics",
+      "name": "gallery_rules_jvm",
       "status": "passed_local",
-      "details": "10 testes Kotlin/JVM executados com runner mínimo e passaram; Gradle JUnit pendente."
+      "details": "6 casos de classificação de pastas executados com Kotlin JVM; suíte JUnit adicionada, execução Gradle pendente."
     },
     {
       "name": "kotlin_syntax",
       "status": "passed_local",
-      "details": "8 arquivos Kotlin PSI sem erros sintáticos."
+      "details": "PSI dos arquivos Kotlin alterados sem erros sintáticos."
+    },
+    {
+      "name": "gallery_pagination",
+      "status": "source_review",
+      "details": "Consulta com página de 96 itens após filtro; seleção total obtém apenas metadados de todas as páginas. Teste Android real pendente."
     },
     {
       "name": "xml_json_structural",
       "status": "passed_local",
-      "details": "81 XML e 6 JSON estruturalmente válidos."
+      "details": "Arquivos XML e JSON verificados estruturalmente."
     },
     {
       "name": "android_gradle_build",
       "status": "not_run",
-      "details": "SDK/Gradle Android completos não disponíveis; validar CI"
+      "details": "SDK Android/Gradle não disponíveis no ambiente; validar GitHub Actions."
     },
     {
-      "name": "tls_real_device_test",
+      "name": "real_device_ui",
       "status": "not_run",
-      "details": "Tentar entre dois aparelhos Android usando QR novo e coletar diagnósticos do cliente e servidor"
+      "details": "Testar Fotos/Vídeos, filtros, seleção total, copiar e enviar em aparelho físico."
     }
   ]
 }

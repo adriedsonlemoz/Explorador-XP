@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.107 (`versionCode 107`). Correção preventiva da identidade do servidor TLS e diagnóstico do handshake dos dois lados. Build Android e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.108 (`versionCode 108`). Galeria com barra compacta de ícones, seleção total, ordenação, filtros por origem e duração dos vídeos. Build Android e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.108 (Galeria aprimorada):** Fotos/Vídeos ganharam barra de ícones compacta, seleção de todos os resultados filtrados (incluindo páginas ainda não exibidas), limpar/inverter seleção, ordenação e filtros por origem. Vídeos mostram duração nas miniaturas e resolução quando disponível; itens selecionados são destacados na grade/lista. Paginação de 96 itens, cache de miniaturas, cópia por SAF sem sobrescrita e compartilhamento Android preservados. A seleção em massa coleta só metadados, não decodifica as imagens. A alpha.107 continua como base para todas as correções de TLS. Testes reais Android e Gradle permanecem pendentes.
 
 **alpha.107 (diagnóstico do handshake):** após uma falha `TLS_HANDSHAKE` em aparelho real, o servidor passou a disponibilizar exclusivamente a identidade TLS indicada pelo QR: o gerenciador X509 fornece a chave privada e o certificado de um único alias AndroidKeyStore, reduzindo ambiguidade se houver outras chaves. O cliente WebDAV negocia HTTP/1.1 como único protocolo de aplicação. No aparelho que compartilha, a tela informa a última falha de negociação TLS recebida e oferece diagnóstico seguro para copiar (classes de exceção, sem IP, certificado ou senha). Essas medidas removem duas fontes de inconsistência, mas a causa específica do print não está comprovada sem logs dos aparelhos.
 
@@ -22,7 +24,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.107` (`versionCode 107`)  
+**Versão atual:** `0.1.0-alpha.108` (`versionCode 108`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

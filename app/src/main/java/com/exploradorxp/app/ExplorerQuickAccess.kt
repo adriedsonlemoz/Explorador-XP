@@ -19,6 +19,25 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.ViewList
+import androidx.compose.material.icons.rounded.CheckBox
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.SelectAll
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ensureActive
@@ -109,41 +128,101 @@ internal fun ExplorerQuickAccessBar(
     }
 }
 
-/** O MediaStore indexa arquivos em diferentes pastas; não limita o atalho à DCIM/Movies. */
-internal data class IndexedMediaFile(val file: File, val modifiedSeconds: Long, val sizeBytes: Long)
+/** Índice de mídia paginado: a seleção total percorre apenas metadados, nunca thumbnails. */
+internal data class IndexedMediaFile(
+    val file: File,
+    val modifiedSeconds: Long,
+    val sizeBytes: Long,
+    val width: Int = 0,
+    val height: Int = 0,
+    val durationMillis: Long = 0L,
+)
+
+internal data class MediaGalleryPage(val entries: List<IndexedMediaFile>, val hasMore: Boolean)
 
 internal object MediaShortcutIndex {
     const val PAGE_SIZE = 96
 
-    fun load(context: Context, kind: MediaShortcutKind, page: Int = 0): List<IndexedMediaFile> {
-        val uri = when (kind) {
-            MediaShortcutKind.PHOTOS -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            MediaShortcutKind.VIDEOS -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+    private fun mediaUri(kind: MediaShortcutKind): Uri = when (kind) {
+        MediaShortcutKind.PHOTOS -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        MediaShortcutKind.VIDEOS -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+    }
+
+    private fun sortClause(sort: MediaGallerySort): String {
+        val column = when (sort) {
+            MediaGallerySort.RECENT, MediaGallerySort.OLDEST -> MediaStore.MediaColumns.DATE_MODIFIED
+            MediaGallerySort.LARGEST, MediaGallerySort.SMALLEST -> MediaStore.MediaColumns.SIZE
+            MediaGallerySort.NAME -> MediaStore.MediaColumns.DISPLAY_NAME
         }
-        val dataColumn = MediaStore.MediaColumns.DATA
-        val modifiedColumn = MediaStore.MediaColumns.DATE_MODIFIED
-        val sizeColumn = MediaStore.MediaColumns.SIZE
-        val results = ArrayList<IndexedMediaFile>(PAGE_SIZE)
-        // Consulta executada somente em Dispatchers.IO; limitar iteração evita sobrecarga da UI.
-        context.contentResolver.query(
-            uri, arrayOf(dataColumn, modifiedColumn, sizeColumn), null, null, "$modifiedColumn DESC"
-        )?.use { cursor ->
-            val pathIndex = cursor.getColumnIndex(dataColumn)
-            val dateIndex = cursor.getColumnIndex(modifiedColumn)
-            val sizeIndex = cursor.getColumnIndex(sizeColumn)
-            if (pathIndex < 0) return emptyList()
-            // Paginar no cursor, sem materializar milhares de objetos em RAM.
-            if (page > 0 && !cursor.moveToPosition(page * PAGE_SIZE - 1)) return emptyList()
-            while (cursor.moveToNext() && results.size < PAGE_SIZE) {
+        val direction = when (sort) {
+            MediaGallerySort.OLDEST, MediaGallerySort.SMALLEST, MediaGallerySort.NAME -> "ASC"
+            else -> "DESC"
+        }
+        return "$column $direction, ${MediaStore.MediaColumns._ID} DESC"
+    }
+
+    private suspend fun queryMedia(
+        context: Context, kind: MediaShortcutKind, sort: MediaGallerySort,
+        consumer: (IndexedMediaFile) -> Boolean,
+    ) {
+        val projection = arrayOf(
+            MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_MODIFIED,
+            MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.WIDTH,
+            MediaStore.MediaColumns.HEIGHT,
+        ) + if (kind == MediaShortcutKind.VIDEOS) arrayOf(MediaStore.Video.VideoColumns.DURATION)
+            else emptyArray()
+        context.contentResolver.query(mediaUri(kind), projection, null, null, sortClause(sort))?.use { cursor ->
+            val pathIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+            val dateIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
+            val sizeIndex = cursor.getColumnIndex(MediaStore.MediaColumns.SIZE)
+            val widthIndex = cursor.getColumnIndex(MediaStore.MediaColumns.WIDTH)
+            val heightIndex = cursor.getColumnIndex(MediaStore.MediaColumns.HEIGHT)
+            val durationIndex = if (kind == MediaShortcutKind.VIDEOS)
+                cursor.getColumnIndex(MediaStore.Video.VideoColumns.DURATION) else -1
+            if (pathIndex < 0) return
+            while (cursor.moveToNext()) {
+                kotlin.coroutines.coroutineContext.ensureActive()
                 val path = cursor.getString(pathIndex)?.takeIf { it.isNotBlank() } ?: continue
                 val file = File(path)
                 if (!file.isFile || !file.canRead() || isPrivateExploradorCache(file)) continue
-                val timestamp = if (dateIndex >= 0 && !cursor.isNull(dateIndex)) cursor.getLong(dateIndex) else 0L
-                val bytes = if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else file.length()
-                results.add(IndexedMediaFile(file, timestamp, bytes.coerceAtLeast(0L)))
+                fun longAt(index: Int): Long = if (index >= 0 && !cursor.isNull(index)) cursor.getLong(index) else 0L
+                val media = IndexedMediaFile(file, longAt(dateIndex), longAt(sizeIndex).coerceAtLeast(0),
+                    longAt(widthIndex).toInt().coerceAtLeast(0),
+                    longAt(heightIndex).toInt().coerceAtLeast(0),
+                    longAt(durationIndex).coerceAtLeast(0))
+                if (!consumer(media)) break
             }
         }
-        return results
+    }
+
+    suspend fun loadPage(
+        context: Context, kind: MediaShortcutKind, page: Int,
+        sort: MediaGallerySort, origin: MediaGalleryOrigin,
+    ): MediaGalleryPage {
+        require(page >= 0)
+        val found = ArrayList<IndexedMediaFile>(PAGE_SIZE + 1)
+        var skipped = 0L
+        val offset = page.toLong() * PAGE_SIZE
+        queryMedia(context, kind, sort) { media ->
+            if (!MediaGalleryRules.matches(media.file.absolutePath, origin)) return@queryMedia true
+            if (skipped < offset) { skipped++; return@queryMedia true }
+            found.add(media)
+            found.size <= PAGE_SIZE
+        }
+        return MediaGalleryPage(found.take(PAGE_SIZE), found.size > PAGE_SIZE)
+    }
+
+    /** Os caminhos são coletados sem carregar imagens; suporta seleção além da primeira página. */
+    suspend fun allMatchingPaths(
+        context: Context, kind: MediaShortcutKind,
+        sort: MediaGallerySort, origin: MediaGalleryOrigin,
+    ): Set<String> {
+        val paths = LinkedHashSet<String>()
+        queryMedia(context, kind, sort) { media ->
+            if (MediaGalleryRules.matches(media.file.absolutePath, origin)) paths.add(media.file.absolutePath)
+            true
+        }
+        return paths
     }
 
     internal fun isPrivateExploradorCache(file: File): Boolean =
@@ -157,6 +236,26 @@ internal fun galleryFileSize(bytes: Long): String = when {
     bytes < 1024 * 1024 -> "%.1f KB".format(bytes / 1024.0)
     bytes < 1024L * 1024 * 1024 -> "%.1f MB".format(bytes / (1024.0 * 1024))
     else -> "%.2f GB".format(bytes / (1024.0 * 1024 * 1024))
+}
+
+internal fun galleryDuration(milliseconds: Long): String {
+    val seconds = (milliseconds / 1000).coerceAtLeast(0)
+    return if (seconds >= 3600) "%d:%02d:%02d".format(seconds / 3600, (seconds / 60) % 60, seconds % 60)
+        else "%02d:%02d".format(seconds / 60, seconds % 60)
+}
+
+@Composable
+private fun GalleryToolbarAction(
+    label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
+    enabled: Boolean = true, onClick: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(56.dp)) {
+        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(38.dp)) {
+            Icon(icon, contentDescription = label, tint = if (enabled) XpBlueDark else XpTextSecondary,
+                modifier = Modifier.size(22.dp))
+        }
+        Text(label, fontSize = 10.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -176,28 +275,46 @@ internal fun MediaShortcutScreen(
     var hasMore by remember(kind, accessGranted) { mutableStateOf(true) }
     var loading by remember(kind, accessGranted) { mutableStateOf(accessGranted) }
     var copying by remember { mutableStateOf(false) }
+    var selectingAll by remember { mutableStateOf(false) }
     var error by remember(kind, accessGranted) { mutableStateOf<String?>(null) }
     var gridView by remember(kind) { mutableStateOf(kind == MediaShortcutKind.PHOTOS) }
     var selectMode by remember(kind) { mutableStateOf(false) }
     var selected by remember(kind) { mutableStateOf<Set<String>>(emptySet()) }
     var notice by remember { mutableStateOf("") }
-    LaunchedEffect(kind, accessGranted, page) {
-        if (accessGranted && hasMore) {
+    var sort by remember(kind) { mutableStateOf(MediaGallerySort.RECENT) }
+    var origin by remember(kind) { mutableStateOf(MediaGalleryOrigin.ALL) }
+    var sortMenu by remember { mutableStateOf(false) }
+    var filterMenu by remember { mutableStateOf(false) }
+    var moreMenu by remember { mutableStateOf(false) }
+    var refreshKey by remember { mutableStateOf(0) }
+
+    fun reloadGallery() {
+        page = 0; entries = emptyList(); hasMore = true; error = null
+        selected = emptySet(); refreshKey++
+    }
+
+    LaunchedEffect(kind, accessGranted, sort, origin, page, refreshKey) {
+        if (accessGranted && (page == 0 || hasMore)) {
             loading = true
             try {
-                val next = withContext(Dispatchers.IO) { MediaShortcutIndex.load(context, kind, page) }
-                entries = if (page == 0) next else (entries + next).distinctBy { it.file.absolutePath }
-                hasMore = next.size == MediaShortcutIndex.PAGE_SIZE
+                val next = withContext(Dispatchers.IO) {
+                    MediaShortcutIndex.loadPage(context, kind, page, sort, origin)
+                }
+                entries = if (page == 0) next.entries
+                    else (entries + next.entries).distinctBy { it.file.absolutePath }
+                hasMore = next.hasMore
                 error = null
             } catch (exception: Exception) {
                 error = exception.localizedMessage ?: "Não foi possível carregar a mídia."
             } finally { loading = false }
         }
     }
+
     val pickDestination = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        val source = entries.filter { it.file.absolutePath in selected }.map { it.file }
+        // selected pode conter arquivos ainda não carregados em tela após Selecionar tudo.
+        val source = selected.map(::File)
         if (uri != null && source.isNotEmpty()) scope.launch {
-            copying = true; notice = "Copiando arquivos selecionados..."
+            copying = true; notice = "Copiando ${source.size} arquivo(s)..."
             try {
                 val result = withContext(Dispatchers.IO) {
                     val dest = DocumentFile.fromTreeUri(context, uri) ?: kotlin.error("Pasta de destino indisponível")
@@ -205,13 +322,19 @@ internal fun MediaShortcutScreen(
                     var copied = 0; var skipped = 0
                     for (file in source) {
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                        if (!file.isFile || !file.canRead() || dest.findFile(file.name) != null) { skipped++; continue }
-                        val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "application/octet-stream"
-                        val document = dest.createFile(mime, file.name) ?: kotlin.error("Não foi possível criar ${file.name}")
+                        if (!file.isFile || !file.canRead() || dest.findFile(file.name) != null) {
+                            skipped++; continue
+                        }
+                        val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
+                            ?: "application/octet-stream"
+                        val document = dest.createFile(mime, file.name)
+                            ?: kotlin.error("Não foi possível criar ${file.name}")
                         try {
                             FileInputStream(file).use { input ->
-                                (context.contentResolver.openOutputStream(document.uri) ?: kotlin.error("Destino indisponível"))
-                                    .use { output -> input.copyTo(output, 64 * 1024) }
+                                (context.contentResolver.openOutputStream(document.uri)
+                                    ?: kotlin.error("Destino indisponível")).use { output ->
+                                    input.copyTo(output, 64 * 1024)
+                                }
                             }
                             copied++
                         } catch (e: Exception) { runCatching { document.delete() }; throw e }
@@ -224,7 +347,12 @@ internal fun MediaShortcutScreen(
         }
     }
     fun shareSelected() {
-        val source = entries.filter { it.file.absolutePath in selected }.map { it.file }
+        // Limite para evitar TransactionTooLargeException na intent com centenas de URIs.
+        if (selected.size > 100) {
+            notice = "Para enviar, selecione no máximo 100 arquivos por vez. Copiar aceita todos."
+            return
+        }
+        val source = selected.map(::File).filter { it.isFile && it.canRead() }
         if (source.isEmpty()) return
         runCatching {
             val uris = ArrayList(source.map {
@@ -242,6 +370,20 @@ internal fun MediaShortcutScreen(
             context.startActivity(Intent.createChooser(intent, "Compartilhar ${source.size} arquivo(s)"))
         }.onFailure { notice = "Falha ao compartilhar: ${it.localizedMessage}" }
     }
+    fun updateAllSelection(invert: Boolean) {
+        scope.launch {
+            selectingAll = true
+            try {
+                val paths = withContext(Dispatchers.IO) {
+                    MediaShortcutIndex.allMatchingPaths(context, kind, sort, origin)
+                }
+                selected = if (invert) paths - selected else paths
+                notice = "${selected.size} arquivo(s) selecionado(s) no filtro atual."
+            } catch (e: Exception) {
+                notice = "Falha ao atualizar seleção: ${e.localizedMessage}"
+            } finally { selectingAll = false }
+        }
+    }
     val title = if (kind == MediaShortcutKind.PHOTOS) "Galeria de fotos" else "Galeria de vídeos"
     fun tap(item: IndexedMediaFile) {
         if (selectMode) {
@@ -249,29 +391,104 @@ internal fun MediaShortcutScreen(
                 else selected + item.file.absolutePath
         } else onOpenFile(item.file)
     }
+
     Column(Modifier.fillMaxSize().background(XpBackground)) {
-        Row(Modifier.fillMaxWidth().background(XpBlueDark).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("‹  Voltar", modifier = Modifier.clickable(onClick = onDismiss), color = Color.White, fontSize = 13.sp)
-            Spacer(Modifier.weight(1f))
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.weight(1f))
-            Text("${entries.size}${if (hasMore) "+" else ""}", color = Color.White, fontSize = 12.sp)
-        }
-        Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Row(Modifier.fillMaxWidth().background(XpBlueDark).padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { gridView = !gridView }, enabled = !copying) { Text(if (gridView) "Lista" else "Grade") }
-            OutlinedButton(onClick = { selectMode = !selectMode; selected = emptySet() }, enabled = !copying) {
-                Text(if (selectMode) "Cancelar seleção" else "Selecionar")
+            Text("‹ Voltar", modifier = Modifier.clickable(onClick = onDismiss), color = Color.White, fontSize = 13.sp)
+            Spacer(Modifier.weight(1f))
+            Text(if (selectMode) "${selected.size} selecionado(s)" else title,
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(Modifier.weight(1f))
+            Text(if (selectMode) "" else "${entries.size}${if (hasMore) "+" else ""}",
+                color = Color.White, fontSize = 12.sp)
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            if (selectMode) {
+                GalleryToolbarAction("Fechar", Icons.Rounded.Close, !copying && !selectingAll) {
+                    selected = emptySet(); selectMode = false
+                }
+                GalleryToolbarAction("Tudo", Icons.Rounded.SelectAll, !copying && !selectingAll) { updateAllSelection(false) }
+                GalleryToolbarAction("Limpar", Icons.Rounded.CheckBox, !copying && !selectingAll) { selected = emptySet() }
+                GalleryToolbarAction("Inverter", Icons.Rounded.CheckCircle, !copying && !selectingAll) {
+                    updateAllSelection(true)
+                }
+                Box {
+                    GalleryToolbarAction("Mais", Icons.Rounded.MoreVert, !copying) { moreMenu = true }
+                    DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                        DropdownMenuItem(text = { Text("Atualizar galeria") }, onClick = {
+                            moreMenu = false; reloadGallery()
+                        })
+                    }
+                }
+            } else {
+                GalleryToolbarAction(if (gridView) "Lista" else "Grade",
+                    if (gridView) Icons.Rounded.ViewList else Icons.Rounded.GridView, !copying) {
+                    gridView = !gridView
+                }
+                GalleryToolbarAction("Selecionar", Icons.Rounded.CheckBox, !copying) {
+                    selectMode = true; selected = emptySet()
+                }
+                Box {
+                    GalleryToolbarAction("Ordenar", Icons.Rounded.Sort, !copying) { sortMenu = true }
+                    DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                        MediaGallerySort.values().forEach { option ->
+                            DropdownMenuItem(text = { Text(option.label + if (sort == option) "  ✓" else "") },
+                                onClick = {
+                                    sort = option; sortMenu = false; reloadGallery()
+                                })
+                        }
+                    }
+                }
+                Box {
+                    GalleryToolbarAction("Filtrar", Icons.Rounded.FilterList, !copying) { filterMenu = true }
+                    DropdownMenu(expanded = filterMenu, onDismissRequest = { filterMenu = false }) {
+                        MediaGalleryOrigin.values().forEach { option ->
+                            DropdownMenuItem(text = { Text(option.label + if (origin == option) "  ✓" else "") },
+                                onClick = {
+                                    origin = option; filterMenu = false; reloadGallery()
+                                })
+                        }
+                    }
+                }
+                Box {
+                    GalleryToolbarAction("Mais", Icons.Rounded.MoreVert, !copying) { moreMenu = true }
+                    DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                        DropdownMenuItem(text = { Text("Atualizar") }, onClick = {
+                            moreMenu = false; reloadGallery()
+                        })
+                        DropdownMenuItem(text = { Text("Informações") }, onClick = {
+                            moreMenu = false
+                            notice = "${entries.size} carregado(s) • ${sort.label} • ${origin.label}. Use Carregar mais para outras páginas."
+                        })
+                    }
+                }
             }
         }
         if (selectMode) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { pickDestination.launch(null) }, enabled = selected.isNotEmpty() && !copying,
-                    modifier = Modifier.weight(1f)) { Text("Copiar (${selected.size})", maxLines = 1) }
-                OutlinedButton(onClick = { shareSelected() }, enabled = selected.isNotEmpty() && !copying,
-                    modifier = Modifier.weight(1f)) { Text("Enviar", maxLines = 1) }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { pickDestination.launch(null) }, enabled = selected.isNotEmpty() && !copying && !selectingAll,
+                    modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Rounded.ContentCopy, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Copiar (${selected.size})", maxLines = 1)
+                }
+                OutlinedButton(onClick = { shareSelected() }, enabled = selected.isNotEmpty() && !copying && !selectingAll,
+                    modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Rounded.Share, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp)); Text("Enviar")
+                }
             }
+        }
+        if (origin != MediaGalleryOrigin.ALL && !selectMode) {
+            Text("Filtro: ${origin.label}", Modifier.padding(start = 14.dp, bottom = 4.dp),
+                color = XpBlueDark, fontSize = 11.sp)
+        }
+        if (loading || selectingAll || copying) {
+            Text(when { copying -> "Copiando..."; selectingAll -> "Selecionando todas as páginas..."; else -> "Carregando..." },
+                Modifier.padding(horizontal = 12.dp, vertical = 2.dp), fontSize = 11.sp, color = XpTextSecondary)
         }
         if (notice.isNotBlank()) Text(notice, Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
             fontSize = 11.sp, color = XpBlueDark)
@@ -280,9 +497,11 @@ internal fun MediaShortcutScreen(
                 Text("Autorize o acesso aos arquivos para listar $title.")
                 Text("Conceder acesso", Modifier.clickable(onClick = onRequestAccess).padding(10.dp), color = XpBlueDark)
             }
-            entries.isEmpty() && loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            entries.isEmpty() && loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             error != null && entries.isEmpty() -> Text(error ?: "", Modifier.padding(18.dp), color = Color(0xFFA42222))
-            entries.isEmpty() -> Text("Nenhum arquivo encontrado no índice de mídia do Android.", Modifier.padding(18.dp))
+            entries.isEmpty() -> Text("Nenhum arquivo encontrado para este filtro.", Modifier.padding(18.dp))
             else -> if (gridView) {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(108.dp), modifier = Modifier.weight(1f),
@@ -290,45 +509,66 @@ internal fun MediaShortcutScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     gridItems(entries, key = { it.file.absolutePath }) { item ->
+                        val chosen = item.file.absolutePath in selected
                         Column(Modifier.fillMaxWidth().combinedClickable(
                             onClick = { tap(item) },
                             onLongClick = { selectMode = true; selected = selected + item.file.absolutePath }
                         ), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box {
+                            Box(Modifier.border(if (chosen) 2.dp else 0.dp,
+                                if (chosen) XpBlueDark else Color.Transparent,
+                                androidx.compose.foundation.shape.RoundedCornerShape(7.dp))) {
                                 GalleryFileThumbnail(item.file, kind == MediaShortcutKind.VIDEOS, 104.dp)
-                                if (selectMode) Checkbox(checked = item.file.absolutePath in selected,
-                                    onCheckedChange = { tap(item) }, modifier = Modifier.align(Alignment.TopEnd))
+                                if (kind == MediaShortcutKind.VIDEOS && item.durationMillis > 0L)
+                                    Text(galleryDuration(item.durationMillis),
+                                        Modifier.align(Alignment.BottomEnd)
+                                            .background(Color(0xCC111B2B)).padding(horizontal = 4.dp, vertical = 2.dp),
+                                        fontSize = 10.sp, color = Color.White)
+                                if (selectMode)
+                                    Icon(if (chosen) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                        contentDescription = if (chosen) "Selecionado" else "Não selecionado",
+                                        tint = if (chosen) XpBlueDark else Color.White,
+                                        modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(24.dp))
                             }
                             Text(item.file.name, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(galleryFileSize(item.sizeBytes), fontSize = 10.sp, color = XpTextSecondary)
                         }
                     }
                     if (hasMore) item {
-                        OutlinedButton(onClick = { page++ }, enabled = !loading && !copying) {
-                            Text(if (loading) "Carregando..." else "Mais fotos/vídeos")
+                        OutlinedButton(onClick = { page++ }, enabled = !loading && !copying && !selectingAll) {
+                            Text(if (loading) "Carregando..." else "Mais arquivos")
                         }
                     }
                 }
             } else {
                 LazyColumn(Modifier.weight(1f)) {
                     items(entries, key = { it.file.absolutePath }) { item ->
-                        Row(Modifier.fillMaxWidth().combinedClickable(
-                            onClick = { tap(item) }, onLongClick = {
+                        val chosen = item.file.absolutePath in selected
+                        Row(Modifier.fillMaxWidth().background(if (chosen) XpSelection else Color.Transparent)
+                            .combinedClickable(onClick = { tap(item) }, onLongClick = {
                                 selectMode = true; selected = selected + item.file.absolutePath
-                            }).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (selectMode) Checkbox(checked = item.file.absolutePath in selected,
-                                onCheckedChange = { tap(item) })
-                            GalleryFileThumbnail(item.file, kind == MediaShortcutKind.VIDEOS, 55.dp)
+                            }).padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            if (selectMode) Checkbox(checked = chosen, onCheckedChange = { tap(item) })
+                            Box {
+                                GalleryFileThumbnail(item.file, kind == MediaShortcutKind.VIDEOS, 55.dp)
+                                if (kind == MediaShortcutKind.VIDEOS && item.durationMillis > 0L)
+                                    Text(galleryDuration(item.durationMillis),
+                                        Modifier.align(Alignment.BottomEnd).background(Color(0xCC111B2B))
+                                            .padding(horizontal = 2.dp), color = Color.White, fontSize = 9.sp)
+                            }
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(item.file.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("${galleryFileSize(item.sizeBytes)} • ${item.file.parentFile?.name ?: "Armazenamento"}",
-                                    fontSize = 10.sp, color = XpTextSecondary)
+                                val dimensions = if (item.width > 0 && item.height > 0)
+                                    " • ${item.width}×${item.height}" else ""
+                                Text("${galleryFileSize(item.sizeBytes)}$dimensions • ${item.file.parentFile?.name ?: "Armazenamento"}",
+                                    fontSize = 10.sp, color = XpTextSecondary,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
                     if (hasMore) item {
-                        OutlinedButton(onClick = { page++ }, enabled = !loading && !copying) {
+                        OutlinedButton(onClick = { page++ }, enabled = !loading && !copying && !selectingAll) {
                             Text(if (loading) "Carregando..." else "Carregar mais")
                         }
                     }

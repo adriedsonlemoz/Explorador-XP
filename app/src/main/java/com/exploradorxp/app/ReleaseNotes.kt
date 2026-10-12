@@ -18,6 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
+                "Galeria Fotos/Vídeos: barra compacta com ícones para visualização, seleção, ordenação e filtro.",
+                "Seleção: marcar todos os resultados do filtro, limpar ou inverter; contador acompanha a seleção.",
+                "Fotos e vídeos: ordenar por data, tamanho ou nome e filtrar por pasta de origem.",
+                "Vídeos mostram duração nas miniaturas e resolução na lista quando disponível no Android.",
+                "Grade/lista com seleção destacada, mantendo cópia segura e envio pelo Android.",
                 "Rede local: servidor TLS apresenta somente o certificado SHA-256 usado no QR.",
                 "Cliente WebDAV utiliza HTTP/1.1, mesmo protocolo do servidor embutido.",
                 "Compartilhar: exibe última falha TLS recebida e permite copiar diagnóstico seguro.",
