@@ -9,6 +9,7 @@ import okhttp3.Credentials
 import okhttp3.Dns
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.Response
@@ -55,6 +56,8 @@ internal class NetworkDavClient(endpoint: String, fingerprint: String, private v
         baseUrl = parsed.newBuilder().encodedPath(prefix).build()
         val (ssl, trust) = NetworkTls.pinnedClientContext(fingerprint)
         client = OkHttpClient.Builder()
+            // O servidor interno implementa apenas HTTP/1.1; não anunciar HTTP/2 via ALPN.
+            .protocols(listOf(Protocol.HTTP_1_1))
             .sslSocketFactory(ssl.socketFactory, trust)
             .dns(object : Dns {
                 override fun lookup(hostname: String): List<InetAddress> {

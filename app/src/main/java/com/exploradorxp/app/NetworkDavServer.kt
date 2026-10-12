@@ -20,6 +20,8 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLException
+import kotlinx.coroutines.flow.update
 import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
 
@@ -82,7 +84,20 @@ internal class NetworkDavServer(
         socket.soTimeout = 60_000
         socket.enabledProtocols = socket.supportedProtocols.filter { it == "TLSv1.3" || it == "TLSv1.2" }.toTypedArray()
         try {
-            socket.startHandshake()
+            try {
+                socket.startHandshake()
+                // Uma conexão autenticada no TLS comprova que o certificado foi negociado.
+                NetworkShareStatus.state.update { state ->
+                    if (state.active) state.copy(lastTlsFailure = null) else state
+                }
+            } catch (tlsError: SSLException) {
+                // Instrumentação local, sem texto bruto da exceção, senha, IP ou certificado.
+                val failure = NetworkFailure.from(tlsError)
+                NetworkShareStatus.state.update { state ->
+                    if (state.active) state.copy(lastTlsFailure = failure) else state
+                }
+                throw tlsError
+            }
             val input = BufferedInputStream(socket.inputStream)
             val output = BufferedOutputStream(socket.outputStream)
             val requestLine = readLine(input, 4096) ?: return

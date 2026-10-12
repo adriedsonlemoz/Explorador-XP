@@ -1,3 +1,13 @@
+## 0.1.0-alpha.107 — 2026-10-12
+
+- Investigação de `TLS_HANDSHAKE` observado em teste com dois celulares, ainda sem logs completos para provar a causa raiz.
+- Servidor TLS passa a usar gerenciador de chaves dedicado ao único certificado AndroidKeyStore publicado no QR. Evita que outra chave existente no KeyStore seja oferecida indevidamente.
+- Cliente WebDAV solicita apenas HTTP/1.1 via ALPN, coerente com o servidor HTTP/1.1 próprio.
+- Tela Compartilhar: se o servidor receber uma tentativa TLS inválida, exibe código/nomes de classes e botão para copiar diagnóstico seguro; quando TLS autentica, limpa a última falha.
+- Erro `TLS_HANDSHAKE` orienta copiar tanto o diagnóstico do cliente quanto o do servidor para identificar o ponto da falha.
+- SHA-256 obrigatório e bloqueio contra envio sem TLS foram preservados. Sem ignorar certificado, sem acesso não autorizado e sem expor credenciais.
+- Verificações locais; handshake real e Gradle Android permanecem pendentes.
+
 ## 0.1.0-alpha.106 — 2026-10-11
 
 - Removido o atalho redundante "Enviar pelo Android / Quick Share" da tela Rede; a transferência WebDAV pela rede local continua e depende de autorização para receber no servidor.

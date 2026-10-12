@@ -5,9 +5,13 @@ import android.security.keystore.KeyProperties
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.MessageDigest
+import java.security.Principal
+import java.security.PrivateKey
+import java.net.Socket
+import javax.net.ssl.SSLEngine
+import javax.net.ssl.X509ExtendedKeyManager
 import java.security.cert.X509Certificate
 import java.security.cert.CertificateException
-import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
@@ -37,10 +41,36 @@ internal object NetworkTls {
             KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore")
                 .apply { initialize(spec) }.generateKeyPair()
         }
-        val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        kmf.init(keyStore, null)
-        val cert = keyStore.getCertificate(ALIAS) as X509Certificate
-        return SSLContext.getInstance("TLS").apply { init(kmf.keyManagers, null, null) } to certificateFingerprint(cert)
+        // Nunca deixar o seletor TLS escolher outra chave do AndroidKeyStore.
+        // O SHA-256 divulgado no QR precisa corresponder ao certificado REALMENTE entregue.
+        val cert = keyStore.getCertificate(ALIAS) as? X509Certificate
+            ?: error("Certificado de rede ausente")
+        val key = keyStore.getKey(ALIAS, null) as? PrivateKey
+            ?: error("Chave privada de rede ausente")
+        check(key.algorithm.equals("RSA", ignoreCase = true) &&
+            cert.publicKey.algorithm.equals("RSA", ignoreCase = true)) {
+            "Identidade TLS incompatível com RSA"
+        }
+        val chain = arrayOf(cert)
+        val keyManager = object : X509ExtendedKeyManager() {
+            private fun identityFor(keyType: String?): String? =
+                if (keyType != null && (keyType.equals("RSA", ignoreCase = true) ||
+                        keyType.equals("RSASSA-PSS", ignoreCase = true))) ALIAS else null
+
+            override fun getCertificateChain(alias: String?): Array<X509Certificate>? =
+                if (alias == ALIAS) chain.clone() else null
+            override fun getPrivateKey(alias: String?): PrivateKey? = if (alias == ALIAS) key else null
+            override fun getServerAliases(keyType: String?, issuers: Array<Principal>?): Array<String>? =
+                identityFor(keyType)?.let { arrayOf(it) }
+            override fun chooseServerAlias(keyType: String?, issuers: Array<Principal>?, socket: Socket?): String? =
+                identityFor(keyType)
+            override fun chooseEngineServerAlias(keyType: String?, issuers: Array<Principal>?, engine: SSLEngine?): String? =
+                identityFor(keyType)
+            override fun getClientAliases(keyType: String?, issuers: Array<Principal>?): Array<String>? = null
+            override fun chooseClientAlias(keyTypes: Array<String>?, issuers: Array<Principal>?, socket: Socket?): String? = null
+            override fun chooseEngineClientAlias(keyTypes: Array<String>?, issuers: Array<Principal>?, engine: SSLEngine?): String? = null
+        }
+        return SSLContext.getInstance("TLS").apply { init(arrayOf(keyManager), null, null) } to certificateFingerprint(cert)
     }
 
     /** Certificate pin required; hostname verification is replaced by exact DER certificate comparison. */

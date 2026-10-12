@@ -50,10 +50,10 @@ internal data class NetworkFailure(
                     listOf("certificate", "certificado", "pin sha", "fingerprint", "handshake").any { it in message } ->
                     NetworkFailure("TLS_HANDSHAKE", "A conexão HTTPS segura falhou",
                         "Os celulares não concluíram a negociação TLS. Isso não prova que o QR esteja incorreto.",
-                        "Mantenha o compartilhamento ativo, confira se o endereço e o Wi-Fi são os mesmos, " +
-                            "atualize o Explorador XP nos dois aparelhos e tente um QR novo. " +
-                            "Se persistir, copie o diagnóstico técnico para investigar. " +
-                            "Não ignore a verificação do certificado.", technical)
+                        "Mantenha Compartilhar ativo no outro celular e confira o endereço IP da tela do servidor. " +
+                            "Gere e leia um QR novo em ambos com a mesma versão. " +
+                            "Se persistir, copie o diagnóstico deste aparelho e também o que aparece em " +
+                            "Compartilhar no celular servidor. Não ignore a verificação do certificado.", technical)
                 "http 401" in message || "http 403" in message || "unauthorized" in message ->
                     NetworkFailure("AUTH", "Acesso não autorizado",
                         "O outro aparelho não aceitou as credenciais ou não permite o acesso.",

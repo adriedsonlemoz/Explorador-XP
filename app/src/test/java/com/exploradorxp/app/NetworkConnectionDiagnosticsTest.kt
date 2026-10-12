@@ -52,6 +52,12 @@ class NetworkConnectionDiagnosticsTest {
         assertFalse(failure.copyable().contains("VAZA123"))
         assertFalse(failure.copyable().contains("https://private"))
     }
+    @Test fun handshakeGuidanceMentionsServerDiagnostic() {
+        val error = NetworkFailure.from(SSLHandshakeException("TLS alert"))
+        assertEquals("TLS_HANDSHAKE", error.code)
+        assertTrue(error.guidance.contains("celular servidor"))
+        assertFalse(error.copyable().contains("TLS alert"))
+    }
     @Test fun sensitiveErrorDetailsAreNotCopied() {
         val text = NetworkFailure.from(IOException("connection closed password=TOPSECRET https://private")).copyable()
         assertFalse(text.contains("TOPSECRET"))

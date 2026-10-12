@@ -25,6 +25,8 @@ internal data class NetworkServerState(
     val uploadEnabled: Boolean = false,
     val addresses: List<String> = emptyList(),
     val error: String? = null,
+    // Apenas classes/categorias de erro, nunca mensagens com IP ou credenciais.
+    val lastTlsFailure: NetworkFailure? = null,
 )
 
 internal object NetworkShareStatus {

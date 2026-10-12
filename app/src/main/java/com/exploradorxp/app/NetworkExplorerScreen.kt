@@ -414,6 +414,26 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                                 }
                             }
                         }
+                        server.lastTlsFailure?.let { tlsIssue ->
+                            Surface(shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.errorContainer) {
+                                Column(Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Falha TLS recebida neste celular", fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onErrorContainer)
+                                    Text("Código: ${tlsIssue.code}. O outro aparelho chegou ao servidor, " +
+                                        "mas a negociação HTTPS não foi concluída.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer)
+                                    Text("Detalhe: ${tlsIssue.technical}", style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer)
+                                    OutlinedButton(onClick = {
+                                        copyNetworkText(context, "TLS servidor Explorador XP", tlsIssue.copyable())
+                                        message = "Diagnóstico TLS do servidor copiado, sem credenciais."
+                                    }) { Text("Copiar diagnóstico do servidor") }
+                                }
+                            }
+                        }
                         server.error?.let { Text("Falha ao compartilhar: $it", color = MaterialTheme.colorScheme.error) }
                     }
                     NetworkPage.DISCOVERY -> {

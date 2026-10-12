@@ -18,6 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
+                "Rede local: servidor TLS apresenta somente o certificado SHA-256 usado no QR.",
+                "Cliente WebDAV utiliza HTTP/1.1, mesmo protocolo do servidor embutido.",
+                "Compartilhar: exibe última falha TLS recebida e permite copiar diagnóstico seguro.",
+                "Conexão HTTPS: orientações para comparar os diagnósticos dos dois celulares.",
                 "Rede: atalho Quick Share removido; a transferência entre Exploradores XP permanece pelo Wi-Fi com WebDAV HTTPS.",
                 "Conectar por IP: ações QR, Segurança e Conectar lado a lado; Conectar em verde quando pronto.",
                 "QR com módulos mais nítidos; leitor com orientação em português e vibração no QR válido e na conexão.",

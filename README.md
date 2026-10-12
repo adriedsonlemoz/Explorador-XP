@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.106 (`versionCode 106`). Rede local com controles padronizados, QR mais nítido, confirmação tátil e diagnóstico TLS específico. Build Android e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.107 (`versionCode 107`). Correção preventiva da identidade do servidor TLS e diagnóstico do handshake dos dois lados. Build Android e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.107 (diagnóstico do handshake):** após uma falha `TLS_HANDSHAKE` em aparelho real, o servidor passou a disponibilizar exclusivamente a identidade TLS indicada pelo QR: o gerenciador X509 fornece a chave privada e o certificado de um único alias AndroidKeyStore, reduzindo ambiguidade se houver outras chaves. O cliente WebDAV negocia HTTP/1.1 como único protocolo de aplicação. No aparelho que compartilha, a tela informa a última falha de negociação TLS recebida e oferece diagnóstico seguro para copiar (classes de exceção, sem IP, certificado ou senha). Essas medidas removem duas fontes de inconsistência, mas a causa específica do print não está comprovada sem logs dos aparelhos.
 
 **alpha.106 (Rede e diagnóstico TLS):** retirado o atalho Quick Share da tela de Rede, mantendo WebDAV HTTPS para cópia e envio de arquivos pelo mesmo Wi-Fi quando o servidor permite recebimento. Na conexão manual, QR / Segurança / Conectar ficam juntos, com Conectar por último em verde. QR gerado em resolução de módulos inteiros e renderizado sem suavização; leitor com texto curto em português e vibração na leitura válida e na conexão bem-sucedida. Falhas TLS passaram a distinguir certificado divergente (TLS_PIN), validade (TLS_DATE) e negociação (TLS_HANDSHAKE), mostrando ações práticas e diagnóstico por classes, sem divulgar credenciais. Ainda é necessário executar o APK em dois aparelhos para confirmar a causa do erro observado na alpha.105.
 
@@ -20,7 +22,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.106` (`versionCode 106`)  
+**Versão atual:** `0.1.0-alpha.107` (`versionCode 107`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.
