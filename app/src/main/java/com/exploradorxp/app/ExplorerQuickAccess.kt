@@ -13,6 +13,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -91,7 +92,7 @@ internal fun ExplorerQuickAccessBar(
     active: ExplorerQuickDestination?,
     onNavigate: (ExplorerQuickDestination) -> Unit,
     trashCount: Int? = null,
-    trashSize: String? = null,
+    trashBytes: Long? = null,
 ) {
     val tabs = listOf(
         Triple(ExplorerQuickDestination.PHOTOS, "Fotos", R.drawable.xp_folder_image),
@@ -111,6 +112,7 @@ internal fun ExplorerQuickAccessBar(
     ) {
         tabs.forEach { (destination, label, drawable) ->
             val selected = active == destination
+            val isTrash = destination == ExplorerQuickDestination.TRASH
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth()
                     .background(if (selected) XpSelection else Color.Transparent)
@@ -119,25 +121,45 @@ internal fun ExplorerQuickAccessBar(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Image(painter = painterResource(drawable), contentDescription = label,
-                    modifier = Modifier.size(23.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(30.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                        Image(
+                            painter = painterResource(drawable),
+                            contentDescription = if (isTrash) {
+                                val amount = trashCount?.let { "$it ${if (it == 1) "item" else "itens"}" }
+                                    ?: "contagem não carregada"
+                                "Lixeira: $amount, ${trashBytes?.let { "$it bytes" } ?: "espaço não carregado"}"
+                            } else label,
+                            modifier = Modifier.size(23.dp),
+                        )
+                        if (isTrash && trashCount != null && trashCount > 0) {
+                            Text(
+                                compactTrashCount(trashCount), color = Color.White,
+                                fontSize = if (trashCount > 99) 6.sp else 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                modifier = Modifier.align(Alignment.Center).offset(y = 3.dp),
+                            )
+                        }
+                    }
+                    if (isTrash) {
+                        Spacer(Modifier.width(2.dp))
+                        Text(
+                            compactTrashSpace(trashBytes),
+                            fontSize = 8.sp, lineHeight = 9.sp, maxLines = 1,
+                            color = XpTextSecondary, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(label, fontSize = 9.sp, maxLines = 1,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                     color = if (selected) XpBlueDark else Color(0xFF253B56),
                     overflow = TextOverflow.Ellipsis)
-                if (destination == ExplorerQuickDestination.TRASH) {
-                    Text(
-                        text = trashCount?.let { if (it == 1) "1 item" else "$it itens" } ?: "—",
-                        fontSize = 8.sp, lineHeight = 9.sp, maxLines = 1,
-                        color = XpTextSecondary, overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = trashSize ?: "—",
-                        fontSize = 8.sp, lineHeight = 9.sp, maxLines = 1,
-                        color = XpTextSecondary, overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
         }
     }

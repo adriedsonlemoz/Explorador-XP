@@ -1,3 +1,11 @@
+## 0.1.0-alpha.110 — 2026-10-12
+
+- Painel de Ferramentas: substituída lista vertical por grade responsiva de oito quadrados (ícone + título curto), sem descrições nem controles de ordenação na tela do painel.
+- Configurações > Organização de arquivos: opções Nome/Data/Tamanho/Tipo e Pastas primeiro realocadas para a tela existente, mantendo os callbacks do ViewModel.
+- Lixeira: o total de itens aparece sobre o ícone; espaço ocupado aparece abreviado ao lado do ícone, dentro do mesmo atalho inferior. O nome fica alinhado com os demais. Sem truncar uma legenda em linhas extras; leitor de tela obtém o número completo de itens e bytes. Estado ainda não carregado continua distinto de zero.
+- Tela Novidades: lista com quatro itens desta build alpha.110, sem mudanças herdadas das versões anteriores. Histórico permanece no CHANGELOG.
+- Acrescentados testes JVM das regras de compactação da Lixeira. Mantidos WebDAV/HTTPS, SMB, galeria e navegação por gestos. Build Gradle Android e testes visuais em dispositivo pendentes.
+
 ## 0.1.0-alpha.109 — 2026-10-12
 
 - Barra inferior passa a ter seis destinos: Fotos, Vídeos, Downloads, Rede, Lixeira e Ferramentas.

@@ -1,54 +1,59 @@
 {
-  "version_build": "0.1.0-alpha.109",
-  "version_code": 109,
-  "manager_version": "0.1.0-alpha.109",
+  "version_build": "0.1.0-alpha.110",
+  "version_code": 110,
+  "manager_version": "0.1.0-alpha.110",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.109: Painel de Ferramentas, resumo de Lixeira na barra inferior e gesto Voltar do Android",
+  "scope": "Alpha.110: Painel em grade, organização em Configurações, Lixeira compacta e novidades por build",
   "checks": [
     {
-      "name": "quick_access_contract",
+      "name": "tools_panel_grid",
       "status": "source_review",
-      "details": "Seis destinos incluindo Ferramentas; ícones existentes. Suite ExplorerQuickAccessTest atualizada."
+      "details": "Grade adaptativa de oito atalhos quadrados; sem detalhes ou controles de organização."
     },
     {
-      "name": "trash_summary",
+      "name": "settings_organization",
       "status": "source_review",
-      "details": "Total de bytes soma o snapshot de itens, com estado loaded para diferenciar sem leitura de Lixeira vazia. Testes TrashQuickSummaryTest adicionados."
+      "details": "SortMode e foldersFirst agora são apresentados em Configurações com os mesmos callbacks do ExplorerViewModel."
     },
     {
-      "name": "back_navigation",
+      "name": "trash_layout",
       "status": "source_review",
-      "details": "BackHandler atende seleção, busca avançada, pesquisa e histórico. Teste com gesto/3 botões em aparelhos pendente."
+      "details": "Contagem sobre o ícone e bytes curtos ao lado, mantendo a barra de 72 dp. Testes de formatter/contador."
     },
     {
-      "name": "tools_panel",
+      "name": "release_notes_scope",
       "status": "source_review",
-      "details": "Links para telas existentes; retorno ao painel ao fechar ferramenta. Diagnóstico, VPN, IP público e teste de velocidade não incluídos."
+      "details": "Quatro itens exclusivamente da alpha.110; histórico detalhado mantido no CHANGELOG."
     },
     {
-      "name": "jvm_models",
+      "name": "jvm_utility",
       "status": "passed_local",
-      "details": "8 testes locais executados com Kotlin/JVM e stubs mínimos para modelos da Lixeira; Gradle JUnit ainda pendente."
+      "details": "13 verificações de tamanho/contador compiladas e executadas com kotlinc/JVM; testes JUnit via Gradle pendentes."
     },
     {
       "name": "kotlin_syntax",
       "status": "passed_local",
-      "details": "8 arquivos Kotlin alterados (incluindo 2 arquivos de teste) passaram na análise sintática PSI."
+      "details": "7 arquivos Kotlin modificados/novos, inclusive testes, sem erros na análise sintática PSI."
     },
     {
       "name": "xml_json_structural",
       "status": "passed_local",
-      "details": "81 XML, 6 JSON e 2 YAML do projeto analisados estruturalmente (conforme conferência local)."
+      "details": "Arquivos analisados estruturalmente: 81 xml, 6 json, 2 yml, 0 yaml."
     },
     {
       "name": "android_gradle_build",
       "status": "not_run",
-      "details": "SDK Android/Gradle completos não disponíveis no ambiente; executar o workflow Gerar APK."
+      "details": "Sem SDK Android/Gradle completos neste ambiente; requer workflow Gerar APK."
     },
     {
       "name": "real_device_ui",
       "status": "not_run",
-      "details": "Verificar barra de seis ícones em diferentes tamanhos de tela, contador e gestos."
+      "details": "Verificar layout grade/atalho da Lixeira e gesto Voltar em celular."
+    },
+    {
+      "name": "release_notes_scope",
+      "status": "passed_local",
+      "details": "Quatro novidades exclusivas da alpha.110 verificadas estaticamente; teste ReleaseNotesScopeTest adicionado para o Gradle."
     }
   ]
 }

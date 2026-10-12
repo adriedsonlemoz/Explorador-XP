@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.109 (`versionCode 109`). Painel de Ferramentas, resumo de Lixeira na barra inferior e gesto Voltar pelo histórico. Build Android e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.110 (`versionCode 110`). Ferramentas em grade, ordenação nas Configurações, indicador compacto da Lixeira e novidades apenas da versão atual. Build Android e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.110 (refinamento do painel):** Painel de Ferramentas reorganizado em grade adaptativa de oito atalhos quadrados, sem descrições. Ordenação e Pastas primeiro movidos para Configurações > Organização de arquivos, mantendo o comportamento anterior. Contagem dentro do ícone da Lixeira e espaço em formato compacto ao lado, sem estender a legenda sob o atalho. Notas de atualização limitadas às quatro mudanças desta versão. Funcionalidades e histórico da alpha.109 preservados. Build Android/testes no aparelho pendentes.
 
 **alpha.109 (Painel de Ferramentas e navegação):** a barra inferior agora possui seis atalhos, inclusive Ferramentas ao lado da Lixeira. A Lixeira mostra itens e bytes somados do inventário já carregado; "—" indica resumo ainda indisponível, sem fingir zero. O painel agrega Aplicativos Instalados, Armazenamento, Dispositivo, Configurações, Rede, Lixeira, Ajuda, Sobre e os controles de ordenação e Pastas primeiro. O gesto Voltar usa o histórico da pasta; seleção, pesquisa e busca avançada são encerradas primeiro. Não há limpeza por prazo nesta versão; diagnóstico de downloads, teste de velocidade, IP público e VPN continuam futuros.
 
@@ -26,7 +28,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.109` (`versionCode 109`)  
+**Versão atual:** `0.1.0-alpha.110` (`versionCode 110`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

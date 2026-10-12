@@ -1,3 +1,7 @@
+## Planejamento atualizado em 2026-10-12 (alpha.110)
+
+**Implementado na alpha.110:** grade de atalhos quadrados no painel de ferramentas; organização movida para Configurações; indicador de contagem sobre a Lixeira e espaço ao lado; notas exibidas apenas para a versão corrente. A alpha.109 introduziu seis atalhos, contagem/bytes do inventário da Lixeira e gesto Voltar no histórico. Build Android e testes no dispositivo continuam pendentes.
+
 ## Planejamento atualizado em 2026-10-12 (alpha.109)
 
 **Implementado na alpha.109:** contador e bytes da Lixeira no atalho inferior, Painel de Ferramentas com módulos existentes e gesto Voltar no histórico de pastas. Teste em Android físico e compilação CI ainda pendentes.

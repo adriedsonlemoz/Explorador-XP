@@ -193,9 +193,7 @@ fun ExplorerScreen(
     val displayedItems = if (advancedSearch.active) advancedSearch.results else state.items
     val quickTrashState by trashState.collectAsStateWithLifecycle()
     val trashCount = quickTrashState.items.size.takeIf { quickTrashState.loaded }
-    val trashSize = remember(quickTrashState.items, quickTrashState.loaded) {
-        if (quickTrashState.loaded) formatBytes(quickTrashState.totalBytes) else null
-    }
+    val trashBytes = quickTrashState.totalBytes.takeIf { quickTrashState.loaded }
 
     // Ao voltar de uma ferramenta aberta pelo painel, retornar ao próprio painel.
     fun returnFromTool() {
@@ -250,10 +248,6 @@ fun ExplorerScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     showToolsPanel -> ToolsPanelScreen(
-                        sortMode = state.sortMode,
-                        foldersFirst = state.foldersFirst,
-                        onSortMode = onSortMode,
-                        onFoldersFirstChange = onFoldersFirstChange,
                         onOpenTool = ::openPanelTool,
                         onDismiss = { showToolsPanel = false },
                     )
@@ -267,7 +261,13 @@ fun ExplorerScreen(
                     showNetworkExplorer -> NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false; returnFromTool() })
                     showDeviceInfo -> DeviceInfoScreen(onDismiss = { showDeviceInfo = false; returnFromTool() })
                     showInstalledApps -> InstalledAppsManagerScreen(onDismiss = { showInstalledApps = false; returnFromTool() })
-                    showSettings -> AppSettingsScreen(onDismiss = { showSettings = false; returnFromTool() })
+                    showSettings -> AppSettingsScreen(
+                        sortMode = state.sortMode,
+                        foldersFirst = state.foldersFirst,
+                        onSortMode = onSortMode,
+                        onFoldersFirstChange = onFoldersFirstChange,
+                        onDismiss = { showSettings = false; returnFromTool() },
+                    )
                     showTrash -> TrashScreenHost(
                         stateFlow = trashState,
                         onDismiss = { showTrash = false; returnFromTool() },
@@ -310,7 +310,7 @@ fun ExplorerScreen(
                 },
                 onNavigate = ::navigateShortcut,
                 trashCount = trashCount,
-                trashSize = trashSize,
+                trashBytes = trashBytes,
             )
         }
         return
@@ -504,7 +504,7 @@ fun ExplorerScreen(
             active = if (state.tab == ExplorerTab.DOWNLOADS) ExplorerQuickDestination.DOWNLOADS else null,
             onNavigate = ::navigateShortcut,
             trashCount = trashCount,
-            trashSize = trashSize,
+            trashBytes = trashBytes,
         )
     }
 
@@ -1479,8 +1479,8 @@ private fun HelpManualScreen(onDismiss: () -> Unit) {
         "Arquivos e pastas" to "A lista e a grade mostram o tipo do arquivo, tamanho e outras informações úteis. O botão de opções abre ações como copiar, mover, renomear, excluir, compartilhar, favoritar e ver propriedades.",
         "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Colar aparece na barra superior.",
         "Compactar ZIP" to "Selecione um ou vários arquivos/pastas e use o atalho ZIP da barra de seleção. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
-        "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A barra inferior mostra a quantidade e o tamanho total armazenados após o carregamento. Os itens não expiram automaticamente nesta versão. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
-        "Painel de Ferramentas" to "Abra Ferramentas na barra inferior para acessar aplicativos instalados, armazenamento, informações do dispositivo, rede, configurações, ajuda e Sobre; também é possível ordenar arquivos e ativar Pastas primeiro.",
+        "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A barra inferior traz a contagem sobre o ícone e o espaço ocupado ao lado em formato curto; o total aparece na tela Lixeira. Os itens não expiram automaticamente. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
+        "Painel de Ferramentas" to "Abra Ferramentas na barra inferior para acessar em uma grade Aplicativos, Armazenamento, Dispositivo, Rede, Lixeira, Configurações, Ajuda e Sobre. Ordenar arquivos e Pastas primeiro ficam em Configurações > Organização de arquivos.",
         "Armazenamento" to "A barra inferior mostra os valores gerais do volume informados pelo Android. Na tela Armazenamento, esses números ficam separados dos arquivos efetivamente analisados pelo Explorador XP. Categorias e pastas usam somente o conjunto que pôde ser enumerado; áreas protegidas não são estimadas.",
         "Aplicativos instalados" to "Em Ferramentas > Aplicativos instalados você pode pesquisar apps de usuário e do sistema, consultar versão, tamanho, SDK, datas, instalador e permissões. Sem Acesso ao uso, o tamanho mostrado é somente o dos APKs instalados; com essa autorização, o Android também fornece código, dados e cache. Desinstalar usa a confirmação do sistema. Por proteção do Android, Limpar dados abre os detalhes oficiais do aplicativo para você concluir a ação.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
@@ -1582,7 +1582,13 @@ private fun HelpTopic(
 }
 
 @Composable
-private fun AppSettingsScreen(onDismiss: () -> Unit) {
+private fun AppSettingsScreen(
+    sortMode: SortMode,
+    foldersFirst: Boolean,
+    onSortMode: (SortMode) -> Unit,
+    onFoldersFirstChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val context = LocalContext.current
     val preferences = remember(context) { PreferencesStore(context) }
     var deviceImagesEnabled by remember { mutableStateOf(preferences.deviceImagesEnabled()) }
@@ -1651,6 +1657,42 @@ private fun AppSettingsScreen(onDismiss: () -> Unit) {
                     lineHeight = 14.sp,
                     color = Color(0xFF4A5B70),
                 )
+            }
+            Spacer(Modifier.height(12.dp))
+            AboutSectionCard("Organização de arquivos", R.drawable.sort) {
+                Text("Ordenar por", color = XpTextSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(7.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    listOf(
+                        SortMode.NAME to "Nome", SortMode.DATE to "Data",
+                        SortMode.SIZE to "Tamanho", SortMode.TYPE to "Tipo",
+                    ).forEach { (mode, label) ->
+                        Text(
+                            text = label,
+                            fontSize = 12.sp,
+                            fontWeight = if (sortMode == mode) FontWeight.Bold else FontWeight.Normal,
+                            color = if (sortMode == mode) Color.White else XpBlueDark,
+                            modifier = Modifier.clip(RoundedCornerShape(7.dp))
+                                .background(if (sortMode == mode) XpBlue else Color.White)
+                                .border(1.dp, XpChromeBorder, RoundedCornerShape(7.dp))
+                                .clickable { onSortMode(mode) }
+                                .padding(horizontal = 12.dp, vertical = 9.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(9.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable { onFoldersFirstChange(!foldersFirst) },
+                ) {
+                    Checkbox(checked = foldersFirst, onCheckedChange = onFoldersFirstChange)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Exibir pastas primeiro", color = Color(0xFF253B56), fontSize = 12.sp)
+                }
             }
         }
 
