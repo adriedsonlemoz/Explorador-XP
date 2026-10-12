@@ -28,8 +28,29 @@ class NetworkConnectionDiagnosticsTest {
     }
     @Test fun tlsFailureMustNotRecommendBypass() {
         val failure = NetworkFailure.from(SSLHandshakeException("certificate verification failed"))
-        assertEquals("TLS", failure.code)
+        assertEquals("TLS_HANDSHAKE", failure.code)
         assertTrue(failure.guidance.contains("Não ignore"))
+    }
+    @Test fun pinnedCertificateMismatchHasItsOwnDiagnosis() {
+        val failure = NetworkFailure.from(SSLHandshakeException("Falha").apply {
+            initCause(NetworkPinMismatchException())
+        })
+        assertEquals("TLS_PIN", failure.code)
+        assertTrue(failure.guidance.contains("endereço IP"))
+        assertTrue(failure.guidance.contains("Não ignore"))
+        assertTrue(failure.copyable().contains("NetworkPinMismatchException"))
+    }
+    @Test fun expiredCertificateHasAClockTip() {
+        val failure = NetworkFailure.from(SSLHandshakeException("Falha").apply {
+            initCause(java.security.cert.CertificateExpiredException("expirado"))
+        })
+        assertEquals("TLS_DATE", failure.code)
+        assertTrue(failure.guidance.contains("hora"))
+    }
+    @Test fun technicalDiagnosisNeverCopiesRawExceptionMessage() {
+        val failure = NetworkFailure.from(SSLHandshakeException("senha=VAZA123 https://private"))
+        assertFalse(failure.copyable().contains("VAZA123"))
+        assertFalse(failure.copyable().contains("https://private"))
     }
     @Test fun sensitiveErrorDetailsAreNotCopied() {
         val text = NetworkFailure.from(IOException("connection closed password=TOPSECRET https://private")).copyable()

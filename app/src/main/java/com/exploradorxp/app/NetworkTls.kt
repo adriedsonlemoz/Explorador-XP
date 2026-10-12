@@ -6,11 +6,15 @@ import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.cert.X509Certificate
+import java.security.cert.CertificateException
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 import javax.security.auth.x500.X500Principal
+
+/** Categoria reconhecível para distinguir PIN errado de TLS sem reduzir a segurança. */
+internal class NetworkPinMismatchException : CertificateException("O SHA-256 do certificado remoto difere do QR.")
 
 internal object NetworkTls {
     private const val ALIAS = "explorador_xp_network_tls_v1"
@@ -52,7 +56,7 @@ internal object NetworkTls {
                 val received = chain?.firstOrNull() ?: throw java.security.cert.CertificateException("Sem certificado")
                 val fingerprint = certificateFingerprint(received)
                 if (!MessageDigest.isEqual(fingerprint.toByteArray(), expected.toByteArray())) {
-                    throw java.security.cert.CertificateException("Certificado remoto diferente do informado")
+                    throw NetworkPinMismatchException()
                 }
                 received.checkValidity()
             }

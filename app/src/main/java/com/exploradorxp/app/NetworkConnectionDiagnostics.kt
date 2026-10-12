@@ -8,6 +8,9 @@ import java.io.EOFException
 import java.io.InterruptedIOException
 import java.io.IOException
 import javax.net.ssl.SSLException
+import javax.net.ssl.SSLHandshakeException
+import java.security.cert.CertificateExpiredException
+import java.security.cert.CertificateNotYetValidException
 
 /** Descrições por categoria, nunca incluem senha, tokens, URL ou conteúdo bruto das exceções. */
 internal data class NetworkFailure(
@@ -15,21 +18,42 @@ internal data class NetworkFailure(
     val title: String,
     val explanation: String,
     val guidance: String,
+    val technical: String = "",
 ) {
     fun copyable(): String = "Explorador XP - diagnóstico de rede\n" +
         "Código: $code\n$title\n$explanation\nO que verificar: $guidance\n" +
+        (if (technical.isNotEmpty()) "Detalhe técnico: $technical\n" else "") +
         "Informações de autenticação não incluídas."
 
     companion object {
         fun from(error: Throwable): NetworkFailure {
             val causes = generateSequence(error) { it.cause }.take(8).toList()
             val message = causes.mapNotNull { it.message }.joinToString(" ").lowercase()
+            // Para TLS, diferenciar pin divergente, datas do certificado e negociação.
+            // Nomes de classe são seguros para copiar; mensagens brutas podem conter segredos.
+            val technical = causes.joinToString(" → ") { it.javaClass.simpleName }
+                .take(180)
             return when {
-                causes.any { it is SSLException } ||
+                causes.any { it is NetworkPinMismatchException } ||
+                    "certificado remoto diferente" in message ->
+                    NetworkFailure("TLS_PIN", "Certificado diferente do QR",
+                        "O aparelho que respondeu apresentou um certificado SHA-256 diferente do informado.",
+                        "Confira se o endereço IP pertence ao celular certo. No aparelho que compartilha, " +
+                            "desligue e ative o compartilhamento, gere um QR novo e leia novamente. " +
+                            "Não ignore a verificação do certificado.", technical)
+                causes.any { it is CertificateExpiredException || it is CertificateNotYetValidException } ->
+                    NetworkFailure("TLS_DATE", "Certificado fora da validade",
+                        "O período de validade do certificado não foi aceito.",
+                        "Confira data, hora e fuso dos dois celulares. Reinicie o compartilhamento e leia o QR de novo. " +
+                            "Não ignore a verificação do certificado.", technical)
+                causes.any { it is SSLHandshakeException || it is SSLException } ||
                     listOf("certificate", "certificado", "pin sha", "fingerprint", "handshake").any { it in message } ->
-                    NetworkFailure("TLS", "Não foi possível confirmar a segurança",
-                        "O certificado do outro aparelho não corresponde ao esperado, ou a conexão TLS falhou.",
-                        "Leia novamente o QR mostrado pelo aparelho correto. Não ignore a verificação do certificado.")
+                    NetworkFailure("TLS_HANDSHAKE", "A conexão HTTPS segura falhou",
+                        "Os celulares não concluíram a negociação TLS. Isso não prova que o QR esteja incorreto.",
+                        "Mantenha o compartilhamento ativo, confira se o endereço e o Wi-Fi são os mesmos, " +
+                            "atualize o Explorador XP nos dois aparelhos e tente um QR novo. " +
+                            "Se persistir, copie o diagnóstico técnico para investigar. " +
+                            "Não ignore a verificação do certificado.", technical)
                 "http 401" in message || "http 403" in message || "unauthorized" in message ->
                     NetworkFailure("AUTH", "Acesso não autorizado",
                         "O outro aparelho não aceitou as credenciais ou não permite o acesso.",

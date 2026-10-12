@@ -1,34 +1,34 @@
 {
-  "version_build": "0.1.0-alpha.105",
-  "version_code": 105,
-  "manager_version": "0.1.0-alpha.105",
+  "version_build": "0.1.0-alpha.106",
+  "version_code": 106,
+  "manager_version": "0.1.0-alpha.106",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.105: redesign UX Rede (3 cartões, QR em diálogo, conexão manual compacta, diagnósticos sem credenciais); nenhuma troca de protocolos",
+  "scope": "Alpha.106: Rede sem atalho Quick Share, ações QR/Segurança/Conectar, vibração e QR nítido; diagnóstico TLS_PIN/TLS_DATE/TLS_HANDSHAKE com pinning obrigatório",
   "checks": [
     {
       "name": "network_error_diagnostics",
       "status": "passed_local",
-      "details": "7 cenários Kotlin/JVM puros passaram em runner local; 6 testes JUnit foram adicionados ao projeto mas Gradle/JUnit Android não rodou."
+      "details": "9 casos Kotlin/JVM do arquivo de testes executados por runner JUnit mínimo local; testes Gradle/JUnit Android pendentes."
     },
     {
-      "name": "network_explorer_kotlin_psi",
+      "name": "network_kotlin_psi",
       "status": "passed_local",
-      "details": "Análise PSI de NetworkExplorerScreen.kt e NetworkConnectionDiagnostics.kt: 0 erros sintáticos."
+      "details": "6 arquivos Kotlin principais/testes inspecionados via PSI, 0 erros sintáticos."
     },
     {
       "name": "xml_json_structural",
       "status": "passed_local",
-      "details": "81 XML e 6 JSON validados por parsers locais."
+      "details": "81 XML e 6 JSON validados localmente."
     },
     {
       "name": "qr_dialog_android",
       "status": "not_run",
-      "details": "Compilação Android completa e teste físico da câmera/ZXing em diálogo pendentes."
+      "details": "Compilação Android Gradle, câmera, vibração e renderização QR em aparelhos reais pendentes."
     },
     {
-      "name": "network_real_devices",
+      "name": "network_tls_real_devices",
       "status": "not_run",
-      "details": "HTTPS/WebDAV, descoberta e SMB físicos pendentes; HTTPS exige autenticação/pin como antes."
+      "details": "Handshake HTTPS WebDAV e SMB entre aparelhos reais pendente; pin SHA-256 e autenticação preservados."
     }
   ]
 }

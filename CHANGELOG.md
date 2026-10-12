@@ -1,3 +1,14 @@
+## 0.1.0-alpha.106 — 2026-10-11
+
+- Removido o atalho redundante "Enviar pelo Android / Quick Share" da tela Rede; a transferência WebDAV pela rede local continua e depende de autorização para receber no servidor.
+- Conectar por endereço: campo IP em linha inteira e três ações uniformes na ordem QR, Segurança, Conectar; Conectar é o último e recebe verde com letras brancas quando ativo.
+- Leitor QR: mensagem de orientação curta em português (inclusive no visor ZXing), vibração ao reconhecer QR válido e nova confirmação tátil após conexão bem-sucedida; sem login automático.
+- QR do servidor desenhado em módulos de pixels inteiros e exibido sem interpolação, com margem adequada; preservados senha temporária e pin SHA-256.
+- Erro de conexão com bloco visual organizado em causa, ação recomendada e cópia de diagnóstico; diferencia TLS_PIN, TLS_DATE e TLS_HANDSHAKE com classes técnicas seguras, sem incluir credenciais.
+- O motivo exato do TLS mostrado na alpha.105 não pode ser provado pelo diagnóstico antigo, que mesclava várias causas. Necessário testar esta versão em dois Android e conferir código técnico e logs locais se persistir.
+- SMB2/SMB3, servidor WebDAV/HTTPS, controles de escrita, demais módulos e pinning TLS continuam ativos, sem bypass de certificado.
+- Testes locais de sintaxe e classificação; build Android Gradle e teste físico pendentes.
+
 ## 0.1.0-alpha.105 — 2026-10-11
 
 - Rede local redesenhada com três cartões (Acessar, Compartilhar, QR) em vez de listas explicativas.

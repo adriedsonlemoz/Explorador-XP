@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.105 (`versionCode 105`). Rede local com UX compacta, QR em janela e diagnósticos de conexão. Build Android e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.106 (`versionCode 106`). Rede local com controles padronizados, QR mais nítido, confirmação tátil e diagnóstico TLS específico. Build Android e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.106 (Rede e diagnóstico TLS):** retirado o atalho Quick Share da tela de Rede, mantendo WebDAV HTTPS para cópia e envio de arquivos pelo mesmo Wi-Fi quando o servidor permite recebimento. Na conexão manual, QR / Segurança / Conectar ficam juntos, com Conectar por último em verde. QR gerado em resolução de módulos inteiros e renderizado sem suavização; leitor com texto curto em português e vibração na leitura válida e na conexão bem-sucedida. Falhas TLS passaram a distinguir certificado divergente (TLS_PIN), validade (TLS_DATE) e negociação (TLS_HANDSHAKE), mostrando ações práticas e diagnóstico por classes, sem divulgar credenciais. Ainda é necessário executar o APK em dois aparelhos para confirmar a causa do erro observado na alpha.105.
 
 **alpha.105 (UX da Rede):** entrada com 3 cartões Acessar/Compartilhar/QR, compartilhamento com controles compactos e informações sensíveis sob demanda, QR do servidor em diálogo, leitor embutido em diálogo com permissão de câmera, conexão por IP compacta e opções de segurança recolhidas. Erros como `connection closed` recebem explicações e código copiável sem senhas; a conexão nunca ignora o pin TLS nem autentica automaticamente ao ler QR. SMB/WebDAV mantidos.
 
@@ -18,7 +20,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.105` (`versionCode 105`)  
+**Versão atual:** `0.1.0-alpha.106` (`versionCode 106`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

@@ -18,6 +18,11 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
+                "Rede: atalho Quick Share removido; a transferência entre Exploradores XP permanece pelo Wi-Fi com WebDAV HTTPS.",
+                "Conectar por IP: ações QR, Segurança e Conectar lado a lado; Conectar em verde quando pronto.",
+                "QR com módulos mais nítidos; leitor com orientação em português e vibração no QR válido e na conexão.",
+                "Erros HTTPS diferenciados: código de PIN, validade do certificado e negociação TLS com dicas práticas.",
+                "Diagnósticos técnicos copiados sem senha; pin SHA-256 obrigatório foi preservado.",
                 "Rede local redesenhada com três cartões: Acessar, Compartilhar e Ler QR.",
                 "Compartilhamento compacto: pastas, ativação e informações de acesso em blocos curtos.",
                 "QR de conexão em janela com câmera integrada; não exige abrir a tela de captura inteira.",

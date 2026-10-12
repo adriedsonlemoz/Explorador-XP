@@ -5,9 +5,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.ClipDescription
 import android.os.PersistableBundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.Manifest
 import android.content.pm.PackageManager
-import android.content.Intent
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.activity.compose.BackHandler
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
@@ -184,6 +186,7 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
         showScanner = false
         runCatching { NetworkQrCode.parse(value) }
             .onSuccess { connection ->
+                vibrateQrFeedback(context)
                 client?.cancel(); client = null
                 host = connection.endpoint; username = connection.username
                 secret = connection.password; fingerprint = connection.fingerprint
@@ -260,19 +263,6 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
             }
         }
     }
-    val quickShare = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            runCatching {
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = context.contentResolver.getType(uri) ?: "application/octet-stream"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    clipData = ClipData.newUri(context.contentResolver, "Arquivo escolhido", uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                context.startActivity(Intent.createChooser(intent, "Enviar arquivo para outro aparelho"))
-            }.onFailure { message = it.localizedMessage ?: "Não há aplicativo de compartilhamento disponível." }
-        }
-    }
     val selectUpload = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val dest = currentPath.toList()
@@ -347,7 +337,6 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                         }
                         TextButton(onClick = { showHelp = true }) { Text("?  Como funciona a Rede?") }
                         OutlinedButton(onClick = { page = NetworkPage.WINDOWS }) { Text("Windows / SMB") }
-                        OutlinedButton(onClick = { quickShare.launch(arrayOf("*/*")) }) { Text("Enviar pelo Android / Quick Share") }
                     }
                     NetworkPage.SHARE -> {
                         Text("Compartilhar pastas", style = MaterialTheme.typography.titleLarge,
@@ -467,39 +456,57 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                         Text("Conectar por endereço", style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold)
                         Text("Digite o endereço do outro aparelho ou leia o QR.", style = MaterialTheme.typography.bodySmall)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(value = host, onValueChange = { newHost ->
-                                if (newHost != host) { fingerprint = ""; secret = "" }
-                                host = newHost
-                            }, singleLine = true,
-                                label = { Text("https://IP:18843") }, modifier = Modifier.weight(1f), enabled = !busy)
-                            OutlinedButton(onClick = { openScanner() }, enabled = !busy) { Text("▦ QR") }
-                        }
+                        OutlinedTextField(value = host, onValueChange = { newHost ->
+                            if (newHost != host) { fingerprint = ""; secret = ""; failure = null }
+                            host = newHost
+                        }, singleLine = true,
+                            label = { Text("https://IP:18843") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
                         if (secret.isNotBlank() && fingerprint.isNotBlank()) {
                             Text("✓ Dados de segurança preenchidos${if (message.startsWith("QR reconhecido")) " pelo QR" else ""}.",
                                 color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
-                        }
-                        Button(enabled = !busy && host.isNotBlank() && fingerprint.isNotBlank() && secret.isNotBlank(), onClick = {
-                            scope.launch {
-                                busy = true; message = ""; failure = null
-                                var attempt: NetworkDavClient? = null
-                                try {
-                                    attempt = withContext(Dispatchers.IO) { NetworkDavClient(host, fingerprint, secret, username) }
-                                    val root = withContext(Dispatchers.IO) { attempt.list(emptyList()) }
-                                    client?.cancel(); client = attempt
-                                    currentPath = emptyList(); remoteItems = root
-                                    page = NetworkPage.REMOTE
-                                } catch (error: Exception) { attempt?.cancel(); reportFailure(error) }
-                                finally { busy = false }
-                            }
-                        }) { Text("Conectar") }
-                        if (host.isNotBlank() && (fingerprint.isBlank() || secret.isBlank())) {
-                            Text("Para conectar com segurança, leia o QR ou preencha os dados abaixo.",
+                        } else if (host.isNotBlank()) {
+                            Text("Leia o QR ou informe os dados de segurança para continuar.",
                                 style = MaterialTheme.typography.bodySmall)
                         }
-                        TextButton(onClick = { showAdvanced = !showAdvanced }) {
-                            Text(if (showAdvanced) "▴ Ocultar dados de segurança" else "▾ Dados de segurança (manual)")
+                        // Ordem única: QR, Segurança, Conectar. Conectar fica à direita e só ativa com dados completos.
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(onClick = { openScanner() }, modifier = Modifier.weight(1f), enabled = !busy,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)) {
+                                Text("▦  QR", maxLines = 1)
+                            }
+                            OutlinedButton(onClick = { showAdvanced = !showAdvanced }, modifier = Modifier.weight(1f),
+                                enabled = !busy, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)) {
+                                Text("Segurança", maxLines = 1)
+                            }
+                            Button(enabled = !busy && host.isNotBlank() && fingerprint.isNotBlank() && secret.isNotBlank(),
+                                modifier = Modifier.weight(1.15f),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF218348), contentColor = Color.White,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                                onClick = {
+                                    scope.launch {
+                                        busy = true; message = ""; failure = null
+                                        var attempt: NetworkDavClient? = null
+                                        try {
+                                            attempt = withContext(Dispatchers.IO) {
+                                                NetworkDavClient(host, fingerprint, secret, username)
+                                            }
+                                            val root = withContext(Dispatchers.IO) { attempt.list(emptyList()) }
+                                            client?.cancel(); client = attempt
+                                            currentPath = emptyList(); remoteItems = root
+                                            page = NetworkPage.REMOTE
+                                            vibrateQrFeedback(context, connected = true)
+                                        } catch (error: Exception) { attempt?.cancel(); reportFailure(error) }
+                                        finally { busy = false }
+                                    }
+                                }) { Text(if (busy) "Abrindo" else "Conectar", maxLines = 1) }
+                        }
+                        if (showAdvanced) {
+                            Text("Verifique o SHA-256 e as credenciais do aparelho que compartilha.",
+                                style = MaterialTheme.typography.bodySmall)
                         }
                         if (showAdvanced) {
                             OutlinedTextField(value = fingerprint, onValueChange = { fingerprint = it }, singleLine = true,
@@ -724,15 +731,38 @@ private fun NetworkTile(symbol: String, label: String, modifier: Modifier = Modi
 
 @Composable
 private fun NetworkFailureSummary(failure: NetworkFailure, onDetails: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(14.dp),
+    Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(failure.title, color = MaterialTheme.colorScheme.onErrorContainer,
-                fontWeight = FontWeight.SemiBold)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("!", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.error.copy(alpha = 0.16f),
+                        RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp))
+                Text(failure.title, color = MaterialTheme.colorScheme.onErrorContainer,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            }
             Text(failure.explanation, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer)
-            TextButton(onClick = onDetails) { Text("?  Por quê? • Ver detalhes e copiar") }
+            HorizontalDivider(color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.20f))
+            Text("O que fazer", fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onErrorContainer)
+            Text(failure.guidance, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer)
+            OutlinedButton(onClick = onDetails, modifier = Modifier.fillMaxWidth()) {
+                Text("Detalhes e copiar diagnóstico (${failure.code})")
+            }
         }
+    }
+}
+
+/** Vibração curta apenas depois de validar o QR; uma segunda confirmação ocorre ao conectar. */
+private fun vibrateQrFeedback(context: Context, connected: Boolean = false) {
+    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
+    if (!vibrator.hasVibrator()) return
+    runCatching {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(VibrationEffect.createOneShot(if (connected) 105L else 65L,
+            VibrationEffect.DEFAULT_AMPLITUDE))
     }
 }
 
@@ -769,6 +799,7 @@ private fun NetworkInlineQrScanner(onDismiss: () -> Unit, onDecoded: (String) ->
     val scanner = remember(context) {
         DecoratedBarcodeView(context).apply {
             setDecoderFactory(DefaultDecoderFactory(listOf(BarcodeFormat.QR_CODE)))
+            setStatusText("Centralize o código QR")
         }
     }
     DisposableEffect(scanner, hasPermission, cameraAvailable, lifecycleOwner) {
@@ -799,7 +830,7 @@ private fun NetworkInlineQrScanner(onDismiss: () -> Unit, onDecoded: (String) ->
                     Text("Este aparelho não tem uma câmera disponível. Use o endereço IP para conectar.")
                 } else if (hasPermission) {
                     AndroidView(factory = { scanner }, modifier = Modifier.fillMaxWidth().height(260.dp))
-                    Text("Aponte para o QR do outro Explorador XP.", style = MaterialTheme.typography.bodySmall)
+                    Text("Aponte para o QR do outro celular.", style = MaterialTheme.typography.labelSmall)
                 } else {
                     Text("Autorize a câmera para ler o QR. Também é possível conectar pelo endereço IP.")
                     OutlinedButton(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
