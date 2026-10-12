@@ -1,3 +1,11 @@
+## 0.1.0-alpha.104 — 2026-10-11
+
+- Corrigido o único erro do Android Lint do workflow **Gerar APK 97** (`:app:lintDebug`): `PermissionImpliesUnsupportedChromeOsHardware` em `AndroidManifest.xml:11`, após introdução da permissão de câmera para leitura de QR.
+- Declaradas as funcionalidades `android.hardware.camera` e `android.hardware.camera.autofocus` como **opcionais** (`android:required="false"`). A permissão `CAMERA` permanece, preservando o leitor QR quando existe câmera.
+- Mantidas funcionalidades de Galeria, Aplicativos Instalados, SMB2/SMB3, WebDAV e QR; sem alterar código de execução ou desabilitar o lint.
+- Corrigido também o arquivo `VERSION`, que ainda indicava alpha.102, e sincronizados `versionCode 104`, `versionName`, README, notas de release e JSONs de identidade/validação.
+- A etapa de lint do novo pacote, o `assemblePerformance` e testes físicos ainda precisam ser executados no GitHub Actions e em dispositivos reais.
+
 ## 0.1.0-alpha.103 — 2026-10-11
 
 - Corrigido erro de compilação Kotlin no workflow **Gerar APK 96** (`:app:compileDebugKotlin`): `ExplorerQuickAccess.kt:206:70 Unresolved reference 'ensureActive'`.

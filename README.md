@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.103 (`versionCode 103`). Correção de compilação do build 96: import de `kotlinx.coroutines.ensureActive` na cópia seletiva da Galeria. Mantidas as melhorias da alpha.102. Build Android completo e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.104 (`versionCode 104`). Correção Android Lint do build 97: a câmera do leitor de QR é opcional no Manifest. Mantidas todas as funções da alpha.103. Build Android completo e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.104 (correção Android Lint):** declarados `android.hardware.camera` e `android.hardware.camera.autofocus` como opcionais (`required="false"`) no `AndroidManifest.xml`, resolvendo a falha `PermissionImpliesUnsupportedChromeOsHardware` do workflow **Gerar APK 97**. A permissão `CAMERA` foi mantida para leitura do QR; dispositivos sem câmera continuam aptos a instalar o explorador, mas não podem escanear QR Codes. Nenhuma outra funcionalidade alterada.
 
 **alpha.103 (correção de compilação):** importada a extensão `kotlinx.coroutines.ensureActive` utilizada por `currentCoroutineContext().ensureActive()` em `ExplorerQuickAccess.kt`, corrigindo a referência ausente na linha 206 do build **Gerar APK 96**. O cancelamento cooperativo durante a cópia de mídia foi preservado. Mudanças funcionais da alpha.102 mantidas.
 
@@ -14,7 +16,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.103` (`versionCode 103`)  
+**Versão atual:** `0.1.0-alpha.104` (`versionCode 104`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

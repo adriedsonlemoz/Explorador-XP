@@ -18,6 +18,7 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
+                "Correção do build 97: câmera declarada opcional para o leitor de QR, permitindo instalação em dispositivos sem câmera.",
                 "Correção do build 96: referência ensureActive resolvida no carregamento e cópia da galeria.",
                 "Aplicativos Instalados: ações Abrir, Limpar, Remover e Sistema compactas junto ao nome.",
                 "Estado do aplicativo passa a indicar Habilitado ou Desativado, sem confundir com execução.",

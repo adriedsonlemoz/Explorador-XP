@@ -1,39 +1,39 @@
 {
-  "version_build": "0.1.0-alpha.103",
-  "version_code": 103,
-  "manager_version": "0.1.0-alpha.103",
+  "version_build": "0.1.0-alpha.104",
+  "version_code": 104,
+  "manager_version": "0.1.0-alpha.104",
   "application_id": "com.exploradorxp.app",
-  "scope": "Correção de compilação Kotlin de ExplorerQuickAccess.kt após workflow Gerar APK 96; preservadas Galeria, Aplicativos e QR.",
+  "scope": "Correção do erro Android Lint do workflow Gerar APK 97: CAMERA sem uses-feature opcional; mantidos módulos anteriores.",
   "checks": [
     {
-      "name": "github_actions_build96_error",
+      "name": "github_actions_build97_lint_error",
       "status": "confirmed",
-      "details": "Falha em :app:compileDebugKotlin, ExplorerQuickAccess.kt:206:70, Unresolved reference 'ensureActive'."
+      "details": "Falha em :app:lintDebug: PermissionImpliesUnsupportedChromeOsHardware; AndroidManifest.xml:11, câmera permission sem uses-feature required=false. 1 erro, 38 avisos."
     },
     {
-      "name": "coroutine_extension_import",
+      "name": "camera_hardware_optional",
       "status": "fixed",
-      "details": "Incluído import kotlinx.coroutines.ensureActive para resolver CoroutineContext.ensureActive() utilizado com currentCoroutineContext()."
+      "details": "uses-feature android.hardware.camera e android.hardware.camera.autofocus com android:required=false; permissão CAMERA mantida."
     },
     {
-      "name": "coroutine_cli_compilation",
+      "name": "manifest_semantic_validation",
       "status": "passed",
-      "details": "Trecho representativo com currentCoroutineContext().ensureActive() compilado via kotlinc com kotlinx-coroutines-core-jvm.jar real."
+      "details": "XML bem-formado e verificação semântica das permissões e features opcionais usando ElementTree."
     },
     {
       "name": "project_metadata_consistency",
       "status": "passed",
-      "details": "VersionCode 103, README/CHANGELOG/RELEASE/ReleaseNotes e identidades sincronizados; 81 XML e 6 JSON válidos."
+      "details": "versionCode/versionName 104, VERSION, README/CHANGELOG/RELEASE/ReleaseNotes, app_identity.json/github-manager.json e docs/VALIDATION.json sincronizados."
     },
     {
-      "name": "alpha103_android_gradle_assemble",
+      "name": "alpha104_android_gradle_lint_and_assemble",
       "status": "not_run",
-      "details": "Gradle Android e SDK indisponíveis no ambiente local; executar GitHub Actions."
+      "details": "Gradle/Android SDK indisponíveis localmente; é necessário reexecutar workflow GitHub Actions Gerar APK com o pacote alpha.104."
     },
     {
-      "name": "network_and_gallery_physical_tests",
+      "name": "qr_and_smb_real_device_tests",
       "status": "not_run",
-      "details": "Validar QR, rede WebDAV/SMB, galeria e fluxos de cópia em aparelhos reais."
+      "details": "Pendente validação em dispositivos reais do QR com permissão de câmera, galeria e transferência pela rede."
     }
   ]
 }
