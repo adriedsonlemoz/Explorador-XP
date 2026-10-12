@@ -13,8 +13,8 @@ android {
         applicationId = "com.exploradorxp.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 104
-        versionName = "0.1.0-alpha.104"
+        versionCode = 105
+        versionName = "0.1.0-alpha.105"
 
         vectorDrawables {
             useSupportLibrary = true

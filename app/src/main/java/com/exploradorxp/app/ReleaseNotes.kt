@@ -18,6 +18,12 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
+                "Rede local redesenhada com três cartões: Acessar, Compartilhar e Ler QR.",
+                "Compartilhamento compacto: pastas, ativação e informações de acesso em blocos curtos.",
+                "QR de conexão em janela com câmera integrada; não exige abrir a tela de captura inteira.",
+                "Endereço IP simplificado: QR ao lado do campo, botão Conectar e opções de segurança recolhidas.",
+                "Falhas de rede explicadas em português com ajuda (?) e diagnóstico copiável sem credenciais.",
+                "QR do servidor sob demanda e cópia do IP ou dos dados completos com aviso de senha sensível.",
                 "Correção do build 97: câmera declarada opcional para o leitor de QR, permitindo instalação em dispositivos sem câmera.",
                 "Correção do build 96: referência ensureActive resolvida no carregamento e cópia da galeria.",
                 "Aplicativos Instalados: ações Abrir, Limpar, Remover e Sistema compactas junto ao nome.",

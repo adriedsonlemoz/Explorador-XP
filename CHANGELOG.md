@@ -1,3 +1,15 @@
+## 0.1.0-alpha.105 — 2026-10-11
+
+- Rede local redesenhada com três cartões (Acessar, Compartilhar, QR) em vez de listas explicativas.
+- Acessar: pesquisa WebDAV com entrada por IP ou QR, preservando SMB2/SMB3 via atalho Windows.
+- Compartilhar: pasta/estado/recebimento compactos, QR em janela e dados de segurança ocultos inicialmente.
+- Ações Copiar IP e Copiar todos os dados; cópia sensível identificada para o Android.
+- Conectar por IP com QR ao lado, Conectar e expansão opcional de SHA-256/usuário/senha.
+- Câmera/ZXing em diálogo compacto com liberação quando a janela fecha; nenhuma conexão automática após QR.
+- Diagnóstico de falhas de rede: títulos e dicas em português, ajuda (?) e cópia sem credenciais.
+- Mantidos cliente/servidor HTTPS/WebDAV, SMB2/SMB3, galeria, atalhos, aplicativos instalados.
+- Testes Kotlin puros de classificação de erros e cópia sem segredos; build Android completo e câmera física pendentes.
+
 ## 0.1.0-alpha.104 — 2026-10-11
 
 - Corrigido o único erro do Android Lint do workflow **Gerar APK 97** (`:app:lintDebug`): `PermissionImpliesUnsupportedChromeOsHardware` em `AndroidManifest.xml:11`, após introdução da permissão de câmera para leitura de QR.

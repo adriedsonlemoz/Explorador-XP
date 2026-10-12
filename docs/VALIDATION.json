@@ -1,39 +1,34 @@
 {
-  "version_build": "0.1.0-alpha.104",
-  "version_code": 104,
-  "manager_version": "0.1.0-alpha.104",
+  "version_build": "0.1.0-alpha.105",
+  "version_code": 105,
+  "manager_version": "0.1.0-alpha.105",
   "application_id": "com.exploradorxp.app",
-  "scope": "Correção do erro Android Lint do workflow Gerar APK 97: CAMERA sem uses-feature opcional; mantidos módulos anteriores.",
+  "scope": "Alpha.105: redesign UX Rede (3 cartões, QR em diálogo, conexão manual compacta, diagnósticos sem credenciais); nenhuma troca de protocolos",
   "checks": [
     {
-      "name": "github_actions_build97_lint_error",
-      "status": "confirmed",
-      "details": "Falha em :app:lintDebug: PermissionImpliesUnsupportedChromeOsHardware; AndroidManifest.xml:11, câmera permission sem uses-feature required=false. 1 erro, 38 avisos."
+      "name": "network_error_diagnostics",
+      "status": "passed_local",
+      "details": "7 cenários Kotlin/JVM puros passaram em runner local; 6 testes JUnit foram adicionados ao projeto mas Gradle/JUnit Android não rodou."
     },
     {
-      "name": "camera_hardware_optional",
-      "status": "fixed",
-      "details": "uses-feature android.hardware.camera e android.hardware.camera.autofocus com android:required=false; permissão CAMERA mantida."
+      "name": "network_explorer_kotlin_psi",
+      "status": "passed_local",
+      "details": "Análise PSI de NetworkExplorerScreen.kt e NetworkConnectionDiagnostics.kt: 0 erros sintáticos."
     },
     {
-      "name": "manifest_semantic_validation",
-      "status": "passed",
-      "details": "XML bem-formado e verificação semântica das permissões e features opcionais usando ElementTree."
+      "name": "xml_json_structural",
+      "status": "passed_local",
+      "details": "81 XML e 6 JSON validados por parsers locais."
     },
     {
-      "name": "project_metadata_consistency",
-      "status": "passed",
-      "details": "versionCode/versionName 104, VERSION, README/CHANGELOG/RELEASE/ReleaseNotes, app_identity.json/github-manager.json e docs/VALIDATION.json sincronizados."
-    },
-    {
-      "name": "alpha104_android_gradle_lint_and_assemble",
+      "name": "qr_dialog_android",
       "status": "not_run",
-      "details": "Gradle/Android SDK indisponíveis localmente; é necessário reexecutar workflow GitHub Actions Gerar APK com o pacote alpha.104."
+      "details": "Compilação Android completa e teste físico da câmera/ZXing em diálogo pendentes."
     },
     {
-      "name": "qr_and_smb_real_device_tests",
+      "name": "network_real_devices",
       "status": "not_run",
-      "details": "Pendente validação em dispositivos reais do QR com permissão de câmera, galeria e transferência pela rede."
+      "details": "HTTPS/WebDAV, descoberta e SMB físicos pendentes; HTTPS exige autenticação/pin como antes."
     }
   ]
 }

@@ -3,12 +3,26 @@ package com.exploradorxp.app
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.ClipDescription
+import android.os.PersistableBundle
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
 import androidx.documentfile.provider.DocumentFile
 import androidx.activity.compose.BackHandler
+import androidx.core.content.ContextCompat
+import com.journeyapps.barcodescanner.BarcodeCallback
+import com.journeyapps.barcodescanner.BarcodeResult
+import com.journeyapps.barcodescanner.DecoratedBarcodeView
+import com.journeyapps.barcodescanner.DefaultDecoderFactory
+import com.google.zxing.BarcodeFormat
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +33,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -26,6 +42,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Checkbox
@@ -44,6 +65,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -101,12 +124,22 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
     var message by remember { mutableStateOf("") }
     var progress by remember { mutableStateOf("") }
     var page by remember { mutableStateOf(NetworkPage.HOME) }
-    var showAddMenu by remember { mutableStateOf(false) }
-    var showQr by remember { mutableStateOf(false) }
+    var showAdvanced by remember { mutableStateOf(false) }
+    var showShareDetails by remember { mutableStateOf(false) }
+    var showQrDialog by remember { mutableStateOf(false) }
+    var showScanner by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
+    var failure by remember { mutableStateOf<NetworkFailure?>(null) }
+    var showFailureDetails by remember { mutableStateOf(false) }
 
     fun reportFailure(error: Throwable) {
-        message = if (error is CancellationException) "Transferência cancelada." else
-            (error.localizedMessage ?: "Não foi possível realizar a operação.")
+        if (error is CancellationException) {
+            message = "Operação cancelada."
+            failure = null
+        } else {
+            failure = NetworkFailure.from(error)
+            message = ""
+        }
     }
 
     fun readRemote(remote: NetworkRemoteClient, path: List<String>) {
@@ -146,25 +179,25 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
         }
     }
 
-    // QR lido pela câmera: preenchimento validado, sem conexão automática ou persistência da senha.
-    val scanQr = rememberLauncherForActivityResult(ScanContract()) { result ->
-        result.contents?.let { text ->
-            runCatching { NetworkQrCode.parse(text) }
-                .onSuccess { connection ->
-                    client?.cancel(); client = null
-                    host = connection.endpoint; username = connection.username
-                    secret = connection.password; fingerprint = connection.fingerprint
-                    page = NetworkPage.MANUAL
-                    message = "QR reconhecido. Confira o endereço e toque em Conectar para autorizar."
-                }
-                .onFailure { error -> message = error.localizedMessage ?: "QR incompatível." }
-        }
+    // A leitura abre uma janela compacta; nunca conecta nem grava credenciais automaticamente.
+    fun acceptQr(value: String) {
+        showScanner = false
+        runCatching { NetworkQrCode.parse(value) }
+            .onSuccess { connection ->
+                client?.cancel(); client = null
+                host = connection.endpoint; username = connection.username
+                secret = connection.password; fingerprint = connection.fingerprint
+                showAdvanced = false
+                failure = null
+                page = NetworkPage.MANUAL
+                message = "QR reconhecido. Confira o aparelho e confirme em Conectar."
+            }
+            .onFailure { error ->
+                failure = NetworkFailure.from(error)
+                message = "QR inválido. Peça um novo QR ao outro aparelho."
+            }
     }
-    fun openScanner() {
-        scanQr.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-            .setPrompt("Leia o QR exibido pelo outro Explorador XP")
-            .setBeepEnabled(false).setOrientationLocked(false))
-    }
+    fun openScanner() { showScanner = true }
 
     val pickShare = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null && !server.active && !server.starting) {
@@ -261,7 +294,10 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
         when {
             busy -> { client?.cancel(); transferJob?.cancel(); message = "Cancelando..." }
             page == NetworkPage.REMOTE && currentPath.isNotEmpty() -> client?.let { readRemote(it, currentPath.dropLast(1)) }
-            page != NetworkPage.HOME -> { if (page == NetworkPage.DISCOVERY) discovery.stop(); page = NetworkPage.HOME }
+            page != NetworkPage.HOME -> {
+                if (page == NetworkPage.DISCOVERY) discovery.stop()
+                failure = null; message = ""; page = NetworkPage.HOME
+            }
             else -> onDismiss()
         }
     }
@@ -287,196 +323,193 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (page) {
                     NetworkPage.HOME -> {
-                        Text("Arquivos entre aparelhos", style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold)
-                        Text("O que você quer fazer?", style = MaterialTheme.typography.bodyMedium)
-                        NetworkHubAction("📱  Acessar outro celular",
-                            "Encontrar um celular que já está compartilhando uma pasta") {
-                            discovery.start(); page = NetworkPage.DISCOVERY
+                        Text("Rede local", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NetworkTile("↔", "Acessar", Modifier.weight(1f)) {
+                                failure = null; discovery.start(); page = NetworkPage.DISCOVERY
+                            }
+                            NetworkTile("📁", "Compartilhar", Modifier.weight(1f)) {
+                                failure = null; page = NetworkPage.SHARE
+                            }
+                            NetworkTile("▦", "Ler QR", Modifier.weight(1f)) { openScanner() }
                         }
-                        NetworkHubAction("📂  Compartilhar arquivos deste celular",
-                            "Escolha a pasta que o outro celular poderá abrir") { page = NetworkPage.SHARE }
-                        NetworkHubAction("▦  Ler QR Code para conectar",
-                            "Aponte a câmera para o QR exibido no celular que compartilha") { openScanner() }
-                        HorizontalDivider()
-                        Text("Neste celular", style = MaterialTheme.typography.titleMedium)
-                        Text(if (server.active) "🟢 Compartilhamento ligado" else "⚪ Compartilhamento desligado",
-                            fontWeight = FontWeight.Medium)
-                        Text(if (folders.isEmpty()) "Nenhuma pasta escolhida. Toque em Compartilhar para selecionar."
-                            else if (server.active) "${folders.size} pasta(s) disponível(is) para outros aparelhos."
-                            else "${folders.size} pasta(s) escolhida(s), mas ainda não disponível(is) na rede.",
-                            style = MaterialTheme.typography.bodySmall)
-                        if (server.active) {
-                            Text("Endereço: https://${server.addresses.firstOrNull() ?: "IP-DO-CELULAR"}:${NetworkDavServer.PORT}",
-                                style = MaterialTheme.typography.bodySmall)
-                            OutlinedButton(onClick = { page = NetworkPage.SHARE }) { Text("Ver dados para conectar") }
+                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Neste celular", fontWeight = FontWeight.SemiBold)
+                                Text(if (server.active) "● Compartilhando ${folders.size} pasta(s)" else "○ Compartilhamento desligado")
+                                if (server.active) Text("Toque em Compartilhar para ver o QR ou desligar.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                if (client != null) {
+                                    TextButton(onClick = { page = NetworkPage.REMOTE }) { Text("Abrir arquivos conectados ›") }
+                                }
+                            }
                         }
-                        HorizontalDivider()
-                        Text("Outro aparelho", style = MaterialTheme.typography.titleMedium)
-                        if (client != null) {
-                            NetworkHubAction("📁  Abrir arquivos conectados", host) { page = NetworkPage.REMOTE }
-                        } else Text("Nenhum aparelho conectado. Abra 'Acessar outro celular' para começar.",
-                            style = MaterialTheme.typography.bodySmall)
-                        OutlinedButton(onClick = { page = NetworkPage.MANUAL }) { Text("Conectar usando endereço IP") }
-                        Text("Importante: a busca encontra servidores WebDAV ativos, não todos os celulares da rede nem pastas do Windows.",
-                            style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = { showHelp = true }) { Text("?  Como funciona a Rede?") }
+                        OutlinedButton(onClick = { page = NetworkPage.WINDOWS }) { Text("Windows / SMB") }
+                        OutlinedButton(onClick = { quickShare.launch(arrayOf("*/*")) }) { Text("Enviar pelo Android / Quick Share") }
                     }
                     NetworkPage.SHARE -> {
-                        Text("Compartilhar arquivos deste celular", style = MaterialTheme.typography.titleLarge,
+                        Text("Compartilhar pastas", style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold)
-                        Text("1. Escolha uma pasta.  2. Ative o compartilhamento.  3. Abra 'Acessar outro celular' no outro aparelho.",
-                            style = MaterialTheme.typography.bodyMedium)
-                        Text("Suas outras pastas continuam privadas. Nada será compartilhado até você ativar.",
-                            style = MaterialTheme.typography.bodySmall)
-                        HorizontalDivider()
-                        Text("1  Pastas escolhidas", style = MaterialTheme.typography.titleMedium)
-                        if (folders.isEmpty()) Text("Nenhuma pasta selecionada. Exemplo: escolha a pasta Download ou DCIM para compartilhar apenas seu conteúdo.")
-                        folders.forEach { folder ->
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("📁 ${folder.name}", fontWeight = FontWeight.Medium)
-                                    Text("Pasta disponível para leitura quando ativar", style = MaterialTheme.typography.bodySmall)
+                        Text("Escolha uma pasta e ligue o compartilhamento.", style = MaterialTheme.typography.bodySmall)
+                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Pastas selecionadas", fontWeight = FontWeight.SemiBold)
+                                if (folders.isEmpty()) Text("Nenhuma pasta escolhida.", style = MaterialTheme.typography.bodySmall)
+                                folders.forEach { folder ->
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text("📁 ${folder.name}", modifier = Modifier.weight(1f), maxLines = 1)
+                                        TextButton(enabled = !server.active && !server.starting, onClick = {
+                                            runCatching { store.remove(folder.alias); folders = store.list() }
+                                                .onFailure { reportFailure(it) }
+                                        }) { Text("Remover") }
+                                    }
                                 }
-                                OutlinedButton(enabled = !server.active && !server.starting, onClick = {
-                                    runCatching { store.remove(folder.alias); folders = store.list() }
-                                        .onFailure { message = it.localizedMessage ?: "Falha ao remover pasta" }
-                                }) { Text("Remover") }
+                                OutlinedButton(enabled = !server.active && !server.starting,
+                                    onClick = { pickShare.launch(null) }) { Text("+ Escolher pasta") }
                             }
                         }
-                        OutlinedButton(enabled = !server.active && !server.starting,
-                            onClick = { pickShare.launch(null) }) { Text("+ Escolher pasta") }
-                        HorizontalDivider()
-                        Text("2  Ligar compartilhamento", style = MaterialTheme.typography.titleMedium)
-                        Text(if (server.active) "🟢 Ligado: os arquivos das pastas acima podem ser acessados por quem tiver os dados da conexão."
-                            else "⚪ Desligado: o outro aparelho não consegue encontrar suas pastas.",
-                            style = MaterialTheme.typography.bodyMedium)
-                        if (!server.active) {
-                            Button(enabled = folders.isNotEmpty() && !server.starting, onClick = {
-                                message = ""; NetworkShareService.start(context, allowUploads)
-                            }) { Text(if (server.starting) "Iniciando..." else "Ativar compartilhamento") }
-                            if (folders.isEmpty()) Text("Escolha uma pasta primeiro para liberar este botão.",
-                                style = MaterialTheme.typography.bodySmall)
-                        } else {
-                            Button(onClick = { NetworkShareService.stop(context) }) { Text("Desligar compartilhamento") }
-                        }
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = allowUploads, enabled = !server.active && !server.starting,
-                                onCheckedChange = { allowUploads = it })
-                            Text("Permitir receber novos arquivos (opcional). Por segurança, fica desligado.",
-                                modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(if (server.active) "● Compartilhamento ligado" else "○ Compartilhamento desligado",
+                                    fontWeight = FontWeight.SemiBold)
+                                if (!server.active) {
+                                    Button(enabled = folders.isNotEmpty() && !server.starting, onClick = {
+                                        message = ""; failure = null; NetworkShareService.start(context, allowUploads)
+                                    }) { Text(if (server.starting) "Iniciando..." else "Ativar compartilhamento") }
+                                } else {
+                                    Button(onClick = { NetworkShareService.stop(context); showQrDialog = false }) {
+                                        Text("Desligar compartilhamento")
+                                    }
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = allowUploads, enabled = !server.active && !server.starting,
+                                        onCheckedChange = { allowUploads = it })
+                                    Text("Permitir receber arquivos", modifier = Modifier.weight(1f),
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                                if (server.active) Text("Para mudar essa permissão, desligue o compartilhamento.",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
                         }
                         if (server.active) {
-                            HorizontalDivider()
-                            Text("3  Conectar pelo outro aparelho", style = MaterialTheme.typography.titleMedium)
-                            Text("No outro celular: Rede > Acessar outro celular > Procurar. Se não aparecer, escolha Conectar por IP.",
-                                style = MaterialTheme.typography.bodySmall)
-                            Text("Endereço: ${server.addresses.firstOrNull()?.let { "https://$it:${NetworkDavServer.PORT}" } ?: "IP indisponível: confira Wi-Fi/hotspot"}")
-                            if (server.addresses.size > 1) {
-                                Text("Outros endereços possíveis (use o IP da rede Wi-Fi):", style = MaterialTheme.typography.bodySmall)
-                                server.addresses.drop(1).forEach { ip ->
-                                    Text("https://$ip:${NetworkDavServer.PORT}", style = MaterialTheme.typography.bodySmall)
+                            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Conectar pelo outro aparelho", fontWeight = FontWeight.SemiBold)
+                                    val shareIp = server.addresses.firstOrNull { NetworkSmbAddress.privateIpv4(it) }
+                                    val shareAddress = shareIp?.let { "https://$it:${NetworkDavServer.PORT}" }
+                                    Text(shareAddress ?: "Endereço Wi-Fi indisponível", style = MaterialTheme.typography.bodySmall)
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Button(enabled = shareIp != null, onClick = { showQrDialog = true },
+                                            modifier = Modifier.weight(1f)) { Text("▦  QR") }
+                                        OutlinedButton(enabled = shareAddress != null, onClick = {
+                                            copyNetworkText(context, "Endereço para conectar", shareAddress.orEmpty())
+                                            message = "Endereço copiado."
+                                        }, modifier = Modifier.weight(1f)) { Text("Copiar IP") }
+                                        OutlinedButton(onClick = { showShareDetails = !showShareDetails },
+                                            modifier = Modifier.weight(1f)) { Text("Detalhes") }
+                                    }
+                                    if (showShareDetails) {
+                                        Text("Usuário: xp", style = MaterialTheme.typography.bodySmall)
+                                        Text("Senha temporária: ${server.password}", style = MaterialTheme.typography.bodySmall)
+                                        Text("SHA-256: ${server.fingerprint}", style = MaterialTheme.typography.bodySmall)
+                                        OutlinedButton(onClick = {
+                                            val text = NetworkConnectionData.format(
+                                                shareAddress.orEmpty(), "xp", server.password, server.fingerprint)
+                                            copyNetworkText(context, "Conexão Explorador XP", text, sensitive = true)
+                                            message = "Dados copiados com senha. Compartilhe apenas com pessoas autorizadas."
+                                        }) { Text("Copiar todos os dados") }
+                                    }
                                 }
                             }
-                            Text("Usuário: xp")
-                            Text("Senha temporária: ${server.password}")
-                            Text("Código de segurança SHA-256: ${server.fingerprint}", style = MaterialTheme.typography.bodySmall)
-                            OutlinedButton(onClick = { showQr = !showQr }) {
-                                Text(if (showQr) "Ocultar QR Code" else "Mostrar QR Code para conectar")
-                            }
-                            if (showQr) {
-                                val qrIp = server.addresses.firstOrNull { NetworkSmbAddress.privateIpv4(it) }
-                                if (qrIp != null) {
-                                    val connection = NetworkQrConnection(qrIp, "xp", server.password, server.fingerprint)
-                                    if (server.password.matches(Regex("[A-Za-z0-9_-]{32}")) &&
-                                        server.fingerprint.matches(Regex("[A-Fa-f0-9]{64}"))) {
-                                        NetworkQrPreview(connection)
-                                    } else Text("Não foi possível criar o QR. Confira os dados da rede.",
-                                        color = MaterialTheme.colorScheme.error)
-                                } else Text("Nenhum IP privado Wi-Fi disponível para gerar o QR.",
-                                    color = MaterialTheme.colorScheme.error)
-                            }
-                            OutlinedButton(onClick = {
-                                val text = "Endereço: https://${server.addresses.firstOrNull() ?: "IP-DO-CELULAR"}:${NetworkDavServer.PORT}\n" +
-                                    "Usuário: xp\nSenha: ${server.password}\nSHA-256: ${server.fingerprint}"
-                                (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                                    .setPrimaryClip(ClipData.newPlainText("Explorador XP conexão", text))
-                                message = "Dados copiados. A área de transferência contém a senha; não compartilhe com desconhecidos."
-                            }) { Text("Copiar dados para conectar") }
                         }
-                        if (server.error != null) Text("Não foi possível compartilhar: ${server.error}",
-                            color = MaterialTheme.colorScheme.error)
+                        server.error?.let { Text("Falha ao compartilhar: $it", color = MaterialTheme.colorScheme.error) }
                     }
                     NetworkPage.DISCOVERY -> {
-                        Text("Encontrar outro celular", style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold)
-                        Text("No OUTRO celular, abra Explorador XP > Rede > Compartilhar arquivos, escolha uma pasta e toque em Ativar compartilhamento.",
-                            style = MaterialTheme.typography.bodyMedium)
-                        Text("Depois, mantenha os dois na mesma rede Wi-Fi ou hotspot e procure aqui.",
+                        Text("Acessar arquivos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                        Text("Encontre um aparelho com compartilhamento ativo.",
                             style = MaterialTheme.typography.bodySmall)
-                        if (discoveryState.searching) {
-                            OutlinedButton(onClick = { discovery.stop() }) { Text("Parar busca") }
-                        } else {
-                            Button(onClick = { discovery.start() }) { Text("Procurar novamente") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = {
+                                if (discoveryState.searching) discovery.stop() else discovery.start()
+                            }) { Text(if (discoveryState.searching) "Parar busca" else "Procurar") }
+                            OutlinedButton(onClick = { discovery.stop(); page = NetworkPage.MANUAL }) {
+                                Text("Por IP")
+                            }
+                            OutlinedButton(onClick = { openScanner() }) { Text("▦ QR") }
                         }
                         if (discoveryState.servers.isEmpty()) {
-                            Text(if (discoveryState.searching) "Buscando compartilhamentos WebDAV ativos..."
-                                else "Nenhum compartilhamento encontrado.",
-                                style = MaterialTheme.typography.titleSmall)
-                            Text(when {
-                                discoveryState.addressFailures > 0 -> "Encontrei um anúncio, mas não consegui obter um endereço IPv4 local. Tente usar o IP exibido no outro celular."
-                                discoveryState.resolveFailures > 0 -> "Um aparelho respondeu, mas não foi possível obter o endereço dele. Confira o Wi-Fi dos dois celulares."
-                                else -> "Se o outro celular não ativou o compartilhamento, ele NÃO aparece nesta lista."
-                            }, style = MaterialTheme.typography.bodySmall)
-                            Text("Se já ativou: verifique se os dois estão na mesma rede, se o roteador permite aparelhos se comunicarem e se o servidor continua ligado.",
+                            Text(if (discoveryState.searching) "Procurando compartilhamentos…" else "Nenhum compartilhamento encontrado.")
+                            Text("No outro aparelho, escolha uma pasta e ative Compartilhar. Os dois devem estar na mesma rede Wi-Fi.",
                                 style = MaterialTheme.typography.bodySmall)
+                            if (!discoveryState.searching) TextButton(onClick = { showHelp = true }) {
+                                Text("?  Por que não encontro meu celular?")
+                            }
                         } else {
-                            Text("Compartilhamentos encontrados", style = MaterialTheme.typography.titleMedium)
-                        }
-                        discoveryState.servers.forEach { device ->
-                            NetworkHubAction("📱 ${device.serviceName}", device.url) {
-                                client?.cancel(); client = null; currentPath = emptyList(); remoteItems = emptyList()
-                                host = device.url; fingerprint = ""; secret = ""
-                                discovery.stop(); page = NetworkPage.MANUAL
-                                message = "Confira o código SHA-256 mostrado no outro celular antes de conectar."
+                            Text("Aparelhos disponíveis", fontWeight = FontWeight.SemiBold)
+                            discoveryState.servers.forEach { device ->
+                                NetworkHubAction(device.serviceName, device.url) {
+                                    client?.cancel(); client = null; currentPath = emptyList(); remoteItems = emptyList()
+                                    host = device.url; fingerprint = ""; secret = ""
+                                    discovery.stop(); failure = null; page = NetworkPage.MANUAL
+                                    showAdvanced = true
+                                    message = "Informe os dados de segurança ou leia o QR no outro celular."
+                                }
                             }
                         }
-                        if (discoveryState.error != null) Text(discoveryState.error ?: "", color = MaterialTheme.colorScheme.error)
-                        HorizontalDivider()
-                        OutlinedButton(onClick = { discovery.stop(); page = NetworkPage.MANUAL }) {
-                            Text("Não apareceu? Conectar pelo IP")
-                        }
-                        Text("A busca encontra apenas servidores WebDAV HTTPS, como outro Explorador XP com compartilhamento ligado. Não encontra pastas Windows/SMB.",
+                        discoveryState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                        Text("A busca encontra servidores WebDAV anunciados, não todos os aparelhos Wi-Fi.",
                             style = MaterialTheme.typography.bodySmall)
                     }
                     NetworkPage.MANUAL -> {
-                        Text("Conectar pelo endereço do outro aparelho", style = MaterialTheme.typography.titleMedium)
-                        Text("No outro celular, ative Compartilhar e copie os dados exibidos. Informe aqui endereço, código de segurança e senha. Exemplo: https://192.168.1.20:18843.",
-                            style = MaterialTheme.typography.bodySmall)
-                        Button(onClick = { openScanner() }, enabled = !busy) { Text("▦ Ler QR Code pela câmera") }
-                        Text("Ao ler o QR, os dados serão preenchidos. Você ainda precisa confirmar a conexão.",
-                            style = MaterialTheme.typography.bodySmall)
-                        OutlinedTextField(value = host, onValueChange = { host = it }, singleLine = true,
-                            label = { Text("Endereço HTTPS e porta") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
-                        OutlinedTextField(value = fingerprint, onValueChange = { fingerprint = it }, singleLine = true,
-                            label = { Text("Código SHA-256 exibido no outro celular") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
-                        OutlinedTextField(value = username, onValueChange = { username = it }, singleLine = true,
-                            label = { Text("Usuário WebDAV") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
-                        OutlinedTextField(value = secret, onValueChange = { secret = it }, singleLine = true,
-                            visualTransformation = PasswordVisualTransformation(),
-                            label = { Text("Senha do dispositivo") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
+                        Text("Conectar por endereço", style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold)
+                        Text("Digite o endereço do outro aparelho ou leia o QR.", style = MaterialTheme.typography.bodySmall)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(value = host, onValueChange = { newHost ->
+                                if (newHost != host) { fingerprint = ""; secret = "" }
+                                host = newHost
+                            }, singleLine = true,
+                                label = { Text("https://IP:18843") }, modifier = Modifier.weight(1f), enabled = !busy)
+                            OutlinedButton(onClick = { openScanner() }, enabled = !busy) { Text("▦ QR") }
+                        }
+                        if (secret.isNotBlank() && fingerprint.isNotBlank()) {
+                            Text("✓ Dados de segurança preenchidos${if (message.startsWith("QR reconhecido")) " pelo QR" else ""}.",
+                                color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                        }
                         Button(enabled = !busy && host.isNotBlank() && fingerprint.isNotBlank() && secret.isNotBlank(), onClick = {
                             scope.launch {
-                                busy = true; message = ""
+                                busy = true; message = ""; failure = null
+                                var attempt: NetworkDavClient? = null
                                 try {
-                                    val remote = withContext(Dispatchers.IO) { NetworkDavClient(host, fingerprint, secret, username) }
-                                    val root = withContext(Dispatchers.IO) { remote.list(emptyList()) }
-                                    client?.cancel(); client = remote
+                                    attempt = withContext(Dispatchers.IO) { NetworkDavClient(host, fingerprint, secret, username) }
+                                    val root = withContext(Dispatchers.IO) { attempt.list(emptyList()) }
+                                    client?.cancel(); client = attempt
                                     currentPath = emptyList(); remoteItems = root
                                     page = NetworkPage.REMOTE
-                                } catch (error: Exception) { reportFailure(error) }
+                                } catch (error: Exception) { attempt?.cancel(); reportFailure(error) }
                                 finally { busy = false }
                             }
                         }) { Text("Conectar") }
+                        if (host.isNotBlank() && (fingerprint.isBlank() || secret.isBlank())) {
+                            Text("Para conectar com segurança, leia o QR ou preencha os dados abaixo.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        TextButton(onClick = { showAdvanced = !showAdvanced }) {
+                            Text(if (showAdvanced) "▴ Ocultar dados de segurança" else "▾ Dados de segurança (manual)")
+                        }
+                        if (showAdvanced) {
+                            OutlinedTextField(value = fingerprint, onValueChange = { fingerprint = it }, singleLine = true,
+                                label = { Text("Código SHA-256") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
+                            OutlinedTextField(value = username, onValueChange = { username = it }, singleLine = true,
+                                label = { Text("Usuário") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
+                            OutlinedTextField(value = secret, onValueChange = { secret = it }, singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                label = { Text("Senha temporária") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
+                        }
                     }
                     NetworkPage.REMOTE -> {
                         Text("Conectado a: ${if (client is NetworkSmbClient) "SMB $smbHost/$smbShare" else host}",
@@ -598,35 +631,57 @@ fun NetworkExplorerScreen(onDismiss: () -> Unit) {
                         client?.cancel(); transferJob?.cancel(); message = "Cancelando transferência..."
                     }) { Text("Cancelar transferência") }
                 }
+                failure?.let { item ->
+                    NetworkFailureSummary(item) { showFailureDetails = true }
+                }
                 if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary)
             }
-            Box(Modifier.align(Alignment.BottomEnd).padding(14.dp)) {
-                Button(onClick = { showAddMenu = true }, modifier = Modifier.size(60.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
-                    Text("+", fontSize = 30.sp, color = Color.White)
-                }
-                DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
-                    DropdownMenuItem(text = { Text("Encontrar outro celular") }, onClick = {
-                        showAddMenu = false; page = NetworkPage.DISCOVERY; discovery.start()
-                    })
-                    DropdownMenuItem(text = { Text("Ler QR Code de outro celular") }, onClick = {
-                        showAddMenu = false; discovery.stop(); openScanner()
-                    })
-                    DropdownMenuItem(text = { Text("Conectar por IP / WebDAV") }, onClick = {
-                        showAddMenu = false; discovery.stop(); page = NetworkPage.MANUAL
-                    })
-                    DropdownMenuItem(text = { Text("Windows / Android SMB2/3") }, onClick = {
-                        showAddMenu = false; discovery.stop(); page = NetworkPage.WINDOWS
-                    })
-                    DropdownMenuItem(text = { Text("Enviar via Quick Share / Android") }, onClick = {
-                        showAddMenu = false; quickShare.launch(arrayOf("*/*"))
-                    })
-                    DropdownMenuItem(text = { Text("Compartilhar arquivos deste celular") }, onClick = {
-                        showAddMenu = false; discovery.stop(); page = NetworkPage.SHARE
-                    })
-                }
-            }
+            // A navegação principal agora está nos três atalhos; não duplicar o botão + nas subtelas.
+
+        }
+    }
+
+    if (showScanner) {
+        NetworkInlineQrScanner(onDismiss = { showScanner = false }, onDecoded = ::acceptQr)
+    }
+    if (showHelp) {
+        AlertDialog(onDismissRequest = { showHelp = false }, title = { Text("Como funciona a Rede?") },
+            text = { Text("Para explorar arquivos, o outro aparelho precisa compartilhar uma pasta e permitir o acesso. " +
+                "No outro Explorador XP, ative Compartilhar; depois use QR ou procure na mesma rede Wi-Fi. " +
+                "Computadores usam SMB na opção Windows / SMB. A busca WebDAV não encontra todos os celulares.") },
+            confirmButton = { TextButton(onClick = { showHelp = false }) { Text("Entendi") } })
+    }
+    if (showQrDialog && server.active) {
+        val qrIp = server.addresses.firstOrNull { NetworkSmbAddress.privateIpv4(it) }
+        AlertDialog(onDismissRequest = { showQrDialog = false },
+            title = { Text("QR para conectar") },
+            text = {
+                if (qrIp != null && server.password.matches(Regex("[A-Za-z0-9_-]{32}")) &&
+                    server.fingerprint.matches(Regex("[A-Fa-f0-9]{64}"))) {
+                    NetworkQrPreview(NetworkQrConnection(qrIp, "xp", server.password, server.fingerprint))
+                } else Text("QR indisponível: confira o Wi-Fi e reinicie o compartilhamento.")
+            },
+            confirmButton = { TextButton(onClick = { showQrDialog = false }) { Text("Fechar") } })
+    }
+    if (showFailureDetails) {
+        failure?.let { item ->
+            AlertDialog(onDismissRequest = { showFailureDetails = false },
+                title = { Text("Detalhes da conexão") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(item.title, fontWeight = FontWeight.SemiBold)
+                        Text(item.explanation)
+                        Text(item.guidance, style = MaterialTheme.typography.bodySmall)
+                        Text("Código: ${item.code}", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = { TextButton(onClick = {
+                    copyNetworkText(context, "Diagnóstico Explorador XP", item.copyable())
+                    showFailureDetails = false
+                    message = "Diagnóstico copiado (sem senha)."
+                }) { Text("Copiar diagnóstico") } },
+                dismissButton = { TextButton(onClick = { showFailureDetails = false }) { Text("Fechar") } })
         }
     }
 
@@ -651,4 +706,106 @@ private fun NetworkHubAction(title: String, description: String, onClick: () -> 
         Text("Abrir ›", color = XpBlueDark, fontSize = 12.sp)
     }
     HorizontalDivider()
+}
+
+/** Três ações compactas, sem descrições longas na página inicial. */
+@Composable
+private fun NetworkTile(symbol: String, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(modifier = modifier.defaultMinSize(minHeight = 108.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(symbol, fontSize = 28.sp, color = MaterialTheme.colorScheme.primary)
+            Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun NetworkFailureSummary(failure: NetworkFailure, onDetails: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(failure.title, color = MaterialTheme.colorScheme.onErrorContainer,
+                fontWeight = FontWeight.SemiBold)
+            Text(failure.explanation, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer)
+            TextButton(onClick = onDetails) { Text("?  Por quê? • Ver detalhes e copiar") }
+        }
+    }
+}
+
+private fun copyNetworkText(context: Context, label: String, value: String, sensitive: Boolean = false) {
+    val clip = ClipData.newPlainText(label, value)
+    if (sensitive) {
+        clip.description.extras = PersistableBundle().apply {
+            putBoolean("android.content.extra.IS_SENSITIVE", true)
+        }
+    }
+    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
+}
+
+/** Mini leitor em diálogo. Câmera liberada assim que o diálogo fecha. */
+@Composable
+private fun NetworkInlineQrScanner(onDismiss: () -> Unit, onDecoded: (String) -> Unit) {
+    val context = LocalContext.current
+    var hasPermission by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        hasPermission = it
+    }
+    LaunchedEffect(Unit) {
+        if (!hasPermission && context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+    val cameraAvailable = remember(context) {
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val latestDecoded by rememberUpdatedState(onDecoded)
+    val scanner = remember(context) {
+        DecoratedBarcodeView(context).apply {
+            setDecoderFactory(DefaultDecoderFactory(listOf(BarcodeFormat.QR_CODE)))
+        }
+    }
+    DisposableEffect(scanner, hasPermission, cameraAvailable, lifecycleOwner) {
+        if (hasPermission && cameraAvailable) {
+            scanner.decodeSingle(object : BarcodeCallback {
+                override fun barcodeResult(result: BarcodeResult?) {
+                    result?.text?.let { latestDecoded(it) }
+                }
+                override fun possibleResultPoints(resultPoints: MutableList<com.google.zxing.ResultPoint>?) = Unit
+            })
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> if (hasPermission && cameraAvailable) scanner.resume()
+                Lifecycle.Event.ON_PAUSE -> scanner.pause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        if (hasPermission && cameraAvailable &&
+            lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) scanner.resume()
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); scanner.pause() }
+    }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Ler QR de conexão") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (!cameraAvailable) {
+                    Text("Este aparelho não tem uma câmera disponível. Use o endereço IP para conectar.")
+                } else if (hasPermission) {
+                    AndroidView(factory = { scanner }, modifier = Modifier.fillMaxWidth().height(260.dp))
+                    Text("Aponte para o QR do outro Explorador XP.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text("Autorize a câmera para ler o QR. Também é possível conectar pelo endereço IP.")
+                    OutlinedButton(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
+                        Text("Permitir câmera")
+                    }
+                }
+            }
+        }, confirmButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } })
 }
