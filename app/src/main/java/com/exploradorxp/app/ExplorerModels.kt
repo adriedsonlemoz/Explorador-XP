@@ -186,8 +186,10 @@ data class TrashItem(
 data class TrashUiState(
     val items: List<TrashItem> = emptyList(),
     val loading: Boolean = false,
+    val loaded: Boolean = false,
 ) {
     val hasItems: Boolean get() = items.isNotEmpty()
+    val totalBytes: Long get() = items.sumOf { it.size.coerceAtLeast(0L) }
 }
 
 data class StorageCategorySummary(

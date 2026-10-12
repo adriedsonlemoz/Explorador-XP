@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.108 (`versionCode 108`). Galeria com barra compacta de ícones, seleção total, ordenação, filtros por origem e duração dos vídeos. Build Android e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.109 (`versionCode 109`). Painel de Ferramentas, resumo de Lixeira na barra inferior e gesto Voltar pelo histórico. Build Android e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.109 (Painel de Ferramentas e navegação):** a barra inferior agora possui seis atalhos, inclusive Ferramentas ao lado da Lixeira. A Lixeira mostra itens e bytes somados do inventário já carregado; "—" indica resumo ainda indisponível, sem fingir zero. O painel agrega Aplicativos Instalados, Armazenamento, Dispositivo, Configurações, Rede, Lixeira, Ajuda, Sobre e os controles de ordenação e Pastas primeiro. O gesto Voltar usa o histórico da pasta; seleção, pesquisa e busca avançada são encerradas primeiro. Não há limpeza por prazo nesta versão; diagnóstico de downloads, teste de velocidade, IP público e VPN continuam futuros.
 
 **alpha.108 (Galeria aprimorada):** Fotos/Vídeos ganharam barra de ícones compacta, seleção de todos os resultados filtrados (incluindo páginas ainda não exibidas), limpar/inverter seleção, ordenação e filtros por origem. Vídeos mostram duração nas miniaturas e resolução quando disponível; itens selecionados são destacados na grade/lista. Paginação de 96 itens, cache de miniaturas, cópia por SAF sem sobrescrita e compartilhamento Android preservados. A seleção em massa coleta só metadados, não decodifica as imagens. A alpha.107 continua como base para todas as correções de TLS. Testes reais Android e Gradle permanecem pendentes.
 
@@ -24,7 +26,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.108` (`versionCode 108`)  
+**Versão atual:** `0.1.0-alpha.109` (`versionCode 109`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

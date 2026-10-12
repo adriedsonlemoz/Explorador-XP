@@ -758,10 +758,15 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         trashJob?.cancel()
         trashJob = viewModelScope.launch {
             _trashState.update { it.copy(loading = true) }
-            val items = runCatching { repository.trashSnapshot() }
-                .onFailure { _events.tryEmit(ExplorerEvent.ShowMessage(it.message ?: "Não foi possível abrir a Lixeira.")) }
-                .getOrDefault(emptyList())
-            _trashState.value = TrashUiState(items = items, loading = false)
+            val snapshot = runCatching { repository.trashSnapshot() }
+            snapshot.onSuccess { items ->
+                _trashState.value = TrashUiState(items = items, loading = false, loaded = true)
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                // Não anunciar "0 itens" se a leitura falhou. Preservar a última contagem válida.
+                _trashState.update { it.copy(loading = false) }
+                _events.tryEmit(ExplorerEvent.ShowMessage(error.message ?: "Não foi possível abrir a Lixeira."))
+            }
         }
     }
 

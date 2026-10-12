@@ -183,12 +183,42 @@ fun ExplorerScreen(
     var mediaShortcut by remember { mutableStateOf<MediaShortcutKind?>(null) }
     var showInstalledApps by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
+    var showToolsPanel by remember { mutableStateOf(false) }
+    var returnToToolsPanel by remember { mutableStateOf(false) }
     var showStorageDetails by remember { mutableStateOf(false) }
     var archiveExtractTarget by remember { mutableStateOf<Pair<File, Boolean>?>(null) }
     var archiveCreateSources by remember { mutableStateOf<List<File>?>(null) }
     var showAdvancedSearchFilters by remember { mutableStateOf(false) }
     val advancedSearch by advancedSearchState.collectAsStateWithLifecycle()
     val displayedItems = if (advancedSearch.active) advancedSearch.results else state.items
+    val quickTrashState by trashState.collectAsStateWithLifecycle()
+    val trashCount = quickTrashState.items.size.takeIf { quickTrashState.loaded }
+    val trashSize = remember(quickTrashState.items, quickTrashState.loaded) {
+        if (quickTrashState.loaded) formatBytes(quickTrashState.totalBytes) else null
+    }
+
+    // Ao voltar de uma ferramenta aberta pelo painel, retornar ao próprio painel.
+    fun returnFromTool() {
+        if (returnToToolsPanel) {
+            returnToToolsPanel = false
+            showToolsPanel = true
+        }
+    }
+
+    fun openPanelTool(action: ExplorerToolAction) {
+        showToolsPanel = false
+        returnToToolsPanel = true
+        when (action) {
+            ExplorerToolAction.APPS -> showInstalledApps = true
+            ExplorerToolAction.STORAGE -> { showStorageDetails = true; onAnalyzeStorage(false) }
+            ExplorerToolAction.DEVICE -> showDeviceInfo = true
+            ExplorerToolAction.SETTINGS -> showSettings = true
+            ExplorerToolAction.NETWORK -> showNetworkExplorer = true
+            ExplorerToolAction.TRASH -> { showTrash = true; onLoadTrash() }
+            ExplorerToolAction.HELP -> showManual = true
+            ExplorerToolAction.ABOUT -> showAbout = true
+        }
+    }
 
     // Navegação fixa: mantém a barra de atalhos visível em todas as telas internas.
     fun navigateShortcut(destination: ExplorerQuickDestination) {
@@ -197,6 +227,8 @@ fun ExplorerScreen(
         showInstalledApps = false
         showSettings = false
         showTrash = false
+        showToolsPanel = false
+        returnToToolsPanel = false
         showAbout = false
         showManual = false
         showStorageDetails = false
@@ -207,51 +239,61 @@ fun ExplorerScreen(
             ExplorerQuickDestination.DOWNLOADS -> onTabChange(ExplorerTab.DOWNLOADS)
             ExplorerQuickDestination.NETWORK -> showNetworkExplorer = true
             ExplorerQuickDestination.TRASH -> { showTrash = true; onLoadTrash() }
+            ExplorerQuickDestination.TOOLS -> showToolsPanel = true
         }
     }
 
     val secondaryPage = showNetworkExplorer || showDeviceInfo || showInstalledApps ||
-        showSettings || showTrash || showAbout || showManual || showStorageDetails || mediaShortcut != null
+        showSettings || showTrash || showToolsPanel || showAbout || showManual || showStorageDetails || mediaShortcut != null
     if (secondaryPage) {
         Column(modifier = modifier.fillMaxSize().background(XpBackground)) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when {
+                    showToolsPanel -> ToolsPanelScreen(
+                        sortMode = state.sortMode,
+                        foldersFirst = state.foldersFirst,
+                        onSortMode = onSortMode,
+                        onFoldersFirstChange = onFoldersFirstChange,
+                        onOpenTool = ::openPanelTool,
+                        onDismiss = { showToolsPanel = false },
+                    )
                     mediaShortcut != null -> MediaShortcutScreen(
                         kind = mediaShortcut!!,
                         accessGranted = accessGranted,
                         onRequestAccess = onRequestAccess,
-                        onDismiss = { mediaShortcut = null },
+                        onDismiss = { mediaShortcut = null; returnFromTool() },
                         onOpenFile = onOpenTarget,
                     )
-                    showNetworkExplorer -> NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false })
-                    showDeviceInfo -> DeviceInfoScreen(onDismiss = { showDeviceInfo = false })
-                    showInstalledApps -> InstalledAppsManagerScreen(onDismiss = { showInstalledApps = false })
-                    showSettings -> AppSettingsScreen(onDismiss = { showSettings = false })
+                    showNetworkExplorer -> NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false; returnFromTool() })
+                    showDeviceInfo -> DeviceInfoScreen(onDismiss = { showDeviceInfo = false; returnFromTool() })
+                    showInstalledApps -> InstalledAppsManagerScreen(onDismiss = { showInstalledApps = false; returnFromTool() })
+                    showSettings -> AppSettingsScreen(onDismiss = { showSettings = false; returnFromTool() })
                     showTrash -> TrashScreenHost(
                         stateFlow = trashState,
-                        onDismiss = { showTrash = false },
+                        onDismiss = { showTrash = false; returnFromTool() },
                         onRefresh = onLoadTrash,
                         onRestore = onRestoreTrashItem,
                         onDeletePermanently = onDeleteTrashItem,
                         onEmpty = onEmptyTrash,
                     )
                     showAbout -> AboutScreen(
-                        onDismiss = { showAbout = false },
+                        onDismiss = { showAbout = false; returnFromTool() },
                         onOpenHelp = { showAbout = false; showManual = true },
                         onOpenDeviceInfo = { showAbout = false; showDeviceInfo = true },
                     )
-                    showManual -> HelpManualScreen(onDismiss = { showManual = false })
+                    showManual -> HelpManualScreen(onDismiss = { showManual = false; returnFromTool() })
                     showStorageDetails -> StorageDetailsScreenHost(
                         stateFlow = storageScanState,
                         fallbackInfo = state.storageInfo,
                         onDismiss = { analyzing ->
                             if (analyzing) onCancelStorageAnalysis()
                             showStorageDetails = false
+                            returnFromTool()
                         },
                         onRefresh = { onAnalyzeStorage(true) },
                         onCancel = onCancelStorageAnalysis,
-                        onOpenFolder = { folder -> showStorageDetails = false; onNavigateTo(folder) },
-                        onOpenFile = { file -> showStorageDetails = false; onOpenTarget(file) },
+                        onOpenFolder = { folder -> showStorageDetails = false; returnToToolsPanel = false; onNavigateTo(folder) },
+                        onOpenFile = { file -> showStorageDetails = false; returnToToolsPanel = false; onOpenTarget(file) },
                         onOpenTrash = { showStorageDetails = false; showTrash = true; onLoadTrash() },
                         onOpenInstalledApps = { showStorageDetails = false; showInstalledApps = true },
                     )
@@ -263,12 +305,28 @@ fun ExplorerScreen(
                     mediaShortcut == MediaShortcutKind.VIDEOS -> ExplorerQuickDestination.VIDEOS
                     showNetworkExplorer -> ExplorerQuickDestination.NETWORK
                     showTrash -> ExplorerQuickDestination.TRASH
+                    showToolsPanel -> ExplorerQuickDestination.TOOLS
                     else -> null
                 },
                 onNavigate = ::navigateShortcut,
+                trashCount = trashCount,
+                trashSize = trashSize,
             )
         }
         return
+    }
+
+    // BackHandler integra o histórico existente ao gesto de voltar e à tecla Voltar do Android.
+    // Na raiz, o Android mantém o tratamento padrão para sair do aplicativo.
+    BackHandler(
+        enabled = state.selectedPaths.isNotEmpty() || advancedSearch.active || state.searchVisible || state.canGoBack,
+    ) {
+        when {
+            state.selectedPaths.isNotEmpty() -> onClearSelection()
+            advancedSearch.active -> onCancelAdvancedSearch()
+            state.searchVisible -> onToggleSearch()
+            state.canGoBack -> onBack()
+        }
     }
 
     Column(
@@ -445,6 +503,8 @@ fun ExplorerScreen(
         ExplorerQuickAccessBar(
             active = if (state.tab == ExplorerTab.DOWNLOADS) ExplorerQuickDestination.DOWNLOADS else null,
             onNavigate = ::navigateShortcut,
+            trashCount = trashCount,
+            trashSize = trashSize,
         )
     }
 
@@ -1414,12 +1474,13 @@ private fun SectionTitle(title: String, icon: Int) {
 private fun HelpManualScreen(onDismiss: () -> Unit) {
     var expandedTopic by remember { mutableStateOf("Começando") }
     val topics = listOf(
-        "Começando" to "Use a barra superior para navegar e operar arquivos; Fotos, Vídeos, Downloads, Rede e Lixeira ficam na barra inferior fixa. Atualizar fica no menu Exibir. Toque em um arquivo para abrir e segure para selecionar.",
-        "Navegação" to "O campo Endereço funciona como caminho navegável. Toque em uma parte do caminho para voltar diretamente até ela. A seta ao lado do endereço permite trocar entre armazenamentos detectados.",
+        "Começando" to "Use a barra superior para navegar e operar arquivos; Fotos, Vídeos, Downloads, Rede, Lixeira e Ferramentas ficam na barra inferior fixa. Atualizar fica no menu Exibir. Toque em um arquivo para abrir e segure para selecionar.",
+        "Navegação" to "O campo Endereço funciona como caminho navegável. Toque em uma parte do caminho para voltar diretamente até ela. A seta ao lado do endereço permite trocar entre armazenamentos detectados. O gesto Voltar do Android percorre o histórico das pastas abertas.",
         "Arquivos e pastas" to "A lista e a grade mostram o tipo do arquivo, tamanho e outras informações úteis. O botão de opções abre ações como copiar, mover, renomear, excluir, compartilhar, favoritar e ver propriedades.",
         "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Colar aparece na barra superior.",
         "Compactar ZIP" to "Selecione um ou vários arquivos/pastas e use o atalho ZIP da barra de seleção. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
-        "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A pasta interna e artefatos de lixeira do sistema ficam ocultos da navegação comum. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
+        "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A barra inferior mostra a quantidade e o tamanho total armazenados após o carregamento. Os itens não expiram automaticamente nesta versão. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
+        "Painel de Ferramentas" to "Abra Ferramentas na barra inferior para acessar aplicativos instalados, armazenamento, informações do dispositivo, rede, configurações, ajuda e Sobre; também é possível ordenar arquivos e ativar Pastas primeiro.",
         "Armazenamento" to "A barra inferior mostra os valores gerais do volume informados pelo Android. Na tela Armazenamento, esses números ficam separados dos arquivos efetivamente analisados pelo Explorador XP. Categorias e pastas usam somente o conjunto que pôde ser enumerado; áreas protegidas não são estimadas.",
         "Aplicativos instalados" to "Em Ferramentas > Aplicativos instalados você pode pesquisar apps de usuário e do sistema, consultar versão, tamanho, SDK, datas, instalador e permissões. Sem Acesso ao uso, o tamanho mostrado é somente o dos APKs instalados; com essa autorização, o Android também fornece código, dados e cache. Desinstalar usa a confirmação do sistema. Por proteção do Android, Limpar dados abre os detalhes oficiais do aplicativo para você concluir a ação.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",

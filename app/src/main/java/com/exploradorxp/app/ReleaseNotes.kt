@@ -18,6 +18,12 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
+                "Barra inferior: novo atalho Ferramentas, ao lado da Lixeira.",
+                "Lixeira: quantidade de itens e espaço ocupado visíveis sem entrar na tela.",
+                "Painel: acesso central a Aplicativos, Armazenamento, Dispositivo, Configurações e Rede.",
+                "Painel também reúne Lixeira, Ajuda, Sobre e ordenação das pastas.",
+                "Gestos: Voltar do Android segue o histórico das pastas e fecha pesquisa/seleção primeiro.",
+                "Arquivos da Lixeira não vencem automaticamente; diagnóstico e ferramentas de rede são futuras etapas.",
                 "Galeria Fotos/Vídeos: barra compacta com ícones para visualização, seleção, ordenação e filtro.",
                 "Seleção: marcar todos os resultados do filtro, limpar ou inverter; contador acompanha a seleção.",
                 "Fotos e vídeos: ordenar por data, tamanho ou nome e filtrar por pasta de origem.",

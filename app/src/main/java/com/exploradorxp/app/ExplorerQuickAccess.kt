@@ -83,26 +83,29 @@ import java.text.DateFormat
 import java.util.Date
 
 /** Barra persistente para o explorador e todas as páginas internas. */
-internal enum class ExplorerQuickDestination { PHOTOS, VIDEOS, DOWNLOADS, NETWORK, TRASH }
+internal enum class ExplorerQuickDestination { PHOTOS, VIDEOS, DOWNLOADS, NETWORK, TRASH, TOOLS }
 internal enum class MediaShortcutKind { PHOTOS, VIDEOS }
 
 @Composable
 internal fun ExplorerQuickAccessBar(
     active: ExplorerQuickDestination?,
     onNavigate: (ExplorerQuickDestination) -> Unit,
+    trashCount: Int? = null,
+    trashSize: String? = null,
 ) {
     val tabs = listOf(
         Triple(ExplorerQuickDestination.PHOTOS, "Fotos", R.drawable.xp_folder_image),
         Triple(ExplorerQuickDestination.VIDEOS, "Vídeos", R.drawable.xp_folder_video),
         Triple(ExplorerQuickDestination.DOWNLOADS, "Downloads", R.drawable.folder_downloads),
         Triple(ExplorerQuickDestination.NETWORK, "Rede", R.drawable.device_mobile),
-        Triple(ExplorerQuickDestination.TRASH, "Lixeira", R.drawable.trash_empty),
+        Triple(ExplorerQuickDestination.TRASH, "Lixeira", if ((trashCount ?: 0) > 0) R.drawable.trash_full else R.drawable.trash_empty),
+        Triple(ExplorerQuickDestination.TOOLS, "Ferramentas", R.drawable.settings),
     )
     Row(
         modifier = Modifier.fillMaxWidth()
             .background(XpChrome)
             .border(1.dp, XpChromeBorder)
-            .height(58.dp)
+            .height(72.dp)
             .padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -112,17 +115,29 @@ internal fun ExplorerQuickAccessBar(
                 modifier = Modifier.weight(1f).fillMaxWidth()
                     .background(if (selected) XpSelection else Color.Transparent)
                     .clickable { onNavigate(destination) }
-                    .padding(vertical = 5.dp, horizontal = 1.dp),
+                    .padding(vertical = 3.dp, horizontal = 1.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Image(painter = painterResource(drawable), contentDescription = label,
-                    modifier = Modifier.size(25.dp))
+                    modifier = Modifier.size(23.dp))
                 Spacer(Modifier.height(2.dp))
-                Text(label, fontSize = 10.sp, maxLines = 1,
+                Text(label, fontSize = 9.sp, maxLines = 1,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                     color = if (selected) XpBlueDark else Color(0xFF253B56),
                     overflow = TextOverflow.Ellipsis)
+                if (destination == ExplorerQuickDestination.TRASH) {
+                    Text(
+                        text = trashCount?.let { if (it == 1) "1 item" else "$it itens" } ?: "—",
+                        fontSize = 8.sp, lineHeight = 9.sp, maxLines = 1,
+                        color = XpTextSecondary, overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = trashSize ?: "—",
+                        fontSize = 8.sp, lineHeight = 9.sp, maxLines = 1,
+                        color = XpTextSecondary, overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

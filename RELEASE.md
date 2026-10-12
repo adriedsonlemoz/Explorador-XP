@@ -1,16 +1,15 @@
-# Explorador XP 0.1.0-alpha.108
+# Explorador XP 0.1.0-alpha.109
 
-## Galeria de Fotos e Vídeos: interface e organização
+## Primeira versão do Painel de Ferramentas
 
-- Ferramentas de ícones: Grade/Lista, Selecionar, Ordenar, Filtrar e Mais.
-- Selecionar tudo em todos os resultados filtrados, inclusive páginas ainda não carregadas; Limpar/Inverter e contador.
-- Ordenação: recentes, antigos, maiores, menores e nome; filtros: câmera, capturas, downloads e outros.
-- Duração dos vídeos e dimensões quando disponíveis, com fallback de reprodução e destaques de seleção.
-- Seleção em segundo plano usando metadados; cache de thumbnails e páginas de 96 arquivos preservados.
-- Copiar por SAF sem sobrescrever; compartilhar pelo Android, limitado a 100 itens por envio.
-- Preservadas as correções de TLS/WebDAV da alpha.107 e os demais recursos SMB, rede e aplicativos.
+- **Ferramentas na barra inferior:** acesso rápido às telas já disponíveis, organização e configurações.
+- **Lixeira mais informativa:** quantidade de itens e espaço ocupado aparecem no próprio atalho, após carregar o inventário da Lixeira.
+- **Gesto Voltar:** navega pelo histórico das pastas, priorizando cancelar seleção e pesquisa.
+- **Atalhos persistentes:** Fotos, Vídeos, Downloads, Rede, Lixeira e Ferramentas.
+- **Sem limpeza automática** e sem ferramentas de IP público, VPN, diagnóstico ou teste de velocidade nesta versão.
+- Preservadas as demais funcionalidades e correções de segurança de rede.
 
-**Versão:** `0.1.0-alpha.108`  
-**Version code:** `108`
+**Versão:** `0.1.0-alpha.109`  
+**Version code:** `109`
 
-**Validação:** testes puros Kotlin e análise sintática locais; **Gradle/Android completo e testes físicos pendentes**.
+**Validação:** revisão local do código e testes de sintaxe/estrutura; **build Gradle Android e testes físicos pendentes**.

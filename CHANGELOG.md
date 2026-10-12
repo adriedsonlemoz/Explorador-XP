@@ -1,3 +1,13 @@
+## 0.1.0-alpha.109 — 2026-10-12
+
+- Barra inferior passa a ter seis destinos: Fotos, Vídeos, Downloads, Rede, Lixeira e Ferramentas.
+- Lixeira exibe contagem e espaço gerenciado pelo Explorador XP sem abrir a página; dados vêm do snapshot de I/O já existente e atualizam após mover/restaurar/apagar/esvaziar. Indicador indisponível antes da primeira leitura, sem confundir falha com lixeira vazia.
+- Novo Painel de Ferramentas: integra as telas existentes de Aplicativos, Armazenamento, Dispositivo, Configurações, Rede, Lixeira, Ajuda e Sobre. Inclui ordenação Nome/Data/Tamanho/Tipo e Pastas primeiro. Ao fechar ferramenta aberta pelo painel, retorna-se ao painel.
+- Gesto Voltar e tecla Voltar do Android usam o histórico nativo do Explorer; seleção, busca avançada e pesquisa têm precedência. Na raiz, o comportamento do sistema é preservado.
+- Sem exclusão automática por validade da Lixeira; políticas de retenção, testes de rede, IP público, VPN e diagnóstico de downloads não foram implementados nesta etapa.
+- Testes existentes dos atalhos atualizados e testes de soma/estado da Lixeira adicionados. Necessário build Android e teste real para validar os gestos e a UI.
+- Preservados os módulos e correções anteriores (galeria, SMB, WebDAV HTTPS e pin SHA-256).
+
 ## 0.1.0-alpha.108 — 2026-10-12
 
 - Galeria Fotos e Vídeos: barra de ações compacta com ícones Grade/Lista, Selecionar, Ordenar, Filtrar e Mais.

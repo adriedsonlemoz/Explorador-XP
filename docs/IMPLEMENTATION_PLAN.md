@@ -1,3 +1,11 @@
+## Planejamento atualizado em 2026-10-12 (alpha.109)
+
+**Implementado na alpha.109:** contador e bytes da Lixeira no atalho inferior, Painel de Ferramentas com módulos existentes e gesto Voltar no histórico de pastas. Teste em Android físico e compilação CI ainda pendentes.
+
+**Próximas ideias (não implementadas):** retenção da Lixeira com opções Nunca/7/30/60/90 dias, diagnóstico guiado de downloads e caches respeitando limites do Android, análise de IP/DNS/rede local, teste de velocidade com limite de dados e inspeção/integração da VPN pelo sistema. Essas etapas exigem projeto e validação próprios; não apagar dados de outros apps sem participação do usuário.
+
+---
+
 ## Planejamento atualizado em 2026-10-11
 
 - Alpha.101: correção específica do R8/SMBJ do build 94; não alterar interfaces de Aplicativos Instalados e Fotos nesta versão.
