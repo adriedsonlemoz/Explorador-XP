@@ -3,7 +3,6 @@ package com.exploradorxp.app
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,11 +78,11 @@ internal fun ToolsPanelScreen(
         }
         HorizontalDivider(color = XpChromeBorder)
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 142.dp),
+            columns = GridCells.Adaptive(minSize = 76.dp),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             items(panelShortcuts, key = { it.action }) { shortcut ->
                 ToolShortcutTile(shortcut, onClick = { onOpenTool(shortcut.action) })
@@ -96,26 +95,24 @@ internal fun ToolsPanelScreen(
 private fun ToolShortcutTile(shortcut: ToolShortcut, onClick: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().aspectRatio(1f)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .border(1.dp, XpChromeBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
-            .padding(10.dp),
+            .padding(horizontal = 2.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            modifier = Modifier.size(54.dp)
-                .background(Color(0xFFEAF3FF), RoundedCornerShape(12.dp)),
+            modifier = Modifier.size(40.dp)
+                .background(Color(0xFFEAF3FF), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Image(painterResource(shortcut.icon), contentDescription = null,
-                modifier = Modifier.size(34.dp))
+                modifier = Modifier.size(27.dp))
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
-            shortcut.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-            lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            shortcut.label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            lineHeight = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center, color = Color(0xFF253B56),
         )
     }

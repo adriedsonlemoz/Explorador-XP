@@ -139,20 +139,12 @@ internal fun ExplorerQuickAccessBar(
                         if (isTrash && trashCount != null && trashCount > 0) {
                             Text(
                                 compactTrashCount(trashCount), color = Color.White,
-                                fontSize = if (trashCount > 99) 6.sp else 8.sp,
+                                fontSize = if (trashCount > 99) 7.sp else 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
-                                modifier = Modifier.align(Alignment.Center).offset(y = 3.dp),
+                                modifier = Modifier.align(Alignment.Center).offset(y = 2.dp),
                             )
                         }
-                    }
-                    if (isTrash) {
-                        Spacer(Modifier.width(2.dp))
-                        Text(
-                            compactTrashSpace(trashBytes),
-                            fontSize = 8.sp, lineHeight = 9.sp, maxLines = 1,
-                            color = XpTextSecondary, overflow = TextOverflow.Ellipsis,
-                        )
                     }
                 }
                 Spacer(Modifier.height(2.dp))

@@ -18,10 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Painel de Ferramentas: oito atalhos em grade de quadrados, com ícones e nomes curtos.",
-                "Organização de arquivos: ordenação e Pastas primeiro agora ficam em Configurações.",
-                "Lixeira: contagem sobre o ícone e espaço ocupado ao lado, sem legendas fora do atalho.",
-                "Novidades da atualização: exibidas apenas as alterações desta versão.",
+                "Aplicativos: ações abaixo do nome e indicadores Sistema/Estado ao lado do título.",
+                "Cabeçalhos: seta Voltar corrigida; ícones claros e sem fundo branco.",
+                "Ferramentas: grade de atalhos compacta, com quatro colunas em telas comuns.",
+                "Lixeira: contador dentro do ícone, sem tamanho exibido ao lado.",
             )
         )
 }

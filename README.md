@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.110 (`versionCode 110`). Ferramentas em grade, ordenação nas Configurações, indicador compacto da Lixeira e novidades apenas da versão atual. Build Android e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.111 (`versionCode 111`). Painel compacto, botões de aplicativos reorganizados e contador da Lixeira dentro do ícone. Build Android e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.111 (ajustes visuais):** Botões de abrir/limpar/remover/sistema posicionados abaixo do pacote, etiquetas de tipo e estado ao lado do nome, Voltar/Atualizar sem fundo branco, Ferramentas em grade compacta e número da Lixeira dentro do ícone.
 
 **alpha.110 (refinamento do painel):** Painel de Ferramentas reorganizado em grade adaptativa de oito atalhos quadrados, sem descrições. Ordenação e Pastas primeiro movidos para Configurações > Organização de arquivos, mantendo o comportamento anterior. Contagem dentro do ícone da Lixeira e espaço em formato compacto ao lado, sem estender a legenda sob o atalho. Notas de atualização limitadas às quatro mudanças desta versão. Funcionalidades e histórico da alpha.109 preservados. Build Android/testes no aparelho pendentes.
 
@@ -28,7 +30,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.110` (`versionCode 110`)  
+**Versão atual:** `0.1.0-alpha.111` (`versionCode 111`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

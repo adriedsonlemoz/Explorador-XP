@@ -40,6 +40,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -453,14 +455,12 @@ private fun AppManagerTitle(onDismiss: () -> Unit, onRefresh: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(34.dp)
-                .background(Color.White, RoundedCornerShape(6.dp))
-                .clickable(onClick = onDismiss),
+            modifier = Modifier.size(44.dp).clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
-            CachedResourceIcon(R.drawable.back, "Voltar", Modifier.size(20.dp))
+            Icon(painterResource(R.drawable.back), "Voltar", tint = Color.White, modifier = Modifier.size(24.dp))
         }
+        Spacer(Modifier.width(5.dp))
         Text(
             "Aplicativos instalados",
             color = Color.White,
@@ -469,13 +469,10 @@ private fun AppManagerTitle(onDismiss: () -> Unit, onRefresh: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         Box(
-            modifier = Modifier
-                .size(34.dp)
-                .background(Color.White, RoundedCornerShape(6.dp))
-                .clickable(onClick = onRefresh),
+            modifier = Modifier.size(44.dp).clickable(onClick = onRefresh),
             contentAlignment = Alignment.Center,
         ) {
-            CachedResourceIcon(R.drawable.refresh, "Atualizar", Modifier.size(20.dp))
+            Icon(painterResource(R.drawable.refresh), "Atualizar", tint = Color.White, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -652,27 +649,21 @@ private fun InstalledAppDetailsScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier
-                    .size(38.dp)
-                    .background(Color.White, RoundedCornerShape(10.dp))
-                    .clickable(onClick = onBack),
+                Modifier.size(44.dp).clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                CachedResourceIcon(R.drawable.back, "Voltar", Modifier.size(21.dp))
+                Icon(painterResource(R.drawable.back), "Voltar", tint = Color.White, modifier = Modifier.size(24.dp))
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
                 Text("Detalhes do aplicativo", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 Text("Dados do Android e ações seguras", color = Color.White.copy(alpha = .84f), fontSize = 10.5.sp)
             }
             Box(
-                Modifier
-                    .size(38.dp)
-                    .background(Color.White, RoundedCornerShape(10.dp))
-                    .clickable(onClick = onRefresh),
+                Modifier.size(44.dp).clickable(onClick = onRefresh),
                 contentAlignment = Alignment.Center,
             ) {
-                CachedResourceIcon(R.drawable.refresh, "Atualizar", Modifier.size(21.dp))
+                Icon(painterResource(R.drawable.refresh), "Atualizar", tint = Color.White, modifier = Modifier.size(24.dp))
             }
         }
 
@@ -702,14 +693,36 @@ private fun InstalledAppDetailsScreen(
                     }
                     Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(
-                            app.label,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1C2F43),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        ) {
+                            Text(
+                                app.label,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1C2F43),
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                AppSummaryChip(
+                                    text = if (app.isUpdatedSystem) "Sistema atualizado" else if (app.isSystem) "Sistema" else "Usuário",
+                                    background = if (app.isSystem || app.isUpdatedSystem) Color(0xFFEAF1FA) else Color(0xFFEAF8EE),
+                                    contentColor = if (app.isSystem || app.isUpdatedSystem) Color(0xFF46607A) else Color(0xFF2F7445),
+                                )
+                                AppSummaryChip(
+                                    text = if (app.enabled) "Habilitado" else "Desativado",
+                                    background = if (app.enabled) Color(0xFFEAF8EE) else Color(0xFFFFF3E7),
+                                    contentColor = if (app.enabled) Color(0xFF2F7445) else Color(0xFF9B6400),
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(3.dp))
                         Text(
                             app.packageName,
@@ -719,19 +732,7 @@ private fun InstalledAppDetailsScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(7.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            AppSummaryChip(
-                                text = if (app.isUpdatedSystem) "Sistema atualizado" else if (app.isSystem) "Sistema" else "Usuário",
-                                background = if (app.isSystem) Color(0xFFEAF1FA) else Color(0xFFEAF8EE),
-                                contentColor = if (app.isSystem) Color(0xFF46607A) else Color(0xFF2F7445),
-                            )
-                            AppSummaryChip(
-                                text = if (app.enabled) "Habilitado" else "Desativado",
-                                background = if (app.enabled) Color(0xFFEAF8EE) else Color(0xFFFFF3E7),
-                                contentColor = if (app.enabled) Color(0xFF2F7445) else Color(0xFF9B6400),
-                            )
-                        }
-                        Spacer(Modifier.height(7.dp))
+                        // Ações onde antes ficavam os indicadores de tipo/estado.
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                             CompactAppAction("Abrir", R.drawable.file_apk, enabled = app.canLaunch,
                                 modifier = Modifier.weight(1f)) {

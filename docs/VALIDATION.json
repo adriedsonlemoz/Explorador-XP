@@ -1,59 +1,54 @@
 {
-  "version_build": "0.1.0-alpha.110",
-  "version_code": 110,
-  "manager_version": "0.1.0-alpha.110",
+  "version_build": "0.1.0-alpha.111",
+  "version_code": 111,
+  "manager_version": "0.1.0-alpha.111",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.110: Painel em grade, organização em Configurações, Lixeira compacta e novidades por build",
+  "scope": "Alpha.111: ações e indicadores dos aplicativos, botão Voltar, ferramentas compactas, lixeira somente no ícone",
   "checks": [
     {
-      "name": "tools_panel_grid",
+      "name": "apps_detail_layout",
       "status": "source_review",
-      "details": "Grade adaptativa de oito atalhos quadrados; sem detalhes ou controles de organização."
+      "details": "Tipo/estado ao lado do título; quatro ações movidas para abaixo do pacote."
     },
     {
-      "name": "settings_organization",
+      "name": "apps_title_back_button",
       "status": "source_review",
-      "details": "SortMode e foldersFirst agora são apresentados em Configurações com os mesmos callbacks do ExplorerViewModel."
+      "details": "Botões de 44dp, ícones brancos sem fundo e título separado da seta."
     },
     {
-      "name": "trash_layout",
+      "name": "tools_panel_4_columns",
       "status": "source_review",
-      "details": "Contagem sobre o ícone e bytes curtos ao lado, mantendo a barra de 72 dp. Testes de formatter/contador."
+      "details": "Grade adaptativa mínimo 76dp, normalmente 4 colunas em ~393dp, sem cartão branco."
     },
     {
-      "name": "release_notes_scope",
+      "name": "trash_icon_count",
       "status": "source_review",
-      "details": "Quatro itens exclusivamente da alpha.110; histórico detalhado mantido no CHANGELOG."
-    },
-    {
-      "name": "jvm_utility",
-      "status": "passed_local",
-      "details": "13 verificações de tamanho/contador compiladas e executadas com kotlinc/JVM; testes JUnit via Gradle pendentes."
-    },
-    {
-      "name": "kotlin_syntax",
-      "status": "passed_local",
-      "details": "7 arquivos Kotlin modificados/novos, inclusive testes, sem erros na análise sintática PSI."
-    },
-    {
-      "name": "xml_json_structural",
-      "status": "passed_local",
-      "details": "Arquivos analisados estruturalmente: 81 xml, 6 json, 2 yml, 0 yaml."
+      "details": "Número sobre ícone, sem indicador lateral; descrição acessível mantém contagem/bytes."
     },
     {
       "name": "android_gradle_build",
       "status": "not_run",
-      "details": "Sem SDK Android/Gradle completos neste ambiente; requer workflow Gerar APK."
+      "details": "Depende de toolchain Android e dependências Gradle."
     },
     {
       "name": "real_device_ui",
       "status": "not_run",
-      "details": "Verificar layout grade/atalho da Lixeira e gesto Voltar em celular."
+      "details": "Pendente verificar densidades/fontes diferentes em Android."
     },
     {
-      "name": "release_notes_scope",
+      "name": "kotlin_syntax",
       "status": "passed_local",
-      "details": "Quatro novidades exclusivas da alpha.110 verificadas estaticamente; teste ReleaseNotesScopeTest adicionado para o Gradle."
+      "details": "Análise PSI Kotlin em InstalledAppsManager, ExplorerQuickAccess, ToolsPanelScreen, ReleaseNotes e ReleaseNotesScopeTest: sem erros."
+    },
+    {
+      "name": "version_sync",
+      "status": "passed_local",
+      "details": "VersionCode 111 sincronizado em Gradle, app_identity, github-manager, VERSION, README e documentação."
+    },
+    {
+      "name": "xml_json_structure",
+      "status": "passed_local",
+      "details": "79 XML e 6 JSON analisados estruturalmente com sucesso."
     }
   ]
 }

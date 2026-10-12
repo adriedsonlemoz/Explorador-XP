@@ -1,3 +1,11 @@
+## 0.1.0-alpha.111 — 2026-10-12
+
+- Detalhes dos aplicativos: indicadores Sistema/Usuário e Habilitado/Desativado passam para a direita do nome; quatro ações (Abrir, Limpar, Remover, Sistema) ocupam a faixa abaixo do pacote antes usada pelos indicadores.
+- Cabeçalhos das telas de aplicativos: ícones Voltar/Atualizar brancos, sem fundo branco, áreas de toque de 44 dp; corrigido o espaço entre a seta Voltar e o título de Aplicativos instalados.
+- Painel de Ferramentas: atalhos menores em grade adaptativa que comporta quatro colunas em telas de largura comum; cartões brancos e bordas eliminados, mantendo oito destinos.
+- Barra inferior: número de itens da Lixeira centralizado sobre o ícone vermelho, sem indicador de tamanho ao lado; dados completos permanecem na descrição de acessibilidade e na tela Lixeira.
+- Versão/versionCode e metadados sincronizados; build Android completo e teste visual em aparelho ainda necessários.
+
 ## 0.1.0-alpha.110 — 2026-10-12
 
 - Painel de Ferramentas: substituída lista vertical por grade responsiva de oito quadrados (ícone + título curto), sem descrições nem controles de ordenação na tela do painel.
