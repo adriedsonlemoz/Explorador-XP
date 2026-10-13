@@ -13,6 +13,10 @@ internal enum class MediaGalleryOrigin(val label: String) {
 
 /** Apenas classifica pela pasta: nunca acessa dados privados de outros aplicativos. */
 internal object MediaGalleryRules {
+    fun isInDirectory(path: String, directory: String): Boolean =
+        java.io.File(path).parentFile?.absolutePath == java.io.File(directory).absolutePath
+
+
     fun matches(path: String, origin: MediaGalleryOrigin): Boolean {
         if (origin == MediaGalleryOrigin.ALL) return true
         val normalized = "/" + path.replace('\\', '/').lowercase().trim('/') + "/"

@@ -18,10 +18,12 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Tema claro: fundo principal branco puro nas telas do Explorador XP.",
-                "Contornos de cartões e campos reforçados; divisórias mantidas visíveis.",
-                "Barra azul, ícones, seleção, avisos e botões mantêm suas cores de identificação.",
-                "A classificação, os filtros e a lista compacta da versão anterior continuam disponíveis.",
+                "Fotos e Vídeos: agora abrem nas pastas de origem, sem misturar todos os arquivos.",
+                "Galerias: menus Arquivo, Editar, Exibir, Favoritos, Ferramentas e Ajuda, com Voltar, Avançar, Início e Subir funcionais.",
+                "Seleção total, cópia e compartilhamento respeitam a pasta de mídia aberta.",
+                "Aplicativos instalados: lista mais compacta com ícones menores, preservando tamanho e pacote.",
+                "Painel de Ferramentas: cartões equilibrados com ícones maiores e pequenas descrições.",
+                "Correção do teste ReleaseNotesScopeTest que interrompeu o workflow Gerar APK 107.",
             )
         )
 }

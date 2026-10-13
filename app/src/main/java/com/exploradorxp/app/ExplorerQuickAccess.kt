@@ -168,6 +168,11 @@ internal data class IndexedMediaFile(
 )
 
 internal data class MediaGalleryPage(val entries: List<IndexedMediaFile>, val hasMore: Boolean)
+internal data class MediaGalleryFolder(
+    val path: String, val count: Int, val totalBytes: Long,
+    val lastModifiedSeconds: Long,
+)
+
 
 internal object MediaShortcutIndex {
     const val PAGE_SIZE = 96
@@ -224,16 +229,47 @@ internal object MediaShortcutIndex {
         }
     }
 
+    /** Faz uma única consulta de metadados, incluindo pastas de páginas posteriores a 96 itens. */
+    suspend fun loadFolders(
+        context: Context, kind: MediaShortcutKind,
+        sort: MediaGallerySort, origin: MediaGalleryOrigin,
+    ): List<MediaGalleryFolder> {
+        val counts = LinkedHashMap<String, MediaGalleryFolder>()
+        queryMedia(context, kind, sort) { media ->
+            if (MediaGalleryRules.matches(media.file.absolutePath, origin)) {
+                media.file.parentFile?.absolutePath?.let { dir ->
+                    val old = counts[dir]
+                    counts[dir] = MediaGalleryFolder(
+                        dir, (old?.count ?: 0) + 1,
+                        (old?.totalBytes ?: 0) + media.sizeBytes,
+                        maxOf(old?.lastModifiedSeconds ?: 0L, media.modifiedSeconds),
+                    )
+                }
+            }
+            true
+        }
+        val result = counts.values.toList()
+        return when (sort) {
+            MediaGallerySort.NAME -> result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { File(it.path).name })
+            MediaGallerySort.LARGEST -> result.sortedByDescending { it.totalBytes }
+            MediaGallerySort.SMALLEST -> result.sortedBy { it.totalBytes }
+            MediaGallerySort.OLDEST -> result.sortedBy { it.lastModifiedSeconds }
+            MediaGallerySort.RECENT -> result.sortedByDescending { it.lastModifiedSeconds }
+        }
+    }
+
     suspend fun loadPage(
         context: Context, kind: MediaShortcutKind, page: Int,
         sort: MediaGallerySort, origin: MediaGalleryOrigin,
+        folderPath: String? = null,
     ): MediaGalleryPage {
         require(page >= 0)
         val found = ArrayList<IndexedMediaFile>(PAGE_SIZE + 1)
         var skipped = 0L
         val offset = page.toLong() * PAGE_SIZE
         queryMedia(context, kind, sort) { media ->
-            if (!MediaGalleryRules.matches(media.file.absolutePath, origin)) return@queryMedia true
+            if (!MediaGalleryRules.matches(media.file.absolutePath, origin) ||
+                (folderPath != null && !MediaGalleryRules.isInDirectory(media.file.absolutePath, folderPath))) return@queryMedia true
             if (skipped < offset) { skipped++; return@queryMedia true }
             found.add(media)
             found.size <= PAGE_SIZE
@@ -245,10 +281,14 @@ internal object MediaShortcutIndex {
     suspend fun allMatchingPaths(
         context: Context, kind: MediaShortcutKind,
         sort: MediaGallerySort, origin: MediaGalleryOrigin,
+        folderPath: String? = null,
     ): Set<String> {
         val paths = LinkedHashSet<String>()
         queryMedia(context, kind, sort) { media ->
-            if (MediaGalleryRules.matches(media.file.absolutePath, origin)) paths.add(media.file.absolutePath)
+            if (MediaGalleryRules.matches(media.file.absolutePath, origin) &&
+                (folderPath == null || MediaGalleryRules.isInDirectory(media.file.absolutePath, folderPath))) {
+                paths.add(media.file.absolutePath)
+            }
             true
         }
         return paths
@@ -273,20 +313,6 @@ internal fun galleryDuration(milliseconds: Long): String {
         else "%02d:%02d".format(seconds / 60, seconds % 60)
 }
 
-@Composable
-private fun GalleryToolbarAction(
-    label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
-    enabled: Boolean = true, onClick: () -> Unit,
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(56.dp)) {
-        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(38.dp)) {
-            Icon(icon, contentDescription = label, tint = if (enabled) XpBlueDark else XpTextSecondary,
-                modifier = Modifier.size(22.dp))
-        }
-        Text(label, fontSize = 10.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MediaShortcutScreen(
@@ -295,10 +321,11 @@ internal fun MediaShortcutScreen(
     onRequestAccess: () -> Unit,
     onDismiss: () -> Unit,
     onOpenFile: (File) -> Unit,
+    onOpenFavorites: () -> Unit,
+    onOpenTools: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
-    BackHandler(onBack = onDismiss)
     var entries by remember(kind, accessGranted) { mutableStateOf(emptyList<IndexedMediaFile>()) }
     var page by remember(kind, accessGranted) { mutableStateOf(0) }
     var hasMore by remember(kind, accessGranted) { mutableStateOf(true) }
@@ -312,22 +339,59 @@ internal fun MediaShortcutScreen(
     var notice by remember { mutableStateOf("") }
     var sort by remember(kind) { mutableStateOf(MediaGallerySort.RECENT) }
     var origin by remember(kind) { mutableStateOf(MediaGalleryOrigin.ALL) }
-    var sortMenu by remember { mutableStateOf(false) }
-    var filterMenu by remember { mutableStateOf(false) }
-    var moreMenu by remember { mutableStateOf(false) }
+    var fileMenu by remember { mutableStateOf(false) }
+    var editMenu by remember { mutableStateOf(false) }
+    var viewMenu by remember { mutableStateOf(false) }
+    var favoritesMenu by remember { mutableStateOf(false) }
+    var toolsMenu by remember { mutableStateOf(false) }
+    var helpMenu by remember { mutableStateOf(false) }
     var refreshKey by remember { mutableStateOf(0) }
+    var folderPath by remember(kind) { mutableStateOf<String?>(null) }
+    var forwardFolder by remember(kind) { mutableStateOf<String?>(null) }
+    var folders by remember(kind, accessGranted) { mutableStateOf(emptyList<MediaGalleryFolder>()) }
+    var folderLoading by remember(kind, accessGranted) { mutableStateOf(accessGranted) }
+
+    fun switchFolder(destination: String?, rememberForForward: Boolean = false) {
+        if (destination == folderPath) return
+        if (rememberForForward) forwardFolder = folderPath else forwardFolder = null
+        folderPath = destination
+        selectMode = false; selected = emptySet()
+        page = 0; entries = emptyList(); hasMore = true; error = null
+        loading = destination != null && accessGranted
+    }
+    fun backGallery() {
+        when {
+            selectMode -> { selectMode = false; selected = emptySet() }
+            folderPath != null -> switchFolder(null, rememberForForward = true)
+            else -> onDismiss()
+        }
+    }
+    BackHandler(onBack = { backGallery() })
 
     fun reloadGallery() {
         page = 0; entries = emptyList(); hasMore = true; error = null
         selected = emptySet(); refreshKey++
     }
 
-    LaunchedEffect(kind, accessGranted, sort, origin, page, refreshKey) {
-        if (accessGranted && (page == 0 || hasMore)) {
+    LaunchedEffect(kind, accessGranted, sort, origin, refreshKey) {
+        if (accessGranted) {
+            folderLoading = true
+            try {
+                folders = withContext(Dispatchers.IO) {
+                    MediaShortcutIndex.loadFolders(context, kind, sort, origin)
+                }
+                error = null
+            } catch (exception: Exception) {
+                error = exception.localizedMessage ?: "Não foi possível listar pastas de mídia."
+            } finally { folderLoading = false }
+        }
+    }
+    LaunchedEffect(kind, accessGranted, sort, origin, folderPath, page, refreshKey) {
+        if (accessGranted && folderPath != null && (page == 0 || hasMore)) {
             loading = true
             try {
                 val next = withContext(Dispatchers.IO) {
-                    MediaShortcutIndex.loadPage(context, kind, page, sort, origin)
+                    MediaShortcutIndex.loadPage(context, kind, page, sort, origin, folderPath)
                 }
                 entries = if (page == 0) next.entries
                     else (entries + next.entries).distinctBy { it.file.absolutePath }
@@ -404,16 +468,16 @@ internal fun MediaShortcutScreen(
             selectingAll = true
             try {
                 val paths = withContext(Dispatchers.IO) {
-                    MediaShortcutIndex.allMatchingPaths(context, kind, sort, origin)
+                    MediaShortcutIndex.allMatchingPaths(context, kind, sort, origin, folderPath)
                 }
                 selected = if (invert) paths - selected else paths
-                notice = "${selected.size} arquivo(s) selecionado(s) no filtro atual."
+                notice = "${selected.size} arquivo(s) selecionado(s) na pasta atual."
             } catch (e: Exception) {
                 notice = "Falha ao atualizar seleção: ${e.localizedMessage}"
             } finally { selectingAll = false }
         }
     }
-    val title = if (kind == MediaShortcutKind.PHOTOS) "Galeria de fotos" else "Galeria de vídeos"
+    val title = if (kind == MediaShortcutKind.PHOTOS) "Fotos" else "Vídeos"
     fun tap(item: IndexedMediaFile) {
         if (selectMode) {
             selected = if (item.file.absolutePath in selected) selected - item.file.absolutePath
@@ -422,78 +486,145 @@ internal fun MediaShortcutScreen(
     }
 
     Column(Modifier.fillMaxSize().background(XpBackground)) {
-        Row(Modifier.fillMaxWidth().background(XpBlueDark).padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Text("‹ Voltar", modifier = Modifier.clickable(onClick = onDismiss), color = Color.White, fontSize = 13.sp)
-            Spacer(Modifier.weight(1f))
-            Text(if (selectMode) "${selected.size} selecionado(s)" else title,
-                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.weight(1f))
-            Text(if (selectMode) "" else "${entries.size}${if (hasMore) "+" else ""}",
-                color = Color.White, fontSize = 12.sp)
+        Row(
+            Modifier.fillMaxWidth().height(50.dp).background(XpBlueDark).padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = { backGallery() }, modifier = Modifier.size(44.dp)) {
+                Icon(painterResource(R.drawable.back), "Voltar", tint = Color.White, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(if (selectMode) "${selected.size} selecionado(s)" else "Explorador XP • $title",
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp,
+                modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (folderPath == null) "${folders.size} pastas" else File(folderPath!!).name,
+                color = Color.White.copy(alpha = .82f), fontSize = 11.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            if (selectMode) {
-                GalleryToolbarAction("Fechar", Icons.Rounded.Close, !copying && !selectingAll) {
-                    selected = emptySet(); selectMode = false
-                }
-                GalleryToolbarAction("Tudo", Icons.Rounded.SelectAll, !copying && !selectingAll) { updateAllSelection(false) }
-                GalleryToolbarAction("Limpar", Icons.Rounded.CheckBox, !copying && !selectingAll) { selected = emptySet() }
-                GalleryToolbarAction("Inverter", Icons.Rounded.CheckCircle, !copying && !selectingAll) {
-                    updateAllSelection(true)
-                }
-                Box {
-                    GalleryToolbarAction("Mais", Icons.Rounded.MoreVert, !copying) { moreMenu = true }
-                    DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
-                        DropdownMenuItem(text = { Text("Atualizar galeria") }, onClick = {
-                            moreMenu = false; reloadGallery()
-                        })
-                    }
-                }
-            } else {
-                GalleryToolbarAction(if (gridView) "Lista" else "Grade",
-                    if (gridView) Icons.Rounded.ViewList else Icons.Rounded.GridView, !copying) {
-                    gridView = !gridView
-                }
-                GalleryToolbarAction("Selecionar", Icons.Rounded.CheckBox, !copying) {
-                    selectMode = true; selected = emptySet()
-                }
-                Box {
-                    GalleryToolbarAction("Ordenar", Icons.Rounded.Sort, !copying) { sortMenu = true }
-                    DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
-                        MediaGallerySort.values().forEach { option ->
-                            DropdownMenuItem(text = { Text(option.label + if (sort == option) "  ✓" else "") },
-                                onClick = {
-                                    sort = option; sortMenu = false; reloadGallery()
-                                })
-                        }
-                    }
-                }
-                Box {
-                    GalleryToolbarAction("Filtrar", Icons.Rounded.FilterList, !copying) { filterMenu = true }
-                    DropdownMenu(expanded = filterMenu, onDismissRequest = { filterMenu = false }) {
-                        MediaGalleryOrigin.values().forEach { option ->
-                            DropdownMenuItem(text = { Text(option.label + if (origin == option) "  ✓" else "") },
-                                onClick = {
-                                    origin = option; filterMenu = false; reloadGallery()
-                                })
-                        }
-                    }
-                }
-                Box {
-                    GalleryToolbarAction("Mais", Icons.Rounded.MoreVert, !copying) { moreMenu = true }
-                    DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
-                        DropdownMenuItem(text = { Text("Atualizar") }, onClick = {
-                            moreMenu = false; reloadGallery()
-                        })
-                        DropdownMenuItem(text = { Text("Informações") }, onClick = {
-                            moreMenu = false
-                            notice = "${entries.size} carregado(s) • ${sort.label} • ${origin.label}. Use Carregar mais para outras páginas."
-                        })
+        // Mesma faixa de menus da tela Arquivos. Ações não aplicáveis à galeria são omitidas.
+        Row(
+            Modifier.fillMaxWidth().height(29.dp).background(XpChrome)
+                .border(1.dp, XpChromeBorder)
+                .horizontalScroll(androidx.compose.foundation.rememberScrollState())
+                .padding(horizontal = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box {
+                XpMenuLabel("Arquivo", fileMenu) { fileMenu = true }
+                XpPopupMenu(fileMenu, { fileMenu = false }) {
+                    XpMenuItem("Atualizar", R.drawable.refresh) { fileMenu = false; reloadGallery() }
+                    XpMenuItem("Informações", R.drawable.info) {
+                        fileMenu = false
+                        notice = if (folderPath == null) "${folders.size} pastas com ${title.lowercase()} disponíveis."
+                            else "Pasta: ${folderPath} • ${entries.size}${if (hasMore) "+" else ""} arquivo(s) carregado(s)."
                     }
                 }
             }
+            Box {
+                XpMenuLabel("Editar", editMenu) { editMenu = true }
+                XpPopupMenu(editMenu, { editMenu = false }) {
+                    XpMenuItem("Selecionar arquivos", R.drawable.select_all, enabled = folderPath != null) {
+                        editMenu = false; selectMode = true
+                    }
+                    XpMenuItem("Selecionar tudo da pasta", enabled = folderPath != null && !selectingAll) {
+                        editMenu = false; selectMode = true; updateAllSelection(false)
+                    }
+                    XpMenuItem("Inverter seleção", enabled = folderPath != null && selectMode && !selectingAll) {
+                        editMenu = false; updateAllSelection(true)
+                    }
+                    XpMenuItem("Cancelar seleção", enabled = selectMode) {
+                        editMenu = false; selectMode = false; selected = emptySet()
+                    }
+                }
+            }
+            Box {
+                XpMenuLabel("Exibir", viewMenu) { viewMenu = true }
+                XpPopupMenu(viewMenu, { viewMenu = false }) {
+                    XpMenuItem("Exibir como grade", checked = gridView) { viewMenu = false; gridView = true }
+                    XpMenuItem("Exibir como lista", checked = !gridView) { viewMenu = false; gridView = false }
+                    XpMenuDivider()
+                    MediaGallerySort.values().forEach { option ->
+                        XpMenuItem("Classificar: ${option.label}", checked = sort == option) {
+                            viewMenu = false; sort = option; reloadGallery()
+                        }
+                    }
+                    XpMenuDivider()
+                    MediaGalleryOrigin.values().forEach { option ->
+                        XpMenuItem("Local: ${option.label}", checked = origin == option) {
+                            viewMenu = false; origin = option
+                            switchFolder(null); reloadGallery()
+                        }
+                    }
+                }
+            }
+            Box {
+                XpMenuLabel("Favoritos", favoritesMenu) { favoritesMenu = true }
+                XpPopupMenu(favoritesMenu, { favoritesMenu = false }) {
+                    XpMenuItem("Abrir Favoritos", R.drawable.favorites) {
+                        favoritesMenu = false; onOpenFavorites()
+                    }
+                }
+            }
+            Box {
+                XpMenuLabel("Ferramentas", toolsMenu) { toolsMenu = true }
+                XpPopupMenu(toolsMenu, { toolsMenu = false }) {
+                    XpMenuItem("Painel de Ferramentas", R.drawable.settings) {
+                        toolsMenu = false; onOpenTools()
+                    }
+                    XpMenuDivider()
+                    XpMenuItem("Copiar arquivos selecionados", R.drawable.copy, enabled = selected.isNotEmpty() && !copying) {
+                        toolsMenu = false; pickDestination.launch(null)
+                    }
+                    XpMenuItem("Compartilhar selecionados", R.drawable.share, enabled = selected.isNotEmpty() && !copying) {
+                        toolsMenu = false; shareSelected()
+                    }
+                    XpMenuDivider()
+                    XpMenuItem("Atualizar", R.drawable.refresh) { toolsMenu = false; reloadGallery() }
+                }
+            }
+            Box {
+                XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
+                XpPopupMenu(helpMenu, { helpMenu = false }) {
+                    XpMenuItem("Como navegar") {
+                        helpMenu = false
+                        notice = "Abra uma pasta para ver sua mídia. Voltar/Subir retornam às pastas; Avançar reabre a última pasta. Exibir altera a classificação."
+                    }
+                }
+            }
+        }
+        // Navegação real de pastas; não confundimos voltar no histórico com fechar a galeria.
+        Row(
+            Modifier.fillMaxWidth().height(52.dp).background(XpChrome)
+                .border(1.dp, XpChromeBorder).padding(horizontal = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            XpClassicToolButton(R.drawable.back, "Voltar", folderPath != null, {
+                switchFolder(null, rememberForForward = true)
+            }, Modifier.weight(1f), compact = true)
+            XpClassicToolButton(R.drawable.forward, "Avançar", forwardFolder != null && folderPath == null, {
+                forwardFolder?.let { switchFolder(it) }
+            }, Modifier.weight(1f), compact = true)
+            XpClassicToolButton(R.drawable.home, "Início", folderPath != null, {
+                switchFolder(null)
+            }, Modifier.weight(1f), compact = true)
+            XpClassicToolButton(R.drawable.up, "Subir", folderPath != null, {
+                switchFolder(null, rememberForForward = true)
+            }, Modifier.weight(1f), compact = true)
+            XpClassicToolButton(R.drawable.refresh, "Atualizar", !copying, { reloadGallery() }, Modifier.weight(1f), compact = true)
+            XpClassicToolButton(R.drawable.select_all, "Selecionar", folderPath != null, {
+                selectMode = !selectMode
+                if (!selectMode) selected = emptySet()
+            }, Modifier.weight(1f), compact = true)
+        }
+        Row(
+            Modifier.fillMaxWidth().height(36.dp).background(Color.White)
+                .border(1.dp, XpCardBorder).padding(horizontal = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Endereço", color = XpTextSecondary, fontSize = 11.sp)
+            Spacer(Modifier.width(10.dp))
+            Text("${title}  ›  ${folderPath?.let { File(it).name } ?: "Pastas"}",
+                color = XpBlueDark, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (selectMode) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
@@ -515,8 +646,8 @@ internal fun MediaShortcutScreen(
             Text("Filtro: ${origin.label}", Modifier.padding(start = 14.dp, bottom = 4.dp),
                 color = XpBlueDark, fontSize = 11.sp)
         }
-        if (loading || selectingAll || copying) {
-            Text(when { copying -> "Copiando..."; selectingAll -> "Selecionando todas as páginas..."; else -> "Carregando..." },
+        if ((folderPath == null && folderLoading) || (folderPath != null && loading) || selectingAll || copying) {
+            Text(when { copying -> "Copiando..."; selectingAll -> "Selecionando arquivos da pasta..."; else -> "Carregando..." },
                 Modifier.padding(horizontal = 12.dp, vertical = 2.dp), fontSize = 11.sp, color = XpTextSecondary)
         }
         if (notice.isNotBlank()) Text(notice, Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
@@ -526,11 +657,43 @@ internal fun MediaShortcutScreen(
                 Text("Autorize o acesso aos arquivos para listar $title.")
                 Text("Conceder acesso", Modifier.clickable(onClick = onRequestAccess).padding(10.dp), color = XpBlueDark)
             }
-            entries.isEmpty() && loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+            (folderPath == null && folderLoading) || (folderPath != null && entries.isEmpty() && loading) ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            error != null && (folderPath == null || entries.isEmpty()) ->
+                Text(error ?: "", Modifier.padding(18.dp), color = Color(0xFFA42222))
+            folderPath == null && folders.isEmpty() ->
+                Text("Nenhuma pasta com ${title.lowercase()} foi encontrada.", Modifier.padding(18.dp))
+            folderPath == null -> LazyColumn(Modifier.weight(1f)) {
+                items(folders, key = { it.path }) { folder ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { switchFolder(folder.path) }
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            Modifier.size(45.dp).background(Color(0xFFEAF3FF),
+                                androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Image(painterResource(R.drawable.xp_folder), contentDescription = null,
+                                modifier = Modifier.size(35.dp))
+                        }
+                        Spacer(Modifier.width(11.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(File(folder.path).name, fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${folder.count} ${if (folder.count == 1) "arquivo" else "arquivos"} • ${galleryFileSize(folder.totalBytes)}",
+                                color = XpTextSecondary, fontSize = 11.sp)
+                            Text(folder.path, color = XpTextSecondary,
+                                fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Icon(painterResource(R.drawable.forward), "Abrir pasta", tint = XpBlueDark,
+                            modifier = Modifier.size(18.dp))
+                    }
+                    androidx.compose.material3.HorizontalDivider(color = XpCardBorder.copy(alpha = .55f))
+                }
             }
-            error != null && entries.isEmpty() -> Text(error ?: "", Modifier.padding(18.dp), color = Color(0xFFA42222))
-            entries.isEmpty() -> Text("Nenhum arquivo encontrado para este filtro.", Modifier.padding(18.dp))
+            entries.isEmpty() -> Text("Nenhuma mídia encontrada nesta pasta.", Modifier.padding(18.dp))
             else -> if (gridView) {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(108.dp), modifier = Modifier.weight(1f),

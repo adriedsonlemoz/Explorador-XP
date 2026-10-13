@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,20 +38,20 @@ import androidx.compose.ui.unit.sp
 /** Apenas módulos existentes: o painel não cria serviços ou permissões adicionais. */
 internal enum class ExplorerToolAction { APPS, STORAGE, DEVICE, SETTINGS, NETWORK, TRASH, HELP, ABOUT }
 
-private data class ToolShortcut(val action: ExplorerToolAction, val label: String, val icon: Int)
+private data class ToolShortcut(val action: ExplorerToolAction, val label: String, val icon: Int, val description: String)
 
 private val panelShortcuts = listOf(
-    ToolShortcut(ExplorerToolAction.APPS, "Aplicativos", R.drawable.file_apk),
-    ToolShortcut(ExplorerToolAction.STORAGE, "Armazenamento", R.drawable.drive_storage),
-    ToolShortcut(ExplorerToolAction.DEVICE, "Dispositivo", R.drawable.device_mobile),
-    ToolShortcut(ExplorerToolAction.NETWORK, "Rede local", R.drawable.device_mobile),
-    ToolShortcut(ExplorerToolAction.TRASH, "Lixeira", R.drawable.trash_empty),
-    ToolShortcut(ExplorerToolAction.SETTINGS, "Configurações", R.drawable.settings),
-    ToolShortcut(ExplorerToolAction.HELP, "Ajuda", R.drawable.help),
-    ToolShortcut(ExplorerToolAction.ABOUT, "Sobre", R.drawable.info),
+    ToolShortcut(ExplorerToolAction.APPS, "Aplicativos", R.drawable.file_apk, "Instalados e uso"),
+    ToolShortcut(ExplorerToolAction.STORAGE, "Armazenamento", R.drawable.drive_storage, "Espaço e arquivos"),
+    ToolShortcut(ExplorerToolAction.DEVICE, "Dispositivo", R.drawable.device_mobile, "Dados do aparelho"),
+    ToolShortcut(ExplorerToolAction.NETWORK, "Rede local", R.drawable.device_mobile, "Wi-Fi e conexões"),
+    ToolShortcut(ExplorerToolAction.TRASH, "Lixeira", R.drawable.trash_empty, "Itens excluídos"),
+    ToolShortcut(ExplorerToolAction.SETTINGS, "Configurações", R.drawable.settings, "Preferências do XP"),
+    ToolShortcut(ExplorerToolAction.HELP, "Ajuda", R.drawable.help, "Dúvidas e uso"),
+    ToolShortcut(ExplorerToolAction.ABOUT, "Sobre", R.drawable.info, "Versão e novidades"),
 )
 
-/** Grade de atalhos no estilo Painel de Controle: ícone e título, sem descrições. */
+/** Atalhos agrupados em quatro colunas, com legenda para reduzir a ambiguidade. */
 @Composable
 internal fun ToolsPanelScreen(
     onOpenTool: (ExplorerToolAction) -> Unit,
@@ -78,11 +78,11 @@ internal fun ToolsPanelScreen(
         }
         HorizontalDivider(color = XpChromeBorder)
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 76.dp),
+            columns = GridCells.Adaptive(minSize = 82.dp),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
+            contentPadding = PaddingValues(horizontal = 9.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(panelShortcuts, key = { it.action }) { shortcut ->
                 ToolShortcutTile(shortcut, onClick = { onOpenTool(shortcut.action) })
@@ -94,26 +94,34 @@ internal fun ToolsPanelScreen(
 @Composable
 private fun ToolShortcutTile(shortcut: ToolShortcut, onClick: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().aspectRatio(1f)
-            .clip(RoundedCornerShape(10.dp))
+        modifier = Modifier.fillMaxWidth().height(112.dp)
+            .clip(RoundedCornerShape(11.dp))
+            .background(Color.White)
+            .border(1.dp, XpCardBorder, RoundedCornerShape(11.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 2.dp, vertical = 4.dp),
+            .padding(horizontal = 3.dp, vertical = 7.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier.size(45.dp)
                 .background(Color(0xFFEAF3FF), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Image(painterResource(shortcut.icon), contentDescription = null,
-                modifier = Modifier.size(27.dp))
+                modifier = Modifier.size(30.dp))
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(5.dp))
         Text(
             shortcut.label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
-            lineHeight = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            lineHeight = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center, color = Color(0xFF253B56),
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            shortcut.description, fontSize = 8.sp, lineHeight = 9.sp,
+            maxLines = 2, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center, color = XpTextSecondary,
         )
     }
 }

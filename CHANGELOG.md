@@ -1,3 +1,13 @@
+## 0.1.0-alpha.114 — 2026-10-12
+
+- Fotos e Vídeos: índice completo de pastas de mídia por caminho integral, sem usar apenas a primeira página de 96 resultados. A tela de entrada apresenta apenas pastas com quantidade e tamanho; a pasta aberta mantém miniaturas reais em lista/grade e paginação de 96 itens.
+- Galerias: cabeçalho no padrão do Explorador XP, menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda, e barra com Voltar/Avançar/Início/Subir/Atualizar/Selecionar. O histórico navega entre pastas sem fechar a tela; o Voltar do Android retorna às pastas antes de sair.
+- Selecionar tudo e Inverter limitam-se aos caminhos de mídia pertencentes à pasta aberta; cópia SAF sem substituir arquivos e compartilhamento Android com limite de 100 itens mantidos.
+- Aplicativos instalados: linhas compactas (ícones de 32 dp, espaçamento vertical de 5 dp, metadados em fonte menor), sem remover pesquisa, badges ou filtros por tamanho/status.
+- Painel de Ferramentas: cartões brancos com borda sutil, ícones de 30 dp em fundo azul-claro e descrições pequenas, com quatro colunas em telas de largura suficiente e distâncias menores entre os atalhos.
+- Workflow Gerar APK 107: `:app:compileDebugKotlin` e `:app:compileDebugUnitTestKotlin` concluídos, mas `ReleaseNotesScopeTest` deixou 1 falha em 141 testes porque procurava novidades exclusivas da alpha.112. As seis novidades da alpha.114 e o teste foram sincronizados sem ignorar falhas.
+- Sintaxe, testes puros de pertencimento de pasta, XML/JSON e integridade do pacote verificados localmente; compilação Android da alpha.114 e UI em aparelho ainda pendentes.
+
 ## 0.1.0-alpha.113 — 2026-10-12
 
 - Tema claro: fundo principal convertido de `#E9F2FC` para `#FFFFFF`. O tema Material 3, as telas de arquivos, rede, galeria e novidades passam a compartilhar o fundo branco puro.

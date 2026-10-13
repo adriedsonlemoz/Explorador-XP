@@ -1,13 +1,14 @@
-# Explorador XP 0.1.0-alpha.113
+# Explorador XP 0.1.0-alpha.114
 
-## Fundo principal branco
+## Galerias com pastas, navegação clássica e refinamento de interface
 
-- **Fundo:** branco puro (`#FFFFFF`) em todas as áreas principais de navegação, arquivos, ferramentas, lista/detalhes de aplicativos, dispositivo e configurações.
-- **Legibilidade:** cartões sobre o branco com contornos ligeiramente reforçados; textos escuros, bordas de controles e divisórias conservados.
-- **Identidade preservada:** barras azuis, ícones, realces de seleção e fundos escuros de visualizadores especializados permanecem como antes.
-- **Sem mudança de funcionamento:** filtros, ícones de APK, modo compacto, SMB/WebDAV, transferência e Lixeira continuam.
+- **Fotos/Vídeos:** pastas na entrada e mídia em miniaturas dentro da pasta; menus clássicos e navegação Voltar, Avançar, Início, Subir.
+- **Seleção:** somente arquivos pertencentes à pasta atual, mesmo nas páginas não carregadas.
+- **Aplicativos:** lista com ícones 32 dp e linhas menores.
+- **Ferramentas:** grade adaptativa mais equilibrada, ícones ampliados, bordas e descrições discretas.
+- **CI:** correção do teste `ReleaseNotesScopeTest` obsoleto identificado no workflow 107.
 
-**Versão:** `0.1.0-alpha.113`  
-**Version code:** `113`
+**Versão:** `0.1.0-alpha.114`  
+**Version code:** `114`
 
-**Validação:** contraste estático (texto >= 4,5:1, borda de campo >= 3:1), Kotlin PSI e XML/JSON; build Android/Gradle e teste visual no aparelho pendentes.
+**Verificação:** sintaxe Kotlin, regras de filtragem de mídia, JSON/XML, integridade ZIP. Build Android completo da alpha.114 e testes físicos ainda necessários.

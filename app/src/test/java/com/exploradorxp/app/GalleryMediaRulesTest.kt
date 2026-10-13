@@ -24,4 +24,11 @@ class GalleryMediaRulesTest {
         assertEquals(5, MediaGallerySort.values().size)
         assertEquals(5, MediaGalleryOrigin.values().size)
     }
+    @Test fun folderMembershipUsesFullParentPathNotOnlyFolderName() {
+        assertTrue(MediaGalleryRules.isInDirectory("/storage/emulated/0/DCIM/Camera/one.jpg", "/storage/emulated/0/DCIM/Camera"))
+        assertFalse(MediaGalleryRules.isInDirectory("/storage/emulated/0/Pictures/Camera/two.jpg", "/storage/emulated/0/DCIM/Camera"))
+        assertFalse(MediaGalleryRules.isInDirectory("/storage/emulated/0/DCIM/Camera/nested/three.jpg", "/storage/emulated/0/DCIM/Camera"))
+        assertFalse(MediaGalleryRules.isInDirectory("/storage/emulated/0/DCIM/Camera2/other.jpg", "/storage/emulated/0/DCIM/Camera"))
+    }
+
 }

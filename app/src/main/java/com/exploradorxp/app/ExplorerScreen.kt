@@ -261,6 +261,8 @@ fun ExplorerScreen(
                         onRequestAccess = onRequestAccess,
                         onDismiss = { mediaShortcut = null; returnFromTool() },
                         onOpenFile = onOpenTarget,
+                        onOpenFavorites = { mediaShortcut = null; onTabChange(ExplorerTab.FAVORITES) },
+                        onOpenTools = { mediaShortcut = null; showToolsPanel = true },
                     )
                     showNetworkExplorer -> NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false; returnFromTool() })
                     showDeviceInfo -> DeviceInfoScreen(onDismiss = { showDeviceInfo = false; returnFromTool() })
@@ -1196,7 +1198,7 @@ private fun isInsideOrSame(file: File, root: File): Boolean {
 }
 
 @Composable
-private fun XpMenuLabel(label: String, selected: Boolean, onClick: () -> Unit) {
+internal fun XpMenuLabel(label: String, selected: Boolean, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     Text(
@@ -1212,7 +1214,7 @@ private fun XpMenuLabel(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun XpPopupMenu(
+internal fun XpPopupMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
     offset: DpOffset = DpOffset(0.dp, 0.dp),
@@ -1231,7 +1233,7 @@ private fun XpPopupMenu(
 }
 
 @Composable
-private fun XpMenuItem(
+internal fun XpMenuItem(
     label: String,
     icon: Int? = null,
     checked: Boolean = false,
@@ -1289,12 +1291,12 @@ private fun XpMenuItem(
 }
 
 @Composable
-private fun XpMenuDivider() {
+internal fun XpMenuDivider() {
     HorizontalDivider(color = Color(0xFFD2D2C8), thickness = 1.dp)
 }
 
 @Composable
-private fun XpClassicToolButton(
+internal fun XpClassicToolButton(
     icon: Int,
     label: String,
     enabled: Boolean,

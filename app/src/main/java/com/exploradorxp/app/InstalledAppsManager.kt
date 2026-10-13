@@ -629,17 +629,17 @@ private fun InstalledAppRow(app: ManagedApp, storageInfo: AppStorageInfo?, onCli
             .fillMaxWidth()
             .background(Color.White)
             .clickable(onClick = onClick)
-            .padding(horizontal = 11.dp, vertical = 9.dp),
+            .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        InstalledAppIcon(app.packageName, Modifier.size(46.dp))
-        Spacer(Modifier.width(10.dp))
+        InstalledAppIcon(app.packageName, Modifier.size(32.dp))
+        Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     app.label,
-                    fontSize = 13.5.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF202020),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -655,28 +655,28 @@ private fun InstalledAppRow(app: ManagedApp, storageInfo: AppStorageInfo?, onCli
                     app.isSystem,
                 )
             }
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(1.dp))
             Text(
                 app.packageName,
-                fontSize = 10.5.sp,
+                fontSize = 9.5.sp,
                 color = XpTextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(1.dp))
             val sizeText = storageInfo?.let { "Total ${AppManagerLogic.displayBytes(it.totalBytes)}" }
                 ?: "APK ${AppManagerLogic.displayBytes(app.apkBytes)}"
             val version = app.versionName?.takeIf { it.isNotBlank() } ?: "sem nome de versão"
             Text(
                 "$sizeText • $version (${app.versionCode})${if (!app.enabled) " • Desativado" else ""}",
-                fontSize = 10.5.sp,
+                fontSize = 9.5.sp,
                 color = if (app.enabled) Color(0xFF4D5D6F) else Color(0xFF9B5B1C),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         Spacer(Modifier.width(6.dp))
-        CachedResourceIcon(R.drawable.xp_chevron_right, "Abrir detalhes", Modifier.size(18.dp))
+        CachedResourceIcon(R.drawable.xp_chevron_right, "Abrir detalhes", Modifier.size(16.dp))
     }
     HorizontalDivider(color = Color(0xFFE5EAF0))
 }

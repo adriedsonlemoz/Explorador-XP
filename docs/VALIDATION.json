@@ -1,49 +1,44 @@
 {
-  "version_build": "0.1.0-alpha.113",
-  "version_code": 113,
-  "manager_version": "0.1.0-alpha.113",
+  "version_build": "0.1.0-alpha.114",
+  "version_code": 114,
+  "manager_version": "0.1.0-alpha.114",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.113: branco puro como fundo principal, cartões e contraste preservados",
+  "scope": "Alpha.114: galerias por pasta, navegação padrão, lista compacta aplicativos e correção teste do build 107",
   "checks": [
     {
-      "name": "white_background",
-      "status": "passed_static_test",
-      "details": "Validação executada em tools/validate_white_theme.py; tokens e telas usam #FFFFFF, janela branca."
+      "name": "workflow_107",
+      "status": "diagnosed",
+      "details": "140 de 141 testes passaram; falhou somente ReleaseNotesScopeTest com asserções de novidades da alpha.112."
     },
     {
-      "name": "readable_elements",
-      "status": "passed_static_test",
-      "details": "Testes de contraste: textos secundários 7,43:1, azul principal 5,32:1, branco no cabeçalho 7,22:1 e borda de campos 3,03:1 no branco; XpCardBorder #A9B9CA."
+      "name": "release_notes",
+      "status": "passed_local_jvm",
+      "details": "ReleaseNotes.current e ReleaseNotesScopeTest sincronizados; asserções relevantes executadas no JVM com stubs de JUnit e BuildConfig."
     },
     {
-      "name": "theme_scope",
-      "status": "passed_static_review",
-      "details": "Visualizadores de imagem/vídeo não foram clareados indevidamente."
-    },
-    {
-      "name": "kotlin_psi",
-      "status": "passed_local",
-      "details": "Kotlin PSI parser aprovado nos 5 fontes modificados; sem erros sintáticos."
-    },
-    {
-      "name": "xml_and_json",
-      "status": "passed_local",
-      "details": "79 XML de recursos e 6 JSON bem-formados; theme XML válido."
+      "name": "media_folder_scope",
+      "status": "passed_local_rules_and_syntax",
+      "details": "GalleryMediaRules.isInDirectory exige pasta pai exata; teste para caminhos com nomes iguais, prefixos e subpastas; índice agrupa por caminho completo. Teste MediaStore em Android pendente."
     },
     {
       "name": "android_build",
       "status": "not_run",
-      "details": "Gradle wrapper ausente; compilação Android completa pendente no CI."
+      "details": "Build Android e testes instrumentados não disponíveis localmente."
+    },
+    {
+      "name": "local_kotlin_tests",
+      "status": "passed_local",
+      "details": "5 testes JVM isolados (4 de GalleryMediaRulesTest, 1 de ReleaseNotesScopeTest); Kotlin PSI sem erros nos 8 arquivos alterados; verificação de XML/JSON."
     },
     {
       "name": "device_ui",
       "status": "not_run",
-      "details": "Inspeção visual em aparelho e temas/contraste de cada componente pendentes."
+      "details": "Testes físicos da UI em aparelho pendentes."
     },
     {
       "name": "versioning",
       "status": "passed_static_review",
-      "details": "Versão 0.1.0-alpha.113/versionCode 113 sincronizados em fontes, metadados, docs e ReleaseNotes."
+      "details": "0.1.0-alpha.114/versionCode 114 sincronizados em código, README, CHANGELOG, RELEASE, JSON e ReleaseNotes."
     }
   ]
 }
