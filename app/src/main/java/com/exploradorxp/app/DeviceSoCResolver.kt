@@ -58,6 +58,8 @@ internal object DeviceSoCResolver {
         CatalogEntry("Helio G35", "MediaTek", aliases("MT6765G"), "PowerVR GE8320", 12),
         CatalogEntry("Helio P22", "MediaTek", aliases("MT6762"), "PowerVR GE8320", 12),
         CatalogEntry("Helio A22", "MediaTek", aliases("MT6761"), "PowerVR GE8320", 12),
+        // Identificador exato do Redmi Note 11 Pro+ 5G global; não generalizar para toda a família MT6877.
+        CatalogEntry("Dimensity 920", "MediaTek", aliases("MT6877V/TZA"), "Mali-G68", 6),
 
         CatalogEntry("Snapdragon 660", "Qualcomm", aliases("SDM660"), "Adreno 512", 14),
         CatalogEntry("Snapdragon 665", "Qualcomm", aliases("SM6125"), "Adreno 610", 11),

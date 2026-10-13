@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "google-play-seed-2026-09-25",
+  "catalogVersion": "seed-xiaomi-redmi-2026-10-13",
   "generatedAtEpochMs": 1790294400000,
-  "source": "Google Play supported devices schema; Redmi A3 model mapping cross-checked with Xiaomi documentation",
+  "source": "Google Play supported devices; modelos 23129RN51X e 21091116UG conferidos com documentação oficial Xiaomi",
   "entries": [
     {
       "manufacturer": "Xiaomi",
@@ -10,6 +10,13 @@
       "marketingName": "Redmi A3",
       "device": "",
       "model": "23129RN51X"
+    },
+    {
+      "manufacturer": "Xiaomi",
+      "brand": "Redmi",
+      "marketingName": "Redmi Note 11 Pro+ 5G",
+      "device": "pissarropro",
+      "model": "21091116UG"
     }
   ]
 }

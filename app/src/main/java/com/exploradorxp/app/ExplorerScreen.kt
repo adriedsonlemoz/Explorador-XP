@@ -154,7 +154,9 @@ fun ExplorerScreen(
     onRename: (File, String) -> Unit,
     onLoadTrash: () -> Unit,
     onRestoreTrashItem: (TrashItem) -> Unit,
+    onRestoreTrashItems: (List<TrashItem>) -> Unit,
     onDeleteTrashItem: (TrashItem) -> Unit,
+    onDeleteTrashItems: (List<TrashItem>) -> Unit,
     onEmptyTrash: () -> Unit,
     onAnalyzeStorage: (Boolean) -> Unit,
     onCancelStorageAnalysis: () -> Unit,
@@ -279,7 +281,9 @@ fun ExplorerScreen(
                         onDismiss = { showTrash = false; returnFromTool() },
                         onRefresh = onLoadTrash,
                         onRestore = onRestoreTrashItem,
+                        onRestoreSelected = onRestoreTrashItems,
                         onDeletePermanently = onDeleteTrashItem,
+                        onDeleteSelected = onDeleteTrashItems,
                         onEmpty = onEmptyTrash,
                     )
                     showAbout -> AboutScreen(
@@ -1871,7 +1875,9 @@ private fun TrashScreenHost(
     onDismiss: () -> Unit,
     onRefresh: () -> Unit,
     onRestore: (TrashItem) -> Unit,
+    onRestoreSelected: (List<TrashItem>) -> Unit,
     onDeletePermanently: (TrashItem) -> Unit,
+    onDeleteSelected: (List<TrashItem>) -> Unit,
     onEmpty: () -> Unit,
 ) {
     val state by stateFlow.collectAsStateWithLifecycle()
@@ -1881,7 +1887,9 @@ private fun TrashScreenHost(
         onDismiss = onDismiss,
         onRefresh = onRefresh,
         onRestore = onRestore,
+        onRestoreSelected = onRestoreSelected,
         onDeletePermanently = onDeletePermanently,
+        onDeleteSelected = onDeleteSelected,
         onEmpty = onEmpty,
     )
 }
@@ -2993,6 +3001,8 @@ private fun DeleteChoiceDialog(
     }
 }
 
+private enum class TrashListFilter { ALL, FILES, FOLDERS }
+
 @Composable
 private fun TrashScreen(
     items: List<TrashItem>,
@@ -3000,301 +3010,255 @@ private fun TrashScreen(
     onDismiss: () -> Unit,
     onRefresh: () -> Unit,
     onRestore: (TrashItem) -> Unit,
+    onRestoreSelected: (List<TrashItem>) -> Unit,
     onDeletePermanently: (TrashItem) -> Unit,
+    onDeleteSelected: (List<TrashItem>) -> Unit,
     onEmpty: () -> Unit,
 ) {
+    val context = LocalContext.current
     var deleteCandidate by remember { mutableStateOf<TrashItem?>(null) }
+    var detailCandidate by remember { mutableStateOf<TrashItem?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
+    var confirmSelected by remember { mutableStateOf(false) }
+    var filter by remember { mutableStateOf(TrashListFilter.ALL) }
+    var filterMenu by remember { mutableStateOf(false) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val trashBytes = items.sumOf { it.size }
+    val filteredItems = remember(items, filter) {
+        items.filter {
+            when (filter) {
+                TrashListFilter.ALL -> true
+                TrashListFilter.FILES -> !it.isDirectory
+                TrashListFilter.FOLDERS -> it.isDirectory
+            }
+        }.sortedByDescending { it.deletedAt }
+    }
+    val selectedItems = items.filter { it.id in selectedIds }
+    LaunchedEffect(items) { selectedIds = selectedIds.intersect(items.mapTo(hashSetOf()) { it.id }) }
 
-    BackHandler(onBack = onDismiss)
+    BackHandler(enabled = selectionMode) { selectedIds = emptySet(); selectionMode = false }
+    BackHandler(enabled = !selectionMode, onBack = onDismiss)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White),
-    ) {
+    Column(Modifier.fillMaxSize().background(Color.White)) {
         XpDialogTitle("Lixeira", onDismiss)
         HorizontalDivider(color = XpChromeBorder)
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(XpChrome)
-                .padding(horizontal = 10.dp, vertical = 9.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(if (items.isEmpty()) R.drawable.trash_empty else R.drawable.trash_full),
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    contentScale = ContentScale.Fit,
+        Column(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
+                    fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24354D),
+                    modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.width(9.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF202020),
-                    )
-                    Spacer(Modifier.height(1.dp))
-                    Text(
-                        "Restaure o que precisar ou apague definitivamente.",
-                        fontSize = 10.5.sp,
-                        color = XpTextSecondary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                ArchiveCompactTrashAction("Atualizar", R.drawable.refresh, enabled = !loading, onClick = onRefresh)
+                Spacer(Modifier.width(5.dp))
+                ArchiveCompactTrashAction("Esvaziar", R.drawable.delete, enabled = !loading && items.isNotEmpty(), danger = true) { confirmEmpty = true }
             }
-            Spacer(Modifier.height(8.dp))
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                if (maxWidth >= 290.dp) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(7.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        XpDialogButton(
-                            "Atualizar",
-                            modifier = Modifier.weight(1f),
-                            enabled = !loading,
-                            iconRes = R.drawable.refresh,
-                            onClick = onRefresh,
-                        )
-                        XpDialogButton(
-                            "Esvaziar Lixeira",
-                            modifier = Modifier.weight(1f),
-                            enabled = items.isNotEmpty() && !loading,
-                            danger = true,
-                            iconRes = R.drawable.delete,
-                        ) { confirmEmpty = true }
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Box {
+                    Text(
+                        when (filter) {
+                            TrashListFilter.ALL -> "Todos ▾"
+                            TrashListFilter.FILES -> "Arquivos ▾"
+                            TrashListFilter.FOLDERS -> "Pastas ▾"
+                        },
+                        fontSize = 11.sp, color = XpBlueDark,
+                        modifier = Modifier.clickable { filterMenu = true }.padding(horizontal = 4.dp, vertical = 7.dp),
+                    )
+                    DropdownMenu(expanded = filterMenu, onDismissRequest = { filterMenu = false }) {
+                        listOf(TrashListFilter.ALL to "Todos", TrashListFilter.FILES to "Arquivos", TrashListFilter.FOLDERS to "Pastas").forEach { (mode, label) ->
+                            Text(label, fontSize = 12.sp, modifier = Modifier.clickable { filter = mode; filterMenu = false }.padding(horizontal = 17.dp, vertical = 11.dp))
+                        }
                     }
-                } else {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        XpDialogButton(
-                            "Atualizar",
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !loading,
-                            iconRes = R.drawable.refresh,
-                            onClick = onRefresh,
-                        )
-                        XpDialogButton(
-                            "Esvaziar Lixeira",
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = items.isNotEmpty() && !loading,
-                            danger = true,
-                            iconRes = R.drawable.delete,
-                        ) { confirmEmpty = true }
+                }
+                Text("• ${filteredItems.size} visíveis", fontSize = 10.sp, color = XpTextSecondary)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    if (selectionMode) "Cancelar seleção" else "Selecionar",
+                    fontSize = 11.sp, color = XpBlueDark,
+                    modifier = Modifier.clickable { selectionMode = !selectionMode; selectedIds = emptySet() }.padding(8.dp),
+                )
+            }
+            if (selectionMode) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Text("${selectedItems.size} selecionados", fontSize = 10.5.sp, modifier = Modifier.weight(1f))
+                    ArchiveCompactTrashAction("Tudo", R.drawable.check, enabled = filteredItems.isNotEmpty()) {
+                        selectedIds = filteredItems.mapTo(linkedSetOf()) { it.id }
+                    }
+                    ArchiveCompactTrashAction("Restaurar", R.drawable.move, enabled = selectedItems.isNotEmpty() && !loading) {
+                        val selection = selectedItems.toList()
+                        selectedIds = emptySet(); selectionMode = false
+                        onRestoreSelected(selection)
+                    }
+                    ArchiveCompactTrashAction("Apagar", R.drawable.delete, enabled = selectedItems.isNotEmpty() && !loading, danger = true) {
+                        confirmSelected = true
                     }
                 }
             }
         }
-
         HorizontalDivider(color = XpChromeBorder)
-
         when {
-            loading -> Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White),
-            ) {
-                LoadingPanelInline("Carregando Lixeira…")
-            }
+            loading -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingPanelInline("Carregando Lixeira…") }
             items.isEmpty() -> Column(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(Color.White),
             ) {
-                androidx.compose.foundation.Image(
-                    painterResource(R.drawable.trash_empty),
-                    null,
-                    modifier = Modifier.size(64.dp),
-                )
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    "A Lixeira está vazia",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = XpBlueDark,
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    "Arquivos enviados para a Lixeira aparecerão aqui.",
-                    fontSize = 11.5.sp,
-                    color = XpTextSecondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 18.dp),
-                )
+                androidx.compose.foundation.Image(painterResource(R.drawable.trash_empty), null, modifier = Modifier.size(60.dp))
+                Spacer(Modifier.height(8.dp))
+                Text("A Lixeira está vazia", fontWeight = FontWeight.Bold, color = XpBlueDark)
             }
-            else -> LazyColumn(
-                contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(Color(0xFFF1F4F8)),
-            ) {
-                items(items, key = { it.id }) { item ->
-                    TrashItemRow(
-                        item = item,
-                        onRestore = { onRestore(item) },
-                        onDelete = { deleteCandidate = item },
-                    )
+            filteredItems.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("Nenhum item neste filtro.", fontSize = 12.sp, color = XpTextSecondary)
+            }
+            else -> LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White)) {
+                filteredItems.groupBy {
+                    DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.forLanguageTag("pt-BR")).format(Date(it.deletedAt))
+                }.forEach { (dateLabel, dayItems) ->
+                    item(key = "day:$dateLabel") {
+                        Text(
+                            dateLabel,
+                            fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = XpTextSecondary,
+                            modifier = Modifier.fillMaxWidth().background(Color(0xFFF4F7FB)).padding(horizontal = 12.dp, vertical = 5.dp),
+                        )
+                    }
+                    items(dayItems, key = { it.id }) { item ->
+                        CompactTrashRow(
+                            item = item,
+                            selectionMode = selectionMode,
+                            selected = item.id in selectedIds,
+                            onToggle = { selectionMode = true; selectedIds = if (item.id in selectedIds) selectedIds - item.id else selectedIds + item.id },
+                            onRestore = { onRestore(item) },
+                            onDelete = { deleteCandidate = item },
+                            onDetails = { detailCandidate = item },
+                        )
+                        HorizontalDivider(color = Color(0xFFE3E8EF))
+                    }
                 }
             }
-        }
-
-        HorizontalDivider(color = XpChromeBorder)
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(XpChrome)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-        ) {
-            Text(
-                "${itemCountLabel(items.size)} • ${formatBytes(trashBytes)}",
-                fontSize = 10.5.sp,
-                color = XpTextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
-            XpDialogButton(
-                "Fechar",
-                iconRes = R.drawable.close,
-                onClick = onDismiss,
-            )
         }
     }
 
+    detailCandidate?.let { item ->
+        XpDialogFrame(title = "Detalhes do item", onDismiss = { detailCandidate = null }) {
+            Text(item.name, fontWeight = FontWeight.Bold, maxLines = 3)
+            Spacer(Modifier.height(8.dp))
+            Text("Tipo: ${item.typeLabel}", fontSize = 11.sp)
+            Text("Tamanho: ${formatBytes(item.size)}", fontSize = 11.sp)
+            Text(formatTrashDate(item.deletedAt), fontSize = 11.sp)
+            Text("Origem: ${item.originalPath}", fontSize = 11.sp)
+            Spacer(Modifier.height(8.dp))
+            XpDialogButton("Copiar caminho original", iconRes = R.drawable.copy, modifier = Modifier.fillMaxWidth()) {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                clipboard?.setPrimaryClip(ClipData.newPlainText("Caminho original", item.originalPath))
+                android.widget.Toast.makeText(context, "Caminho copiado", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            Spacer(Modifier.height(7.dp))
+            XpDialogButton("Fechar", onClick = { detailCandidate = null }, modifier = Modifier.fillMaxWidth())
+        }
+    }
     deleteCandidate?.let { item ->
         XpConfirmDialog(
             title = "Apagar permanentemente?",
             message = "\"${item.name}\" será removido de forma definitiva e não poderá ser restaurado.",
-            confirmText = "Apagar",
-            danger = true,
+            confirmText = "Apagar", danger = true,
             onDismiss = { deleteCandidate = null },
+            onConfirm = { deleteCandidate = null; onDeletePermanently(item) },
+        )
+    }
+    if (confirmSelected) {
+        XpConfirmDialog(
+            title = "Apagar itens selecionados?",
+            message = "${selectedItems.size} itens serão apagados permanentemente. Esta ação não pode ser desfeita.",
+            confirmText = "Apagar", danger = true,
+            onDismiss = { confirmSelected = false },
             onConfirm = {
-                deleteCandidate = null
-                onDeletePermanently(item)
+                val selection = selectedItems.toList()
+                confirmSelected = false; selectedIds = emptySet(); selectionMode = false
+                if (selection.isNotEmpty()) onDeleteSelected(selection)
             },
         )
     }
-
     if (confirmEmpty) {
         XpConfirmDialog(
             title = "Esvaziar Lixeira?",
-            message = if (items.size == 1) {
-                "1 item (${formatBytes(trashBytes)}) será apagado permanentemente. Esta ação não pode ser desfeita."
-            } else {
-                "${itemCountLabel(items.size)} (${formatBytes(trashBytes)}) serão apagados permanentemente. Esta ação não pode ser desfeita."
-            },
-            confirmText = "Esvaziar",
-            danger = true,
+            message = "${itemCountLabel(items.size)} (${formatBytes(trashBytes)}) serão apagados permanentemente. Esta ação não pode ser desfeita.",
+            confirmText = "Esvaziar", danger = true,
             onDismiss = { confirmEmpty = false },
-            onConfirm = {
-                confirmEmpty = false
-                onEmpty()
-            },
+            onConfirm = { confirmEmpty = false; onEmpty() },
         )
     }
 }
 
 @Composable
-private fun TrashItemRow(
+private fun ArchiveCompactTrashAction(
+    label: String, icon: Int, enabled: Boolean = true, danger: Boolean = false, onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .background(Color.White, RoundedCornerShape(6.dp))
+            .border(1.dp, if (danger) Color(0xFFD9A3A3) else XpChromeBorder, RoundedCornerShape(6.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+    ) {
+        CachedResourceIcon(icon, label, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(label, color = if (!enabled) Color.Gray else if (danger) Color(0xFF9C3030) else XpBlueDark, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CompactTrashRow(
     item: TrashItem,
+    selectionMode: Boolean,
+    selected: Boolean,
+    onToggle: () -> Unit,
     onRestore: () -> Unit,
     onDelete: () -> Unit,
+    onDetails: () -> Unit,
 ) {
-    Column(
+    var menuOpen by remember(item.id) { mutableStateOf(false) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(5.dp))
-            .border(1.dp, Color(0xFFC8D5E5), RoundedCornerShape(5.dp))
-            .padding(9.dp),
+            .background(if (selected) XpSelection else Color.White)
+            .combinedClickable(onClick = { if (selectionMode) onToggle() else onDetails() }, onLongClick = onToggle)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.Top,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            androidx.compose.foundation.Image(
-                painter = painterResource(item.iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(34.dp),
-                contentScale = ContentScale.Fit,
-            )
-            Spacer(Modifier.width(9.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.name.ifBlank { item.trashedFile.name.ifBlank { "Item sem nome" } },
-                    fontSize = 13.5.sp,
-                    lineHeight = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1D2A3A),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    buildString {
-                        append(item.typeLabel)
-                        if (!item.isDirectory || item.size > 0L) append(" • ${formatBytes(item.size)}")
-                    },
-                    fontSize = 10.5.sp,
-                    color = XpTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    formatTrashDate(item.deletedAt),
-                    fontSize = 10.sp,
-                    color = Color(0xFF5D6F86),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+        if (selectionMode) {
+            Checkbox(checked = selected, onCheckedChange = { onToggle() })
+            Spacer(Modifier.width(4.dp))
+        } else {
+            CachedResourceIcon(item.iconRes, null, modifier = Modifier.size(29.dp))
+            Spacer(Modifier.width(10.dp))
         }
-
-        Spacer(Modifier.height(5.dp))
-        Text(
-            "Origem: ${compactOriginalPath(item.originalPath)}",
-            fontSize = 9.5.sp,
-            lineHeight = 12.sp,
-            color = Color(0xFF66788F),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(Modifier.height(8.dp))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            XpDialogButton(
-                "Restaurar",
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.move,
-                onClick = onRestore,
+        Column(Modifier.weight(1f)) {
+            Text(
+                item.name.ifBlank { item.trashedFile.name.ifBlank { "Item sem nome" } },
+                fontSize = 12.5.sp, color = Color(0xFF1D2A3A), fontWeight = FontWeight.SemiBold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
-            XpDialogButton(
-                "Apagar",
-                modifier = Modifier.weight(1f),
-                danger = true,
-                iconRes = R.drawable.delete,
-                onClick = onDelete,
+            Text(
+                "${item.typeLabel} • ${formatBytes(item.size)} • ${java.text.SimpleDateFormat("HH:mm", Locale.forLanguageTag("pt-BR")).format(Date(item.deletedAt))}",
+                fontSize = 10.sp, color = XpTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
+        }
+        if (!selectionMode) {
+            Box(Modifier.clickable(onClick = onRestore).padding(10.dp)) {
+                CachedResourceIcon(R.drawable.move, "Restaurar ${item.name}", modifier = Modifier.size(19.dp))
+            }
+            Box {
+                Text("⋮", fontSize = 21.sp, color = XpBlueDark, modifier = Modifier.clickable { menuOpen = true }.padding(horizontal = 8.dp, vertical = 8.dp))
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    Text("Restaurar", fontSize = 12.sp, modifier = Modifier.clickable { menuOpen = false; onRestore() }.padding(14.dp))
+                    Text("Detalhes", fontSize = 12.sp, modifier = Modifier.clickable { menuOpen = false; onDetails() }.padding(14.dp))
+                    Text("Apagar permanentemente", fontSize = 12.sp, color = Color(0xFFAD3333), modifier = Modifier.clickable { menuOpen = false; onDelete() }.padding(14.dp))
+                }
+            }
         }
     }
 }

@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.115 (`versionCode 115`). Corrigida a importação Compose `horizontalScroll` que interrompeu a compilação Kotlin no workflow Gerar APK 108. Galerias, lista compacta de aplicativos e Ferramentas da alpha.114 foram preservadas. Compilação Android e teste em aparelho pendentes.
+> **Versão atual:** 0.1.0-alpha.116 (`versionCode 116`). Visualizador ZIP e Lixeira compactados; informações de dispositivo copiáveis, Redmi Note 11 Pro+ 5G e Dimensity 920 reconhecidos no catálogo offline. Build Android e teste físico pendentes.
 
 # Explorador XP
+
+**alpha.116 (ZIP, Lixeira e dispositivo):** Visualizador ZIP com ações compactas, Info expansível, busca/seleção sob demanda e "Abrir com" único no menu. Lixeira compacta com filtros, datas e operações em lote. Informações técnicas do dispositivo copiáveis por toque e catálogo offline Redmi Note 11 Pro+ 5G/Dimensity 920 (aliases exatos).
 
 **alpha.115 (correção do build 108):** Adicionada a importação ausente de `horizontalScroll` no cabeçalho das galerias, inserido verificador preventivo de importação no workflow e atualizadas as Novidades com teste da versão atual. Nenhuma mudança funcional na navegação por pastas.
 
@@ -38,7 +40,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.115` (`versionCode 115`)  
+**Versão atual:** `0.1.0-alpha.116` (`versionCode 116`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

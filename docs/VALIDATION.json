@@ -1,44 +1,54 @@
 {
-  "version_build": "0.1.0-alpha.115",
-  "version_code": 115,
-  "manager_version": "0.1.0-alpha.115",
+  "version_build": "0.1.0-alpha.116",
+  "version_code": 116,
+  "manager_version": "0.1.0-alpha.116",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.115: correção compilação Kotlin de horizontalScroll identificada no workflow Gerar APK 108",
+  "scope": "Alpha.116: ZIP e Lixeira compactos, filtros/lote, especificações públicas copiáveis, identificação Xiaomi/Dimensity offline",
   "checks": [
     {
-      "name": "workflow_108",
-      "status": "diagnosed",
-      "details": "Falha :app:compileDebugKotlin, ExplorerQuickAccess.kt:508:18 unresolved reference horizontalScroll."
+      "name": "kotlin_psi",
+      "status": "passed_local_psi",
+      "details": "8 arquivos Kotlin da mudança aprovados em análise sintática PSI."
     },
     {
-      "name": "compose_import",
+      "name": "source_ui",
       "status": "passed_local_static",
-      "details": "Import Compose presente e invocado; verificador local passou e teste negativo detectou a falta do import."
+      "details": "15 invariantes ZIP/Lixeira/dispositivo aprovadas por tools/validate_ui_alpha116.py."
+    },
+    {
+      "name": "soc_identity",
+      "status": "passed_local_jvm",
+      "details": "7 asserções Kotlin/JVM do SoC, incluindo alias exato/ambíguo."
+    },
+    {
+      "name": "device_identity",
+      "status": "passed_local_jvm",
+      "details": "4 asserções Kotlin/JVM de correspondência do modelo e fabricante."
     },
     {
       "name": "release_notes",
       "status": "passed_local_jvm",
-      "details": "5 testes Kotlin/JVM isolados passaram, incluindo ReleaseNotesScopeTest."
+      "details": "6 asserções Kotlin/JVM de novidades alpha.116."
+    },
+    {
+      "name": "compose_and_theme",
+      "status": "passed_local_static",
+      "details": "tools/validate_compose_imports.py e validate_white_theme.py aprovados."
+    },
+    {
+      "name": "xml_json",
+      "status": "passed_local_static",
+      "details": "81 XML e 6 JSON validados."
     },
     {
       "name": "android_build",
       "status": "not_run",
-      "details": "Compilação Android completa indisponível neste ambiente; validação real via CI pendente."
-    },
-    {
-      "name": "kotlin_syntax",
-      "status": "passed_psi",
-      "details": "3 arquivos Kotlin alterados aprovados na análise sintática PSI."
-    },
-    {
-      "name": "device_ui",
-      "status": "not_run",
-      "details": "UI de galeria e menus ainda não testada fisicamente."
+      "details": "Compilação Gradle/Android e testes instrumentados/visuais pendentes; sem SDK/Gradle disponíveis."
     },
     {
       "name": "versioning",
-      "status": "passed_static_review",
-      "details": "alpha.115/versionCode 115 sincronizados em Gradle, VERSION, README, CHANGELOG, RELEASE, JSON e ReleaseNotes; 81 XML e 6 JSON válidos."
+      "status": "passed_local_static",
+      "details": "VersionCode 116, RELEASE, VERSION, README, CHANGELOG e metadados alinhados."
     }
   ]
 }

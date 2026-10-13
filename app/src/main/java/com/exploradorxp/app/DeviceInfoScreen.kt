@@ -82,6 +82,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
@@ -350,6 +352,11 @@ fun DeviceInfoScreen(onDismiss: () -> Unit) {
                                 imageLoading = imageLoading,
                                 externalLookupEnabled = externalLookupEnabled,
                                 onImageDetails = { if (availableImage != null) showImageDetails = true },
+                            )
+                            Text(
+                                "Toque nos valores técnicos em azul para copiar.",
+                                fontSize = 10.sp, color = DeviceMuted,
+                                modifier = Modifier.padding(horizontal = 7.dp),
                             )
                             DeviceModelInformation(
                                 info = info,
@@ -1008,8 +1015,20 @@ private fun DeviceSection(
     }
 }
 
+// Copiar só especificações técnicas públicas. Evitar disponibilizar automaticamente
+// Wi-Fi, SIM, operadora, rede, localização e dados pessoais na área de transferência.
+private val safeCopyFields = setOf(
+    "Nome comercial", "Fabricante (Android)", "Marca (Android)", "Modelo (Android)",
+    "Device (Android)", "Product (Android)", "Android", "Patch de segurança",
+    "Modelo / ID do SoC", "Fabricante do SoC", "Núcleos detectados",
+    "ABI principal do sistema", "ABIs do sistema", "Suporte do sistema",
+    "Arquitetura do kernel", "Frequências", "GPU", "Fabricação", "Hardware Android", "Tela",
+)
+
 @Composable
 private fun InfoRow(label: String, value: String) {
+    val context = LocalContext.current
+    val canCopy = label in safeCopyFields && value.isNotBlank() && !value.startsWith("Não disponível") && value != "Identificando…"
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Text(
             label,
@@ -1020,47 +1039,53 @@ private fun InfoRow(label: String, value: String) {
         )
         Text(
             value,
-            color = DeviceText,
+            color = if (canCopy) DeviceBlueDark else DeviceText,
             fontSize = 11.sp,
             lineHeight = 14.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(.58f),
+            modifier = Modifier.weight(.58f).then(
+                if (canCopy) Modifier
+                    .semantics { contentDescription = "$label: $value. Toque para copiar" }
+                    .clickable {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                        clipboard?.setPrimaryClip(ClipData.newPlainText(label, value))
+                        Toast.makeText(context, "$label copiado", Toast.LENGTH_SHORT).show()
+                    }
+                    .padding(vertical = 4.dp)
+                else Modifier
+            ),
         )
     }
 }
 
 @Composable
 private fun ProcessorInfoRow(identity: DeviceSoCResolver.Identity) {
+    val context = LocalContext.current
+    fun copyValue(label: String, value: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        clipboard?.setPrimaryClip(ClipData.newPlainText(label, value))
+        Toast.makeText(context, "$label copiado", Toast.LENGTH_SHORT).show()
+    }
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Text(
-            "Processador",
-            color = DeviceMuted,
-            fontSize = 10.5.sp,
-            lineHeight = 13.sp,
+            "Processador", color = DeviceMuted, fontSize = 10.5.sp, lineHeight = 13.sp,
             modifier = Modifier.weight(.42f).padding(end = 8.dp),
         )
         Column(modifier = Modifier.weight(.58f)) {
             Text(
-                if (identity.commercialName != null) identity.primaryLabel else identity.technicalLabel,
-                color = DeviceText,
-                fontSize = 12.5.sp,
-                lineHeight = 15.sp,
-                fontWeight = FontWeight.Bold,
+                if (identity.commercialName != null) "${identity.manufacturer ?: ""} ${identity.commercialName}".trim() else identity.technicalLabel,
+                color = DeviceBlueDark, fontSize = 12.5.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .semantics { contentDescription = "Processador. Toque para copiar" }
+                    .clickable { copyValue("Processador", identity.primaryLabel) }.padding(vertical = 3.dp),
             )
             if (identity.commercialName != null) {
                 Text(
-                    identity.technicalLabel,
-                    color = DeviceMuted,
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
+                    identity.technicalLabel, color = DeviceMuted, fontSize = 10.sp, lineHeight = 13.sp,
+                    modifier = Modifier.clickable { copyValue("Código do SoC", identity.technicalId) }.padding(vertical = 2.dp),
                 )
             }
-            Text(
-                "Fonte: ${identity.identitySourceLabel}",
-                color = DeviceMuted,
-                fontSize = 8.8.sp,
-                lineHeight = 11.sp,
-            )
+            Text("Fonte: ${identity.identitySourceLabel}", color = DeviceMuted, fontSize = 8.8.sp, lineHeight = 11.sp)
         }
     }
 }

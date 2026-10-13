@@ -35,6 +35,18 @@ class DeviceIdentityMatcherTest {
     }
 
     @Test
+    fun matchesRedmiNote11ProPlusModelWithExactXiaomiCatalogRecord() {
+        val result = DeviceIdentityMatcher.match(
+            DeviceIdentityInput("Xiaomi", "Redmi", "pissarropro", "21091116UG", "pissarropro_global"),
+            listOf(DeviceCatalogEntry("Xiaomi", "Redmi", "Redmi Note 11 Pro+ 5G", "pissarropro", "21091116UG")),
+            DeviceIdentitySource.LOCAL_CATALOG,
+            "seed-xiaomi-redmi-2026-10-13",
+        )
+        assertEquals("Redmi Note 11 Pro+ 5G", result?.displayName)
+        assertEquals(DeviceIdentityConfidence.HIGH, result?.confidence)
+    }
+
+    @Test
     fun unknownModel_returnsNoMatch() {
         val input = DeviceIdentityInput("Xiaomi", "Redmi", "unknown", "UNKNOWN-123", "unknown")
         assertNull(DeviceIdentityMatcher.match(input, listOf(redmiA3), DeviceIdentitySource.LOCAL_CATALOG, "seed-test"))

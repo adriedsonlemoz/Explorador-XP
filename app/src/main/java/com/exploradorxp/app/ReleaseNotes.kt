@@ -18,7 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigida a compilação das galerias de Fotos e Vídeos: importação do horizontalScroll ausente no workflow Gerar APK 108.",
+                "Visualizador ZIP simplificado: ações compactas, busca opcional, Info resumida e Abrir com no menu.",
+                "Lixeira compacta com filtros, agrupamento por data e restauração/exclusão em lote com confirmação.",
+                "Informações do dispositivo: cópia por toque de especificações públicas e catálogo offline do Redmi Note 11 Pro+ 5G com Dimensity 920.",
             )
         )
 }

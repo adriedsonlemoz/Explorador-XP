@@ -190,7 +190,8 @@ fun InternalViewerScreen(
     ) {
         if (!contentFullScreen) {
             ViewerTitleBar(activeFile, extension)
-            ViewerToolbar(activeFile, extension, typeDetectedFromContent) { onOpenExternal(activeFile) }
+            // ZIP possui resumo e ações próprias; a barra genérica repetia tamanho e "Abrir com".
+            if (extension != "zip") ViewerToolbar(activeFile, extension, typeDetectedFromContent) { onOpenExternal(activeFile) }
             HorizontalDivider(color = Color(0xFFB8C7DA))
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -1943,6 +1944,17 @@ private fun ViewerStatusBar(
     }
     val size = remember(file.absolutePath, file.lastModified()) { file.length() }
     val parent = remember(file.absolutePath) { file.parentFile?.name.orEmpty() }
+    if (resolvedExtension == "zip") {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+            modifier = Modifier.fillMaxWidth().background(XpChrome)
+                .border(1.dp, XpChromeBorder).padding(horizontal = 10.dp, vertical = 4.dp),
+        ) {
+            XpDialogButton("Fechar", iconRes = R.drawable.close, onClick = onClose)
+        }
+        return
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

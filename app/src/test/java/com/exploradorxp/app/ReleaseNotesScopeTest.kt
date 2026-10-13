@@ -10,9 +10,10 @@ class ReleaseNotesScopeTest {
         val info = ReleaseNotes.current
         assertEquals(BuildConfig.VERSION_NAME, info.versionName)
         assertEquals(BuildConfig.VERSION_CODE, info.versionCode)
-        assertEquals(1, info.changes.size)
-        assertTrue(info.changes.single().contains("horizontalScroll"))
-        assertTrue(info.changes.single().contains("108"))
-        assertFalse(info.changes.any { it.contains("workflow Gerar APK 107") || it.contains("alpha.112") })
+        assertEquals(3, info.changes.size)
+        assertTrue(info.changes.any { it.contains("ZIP") })
+        assertTrue(info.changes.any { it.contains("Lixeira") })
+        assertTrue(info.changes.any { it.contains("Dimensity 920") })
+        assertFalse(info.changes.any { it.contains("workflow Gerar APK 108") || it.contains("alpha.112") })
     }
 }

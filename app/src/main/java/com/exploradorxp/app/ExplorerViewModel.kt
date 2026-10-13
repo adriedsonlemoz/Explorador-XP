@@ -788,6 +788,26 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         ) { onProgress -> repository.permanentlyDeleteTrash(listOf(item), onProgress, ::awaitTransferResumed) }
     }
 
+    fun restoreTrashItems(items: List<TrashItem>) {
+        if (items.isEmpty()) return
+        runTransfer(
+            kind = TransferKind.MOVE,
+            successMessage = "Itens restaurados.",
+            failureFallback = "Falha ao restaurar itens selecionados.",
+            refreshTrash = true,
+        ) { onProgress -> repository.restoreTrash(items, onProgress, ::awaitTransferResumed) }
+    }
+
+    fun permanentlyDeleteTrashItems(items: List<TrashItem>) {
+        if (items.isEmpty()) return
+        runTransfer(
+            kind = TransferKind.DELETE,
+            successMessage = "Itens apagados permanentemente.",
+            failureFallback = "Falha ao apagar itens selecionados.",
+            refreshTrash = true,
+        ) { onProgress -> repository.permanentlyDeleteTrash(items, onProgress, ::awaitTransferResumed) }
+    }
+
     fun emptyTrash() {
         if (_trashState.value.items.isEmpty()) return
         runTransfer(

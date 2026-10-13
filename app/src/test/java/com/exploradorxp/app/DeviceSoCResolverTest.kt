@@ -40,6 +40,19 @@ class DeviceSoCResolverTest {
     }
 
     @Test
+    fun identifiesGlobalRedmiNote11ProPlusDimensity920ByExactCode() {
+        val chip = DeviceSoCResolver.resolve("MediaTek", "MT6877V/TZA", "mt6877")
+        assertEquals("Dimensity 920", chip.commercialName)
+        assertEquals("MediaTek", chip.manufacturer)
+        assertEquals("MT6877V/TZA", chip.technicalId)
+        assertEquals("Mali-G68", chip.gpu)
+        assertEquals("6 nm", chip.processLabel)
+        assertTrue(chip.matchedCatalog)
+        // Um alias genérico não deve ser promovido por adivinhação.
+        assertNull(DeviceSoCResolver.resolve("MediaTek", "MT6877", "mt6877").commercialName)
+    }
+
+    @Test
     fun unknownIdentifierFallsBackToAndroidValues() {
         val identity = DeviceSoCResolver.resolve("Example Silicon", "ABC-123", "example")
         assertNull(identity.commercialName)

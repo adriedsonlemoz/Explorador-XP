@@ -1,3 +1,11 @@
+## 0.1.0-alpha.116 (2026-10-13)
+
+- ZIP: resumo compacto, ações Extrair/Verificar/Info lado a lado; busca e seleção opcionais, remoção do segundo Abrir com, Info simplificada e dados técnicos expansíveis.
+- Lixeira: linhas compactas, filtro Todos/Arquivos/Pastas, agrupamento por data, ações e detalhes sob demanda, seleção e restauração/exclusão em lote com confirmação.
+- Dispositivo: valores técnicos públicos copiáveis por toque, modelo Redmi Note 11 Pro+ 5G 21091116UG e SoC Dimensity 920 MT6877V/TZA reconhecidos pelo catálogo offline, com fonte explicitada.
+- versionCode 116, README, metadados e teste de Novidades atualizados.
+- Build Android completo e teste visual em aparelho pendentes.
+
 ## 0.1.0-alpha.115 — 2026-10-12
 
 - **Corrigida falha do workflow Gerar APK 108:** `:app:compileDebugKotlin` falhou em `ExplorerQuickAccess.kt:508` por ausência do import da extensão Compose `androidx.compose.foundation.horizontalScroll`. Import adicionado; rolagem horizontal dos menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda foi preservada.
