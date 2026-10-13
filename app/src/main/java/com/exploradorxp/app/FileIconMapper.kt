@@ -15,7 +15,7 @@ object FileIconMapper {
     private val sheets = setOf("xls", "xlsx", "ods", "csv")
     private val presentations = setOf("ppt", "pptx", "odp")
     private val images = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "tif", "tiff", "heic", "psd", "ai", "eps", "ico")
-    private val audio = setOf("mp3", "wav", "ogg", "flac", "aac", "m4a")
+    private val audio = setOf("mp3", "wav", "ogg", "flac", "aac", "m4a", "opus")
     private val video = setOf("mp4", "avi", "mkv", "mov", "webm", "3gp")
     private val archives = setOf("zip", "rar", "7z", "tar", "gz", "bz2", "xz")
     private val code = setOf("html", "htm", "css", "js", "json", "xml", "yaml", "yml", "php", "py", "java", "kt", "c", "h", "cpp", "sh", "bat")

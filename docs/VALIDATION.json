@@ -1,54 +1,34 @@
 {
-  "version_build": "0.1.0-alpha.116",
-  "version_code": 116,
-  "manager_version": "0.1.0-alpha.116",
+  "version_build": "0.1.0-alpha.119",
+  "version_code": 119,
+  "manager_version": "0.1.0-alpha.119",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.116: ZIP e Lixeira compactos, filtros/lote, especificações públicas copiáveis, identificação Xiaomi/Dimensity offline",
+  "scope": "alpha.119: MediaSessionService, notificação de mídia e mini-player compartilhado",
   "checks": [
     {
-      "name": "kotlin_psi",
-      "status": "passed_local_psi",
-      "details": "8 arquivos Kotlin da mudança aprovados em análise sintática PSI."
-    },
-    {
-      "name": "source_ui",
+      "name": "music_service_contracts",
       "status": "passed_local_static",
-      "details": "15 invariantes ZIP/Lixeira/dispositivo aprovadas por tools/validate_ui_alpha116.py."
-    },
-    {
-      "name": "soc_identity",
-      "status": "passed_local_jvm",
-      "details": "7 asserções Kotlin/JVM do SoC, incluindo alias exato/ambíguo."
-    },
-    {
-      "name": "device_identity",
-      "status": "passed_local_jvm",
-      "details": "4 asserções Kotlin/JVM de correspondência do modelo e fabricante."
+      "details": "Verificador estático valida declaração de serviço, permissões, dependências, controlador, mini-player, sessão única e entrada de notificação."
     },
     {
       "name": "release_notes",
-      "status": "passed_local_jvm",
-      "details": "6 asserções Kotlin/JVM de novidades alpha.116."
+      "status": "passed_local_static",
+      "details": "Notas de versão e teste de escopo sincronizados; execução JUnit/Android em CI pendente."
     },
     {
-      "name": "compose_and_theme",
-      "status": "passed_local_static",
-      "details": "tools/validate_compose_imports.py e validate_white_theme.py aprovados."
+      "name": "kotlin_psi",
+      "status": "passed_local_psi",
+      "details": "Fontes Kotlin alteradas analisadas pelo parser Kotlin PSI; não é compilação Android."
     },
     {
-      "name": "xml_json",
+      "name": "resources_metadata",
       "status": "passed_local_static",
-      "details": "81 XML e 6 JSON validados."
+      "details": "Arquivos XML/JSON analisados e referências de versão sincronizadas."
     },
     {
       "name": "android_build",
       "status": "not_run",
-      "details": "Compilação Gradle/Android e testes instrumentados/visuais pendentes; sem SDK/Gradle disponíveis."
-    },
-    {
-      "name": "versioning",
-      "status": "passed_local_static",
-      "details": "VersionCode 116, RELEASE, VERSION, README, CHANGELOG e metadados alinhados."
+      "details": "SDK/Gradle Android não disponíveis no ambiente local; teste completo no GitHub Actions pendente."
     }
   ]
 }

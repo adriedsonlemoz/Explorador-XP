@@ -1,6 +1,14 @@
-> **Versão atual:** 0.1.0-alpha.116 (`versionCode 116`). Visualizador ZIP e Lixeira compactados; informações de dispositivo copiáveis, Redmi Note 11 Pro+ 5G e Dimensity 920 reconhecidos no catálogo offline. Build Android e teste físico pendentes.
+> **Versão atual:** 0.1.0-alpha.119 (`versionCode 119`). Mini-player de música e reprodução em segundo plano via Media3 MediaSessionService. Build Android e teste em aparelho ainda pendentes.
+
+**alpha.119:** o player Media3 foi transferido da tela para um serviço de sessão de mídia, com controles de notificação/tela bloqueada, mini-player persistente durante a navegação e retorno ao player pelo mini-player e pela notificação. A fila da pasta e os controles da alpha.118 foram preservados.
+
+> **Versão atual:** 0.1.0-alpha.118 (`versionCode 118`). Player de música interno com Media3, capa e tags, fila por pasta e controles. Build Android e teste físico pendentes.
 
 # Explorador XP
+
+**alpha.118:** player próprio com capa e informações das tags, fila de áudios da pasta (limite 1000), controles anterior/próximo/aleatório/repetição, pausa no segundo plano; Media3 reaproveitado do vídeo.
+
+**alpha.117:** menus Ferramentas/Ajuda e barra de navegação compartilhados nas galerias; arquivos de mídia podem ser copiados, movidos, renomeados, compartilhados, compactados ou enviados à Lixeira com seleção; pesquisa por nomes na pasta e criação na pasta física; renomeação preserva a extensão por padrão.
 
 **alpha.116 (ZIP, Lixeira e dispositivo):** Visualizador ZIP com ações compactas, Info expansível, busca/seleção sob demanda e "Abrir com" único no menu. Lixeira compacta com filtros, datas e operações em lote. Informações técnicas do dispositivo copiáveis por toque e catálogo offline Redmi Note 11 Pro+ 5G/Dimensity 920 (aliases exatos).
 

@@ -21,6 +21,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +37,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -75,11 +77,13 @@ private data class PreparedExternalFile(
 
 class MainActivity : ComponentActivity() {
     private var externalOpenSequence = 0
+    private var musicOpenRequest by mutableIntStateOf(0)
     private var externalOpenRequest by mutableStateOf<ExternalOpenRequest?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         updateExternalOpenRequest(intent)
+        if (intent?.action == ACTION_OPEN_MUSIC_PLAYER) musicOpenRequest++
         if (PreferencesStore(this).deviceImagesEnabled()) {
             lifecycleScope.launch(Dispatchers.IO) {
                 runCatching { DeviceIdentityRepository(applicationContext).warmupCurrentDevice() }
@@ -111,6 +115,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         initialDirectoryPath = intent.getStringExtra(EXTRA_PERFORMANCE_START_PATH),
                         externalOpenRequest = externalOpenRequest,
+                        musicOpenRequest = musicOpenRequest,
                     )
                 }
             }
@@ -121,6 +126,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         updateExternalOpenRequest(intent)
+        if (intent.action == ACTION_OPEN_MUSIC_PLAYER) musicOpenRequest++
     }
 
     private fun updateExternalOpenRequest(sourceIntent: Intent?) {
@@ -159,17 +165,35 @@ private fun ExplorerApp(
     modifier: Modifier = Modifier,
     initialDirectoryPath: String? = null,
     externalOpenRequest: ExternalOpenRequest? = null,
+    musicOpenRequest: Int = 0,
     viewModel: ExplorerViewModel = viewModel(),
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var accessGranted by remember { mutableStateOf(hasFileAccess(context)) }
     var viewerFilePath by rememberSaveable { mutableStateOf<String?>(null) }
+    // Criar a conexão com o serviço somente após o primeiro áudio solicitado.
+    // Mantê-la ao voltar à lista permite mini-player e reprodução em segundo plano.
+    var musicActivated by rememberSaveable { mutableStateOf(MusicPlaybackStatus.hasSession) }
+    LaunchedEffect(viewerFilePath) {
+        if (viewerFilePath?.substringAfterLast('.')?.lowercase() in
+            setOf("mp3", "wav", "m4a", "aac", "ogg", "flac", "opus")) musicActivated = true
+    }
+    if (musicOpenRequest > 0) LaunchedEffect(musicOpenRequest) { musicActivated = true }
     var viewerMimeType by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerForcedReadOnly by rememberSaveable { mutableStateOf(false) }
     var viewerCleanupDirectory by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerExternalOrigin by rememberSaveable { mutableStateOf<ExternalOpenOrigin?>(null) }
     var viewerFolderImagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
+    val musicController = rememberMusicController(musicActivated)
+    LaunchedEffect(musicOpenRequest, musicController) {
+        if (musicOpenRequest > 0 && musicController != null) {
+            musicItemFile(musicController.currentMediaItem)?.let { track ->
+                viewerFilePath = track.absolutePath
+                viewerMimeType = null
+            }
+        }
+    }
     var externalOpenLoading by remember(externalOpenRequest?.id) { mutableStateOf(externalOpenRequest != null) }
     var initialDirectoryHandled by remember(initialDirectoryPath) { mutableStateOf(false) }
     val preferences = remember(context) { PreferencesStore(context) }
@@ -385,6 +409,12 @@ private fun ExplorerApp(
                 viewerExternalOrigin = null
                 viewerCleanupDirectory = null
                 viewerFolderImagePaths = emptyList()
+                // Não deixar a sessão apontando para um arquivo temporário já apagado.
+                if (cleanup != null && musicItemFile(musicController?.currentMediaItem)
+                        ?.parentFile?.absolutePath == cleanup) {
+                    musicController?.stop()
+                    musicController?.clearMediaItems()
+                }
                 cleanup?.let { File(it).deleteRecursively() }
                 if (wasExternalOpen) {
                     (context as? android.app.Activity)?.finish()
@@ -395,6 +425,11 @@ private fun ExplorerApp(
             onOpenExternal = { target -> openFile(context, target) },
             onOpenFolder = { target ->
                 val cleanup = viewerCleanupDirectory
+                if (cleanup != null && musicItemFile(musicController?.currentMediaItem)
+                        ?.parentFile?.absolutePath == cleanup) {
+                    musicController?.stop()
+                    musicController?.clearMediaItems()
+                }
                 viewerFilePath = null
                 viewerMimeType = null
                 viewerForcedReadOnly = false
@@ -407,6 +442,8 @@ private fun ExplorerApp(
             },
             onShareFile = viewModel::shareFile,
             onMoveToTrash = viewModel::moveFileToTrash,
+            audioController = musicController,
+            onAudioRequested = { musicActivated = true },
         )
         return
     }
@@ -416,6 +453,7 @@ private fun ExplorerApp(
         return
     }
 
+    Column(modifier = modifier) {
     ExplorerScreen(
         state = state,
         accessGranted = accessGranted,
@@ -459,6 +497,13 @@ private fun ExplorerApp(
         onCreateFolder = viewModel::createFolder,
         onCreateFile = viewModel::createFile,
         onRename = viewModel::rename,
+        onRenameAndThen = viewModel::renameAndThen,
+        onCopyFiles = viewModel::copyFiles,
+        onCutFiles = viewModel::cutFiles,
+        onMoveFilesToTrash = viewModel::moveFilesToTrash,
+        onCreateFolderAt = viewModel::createFolderAt,
+        onCreateFileAt = viewModel::createFileAt,
+        onPasteInto = viewModel::pasteClipboardTo,
         onLoadTrash = viewModel::loadTrash,
         onRestoreTrashItem = viewModel::restoreTrashItem,
         onRestoreTrashItems = viewModel::restoreTrashItems,
@@ -476,8 +521,26 @@ private fun ExplorerApp(
         storageScanState = viewModel.storageScanState,
         transferState = viewModel.transferState,
         advancedSearchState = viewModel.advancedSearchState,
-        modifier = modifier,
+        modifier = Modifier.weight(1f),
     )
+    if (musicController != null) {
+        MusicMiniPlayer(
+            controller = musicController,
+            onOpen = { track ->
+                viewerFilePath = track.absolutePath
+                viewerMimeType = null
+                viewerForcedReadOnly = false
+                viewerExternalOrigin = null
+                viewerCleanupDirectory = null
+                viewerFolderImagePaths = emptyList()
+            },
+            onClose = {
+                musicController.stop()
+                musicController.clearMediaItems()
+            },
+        )
+    }
+    }
 }
 
 @Composable

@@ -152,6 +152,13 @@ fun ExplorerScreen(
     onCreateFolder: (String) -> Unit,
     onCreateFile: (String) -> Unit,
     onRename: (File, String) -> Unit,
+    onRenameAndThen: (File, String, () -> Unit) -> Unit,
+    onCopyFiles: (List<File>) -> Unit,
+    onCutFiles: (List<File>) -> Unit,
+    onMoveFilesToTrash: (List<File>) -> Unit,
+    onCreateFolderAt: (File, String) -> Unit,
+    onCreateFileAt: (File, String) -> Unit,
+    onPasteInto: (File) -> Unit,
     onLoadTrash: () -> Unit,
     onRestoreTrashItem: (TrashItem) -> Unit,
     onRestoreTrashItems: (List<TrashItem>) -> Unit,
@@ -265,6 +272,24 @@ fun ExplorerScreen(
                         onOpenFile = onOpenTarget,
                         onOpenFavorites = { mediaShortcut = null; onTabChange(ExplorerTab.FAVORITES) },
                         onOpenTools = { mediaShortcut = null; showToolsPanel = true },
+                        onCopyFiles = onCopyFiles,
+                        onCutFiles = onCutFiles,
+                        onMoveToTrash = onMoveFilesToTrash,
+                        onRenameFile = onRenameAndThen,
+                        transferState = transferState,
+                        onFavoriteFile = onToggleFavorite,
+                        onCompressFiles = { archiveCreateSources = it; mediaShortcut = null },
+                        onCreateFolderAt = onCreateFolderAt,
+                        onCreateFileAt = onCreateFileAt,
+                        onPasteInto = onPasteInto,
+                        canPaste = state.clipboard != null,
+                        onShowInstalledApps = { mediaShortcut = null; showInstalledApps = true },
+                        onShowNetwork = { mediaShortcut = null; showNetworkExplorer = true },
+                        onShowSettings = { mediaShortcut = null; showSettings = true },
+                        onShowDeviceInfo = { mediaShortcut = null; showDeviceInfo = true },
+                        onShowManual = { mediaShortcut = null; showManual = true },
+                        onShowAbout = { mediaShortcut = null; showAbout = true },
+                        onOpenTrash = { mediaShortcut = null; showTrash = true; onLoadTrash() },
                     )
                     showNetworkExplorer -> NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false; returnFromTool() })
                     showDeviceInfo -> DeviceInfoScreen(onDismiss = { showDeviceInfo = false; returnFromTool() })
@@ -323,6 +348,10 @@ fun ExplorerScreen(
                 trashBytes = trashBytes,
             )
         }
+        // Os comandos da galeria também executam transferências do ViewModel.
+        // Sem os hosts aqui, um conflito de nome ficaria aguardando resposta invisível.
+        TransferProgressHost(transferState, onPauseTransfer, onResumeTransfer, onCancelTransfer)
+        TransferConflictHost(transferConflict, onResolveTransferConflict, onCancelTransfer)
         return
     }
 
@@ -547,7 +576,7 @@ fun ExplorerScreen(
     archiveCreateSources?.takeIf { it.isNotEmpty() }?.let { sources ->
         ArchiveCreationFlow(
             sources = sources,
-            initialDestination = state.currentDir,
+            initialDestination = sources.firstOrNull()?.parentFile ?: state.currentDir,
             onDismiss = {
                 archiveCreateSources = null
                 onRefresh()
@@ -591,16 +620,10 @@ fun ExplorerScreen(
     }
 
     renameTarget?.let { target ->
-        NameDialog(
-            title = "Renomear",
-            initialValue = target.name,
-            confirmText = "Renomear",
-            onDismiss = { renameTarget = null },
-            onConfirm = {
-                renameTarget = null
-                onRename(target, it)
-            }
-        )
+        RenameFileDialog(file = target, onDismiss = { renameTarget = null }) { newName ->
+            renameTarget = null
+            onRename(target, newName)
+        }
     }
 
     propertiesTarget?.let { target ->
@@ -749,7 +772,6 @@ private fun XpHeader(
     var helpMenu by remember { mutableStateOf(false) }
     var addressMenu by remember { mutableStateOf(false) }
     var selectionMoreMenu by remember { mutableStateOf(false) }
-    var newMenu by remember { mutableStateOf(false) }
     val trashUiState by trashState.collectAsStateWithLifecycle()
     val trashHasItems = trashUiState.hasItems
 
@@ -834,16 +856,7 @@ private fun XpHeader(
         }
 
         if (selectionCount == 0 && !searchMode) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(29.dp)
-                    .background(XpChrome)
-                    .border(1.dp, XpChromeBorder)
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 3.dp)
-            ) {
+            XpExplorerMenuBar {
                 Box {
                     XpMenuLabel("Arquivo", fileMenu) { fileMenu = true }
                     XpPopupMenu(expanded = fileMenu, onDismiss = { fileMenu = false }) {
@@ -912,37 +925,14 @@ private fun XpHeader(
                     }
                 }
 
-                Box {
-                    XpMenuLabel("Ferramentas", toolsMenu) { toolsMenu = true }
-                    XpPopupMenu(expanded = toolsMenu, onDismiss = { toolsMenu = false }) {
-                        XpMenuItem("Aplicativos instalados", R.drawable.file_apk) {
-                            toolsMenu = false
-                            onShowInstalledApps()
-                        }
-                        XpMenuItem("Rede local (WebDAV)", R.drawable.device_mobile) {
-                            toolsMenu = false
-                            onShowNetwork()
-                        }
-                        XpMenuDivider()
-                        XpMenuItem("Configurações", R.drawable.settings) {
-                            toolsMenu = false
-                            onShowSettings()
-                        }
-                        XpMenuItem("Informações do dispositivo", R.drawable.device_mobile) {
-                            toolsMenu = false
-                            onShowDeviceInfo()
-                        }
-                    }
-                }
+                XpExplorerToolsMenu(
+                    onApps = onShowInstalledApps,
+                    onNetwork = onShowNetwork,
+                    onSettings = onShowSettings,
+                    onDevice = onShowDeviceInfo,
+                )
+                XpExplorerHelpMenu(onHelp = onShowManual, onAbout = onShowAbout)
 
-                Box {
-                    XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
-                    XpPopupMenu(expanded = helpMenu, onDismiss = { helpMenu = false }) {
-                        XpMenuItem("Ajuda", R.drawable.help) { helpMenu = false; onShowManual() }
-                        XpMenuDivider()
-                        XpMenuItem("Sobre o Explorador XP", R.drawable.info) { helpMenu = false; onShowAbout() }
-                    }
-                }
             }
         }
 
@@ -1005,37 +995,15 @@ private fun XpHeader(
                         }
                     }
                 } else {
-                    XpClassicToolButton(R.drawable.back, "Voltar", canBack, onBack, Modifier.weight(1f), compact = true)
-                    XpClassicToolButton(R.drawable.forward, "Avançar", canForward, onForward, Modifier.weight(1f), compact = true)
-                    XpClassicToolButton(R.drawable.home, "Início", true, onHome, Modifier.weight(1f), compact = true)
-                    XpClassicToolButton(R.drawable.up, "Subir", true, onUp, Modifier.weight(1f), compact = true)
-                    XpClassicToolButton(R.drawable.search, "Pesquisar", true, onToggleSearch, Modifier.weight(1f), compact = true)
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        XpClassicToolButton(
-                            R.drawable.file_new,
-                            "Novo",
-                            true,
-                            { newMenu = true },
-                            Modifier.fillMaxWidth(),
-                            compact = true,
-                        )
-                        XpPopupMenu(expanded = newMenu, onDismiss = { newMenu = false }) {
-                            XpMenuItem("Nova pasta", R.drawable.folder_new) {
-                                newMenu = false
-                                onNewFolder()
-                            }
-                            XpMenuItem("Novo arquivo", R.drawable.file_new) {
-                                newMenu = false
-                                onNewFile()
-                            }
-                        }
-                    }
-                    XpClassicToolButton(R.drawable.refresh, "Atualizar", true, onRefresh, Modifier.weight(1f), compact = true)
-                    if (canPaste) {
-                        XpClassicToolButton(R.drawable.paste, "Colar", true, onPaste, Modifier.weight(1f), compact = true)
-                    } else {
-                        XpClassicToolButton(R.drawable.favorites, "Favoritos", true, onOpenFavorites, Modifier.weight(1f), compact = true)
-                    }
+                    XpNavigationButtons(XpNavigationCommands(
+                        canBack = canBack, canForward = canForward, canUp = true,
+                        onBack = onBack, onForward = onForward, onHome = onHome, onUp = onUp,
+                        onSearch = onToggleSearch, onNewFolder = onNewFolder, onNewFile = onNewFile,
+                        canNew = true, onRefresh = onRefresh,
+                        onLast = if (canPaste) onPaste else onOpenFavorites,
+                        lastLabel = if (canPaste) "Colar" else "Favoritos",
+                        lastIcon = if (canPaste) R.drawable.paste else R.drawable.favorites,
+                    ))
                 }
             }
         }
@@ -5223,7 +5191,7 @@ private fun EmptyState(tab: ExplorerTab, query: String, currentDir: File) {
 }
 
 @Composable
-private fun NameDialog(
+internal fun NameDialog(
     title: String,
     initialValue: String,
     confirmText: String,

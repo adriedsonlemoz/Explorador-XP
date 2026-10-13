@@ -20,6 +20,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -80,6 +83,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.StateFlow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -324,6 +329,24 @@ internal fun MediaShortcutScreen(
     onOpenFile: (File) -> Unit,
     onOpenFavorites: () -> Unit,
     onOpenTools: () -> Unit,
+    onCopyFiles: (List<File>) -> Unit,
+    onCutFiles: (List<File>) -> Unit,
+    onMoveToTrash: (List<File>) -> Unit,
+    onRenameFile: (File, String, () -> Unit) -> Unit,
+    transferState: StateFlow<TransferState?>,
+    onFavoriteFile: (File) -> Unit,
+    onCompressFiles: (List<File>) -> Unit,
+    onCreateFolderAt: (File, String) -> Unit,
+    onCreateFileAt: (File, String) -> Unit,
+    onPasteInto: (File) -> Unit,
+    canPaste: Boolean,
+    onShowInstalledApps: () -> Unit,
+    onShowNetwork: () -> Unit,
+    onShowSettings: () -> Unit,
+    onShowDeviceInfo: () -> Unit,
+    onShowManual: () -> Unit,
+    onShowAbout: () -> Unit,
+    onOpenTrash: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -349,6 +372,13 @@ internal fun MediaShortcutScreen(
     var refreshKey by remember { mutableStateOf(0) }
     var folderPath by remember(kind) { mutableStateOf<String?>(null) }
     var forwardFolder by remember(kind) { mutableStateOf<String?>(null) }
+    var searchMode by remember(kind) { mutableStateOf(false) }
+    var searchQuery by remember(kind) { mutableStateOf("") }
+    var newFolderDialog by remember { mutableStateOf(false) }
+    var newFileDialog by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<File?>(null) }
+    var confirmTrash by remember { mutableStateOf<List<File>?>(null) }
+    var moreMenu by remember { mutableStateOf(false) }
     var folders by remember(kind, accessGranted) { mutableStateOf(emptyList<MediaGalleryFolder>()) }
     var folderLoading by remember(kind, accessGranted) { mutableStateOf(accessGranted) }
 
@@ -372,6 +402,16 @@ internal fun MediaShortcutScreen(
     fun reloadGallery() {
         page = 0; entries = emptyList(); hasMore = true; error = null
         selected = emptySet(); refreshKey++
+    }
+
+    val activeTransfer by transferState.collectAsStateWithLifecycle()
+    var sawTransfer by remember(kind) { mutableStateOf(false) }
+    LaunchedEffect(activeTransfer) {
+        if (activeTransfer != null) sawTransfer = true
+        else if (sawTransfer) {
+            sawTransfer = false
+            reloadGallery()
+        }
     }
 
     LaunchedEffect(kind, accessGranted, sort, origin, refreshKey) {
@@ -478,12 +518,60 @@ internal fun MediaShortcutScreen(
             } finally { selectingAll = false }
         }
     }
+    fun selectedFiles(): List<File> = selected.map(::File).filter { it.isFile && it.canRead() }
+    fun endSelection() { selectMode = false; selected = emptySet() }
+    fun copySelectedToClipboard(move: Boolean) {
+        val source = selectedFiles()
+        if (source.isEmpty()) return
+        if (move) onCutFiles(source) else onCopyFiles(source)
+        notice = if (move) "${source.size} mídia(s) pronta(s) para mover. Abra a pasta de destino e toque em Colar."
+            else "${source.size} mídia(s) pronta(s) para copiar. Abra a pasta de destino e toque em Colar."
+        endSelection()
+    }
+    fun renameSelected() { renameTarget = selectedFiles().singleOrNull() }
+    fun deleteSelected() { confirmTrash = selectedFiles().takeIf { it.isNotEmpty() } }
+    fun compressSelected() {
+        val files = selectedFiles()
+        if (files.isNotEmpty()) onCompressFiles(files)
+    }
+    val matchingFolders = if (searchQuery.isBlank()) folders else folders.filter {
+        File(it.path).name.contains(searchQuery, ignoreCase = true) || it.path.contains(searchQuery, ignoreCase = true)
+    }
+    val matchingEntries = if (searchQuery.isBlank()) entries else entries.filter {
+        it.file.name.contains(searchQuery, ignoreCase = true)
+    }
     val title = if (kind == MediaShortcutKind.PHOTOS) "Fotos" else "Vídeos"
     fun tap(item: IndexedMediaFile) {
         if (selectMode) {
             selected = if (item.file.absolutePath in selected) selected - item.file.absolutePath
                 else selected + item.file.absolutePath
         } else onOpenFile(item.file)
+    }
+
+    renameTarget?.let { file ->
+        RenameFileDialog(file, onDismiss = { renameTarget = null }) { newName ->
+            renameTarget = null
+            onRenameFile(file, newName) { reloadGallery() }
+            endSelection()
+        }
+    }
+    if (newFolderDialog && folderPath != null) NameDialog(
+        "Nova pasta", "", "Criar", onDismiss = { newFolderDialog = false }, onConfirm = { name ->
+            newFolderDialog = false; folderPath?.let { onCreateFolderAt(File(it), name) }
+        })
+    if (newFileDialog && folderPath != null) NameDialog(
+        "Novo arquivo", "", "Criar", onDismiss = { newFileDialog = false }, onConfirm = { name ->
+            newFileDialog = false; folderPath?.let { onCreateFileAt(File(it), name) }
+        })
+    confirmTrash?.let { files ->
+        AlertDialog(onDismissRequest = { confirmTrash = null },
+            title = { Text("Mover para a Lixeira?") },
+            text = { Text("${files.size} item(ns) selecionado(s). Os arquivos poderão ser restaurados pela Lixeira.") },
+            confirmButton = { TextButton(onClick = {
+                confirmTrash = null; onMoveToTrash(files); endSelection(); reloadGallery()
+            }) { Text("Mover para a Lixeira") } },
+            dismissButton = { TextButton(onClick = { confirmTrash = null }) { Text("Cancelar") } },
+        )
     }
 
     Column(Modifier.fillMaxSize().background(XpBackground)) {
@@ -502,47 +590,59 @@ internal fun MediaShortcutScreen(
                 color = Color.White.copy(alpha = .82f), fontSize = 11.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        // Mesma faixa de menus da tela Arquivos. Ações não aplicáveis à galeria são omitidas.
-        Row(
-            Modifier.fillMaxWidth().height(29.dp).background(XpChrome)
-                .border(1.dp, XpChromeBorder)
-                .horizontalScroll(androidx.compose.foundation.rememberScrollState())
-                .padding(horizontal = 3.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        // A barra e os componentes dos menus agora são compartilhados com Arquivos.
+        XpExplorerMenuBar {
             Box {
                 XpMenuLabel("Arquivo", fileMenu) { fileMenu = true }
                 XpPopupMenu(fileMenu, { fileMenu = false }) {
-                    XpMenuItem("Atualizar", R.drawable.refresh) { fileMenu = false; reloadGallery() }
-                    XpMenuItem("Informações", R.drawable.info) {
-                        fileMenu = false
-                        notice = if (folderPath == null) "${folders.size} pastas com ${title.lowercase()} disponíveis."
-                            else "Pasta: ${folderPath} • ${entries.size}${if (hasMore) "+" else ""} arquivo(s) carregado(s)."
+                    XpMenuItem("Nova pasta", R.drawable.folder_new, enabled = folderPath != null) {
+                        fileMenu = false; newFolderDialog = true
                     }
+                    XpMenuItem("Novo arquivo", R.drawable.file_new, enabled = folderPath != null) {
+                        fileMenu = false; newFileDialog = true
+                    }
+                    if (canPaste) XpMenuItem("Colar", R.drawable.paste, enabled = folderPath != null) {
+                        fileMenu = false; folderPath?.let { onPasteInto(File(it)) }; reloadGallery()
+                    }
+                    XpMenuDivider()
+                    XpMenuItem("Lixeira", R.drawable.trash_empty) { fileMenu = false; onOpenTrash() }
                 }
             }
             Box {
                 XpMenuLabel("Editar", editMenu) { editMenu = true }
                 XpPopupMenu(editMenu, { editMenu = false }) {
-                    XpMenuItem("Selecionar arquivos", R.drawable.select_all, enabled = folderPath != null) {
-                        editMenu = false; selectMode = true
+                    if (canPaste) XpMenuItem("Colar", R.drawable.paste, enabled = folderPath != null) {
+                        editMenu = false; folderPath?.let { onPasteInto(File(it)) }; reloadGallery()
                     }
-                    XpMenuItem("Selecionar tudo da pasta", enabled = folderPath != null && !selectingAll) {
+                    XpMenuItem("Selecionar tudo", R.drawable.select_all, enabled = folderPath != null && !selectingAll) {
                         editMenu = false; selectMode = true; updateAllSelection(false)
                     }
                     XpMenuItem("Inverter seleção", enabled = folderPath != null && selectMode && !selectingAll) {
                         editMenu = false; updateAllSelection(true)
                     }
                     XpMenuItem("Cancelar seleção", enabled = selectMode) {
-                        editMenu = false; selectMode = false; selected = emptySet()
+                        editMenu = false; endSelection()
+                    }
+                    if (selected.isNotEmpty()) {
+                        XpMenuDivider()
+                        XpMenuItem("Copiar", R.drawable.copy) { editMenu = false; copySelectedToClipboard(false) }
+                        XpMenuItem("Mover", R.drawable.move) { editMenu = false; copySelectedToClipboard(true) }
+                        XpMenuItem("Renomear", R.drawable.rename, enabled = selected.size == 1) {
+                            editMenu = false; renameSelected()
+                        }
+                        XpMenuItem("Excluir (Lixeira)", R.drawable.delete) { editMenu = false; deleteSelected() }
                     }
                 }
             }
             Box {
                 XpMenuLabel("Exibir", viewMenu) { viewMenu = true }
                 XpPopupMenu(viewMenu, { viewMenu = false }) {
-                    XpMenuItem("Exibir como grade", checked = gridView) { viewMenu = false; gridView = true }
-                    XpMenuItem("Exibir como lista", checked = !gridView) { viewMenu = false; gridView = false }
+                    XpMenuItem("Exibir como ícones", R.drawable.view_grid, checked = gridView) {
+                        viewMenu = false; gridView = true
+                    }
+                    XpMenuItem("Exibir como lista", R.drawable.view_list, checked = !gridView) {
+                        viewMenu = false; gridView = false
+                    }
                     XpMenuDivider()
                     MediaGallerySort.values().forEach { option ->
                         XpMenuItem("Classificar: ${option.label}", checked = sort == option) {
@@ -552,70 +652,76 @@ internal fun MediaShortcutScreen(
                     XpMenuDivider()
                     MediaGalleryOrigin.values().forEach { option ->
                         XpMenuItem("Local: ${option.label}", checked = origin == option) {
-                            viewMenu = false; origin = option
-                            switchFolder(null); reloadGallery()
+                            viewMenu = false; origin = option; switchFolder(null); reloadGallery()
                         }
                     }
+                    XpMenuDivider()
+                    XpMenuItem("Atualizar", R.drawable.refresh) { viewMenu = false; reloadGallery() }
                 }
             }
             Box {
                 XpMenuLabel("Favoritos", favoritesMenu) { favoritesMenu = true }
                 XpPopupMenu(favoritesMenu, { favoritesMenu = false }) {
-                    XpMenuItem("Abrir Favoritos", R.drawable.favorites) {
-                        favoritesMenu = false; onOpenFavorites()
+                    XpMenuItem("Abrir Favoritos", R.drawable.favorites) { favoritesMenu = false; onOpenFavorites() }
+                    XpMenuItem("Adicionar aos Favoritos", R.drawable.favorites, enabled = selected.size == 1) {
+                        favoritesMenu = false; selectedFiles().singleOrNull()?.let(onFavoriteFile)
                     }
                 }
             }
-            Box {
-                XpMenuLabel("Ferramentas", toolsMenu) { toolsMenu = true }
-                XpPopupMenu(toolsMenu, { toolsMenu = false }) {
-                    XpMenuItem("Painel de Ferramentas", R.drawable.settings) {
-                        toolsMenu = false; onOpenTools()
-                    }
-                    XpMenuDivider()
-                    XpMenuItem("Copiar arquivos selecionados", R.drawable.copy, enabled = selected.isNotEmpty() && !copying) {
-                        toolsMenu = false; pickDestination.launch(null)
-                    }
-                    XpMenuItem("Compartilhar selecionados", R.drawable.share, enabled = selected.isNotEmpty() && !copying) {
-                        toolsMenu = false; shareSelected()
-                    }
-                    XpMenuDivider()
-                    XpMenuItem("Atualizar", R.drawable.refresh) { toolsMenu = false; reloadGallery() }
-                }
-            }
-            Box {
-                XpMenuLabel("Ajuda", helpMenu) { helpMenu = true }
-                XpPopupMenu(helpMenu, { helpMenu = false }) {
-                    XpMenuItem("Como navegar") {
-                        helpMenu = false
-                        notice = "Abra uma pasta para ver sua mídia. Voltar/Subir retornam às pastas; Avançar reabre a última pasta. Exibir altera a classificação."
-                    }
-                }
-            }
+            XpExplorerToolsMenu(
+                onApps = onShowInstalledApps,
+                onNetwork = onShowNetwork,
+                onSettings = onShowSettings,
+                onDevice = onShowDeviceInfo,
+            )
+            XpExplorerHelpMenu(onHelp = onShowManual, onAbout = onShowAbout)
+
         }
-        // Navegação real de pastas; não confundimos voltar no histórico com fechar a galeria.
-        Row(
-            Modifier.fillMaxWidth().height(52.dp).background(XpChrome)
-                .border(1.dp, XpChromeBorder).padding(horizontal = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            XpClassicToolButton(R.drawable.back, "Voltar", folderPath != null, {
-                switchFolder(null, rememberForForward = true)
-            }, Modifier.weight(1f), compact = true)
-            XpClassicToolButton(R.drawable.forward, "Avançar", forwardFolder != null && folderPath == null, {
-                forwardFolder?.let { switchFolder(it) }
-            }, Modifier.weight(1f), compact = true)
-            XpClassicToolButton(R.drawable.home, "Início", folderPath != null, {
-                switchFolder(null)
-            }, Modifier.weight(1f), compact = true)
-            XpClassicToolButton(R.drawable.up, "Subir", folderPath != null, {
-                switchFolder(null, rememberForForward = true)
-            }, Modifier.weight(1f), compact = true)
-            XpClassicToolButton(R.drawable.refresh, "Atualizar", !copying, { reloadGallery() }, Modifier.weight(1f), compact = true)
-            XpClassicToolButton(R.drawable.select_all, "Selecionar", folderPath != null, {
-                selectMode = !selectMode
-                if (!selectMode) selected = emptySet()
-            }, Modifier.weight(1f), compact = true)
+        if (selected.isNotEmpty() && selectMode) {
+            Row(Modifier.fillMaxWidth().height(56.dp).background(XpChrome).border(1.dp, XpChromeBorder),
+                verticalAlignment = Alignment.CenterVertically) {
+                XpClassicToolButton(R.drawable.copy, "Copiar", !copying, { copySelectedToClipboard(false) }, Modifier.weight(1f), compact = true)
+                XpClassicToolButton(R.drawable.move, "Mover", !copying, { copySelectedToClipboard(true) }, Modifier.weight(1f), compact = true)
+                XpClassicToolButton(R.drawable.rename, "Renomear", selected.size == 1 && !copying, { renameSelected() }, Modifier.weight(1f), compact = true)
+                XpClassicToolButton(R.drawable.share, "Compart.", !copying, { shareSelected() }, Modifier.weight(1f), compact = true)
+                XpClassicToolButton(R.drawable.folder_compressed, "ZIP", !copying, { compressSelected() }, Modifier.weight(1f), compact = true)
+                XpClassicToolButton(R.drawable.delete, "Excluir", !copying, { deleteSelected() }, Modifier.weight(1f), compact = true)
+                Box(Modifier.weight(1f).fillMaxHeight()) {
+                    XpClassicToolButton(R.drawable.more, "Mais", true, { moreMenu = true }, Modifier.fillMaxWidth(), compact = true)
+                    XpPopupMenu(moreMenu, { moreMenu = false }) {
+                        XpMenuItem("Adicionar aos Favoritos", R.drawable.favorites, enabled = selected.size == 1) {
+                            moreMenu = false; selectedFiles().singleOrNull()?.let(onFavoriteFile)
+                        }
+                        XpMenuItem("Cancelar seleção", R.drawable.close) { moreMenu = false; endSelection() }
+                    }
+                }
+            }
+        } else {
+            XpExplorerNavigationBar(XpNavigationCommands(
+                canBack = folderPath != null, canForward = forwardFolder != null && folderPath == null,
+                canUp = folderPath != null,
+                onBack = { switchFolder(null, rememberForForward = true) },
+                onForward = { forwardFolder?.let { switchFolder(it) } },
+                onHome = { switchFolder(null) }, onUp = { switchFolder(null, rememberForForward = true) },
+                onSearch = { searchMode = !searchMode; if (!searchMode) searchQuery = "" },
+                onNewFolder = { newFolderDialog = true },
+                onNewFile = { newFileDialog = true },
+                canNew = folderPath != null,
+                onRefresh = { reloadGallery() },
+                onLast = { if (canPaste) folderPath?.let { onPasteInto(File(it)) } else onOpenFavorites(); reloadGallery() },
+                lastLabel = if (canPaste) "Colar" else "Favoritos",
+                lastIcon = if (canPaste) R.drawable.paste else R.drawable.favorites,
+                canLast = !canPaste || folderPath != null,
+            ))
+        }
+        if (searchMode) {
+            OutlinedTextField(
+                value = searchQuery, onValueChange = { searchQuery = it },
+                placeholder = { Text(if (folderPath == null) "Pesquisar pastas" else "Pesquisar nos arquivos carregados") },
+                singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 3.dp),
+            )
+            if (hasMore && folderPath != null) Text("Busca nos itens carregados. Toque em Mais arquivos para ampliar.",
+                Modifier.padding(start = 12.dp), fontSize = 10.sp, color = XpTextSecondary)
         }
         Row(
             Modifier.fillMaxWidth().height(36.dp).background(Color.White)
@@ -626,22 +732,6 @@ internal fun MediaShortcutScreen(
             Spacer(Modifier.width(10.dp))
             Text("${title}  ›  ${folderPath?.let { File(it).name } ?: "Pastas"}",
                 color = XpBlueDark, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        if (selectMode) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { pickDestination.launch(null) }, enabled = selected.isNotEmpty() && !copying && !selectingAll,
-                    modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Rounded.ContentCopy, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Copiar (${selected.size})", maxLines = 1)
-                }
-                OutlinedButton(onClick = { shareSelected() }, enabled = selected.isNotEmpty() && !copying && !selectingAll,
-                    modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Rounded.Share, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp)); Text("Enviar")
-                }
-            }
         }
         if (origin != MediaGalleryOrigin.ALL && !selectMode) {
             Text("Filtro: ${origin.label}", Modifier.padding(start = 14.dp, bottom = 4.dp),
@@ -662,10 +752,10 @@ internal fun MediaShortcutScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             error != null && (folderPath == null || entries.isEmpty()) ->
                 Text(error ?: "", Modifier.padding(18.dp), color = Color(0xFFA42222))
-            folderPath == null && folders.isEmpty() ->
+            folderPath == null && matchingFolders.isEmpty() ->
                 Text("Nenhuma pasta com ${title.lowercase()} foi encontrada.", Modifier.padding(18.dp))
             folderPath == null -> LazyColumn(Modifier.weight(1f)) {
-                items(folders, key = { it.path }) { folder ->
+                items(matchingFolders, key = { it.path }) { folder ->
                     Row(
                         Modifier.fillMaxWidth().clickable { switchFolder(folder.path) }
                             .padding(horizontal = 12.dp, vertical = 9.dp),
@@ -694,14 +784,14 @@ internal fun MediaShortcutScreen(
                     androidx.compose.material3.HorizontalDivider(color = XpCardBorder.copy(alpha = .55f))
                 }
             }
-            entries.isEmpty() -> Text("Nenhuma mídia encontrada nesta pasta.", Modifier.padding(18.dp))
+            matchingEntries.isEmpty() -> Text("Nenhuma mídia encontrada nesta pasta.", Modifier.padding(18.dp))
             else -> if (gridView) {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(108.dp), modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(7.dp), horizontalArrangement = Arrangement.spacedBy(7.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    gridItems(entries, key = { it.file.absolutePath }) { item ->
+                    gridItems(matchingEntries, key = { it.file.absolutePath }) { item ->
                         val chosen = item.file.absolutePath in selected
                         Column(Modifier.fillMaxWidth().combinedClickable(
                             onClick = { tap(item) },
@@ -734,7 +824,7 @@ internal fun MediaShortcutScreen(
                 }
             } else {
                 LazyColumn(Modifier.weight(1f)) {
-                    items(entries, key = { it.file.absolutePath }) { item ->
+                    items(matchingEntries, key = { it.file.absolutePath }) { item ->
                         val chosen = item.file.absolutePath in selected
                         Row(Modifier.fillMaxWidth().background(if (chosen) XpSelection else Color.Transparent)
                             .combinedClickable(onClick = { tap(item) }, onLongClick = {

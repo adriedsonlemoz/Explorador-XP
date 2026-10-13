@@ -11,9 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.provider.Settings
-import android.widget.MediaController
 import android.widget.Toast
-import android.widget.VideoView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -136,6 +134,8 @@ fun InternalViewerScreen(
     onOpenFolder: (File) -> Unit,
     onShareFile: (File) -> Unit,
     onMoveToTrash: (File) -> Unit,
+    audioController: androidx.media3.session.MediaController? = null,
+    onAudioRequested: () -> Unit = {},
 ) {
     var activeFilePath by rememberSaveable(file.absolutePath) { mutableStateOf(file.absolutePath) }
     var returnToArchivePath by rememberSaveable(file.absolutePath) { mutableStateOf<String?>(null) }
@@ -150,6 +150,10 @@ fun InternalViewerScreen(
     }
     val typeDetectedFromContent = extension.isNotBlank() && extension != physicalExtension
     val isVideo = extension in videoExtensions
+    // Inclui áudio reconhecido pelo conteúdo, mesmo sem extensão no nome.
+    LaunchedEffect(extension, activeFilePath) {
+        if (extension in audioExtensions) onAudioRequested()
+    }
     val isExternalText = remember(externalMimeType) {
         ExternalOpenSupport.normalizeMime(externalMimeType).startsWith("text/")
     }
@@ -161,6 +165,9 @@ fun InternalViewerScreen(
     var contentFullScreen by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var guardedCloseRequest by remember(activeFilePath) { mutableStateOf<(() -> Unit)?>(null) }
     var removedImagePaths by remember(file.absolutePath) { mutableStateOf<Set<String>>(emptySet()) }
+    var currentAudioPath by remember(file.absolutePath) { mutableStateOf<String?>(null) }
+    val displayedFile = if (extension in audioExtensions && currentAudioPath != null) File(currentAudioPath!!) else activeFile
+    val displayedExtension = if (extension in audioExtensions) displayedFile.extension.lowercase() else extension
 
     BackHandler {
         when {
@@ -189,9 +196,9 @@ fun InternalViewerScreen(
             .background(if (isVideo) Color.Black else Color(0xFFF6F2E8))
     ) {
         if (!contentFullScreen) {
-            ViewerTitleBar(activeFile, extension)
+            ViewerTitleBar(displayedFile, displayedExtension)
             // ZIP possui resumo e ações próprias; a barra genérica repetia tamanho e "Abrir com".
-            if (extension != "zip") ViewerToolbar(activeFile, extension, typeDetectedFromContent) { onOpenExternal(activeFile) }
+            if (extension != "zip") ViewerToolbar(displayedFile, displayedExtension, typeDetectedFromContent) { onOpenExternal(displayedFile) }
             HorizontalDivider(color = Color(0xFFB8C7DA))
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -217,7 +224,14 @@ fun InternalViewerScreen(
                     onFullScreenChange = { contentFullScreen = it },
                     onOpenExternal = { onOpenExternal(activeFile) },
                 )
-                extension in audioExtensions -> MediaViewer(activeFile)
+                extension in audioExtensions -> if (audioController != null) AudioPlayerViewer(
+                    file = activeFile,
+                    controller = audioController,
+                    onTrackChanged = { currentAudioPath = it.absolutePath },
+                    onOpenExternal = onOpenExternal,
+                ) else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Conectando ao reprodutor de música...", color = XpBlueDark)
+                }
                 extension == "pdf" -> PdfViewer(activeFile)
                 extension == "zip" -> ArchiveZipViewer(
                     file = activeFile,
@@ -248,7 +262,7 @@ fun InternalViewerScreen(
                 else -> UnsupportedViewer { onOpenExternal(activeFile) }
             }
         }
-        if (!contentFullScreen) ViewerStatusBar(activeFile, extension, typeDetectedFromContent, requestClose)
+        if (!contentFullScreen) ViewerStatusBar(displayedFile, displayedExtension, typeDetectedFromContent, requestClose)
     }
 }
 
@@ -742,26 +756,6 @@ private fun ImageInfoLine(label: String, value: String) {
     }
 }
 
-@Composable
-private fun MediaViewer(file: File) {
-    val context = LocalContext.current
-    AndroidView(
-        modifier = Modifier.fillMaxSize().background(Color.Black),
-        factory = {
-            VideoView(context).apply {
-                val controller = MediaController(context)
-                controller.setAnchorView(this)
-                setMediaController(controller)
-                setVideoURI(Uri.fromFile(file))
-                setOnPreparedListener { player ->
-                    player.isLooping = false
-                    start()
-                }
-            }
-        },
-        update = { /* O VideoView mantém o estado sem reiniciar em recomposições. */ }
-    )
-}
 
 @Composable
 private fun PdfViewer(file: File) {

@@ -11,9 +11,9 @@ class ReleaseNotesScopeTest {
         assertEquals(BuildConfig.VERSION_NAME, info.versionName)
         assertEquals(BuildConfig.VERSION_CODE, info.versionCode)
         assertEquals(3, info.changes.size)
-        assertTrue(info.changes.any { it.contains("ZIP") })
-        assertTrue(info.changes.any { it.contains("Lixeira") })
-        assertTrue(info.changes.any { it.contains("Dimensity 920") })
-        assertFalse(info.changes.any { it.contains("workflow Gerar APK 108") || it.contains("alpha.112") })
+        assertTrue(info.changes.any { it.contains("Mini-player") })
+        assertTrue(info.changes.any { it.contains("MediaSessionService") })
+        assertTrue(info.changes.any { it.contains("mesmo player", ignoreCase = true) })
+        assertFalse(info.changes.any { it.contains("Dimensity 920") || it.contains("alpha.116") })
     }
 }

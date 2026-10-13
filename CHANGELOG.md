@@ -1,3 +1,28 @@
+## 0.1.0-alpha.119 (2026-10-13)
+
+- Serviço `MusicPlaybackService` com Media3 `MediaSessionService`, player único e `MediaSession`; sessão de mídia fornece os controles de sistema e a notificação, usando foreground service tipo `mediaPlayback`.
+- Mini-player compacto na tela do explorador, com abrir player, anterior, pausar/retomar, próxima e encerrar.
+- O player completo se conecta à mesma sessão, não perde a posição/fila quando a tela é fechada ou o app passa ao segundo plano. A conexão é criada sob demanda, só após a primeira música.
+- Ação de abrir o player a partir da notificação, inclusive com retorno da atividade; cuidado com arquivos temporários abertos externamente.
+- Dependência Media3 Session, permissão de foreground de áudio e declaração de service; notas da versão e verificação pré-build sincronizadas.
+- Compilação Android completa e testes instrumentados no aparelho pendentes.
+
+## 0.1.0-alpha.118 (2026-10-13)
+
+- Player de música próprio com Media3 ExoPlayer no lugar de VideoView/MediaController, incluindo capa embutida, título/artista/álbum via metadados, progresso e controles de reprodução.
+- Fila local com até 1000 arquivos de áudio da pasta, navegação anterior/próxima, embaralhar, repetir faixa ou todas e seletor de faixas; sem varredura recursiva.
+- Foco de áudio gerenciado, pausa em ON_STOP, liberação no fechamento, mensagens para arquivos inacessíveis ou não reproduzíveis e opção Abrir com.
+- Reconhecimento de .opus harmonizado nos ícones, tipos e análise de armazenamento.
+- versionCode 118, documentação e notas da versão sincronizados. Compilação Android/validação física pendentes.
+
+## 0.1.0-alpha.118 (2026-10-13)
+
+- Fotos/Vídeos: barra de menus e navegação extraídas para componentes compartilhados com Arquivos (ExplorerChrome); comandos e destinos Ferramentas/Ajuda unificados. Grade, lista e filtros de origem continuam próprios de cada mídia.
+- Galerias: Pesquisar pastas/arquivos carregados, Novo arquivo/Nova pasta na pasta real, Colar com destino explícito e tratamento de conflito, seleção múltipla com Copiar/Mover/Renomear/Compartilhar/ZIP/Lixeira. Ações indisponíveis na raiz virtual "Pastas" permanecem desativadas.
+- Renomear: novo diálogo comum às listas de arquivos e mídias; seleção inicial apenas do nome, extensão protegida por padrão, opção explícita para alterá-la, suporte a .tar.gz e dotfiles, validação de nomes e conflitos, operação idêntica sem erro.
+- Hosts de progresso e conflito também disponíveis nas galerias, evitando transferências aguardando janelas invisíveis. Exclusão pela galeria move para Lixeira após confirmação.
+- versionCode 117, metadados, testes unitários e novidades sincronizados. Build Android completo e testes em aparelho ainda pendentes.
+
 ## 0.1.0-alpha.116 (2026-10-13)
 
 - ZIP: resumo compacto, ações Extrair/Verificar/Info lado a lado; busca e seleção opcionais, remoção do segundo Abrir com, Info simplificada e dados técnicos expansíveis.

@@ -15,7 +15,7 @@ object FileTypeClassifier {
         "tiff" to "Imagem TIFF", "heic" to "Imagem HEIC", "psd" to "Imagem Photoshop", "ai" to "Arquivo Illustrator",
         "eps" to "Imagem EPS", "ico" to "Ícone",
         "mp3" to "Áudio MP3", "wav" to "Áudio WAV", "ogg" to "Áudio OGG", "flac" to "Áudio FLAC",
-        "aac" to "Áudio AAC", "m4a" to "Áudio M4A",
+        "aac" to "Áudio AAC", "m4a" to "Áudio M4A", "opus" to "Áudio Opus",
         "mp4" to "Vídeo MP4", "avi" to "Vídeo AVI", "mkv" to "Vídeo MKV", "mov" to "Vídeo MOV",
         "webm" to "Vídeo WebM", "3gp" to "Vídeo 3GP",
         "zip" to "Arquivo ZIP", "rar" to "Arquivo RAR", "7z" to "Arquivo 7-Zip", "tar" to "Arquivo TAR",
@@ -36,7 +36,7 @@ object FileTypeClassifier {
 
     private val imageExtensions = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "tif", "tiff", "heic", "psd", "ai", "eps", "ico")
     private val videoExtensions = setOf("mp4", "avi", "mkv", "mov", "webm", "3gp")
-    private val audioExtensions = setOf("mp3", "wav", "ogg", "flac", "aac", "m4a")
+    private val audioExtensions = setOf("mp3", "wav", "ogg", "flac", "aac", "m4a", "opus")
     private val documentExtensions = setOf("txt", "log", "rtf", "md", "doc", "docx", "odt", "xls", "xlsx", "ods", "csv", "ppt", "pptx", "odp", "pdf", "html", "htm", "epub", "mobi")
     private val archiveExtensions = setOf("zip", "rar", "7z", "tar", "gz", "bz2", "xz")
 

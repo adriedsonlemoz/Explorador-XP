@@ -544,6 +544,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun copyFile(file: File) = setClipboard(listOf(file), ClipboardMode.COPY)
     fun cutFile(file: File) = setClipboard(listOf(file), ClipboardMode.CUT)
+    fun copyFiles(files: List<File>) = setClipboard(files, ClipboardMode.COPY)
+    fun cutFiles(files: List<File>) = setClipboard(files, ClipboardMode.CUT)
+
 
     private fun setClipboard(files: List<File>, mode: ClipboardMode) {
         if (files.isEmpty()) return
@@ -583,6 +586,54 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                 onConflict = ::requestTransferConflict,
             )
         }
+    }
+
+    /** Destino explícito da galeria. Não usa a pasta atual do explorador silenciosamente. */
+    fun pasteClipboardTo(destination: File) {
+        val clipboard = _uiState.value.clipboard ?: return
+        if (!destination.isDirectory || !destination.canWrite()) {
+            _events.tryEmit(ExplorerEvent.ShowMessage("Pasta de destino indisponível ou somente leitura."))
+            return
+        }
+        val kind = if (clipboard.mode == ClipboardMode.CUT) TransferKind.MOVE else TransferKind.COPY
+        _uiState.update { it.copy(clipboard = null) }
+        runTransfer(kind, "Operação concluída.", "Falha ao colar.") { progress ->
+            repository.paste(clipboard, destination, progress, ::awaitTransferResumed, ::requestTransferConflict)
+        }
+    }
+
+    fun createFolderAt(destination: File, name: String) {
+        viewModelScope.launch {
+            repository.createFolder(destination, name)
+                .onSuccess {
+                    invalidateAllSnapshots()
+                    _events.emit(ExplorerEvent.ShowMessage("Pasta criada. Pastas sem mídias não aparecem na galeria."))
+                    startRefresh(useCache = false)
+                }
+                .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao criar pasta.")) }
+        }
+    }
+
+    fun createFileAt(destination: File, name: String) {
+        viewModelScope.launch {
+            repository.createFile(destination, name)
+                .onSuccess {
+                    invalidateAllSnapshots()
+                    _events.emit(ExplorerEvent.ShowMessage("Arquivo criado. Somente mídias aparecem na galeria."))
+                    startRefresh(useCache = false)
+                }
+                .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao criar arquivo.")) }
+        }
+    }
+
+    fun moveFilesToTrash(files: List<File>) {
+        if (files.isEmpty()) return
+        runTransfer(
+            kind = TransferKind.MOVE,
+            successMessage = "${files.size} item(ns) movido(s) para a Lixeira.",
+            failureFallback = "Falha ao mover arquivos para a Lixeira.",
+            refreshTrash = true,
+        ) { progress -> repository.moveToTrash(files, progress, ::awaitTransferResumed) }
     }
 
     /** Exclusão permanente, usada apenas após escolha explícita do usuário. */
@@ -715,7 +766,9 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun rename(file: File, newName: String) {
+    fun rename(file: File, newName: String) = renameAndThen(file, newName) {}
+
+    fun renameAndThen(file: File, newName: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             repository.rename(file, newName)
                 .onSuccess {
@@ -724,6 +777,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
                     _events.emit(ExplorerEvent.ShowMessage("Item renomeado."))
                     startRefresh(useCache = false)
                     if (_advancedSearchState.value.active) runAdvancedSearch(_advancedSearchState.value.filters, debounceMs = 0L)
+                    onSuccess()
                 }
                 .onFailure { _events.emit(ExplorerEvent.ShowMessage(it.message ?: "Falha ao renomear.")) }
         }

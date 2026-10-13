@@ -13,8 +13,8 @@ android {
         applicationId = "com.exploradorxp.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 116
-        versionName = "0.1.0-alpha.116"
+        versionCode = 119
+        versionName = "0.1.0-alpha.119"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -107,6 +107,7 @@ dependencies {
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation("androidx.media3:media3-exoplayer:1.9.4")
     implementation("androidx.media3:media3-ui:1.9.4")
+    implementation("androidx.media3:media3-session:1.9.4")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")

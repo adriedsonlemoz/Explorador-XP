@@ -27,6 +27,9 @@ jobs:
       - name: Conferir importações Compose
         run: python3 tools/validate_compose_imports.py
 
+      - name: Validar arquitetura de áudio alpha.119
+        run: python3 tools/validate_alpha119.py
+
       - name: Testar
         run: gradle :app:testDebugUnitTest --stacktrace
 

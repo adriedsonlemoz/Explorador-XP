@@ -121,10 +121,11 @@ class FileRepository(
 
     suspend fun rename(file: File, newName: String): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
-            require(newName.isNotBlank()) { "Informe um novo nome." }
-            require('/' !in newName && '\\' !in newName) { "O nome não pode conter separadores de caminho." }
+            require(FileRenameRules.validationError(newName) == null) { FileRenameRules.validationError(newName) ?: "Nome inválido." }
             require(!isInsideManagedTrash(file)) { "Itens da Lixeira devem ser restaurados antes de renomear." }
+            require(file.exists()) { "O item não existe mais." }
             val target = File(file.parentFile, newName.trim())
+            if (target.absolutePath == file.absolutePath) return@runCatching file
             require(!target.exists()) { "Já existe um item com esse nome." }
             check(file.renameTo(target)) { "Não foi possível renomear o item." }
             target

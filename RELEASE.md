@@ -1,16 +1,17 @@
-# Explorador XP 0.1.0-alpha.116
+# Explorador XP 0.1.0-alpha.119
 
-**Versão:** `0.1.0-alpha.116`  
-**Version code:** `116`
+**Versão:** `0.1.0-alpha.119`  
+**Version code:** `119`
 
-## Melhorias de interface
+## Novidades
 
-- ZIP: removida a barra genérica redundante de "Abrir com"; cabeçalho agora mostra apenas conteúdo/tamanho com ações Extrair/Verificar/Info na mesma linha. Busca e seleção tornadas opcionais, navegação por caminho preservada. Info do ZIP compacta com seção de detalhes técnicos expansível e caminho copiável.
-- Lixeira: lista compacta com restauração de um toque, menu para exclusão definitiva com confirmação, detalhes sob demanda, filtros Arquivos/Pastas e agrupamento por data. Seleção múltipla com restauração e exclusão em lote; operações enviadas de uma vez ao repositório para evitar disputas de transferências.
-- Dispositivo: toques em valores técnicos públicos copiam para a área de transferência com confirmação. Mantidos dados de rede/SIM sem cópia automática. Catálogo offline reconhece o modelo 21091116UG como Redmi Note 11 Pro+ 5G e alias exato MT6877V/TZA como MediaTek Dimensity 920. Dados de catálogo continuam diferenciados das leituras Android.
-- Notas de atualização e testes de escopo sincronizados com a alpha.116.
+- Mini-player na navegação com nome da faixa e controles anterior/pausar/retomar/próxima/encerrar.
+- Reprodução de música continua ao sair do player ou bloquear a tela com Media3 `MediaSessionService` e sessão de mídia do Android.
+- Controles do sistema na notificação e tela bloqueada; tocar a notificação retorna ao player.
+- A fila da pasta e a posição são preservadas ao reabrir, sem criar um segundo ExoPlayer.
+- Limpeza conservadora dos arquivos temporários compartilhados por outras aplicações.
 
-## Validação
+## Testes pendentes
 
-- Validação local de integridade de arquivos, recursos e testes unitários isolados quando disponíveis.
-- **Pendente:** build Android completo, testes instrumentados e teste físico das interfaces ZIP, Lixeira e Dispositivo.
+- Build completo do Gradle/Android, testes com MP3/FLAC/OPUS, fila, chamadas telefônicas, Bluetooth/fones, tela bloqueada, consumo de bateria e restrições em segundo plano do sistema.
+- A notificação de mídia fica sob responsabilidade do Media3; visibilidade depende das configurações e versão do Android.
