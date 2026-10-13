@@ -1,3 +1,11 @@
+## 0.1.0-alpha.121 (2026-10-13)
+
+- Corrigidos os 2 erros fatais `ProduceStateDoesNotAssignValue` em `AudioPlayerViewer.kt` (linhas 155 e 232 da alpha.120); `:app:lintDebug` interrompia o workflow 112 com 40 avisos não fatais.
+- Fila de áudio, tags e capa continuam carregadas via `Dispatchers.IO`, agora com `remember`/`mutableStateOf`/`LaunchedEffect`; estado reiniciado ao trocar o caminho da faixa e atualizado apenas para a key ativa.
+- Adicionado verificador preventivo `tools/validate_audio_compose_state.py` antes do Gradle, sem suprimir nem desativar o Lint Android.
+- VersionCode 121, VERSION, README, RELEASE, Novidades/teste de escopo, docs/VALIDATION.json e metadados sincronizados.
+- Não houve modificação da arquitetura Media3 do serviço, mini-player ou permissões. Compilação Android completa e teste real em dispositivo aguardando CI.
+
 ## 0.1.0-alpha.120 (2026-10-13)
 
 - Corrigida falha do workflow **Gerar APK 111** em `:app:compileDebugKotlin`: ausência do import `androidx.compose.foundation.layout.fillMaxHeight` em `ExplorerQuickAccess.kt` (linha 689 na alpha.119).

@@ -1,16 +1,16 @@
-# Explorador XP 0.1.0-alpha.120
+# Explorador XP 0.1.0-alpha.121
 
-**Versão:** `0.1.0-alpha.120`  
-**Version code:** `120`
+**Versão:** `0.1.0-alpha.121`  
+**Version code:** `121`
 
-## Correção do build 111
+## Correção do build 112
 
-- Em `ExplorerQuickAccess.kt`, importada a extensão Compose `androidx.compose.foundation.layout.fillMaxHeight`, utilizada na barra de seleção de Fotos/Vídeos.
-- Verificação de importações Compose antes do Gradle estendida a todos os arquivos Kotlin, cobrindo `horizontalScroll` e `fillMaxHeight`.
-- Teste de Novidades adaptado para exibir somente o escopo da alpha.120.
-- Funcionalidades da alpha.119 preservadas (mini-player, Media3, reprodução de fundo e controles de mídia).
+- Em `AudioPlayerViewer.kt`, substituídas duas construções `produceState` sinalizadas pelo Android Lint por `remember` + `mutableStateOf` e `LaunchedEffect`, mantendo a fila, metadados e capas carregados em `Dispatchers.IO`.
+- Verificação preventiva de padrão de estado do player adicionada ao workflow.
+- Teste de Novidades atualizado para mostrar somente as correções da alpha.121.
+- Media3, mini-player, notificação, segundo plano e demais funcionalidades anteriores preservadas.
 
 ## Pendências
 
-- Executar o workflow `Gerar APK` e confirmar `:app:testDebugUnitTest`, `:app:lintDebug` e `:app:assemblePerformance`.
-- Testar player de áudio, notificação, fones/Bluetooth, retomada e economia de bateria em aparelho Android.
+- Confirmar `:app:testDebugUnitTest`, `:app:lintDebug` e `:app:assemblePerformance` no GitHub Actions.
+- Validar o player real no aparelho com diferentes formatos e ao trocar rapidamente as faixas.

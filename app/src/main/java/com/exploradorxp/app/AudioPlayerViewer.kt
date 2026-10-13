@@ -50,7 +50,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -152,8 +151,11 @@ internal fun AudioPlayerViewer(
         return
     }
 
-    val queue by produceState<List<File>?>(initialValue = null, file.absolutePath) {
-        value = withContext(Dispatchers.IO) { AudioQueueRules.buildQueue(file) }
+    // Estado da fila separado da coroutine: evita a reprovação do Android Lint
+    // ProduceStateDoesNotAssignValue, preservando o trabalho de disco fora da UI.
+    var queue by remember(file.absolutePath) { mutableStateOf<List<File>?>(null) }
+    LaunchedEffect(file.absolutePath) {
+        queue = withContext(Dispatchers.IO) { AudioQueueRules.buildQueue(file) }
     }
     val tracks = queue
     if (tracks == null) {
@@ -229,8 +231,10 @@ internal fun AudioPlayerViewer(
     }
 
     val currentFile = tracks[index.coerceIn(0, tracks.lastIndex)]
-    val tags by produceState<AudioTags?>(initialValue = null, currentFile.absolutePath) {
-        value = withContext(Dispatchers.IO) { extractAudioTags(currentFile) }
+    // Reinicia o estado ao trocar de faixa, sem mostrar metadados da anterior.
+    var tags by remember(currentFile.absolutePath) { mutableStateOf<AudioTags?>(null) }
+    LaunchedEffect(currentFile.absolutePath) {
+        tags = withContext(Dispatchers.IO) { extractAudioTags(currentFile) }
     }
     val selectedTags = tags ?: AudioTags(AudioQueueRules.readableTitle(currentFile.name), null, null, null)
 

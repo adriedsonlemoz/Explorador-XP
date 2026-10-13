@@ -1,3 +1,7 @@
+> **Versão atual:** 0.1.0-alpha.121 (`versionCode 121`). Corrigidos os dois erros `ProduceStateDoesNotAssignValue` do Android Lint no player de música. Compilação completa e teste em aparelho aguardam novo build do GitHub Actions.
+
+**alpha.121 (correção build 112):** em `AudioPlayerViewer.kt`, leitura da fila e metadados/capa continuam em `Dispatchers.IO`, mas o estado Compose agora usa `remember` + `mutableStateOf` e `LaunchedEffect`, em vez das duas chamadas `produceState` sinalizadas pelo Lint. Adicionado `tools/validate_audio_compose_state.py` ao workflow. Player Media3, mini-player e reprodução em segundo plano preservados.
+
 > **Versão atual:** 0.1.0-alpha.120 (`versionCode 120`). Corrigida a importação `fillMaxHeight` usada na seleção das galerias; verificação preventiva de importações Compose ampliada. Android build e testes no aparelho pendentes.
 
 **alpha.120 (correção build 111):** compilação da alpha.119 falhou em `:app:compileDebugKotlin` porque `ExplorerQuickAccess.kt` usava `Modifier.fillMaxHeight()` sem a extensão importada. A alpha.120 corrige esse erro e passa a verificar tanto `fillMaxHeight` quanto `horizontalScroll` antes do Gradle. Player e mini-player da alpha.119 mantidos.

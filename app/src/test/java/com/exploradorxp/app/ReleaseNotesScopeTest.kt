@@ -10,9 +10,10 @@ class ReleaseNotesScopeTest {
         val info = ReleaseNotes.current
         assertEquals(BuildConfig.VERSION_NAME, info.versionName)
         assertEquals(BuildConfig.VERSION_CODE, info.versionCode)
-        assertEquals(2, info.changes.size)
-        assertTrue(info.changes.any { it.contains("fillMaxHeight") })
-        assertTrue(info.changes.any { it.contains("importações Compose") })
-        assertFalse(info.changes.any { it.contains("Mini-player") || it.contains("MediaSessionService") })
+        assertEquals(3, info.changes.size)
+        assertTrue(info.changes.any { it.contains("Android Lint") })
+        assertTrue(info.changes.any { it.contains("fila") && it.contains("tags") })
+        assertTrue(info.changes.any { it.contains("verificação preventiva") })
+        assertFalse(info.changes.any { it.contains("fillMaxHeight") || it.contains("Mini-player") })
     }
 }

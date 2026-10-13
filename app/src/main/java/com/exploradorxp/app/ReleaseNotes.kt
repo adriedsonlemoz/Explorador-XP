@@ -18,8 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigida a compilação dos controles de Fotos e Vídeos (importação fillMaxHeight).",
-                "Nova verificação preventiva de importações Compose antes dos testes Android.",
+                "Corrigidos dois erros do Android Lint no carregamento assíncrono de músicas e capas.",
+                "Mantidas a fila, as tags e a arte do álbum fora da thread principal, com estado Compose seguro.",
+                "Adicionada verificação preventiva de estados assíncronos ao workflow de compilação.",
             )
         )
 }

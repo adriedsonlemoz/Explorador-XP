@@ -27,8 +27,11 @@ jobs:
       - name: Conferir importações Compose
         run: python3 tools/validate_compose_imports.py
 
-      - name: Validar áudio e correção build 111 alpha.120
-        run: python3 tools/validate_alpha120.py
+      - name: Conferir estados de áudio Compose
+        run: python3 tools/validate_audio_compose_state.py
+
+      - name: Validar áudio e correção lint build 112 alpha.121
+        run: python3 tools/validate_alpha121.py
 
       - name: Testar
         run: gradle :app:testDebugUnitTest --stacktrace

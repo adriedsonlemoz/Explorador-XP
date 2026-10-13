@@ -1,44 +1,39 @@
 {
-  "version_build": "0.1.0-alpha.120",
-  "version_code": 120,
-  "manager_version": "0.1.0-alpha.120",
+  "version_build": "0.1.0-alpha.121",
+  "version_code": 121,
+  "manager_version": "0.1.0-alpha.121",
   "application_id": "com.exploradorxp.app",
-  "scope": "alpha.120: correção da compilação Kotlin (fillMaxHeight) do build 111 e prevenção de imports Compose",
+  "scope": "alpha.121: correção dos dois erros Android Lint Compose ProduceStateDoesNotAssignValue do build 112",
   "checks": [
     {
-      "name": "compose_imports",
-      "status": "passed_local_static",
-      "details": "Verificação de importações obrigatórias horizontalScroll e fillMaxHeight em todos os arquivos Kotlin, incluindo teste negativo por remoção temporária."
+      "name": "build112_diagnosis",
+      "status": "confirmed_from_ci_logs",
+      "details": "workflow 112: :app:testDebugUnitTest aprovado; :app:lintDebug falhou com 2 errors/40 warnings no AudioPlayerViewer.kt, linhas 155 e 232 da alpha.120."
     },
     {
-      "name": "music_service_contracts",
+      "name": "audio_state_guard",
       "status": "passed_local_static",
-      "details": "Integração Media3 MediaSessionService e mini-player da alpha.119 preservada; validador alpha.120 executado."
-    },
-    {
-      "name": "isolated_jvm_tests",
-      "status": "passed_local_jvm",
-      "details": "10 verificações JVM para escopo da versão, fila de áudio, OPUS e renomeação, utilizando stubs locais de BuildConfig (não substituem JUnit/Android)."
+      "details": "2 estados Compose verificados, I/O mantido em Dispatcher.IO; teste negativo detectou reintrodução de produceState."
     },
     {
       "name": "release_notes",
-      "status": "passed_local_static",
-      "details": "Notas da alpha.120 e teste de escopo atualizados; compilação/teste JUnit Android aguardando CI."
+      "status": "passed_local_jvm",
+      "details": "11 verificações JVM isoladas (escopo das novidades, versão, fila OPUS, renomeação) aprovadas; JUnit Android pendente."
     },
     {
       "name": "kotlin_syntax",
       "status": "passed_local_psi",
-      "details": "111 arquivos Kotlin (app/src/main e app/src/test) analisados com parser PSI Kotlin 1.9 sem erros sintáticos; não equivale à compilação Android."
+      "details": "111 arquivos Kotlin passaram no parser PSI 1.9; não substitui compilação Android."
     },
     {
       "name": "resources_metadata",
       "status": "passed_local_static",
-      "details": "81 arquivos XML, 6 JSON válidos e versionCode 120 consistente em Gradle, VERSION, identidade, README e release."
+      "details": "81 XML, 6 JSON válidos, versionCode 121 e integridade CRC do ZIP validada."
     },
     {
       "name": "android_build",
       "status": "not_run",
-      "details": "Gradle/Android SDK não disponíveis no ambiente local; workflow 111 falhou antes dos testes por import ausente. Novo build pendente."
+      "details": "Novo :app:lintDebug/:app:assemblePerformance requer GitHub Actions com Android SDK."
     }
   ]
 }
