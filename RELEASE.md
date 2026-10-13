@@ -1,14 +1,12 @@
-# Explorador XP 0.1.0-alpha.114
+# Explorador XP 0.1.0-alpha.115
 
-## Galerias com pastas, navegação clássica e refinamento de interface
+## Correção de compilação do workflow Gerar APK 108
 
-- **Fotos/Vídeos:** pastas na entrada e mídia em miniaturas dentro da pasta; menus clássicos e navegação Voltar, Avançar, Início, Subir.
-- **Seleção:** somente arquivos pertencentes à pasta atual, mesmo nas páginas não carregadas.
-- **Aplicativos:** lista com ícones 32 dp e linhas menores.
-- **Ferramentas:** grade adaptativa mais equilibrada, ícones ampliados, bordas e descrições discretas.
-- **CI:** correção do teste `ReleaseNotesScopeTest` obsoleto identificado no workflow 107.
+- Importação da extensão Compose `horizontalScroll` no arquivo `ExplorerQuickAccess.kt`. A ausência do import impedia `:app:compileDebugKotlin` na alpha.114.
+- Validação estática preventiva do import no workflow, antes dos testes Android; nenhuma checagem existente foi desativada.
+- Notas de novidades atualizadas para a correção da alpha.115. As funcionalidades da alpha.114 continuam disponíveis: Fotos/Vídeos por pasta com navegação, lista compacta de aplicativos e painel de ferramentas com descrições.
 
-**Versão:** `0.1.0-alpha.114`  
-**Version code:** `114`
+**Versão:** `0.1.0-alpha.115`  
+**Version code:** `115`
 
-**Verificação:** sintaxe Kotlin, regras de filtragem de mídia, JSON/XML, integridade ZIP. Build Android completo da alpha.114 e testes físicos ainda necessários.
+**Verificação:** logs do workflow 108 analisados; import, versão e estrutura verificados localmente. Compilação Gradle/Android, APK e testes físicos dependem do GitHub Actions/aparelho.

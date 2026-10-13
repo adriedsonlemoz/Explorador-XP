@@ -1,44 +1,44 @@
 {
-  "version_build": "0.1.0-alpha.114",
-  "version_code": 114,
-  "manager_version": "0.1.0-alpha.114",
+  "version_build": "0.1.0-alpha.115",
+  "version_code": 115,
+  "manager_version": "0.1.0-alpha.115",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.114: galerias por pasta, navegação padrão, lista compacta aplicativos e correção teste do build 107",
+  "scope": "Alpha.115: correção compilação Kotlin de horizontalScroll identificada no workflow Gerar APK 108",
   "checks": [
     {
-      "name": "workflow_107",
+      "name": "workflow_108",
       "status": "diagnosed",
-      "details": "140 de 141 testes passaram; falhou somente ReleaseNotesScopeTest com asserções de novidades da alpha.112."
+      "details": "Falha :app:compileDebugKotlin, ExplorerQuickAccess.kt:508:18 unresolved reference horizontalScroll."
+    },
+    {
+      "name": "compose_import",
+      "status": "passed_local_static",
+      "details": "Import Compose presente e invocado; verificador local passou e teste negativo detectou a falta do import."
     },
     {
       "name": "release_notes",
       "status": "passed_local_jvm",
-      "details": "ReleaseNotes.current e ReleaseNotesScopeTest sincronizados; asserções relevantes executadas no JVM com stubs de JUnit e BuildConfig."
-    },
-    {
-      "name": "media_folder_scope",
-      "status": "passed_local_rules_and_syntax",
-      "details": "GalleryMediaRules.isInDirectory exige pasta pai exata; teste para caminhos com nomes iguais, prefixos e subpastas; índice agrupa por caminho completo. Teste MediaStore em Android pendente."
+      "details": "5 testes Kotlin/JVM isolados passaram, incluindo ReleaseNotesScopeTest."
     },
     {
       "name": "android_build",
       "status": "not_run",
-      "details": "Build Android e testes instrumentados não disponíveis localmente."
+      "details": "Compilação Android completa indisponível neste ambiente; validação real via CI pendente."
     },
     {
-      "name": "local_kotlin_tests",
-      "status": "passed_local",
-      "details": "5 testes JVM isolados (4 de GalleryMediaRulesTest, 1 de ReleaseNotesScopeTest); Kotlin PSI sem erros nos 8 arquivos alterados; verificação de XML/JSON."
+      "name": "kotlin_syntax",
+      "status": "passed_psi",
+      "details": "3 arquivos Kotlin alterados aprovados na análise sintática PSI."
     },
     {
       "name": "device_ui",
       "status": "not_run",
-      "details": "Testes físicos da UI em aparelho pendentes."
+      "details": "UI de galeria e menus ainda não testada fisicamente."
     },
     {
       "name": "versioning",
       "status": "passed_static_review",
-      "details": "0.1.0-alpha.114/versionCode 114 sincronizados em código, README, CHANGELOG, RELEASE, JSON e ReleaseNotes."
+      "details": "alpha.115/versionCode 115 sincronizados em Gradle, VERSION, README, CHANGELOG, RELEASE, JSON e ReleaseNotes; 81 XML e 6 JSON válidos."
     }
   ]
 }

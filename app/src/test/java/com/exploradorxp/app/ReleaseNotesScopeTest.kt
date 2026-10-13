@@ -10,13 +10,9 @@ class ReleaseNotesScopeTest {
         val info = ReleaseNotes.current
         assertEquals(BuildConfig.VERSION_NAME, info.versionName)
         assertEquals(BuildConfig.VERSION_CODE, info.versionCode)
-        assertEquals(6, info.changes.size)
-        assertTrue(info.changes.any { it.contains("Fotos e Vídeos") && it.contains("pastas") })
-        assertTrue(info.changes.any { it.contains("Voltar") && it.contains("Avançar") })
-        assertTrue(info.changes.any { it.contains("Seleção total") })
-        assertTrue(info.changes.any { it.contains("Aplicativos instalados") && it.contains("compacta") })
-        assertTrue(info.changes.any { it.contains("Painel de Ferramentas") })
-        assertTrue(info.changes.any { it.contains("ReleaseNotesScopeTest") })
-        assertFalse(info.changes.any { it.contains("SMB") || it.contains("WebDAV") || it.contains("alpha.109") })
+        assertEquals(1, info.changes.size)
+        assertTrue(info.changes.single().contains("horizontalScroll"))
+        assertTrue(info.changes.single().contains("108"))
+        assertFalse(info.changes.any { it.contains("workflow Gerar APK 107") || it.contains("alpha.112") })
     }
 }

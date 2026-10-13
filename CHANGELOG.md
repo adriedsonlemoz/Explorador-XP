@@ -1,3 +1,10 @@
+## 0.1.0-alpha.115 — 2026-10-12
+
+- **Corrigida falha do workflow Gerar APK 108:** `:app:compileDebugKotlin` falhou em `ExplorerQuickAccess.kt:508` por ausência do import da extensão Compose `androidx.compose.foundation.horizontalScroll`. Import adicionado; rolagem horizontal dos menus Arquivo/Editar/Exibir/Favoritos/Ferramentas/Ajuda foi preservada.
+- Adicionado `tools/validate_compose_imports.py` à verificação inicial do GitHub Actions para identificar este problema antes da tarefa Kotlin e preservar as etapas de teste/lint, sem silenciar avisos ou desativar minificação.
+- Novidades desta versão e `ReleaseNotesScopeTest` sincronizados para refletir somente a correção atual; histórico da alpha.114 preservado.
+- Sem alterações funcionais na navegação por pastas, miniaturas, lista compacta de aplicativos, painel de ferramentas, filtros ou rede. Build Android completo e testes em aparelho ainda pendentes.
+
 ## 0.1.0-alpha.114 — 2026-10-12
 
 - Fotos e Vídeos: índice completo de pastas de mídia por caminho integral, sem usar apenas a primeira página de 96 resultados. A tela de entrada apresenta apenas pastas com quantidade e tamanho; a pasta aberta mantém miniaturas reais em lista/grade e paginação de 96 itens.
