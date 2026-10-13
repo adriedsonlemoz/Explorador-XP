@@ -1,59 +1,49 @@
 {
-  "version_build": "0.1.0-alpha.112",
-  "version_code": 112,
-  "manager_version": "0.1.0-alpha.112",
+  "version_build": "0.1.0-alpha.113",
+  "version_code": 113,
+  "manager_version": "0.1.0-alpha.113",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.112: ícones reais de APK, lista compacta, classificação em Exibir, filtros discretos de aplicativos",
+  "scope": "Alpha.113: branco puro como fundo principal, cartões e contraste preservados",
   "checks": [
     {
-      "name": "apk_icon_loader",
-      "status": "source_review",
-      "details": "PackageManager em Dispatchers.IO com LRU de 8 MiB, Semaphore(2), fallback vetorial."
+      "name": "white_background",
+      "status": "passed_static_test",
+      "details": "Validação executada em tools/validate_white_theme.py; tokens e telas usam #FFFFFF, janela branca."
     },
     {
-      "name": "compact_file_list",
-      "status": "source_review",
-      "details": "24dp ícones; duas linhas; preferência persistida."
+      "name": "readable_elements",
+      "status": "passed_static_test",
+      "details": "Testes de contraste: textos secundários 7,43:1, azul principal 5,32:1, branco no cabeçalho 7,22:1 e borda de campos 3,03:1 no branco; XpCardBorder #A9B9CA."
     },
     {
-      "name": "sort_in_view_menu",
-      "status": "source_review",
-      "details": "Nome, data, tamanho, tipo e pastas primeiro diretamente em Exibir; Ferramentas removido."
+      "name": "theme_scope",
+      "status": "passed_static_review",
+      "details": "Visualizadores de imagem/vídeo não foram clareados indevidamente."
     },
     {
-      "name": "app_filters",
-      "status": "source_review",
-      "details": "Tamanho por faixas, estado, última atualização e instalação com fallback tamanho APK."
-    },
-    {
-      "name": "logic_test",
+      "name": "kotlin_psi",
       "status": "passed_local",
-      "details": "Compilado Kotlin/JVM puro: 7 verificações de filtros de tamanho, estado, datas e fallback de armazenamento passaram. Testes JUnit Android ainda pendentes."
+      "details": "Kotlin PSI parser aprovado nos 5 fontes modificados; sem erros sintáticos."
     },
     {
-      "name": "kotlin_syntax",
+      "name": "xml_and_json",
       "status": "passed_local",
-      "details": "Parser Kotlin PSI aplicado a 8 fontes e testes modificados: 0 erros sintáticos."
+      "details": "79 XML de recursos e 6 JSON bem-formados; theme XML válido."
     },
     {
-      "name": "xml_json_structure",
-      "status": "passed_local",
-      "details": "80 XML e 6 JSON válidos estruturalmente."
-    },
-    {
-      "name": "android_gradle_build",
+      "name": "android_build",
       "status": "not_run",
-      "details": "Gradle wrapper/toolchain Android ausentes no ambiente local."
+      "details": "Gradle wrapper ausente; compilação Android completa pendente no CI."
     },
     {
-      "name": "real_device_ui",
+      "name": "device_ui",
       "status": "not_run",
-      "details": "Pendente executar APK no dispositivo."
+      "details": "Inspeção visual em aparelho e temas/contraste de cada componente pendentes."
     },
     {
-      "name": "version_sync",
-      "status": "passed_local",
-      "details": "VERSION, Gradle, metadados, README, CHANGELOG, release e novidade de atualização sincronizados na alpha.112."
+      "name": "versioning",
+      "status": "passed_static_review",
+      "details": "Versão 0.1.0-alpha.113/versionCode 113 sincronizados em fontes, metadados, docs e ReleaseNotes."
     }
   ]
 }

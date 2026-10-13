@@ -18,10 +18,10 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "APK: ícones reais na lista e grade quando o Android consegue lê-los, com cache.",
-                "Exibir: Lista compacta com ícones menores e preferência persistente.",
-                "Exibir: classificação por nome, data, tamanho e tipo, e Pastas primeiro.",
-                "Aplicativos instalados: filtro discreto por tamanho/estado e ordenação por datas.",
+                "Tema claro: fundo principal branco puro nas telas do Explorador XP.",
+                "Contornos de cartões e campos reforçados; divisórias mantidas visíveis.",
+                "Barra azul, ícones, seleção, avisos e botões mantêm suas cores de identificação.",
+                "A classificação, os filtros e a lista compacta da versão anterior continuam disponíveis.",
             )
         )
 }

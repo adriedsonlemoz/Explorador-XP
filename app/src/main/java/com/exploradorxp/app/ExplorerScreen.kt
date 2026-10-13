@@ -91,7 +91,8 @@ import java.util.Locale
 val XpBlue = Color(0xFF0A67D8)
 val XpBlueDark = Color(0xFF0752B8)
 val XpBlueLight = Color(0xFF4BA4FF)
-val XpBackground = Color(0xFFE9F2FC)
+// Fundo neutro de todo o conteúdo; superfícies interativas preservam suas próprias cores.
+val XpBackground = Color(0xFFFFFFFF)
 val XpSurface = Color(0xFFFFFFFF)
 val XpBorder = Color(0xFF2E7FD3)
 val XpTextSecondary = Color(0xFF36577F)
@@ -99,10 +100,10 @@ val XpSelection = Color(0xFFD9E9FB)
 val XpChrome = Color(0xFFF2F4F8)
 val XpChromeBorder = Color(0xFFB8C7DA)
 val XpPanel = Color(0xFFF6FAFF)
-val XpControlBorder = Color(0xFFC5D4E5)
+val XpControlBorder = Color(0xFF8496AA)
 val XpControlBackground = Color(0xFFFAFCFF)
 val XpControlPressed = Color(0xFFE8F2FC)
-val XpCardBorder = Color(0xFFD7E3EF)
+val XpCardBorder = Color(0xFFA9B9CA)
 
 private enum class FileMenuAction { OPEN, OPEN_WITH, EXTRACT_HERE, EXTRACT_TO, COPY, MOVE, RENAME, DELETE, SHARE, FAVORITE, PROPERTIES, SELECT }
 
@@ -1514,7 +1515,7 @@ private fun HelpManualScreen(onDismiss: () -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .background(Color(0xFFF6F8FB))
+                    .background(XpBackground)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 10.dp, vertical = 8.dp),
             ) {
@@ -1610,7 +1611,7 @@ private fun AppSettingsScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .background(Color(0xFFF6F8FB))
+                .background(XpBackground)
                 .verticalScroll(rememberScrollState())
                 .padding(12.dp),
         ) {
@@ -1739,7 +1740,7 @@ private fun AboutScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .background(Color(0xFFF6F8FB))
+                .background(XpBackground)
                 .verticalScroll(rememberScrollState())
                 .padding(12.dp),
         ) {

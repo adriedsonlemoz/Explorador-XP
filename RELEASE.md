@@ -1,13 +1,13 @@
-# Explorador XP 0.1.0-alpha.112
+# Explorador XP 0.1.0-alpha.113
 
-## Ícones de APK, lista compacta e ordenação
+## Fundo principal branco
 
-- **APK:** ícone real extraído do APK quando reconhecido pelo Android, em lista e grade. Cache limitado e fallback para arquivos ilegíveis.
-- **Exibir:** modo Lista compacta de ícones menores com preferência persistente; classificar por Nome/Data/Tamanho/Tipo e escolher Pastas primeiro. Removida a classificação de Ferramentas.
-- **Aplicativos instalados:** ícone de filtros na barra superior, opções por tamanho/estado e ordenação por data de instalação/atualização ou tamanho. Tamanho total só quando autorizado pelo Android; sem permissão usa o tamanho dos APKs.
-- **Preservados:** módulos de arquivos, rede SMB/WebDAV, lixeira, galeria e ferramentas.
+- **Fundo:** branco puro (`#FFFFFF`) em todas as áreas principais de navegação, arquivos, ferramentas, lista/detalhes de aplicativos, dispositivo e configurações.
+- **Legibilidade:** cartões sobre o branco com contornos ligeiramente reforçados; textos escuros, bordas de controles e divisórias conservados.
+- **Identidade preservada:** barras azuis, ícones, realces de seleção e fundos escuros de visualizadores especializados permanecem como antes.
+- **Sem mudança de funcionamento:** filtros, ícones de APK, modo compacto, SMB/WebDAV, transferência e Lixeira continuam.
 
-**Versão:** `0.1.0-alpha.112`  
-**Version code:** `112`
+**Versão:** `0.1.0-alpha.113`  
+**Version code:** `113`
 
-**Validação:** sintaxe Kotlin e testes isolados; build Android no GitHub Actions e teste físico pendentes.
+**Validação:** contraste estático (texto >= 4,5:1, borda de campo >= 3:1), Kotlin PSI e XML/JSON; build Android/Gradle e teste visual no aparelho pendentes.

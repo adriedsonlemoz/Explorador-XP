@@ -292,7 +292,7 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF6F8FB)),
+            .background(XpBackground),
     ) {
         AppManagerTitle(
             onDismiss = onDismiss,
@@ -743,7 +743,7 @@ private fun InstalledAppDetailsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF3F7FC)),
+            .background(XpBackground),
     ) {
         Row(
             modifier = Modifier
@@ -783,7 +783,7 @@ private fun InstalledAppDetailsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.White, RoundedCornerShape(16.dp))
-                    .border(1.dp, Color(0xFFD7E5F3), RoundedCornerShape(16.dp))
+                    .border(1.dp, XpCardBorder, RoundedCornerShape(16.dp))
                     .padding(13.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -59,7 +59,7 @@ internal fun ToolsPanelScreen(
 ) {
     BackHandler(onBack = onDismiss)
 
-    Column(Modifier.fillMaxSize().background(Color(0xFFF6F8FB))) {
+    Column(Modifier.fillMaxSize().background(XpBackground)) {
         Row(
             modifier = Modifier.fillMaxWidth().height(48.dp).background(XpBlueDark).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,

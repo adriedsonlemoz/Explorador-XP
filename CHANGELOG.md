@@ -1,3 +1,11 @@
+## 0.1.0-alpha.113 — 2026-10-12
+
+- Tema claro: fundo principal convertido de `#E9F2FC` para `#FFFFFF`. O tema Material 3, as telas de arquivos, rede, galeria e novidades passam a compartilhar o fundo branco puro.
+- Aplicativos instalados, detalhes, Painel de Ferramentas, Ajuda, Configurações, Sobre e Dispositivo deixam de usar superfícies grandes azuladas/cinza-claras em favor do fundo branco.
+- Bordas de cartões reforçadas levemente (`#A9B9CA`), inclusive no cartão principal de detalhes de aplicativos, para não desaparecerem sobre o fundo branco.
+- Permanecem inalterados: cabeçalho azul, barras de comandos, indicadores de status, ícones coloridos, seleção azul, avisos e fundo escuro de visualizadores de mídia.
+- Validações de contraste, Kotlin PSI (5 fontes), XML (79), JSON (6) realizadas; compilação Android e verificação visual em aparelho ainda são necessárias.
+
 ## 0.1.0-alpha.112 — 2026-10-12
 
 - Arquivos APK: leitura do ícone real do pacote pelo PackageManager (sem executar ou instalar), com decodificação em I/O limitado a dois trabalhos, cache LRU de 8 MiB e fallback vetorial para APKs incompatíveis ou inválidos.
