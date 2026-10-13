@@ -168,6 +168,9 @@ fun ExplorerScreen(
     advancedSearchState: StateFlow<AdvancedSearchState>,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val preferences = remember(context) { PreferencesStore(context.applicationContext) }
+    var compactFileList by remember { mutableStateOf(preferences.compactFileList()) }
     var showNewFolder by remember { mutableStateOf(false) }
     var showNewFile by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<File?>(null) }
@@ -357,6 +360,12 @@ fun ExplorerScreen(
             onUp = onUp,
             viewMode = state.viewMode,
             onToggleView = onToggleView,
+            compactList = compactFileList,
+            onCompactListChange = { enabled ->
+                compactFileList = enabled
+                preferences.setCompactFileList(enabled)
+                if (enabled && state.viewMode == ViewMode.GRID) onToggleView()
+            },
             showHidden = state.showHidden,
             onShowHiddenChange = onToggleHidden,
             sortMode = state.sortMode,
@@ -440,6 +449,7 @@ fun ExplorerScreen(
                     items = displayedItems,
                     searchRoot = state.currentDir.takeIf { advancedSearch.active },
                     selectedPaths = state.selectedPaths,
+                    compact = compactFileList,
                     onItemClick = onItemClick,
                     onMenuAction = { item, action ->
                         when (action) {
@@ -689,6 +699,8 @@ private fun XpHeader(
     onUp: () -> Unit,
     viewMode: ViewMode,
     onToggleView: () -> Unit,
+    compactList: Boolean,
+    onCompactListChange: (Boolean) -> Unit,
     showHidden: Boolean,
     onShowHiddenChange: (Boolean) -> Unit,
     sortMode: SortMode,
@@ -727,7 +739,6 @@ private fun XpHeader(
     var viewMenu by remember { mutableStateOf(false) }
     var favoritesMenu by remember { mutableStateOf(false) }
     var toolsMenu by remember { mutableStateOf(false) }
-    var organizeMenu by remember { mutableStateOf(false) }
     var helpMenu by remember { mutableStateOf(false) }
     var addressMenu by remember { mutableStateOf(false) }
     var selectionMoreMenu by remember { mutableStateOf(false) }
@@ -857,6 +868,27 @@ private fun XpHeader(
                             if (viewMode == ViewMode.LIST) R.drawable.view_grid else R.drawable.view_list,
                         ) { viewMenu = false; onToggleView() }
                         XpMenuItem(
+                            "Lista compacta (ícones menores)", R.drawable.view_list,
+                            checked = compactList,
+                        ) { viewMenu = false; onCompactListChange(!compactList) }
+                        XpMenuDivider()
+                        XpMenuItem("Classificar por nome", checked = sortMode == SortMode.NAME) {
+                            viewMenu = false; onSortMode(SortMode.NAME)
+                        }
+                        XpMenuItem("Classificar por data", checked = sortMode == SortMode.DATE) {
+                            viewMenu = false; onSortMode(SortMode.DATE)
+                        }
+                        XpMenuItem("Classificar por tamanho", checked = sortMode == SortMode.SIZE) {
+                            viewMenu = false; onSortMode(SortMode.SIZE)
+                        }
+                        XpMenuItem("Classificar por tipo", checked = sortMode == SortMode.TYPE) {
+                            viewMenu = false; onSortMode(SortMode.TYPE)
+                        }
+                        XpMenuDivider()
+                        XpMenuItem("Pastas primeiro", checked = foldersFirst) {
+                            viewMenu = false; onFoldersFirstChange(!foldersFirst)
+                        }
+                        XpMenuItem(
                             if (showHidden) "Ocultar arquivos ocultos" else "Mostrar arquivos ocultos",
                             R.drawable.visible,
                             checked = showHidden,
@@ -875,36 +907,7 @@ private fun XpHeader(
 
                 Box {
                     XpMenuLabel("Ferramentas", toolsMenu) { toolsMenu = true }
-                    XpPopupMenu(expanded = toolsMenu, onDismiss = { toolsMenu = false; organizeMenu = false }) {
-                        Box {
-                            XpMenuItem("Organizar", R.drawable.sort, trailing = "▶") { organizeMenu = true }
-                            XpPopupMenu(
-                                expanded = organizeMenu,
-                                onDismiss = { organizeMenu = false },
-                                offset = DpOffset(164.dp, (-30).dp),
-                            ) {
-                                SortMode.entries.forEach { mode ->
-                                    val label = when (mode) {
-                                        SortMode.NAME -> "Nome"
-                                        SortMode.DATE -> "Data"
-                                        SortMode.SIZE -> "Tamanho"
-                                        SortMode.TYPE -> "Tipo"
-                                    }
-                                    XpMenuItem(label, checked = sortMode == mode) {
-                                        organizeMenu = false
-                                        toolsMenu = false
-                                        onSortMode(mode)
-                                    }
-                                }
-                                XpMenuDivider()
-                                XpMenuItem("Pastas primeiro", checked = foldersFirst) {
-                                    onFoldersFirstChange(!foldersFirst)
-                                    organizeMenu = false
-                                    toolsMenu = false
-                                }
-                            }
-                        }
-                        XpMenuDivider()
+                    XpPopupMenu(expanded = toolsMenu, onDismiss = { toolsMenu = false }) {
                         XpMenuItem("Aplicativos instalados", R.drawable.file_apk) {
                             toolsMenu = false
                             onShowInstalledApps()
@@ -1474,13 +1477,13 @@ private fun SectionTitle(title: String, icon: Int) {
 private fun HelpManualScreen(onDismiss: () -> Unit) {
     var expandedTopic by remember { mutableStateOf("Começando") }
     val topics = listOf(
-        "Começando" to "Use a barra superior para navegar e operar arquivos; Fotos, Vídeos, Downloads, Rede, Lixeira e Ferramentas ficam na barra inferior fixa. Atualizar fica no menu Exibir. Toque em um arquivo para abrir e segure para selecionar.",
+        "Começando" to "Use a barra superior para navegar e operar arquivos; Fotos, Vídeos, Downloads, Rede, Lixeira e Ferramentas ficam na barra inferior fixa. Exibir contém classificação, lista compacta e Atualizar. Toque em um arquivo para abrir e segure para selecionar.",
         "Navegação" to "O campo Endereço funciona como caminho navegável. Toque em uma parte do caminho para voltar diretamente até ela. A seta ao lado do endereço permite trocar entre armazenamentos detectados. O gesto Voltar do Android percorre o histórico das pastas abertas.",
         "Arquivos e pastas" to "A lista e a grade mostram o tipo do arquivo, tamanho e outras informações úteis. O botão de opções abre ações como copiar, mover, renomear, excluir, compartilhar, favoritar e ver propriedades.",
         "Copiar e mover" to "Selecione itens e use Copiar ou Mover. Depois navegue até o destino e use Colar. Quando há algo na área de transferência, o botão Colar aparece na barra superior.",
         "Compactar ZIP" to "Selecione um ou vários arquivos/pastas e use o atalho ZIP da barra de seleção. Defina o nome e o destino; o app preserva pastas, mostra progresso e permite cancelar.",
         "Lixeira" to "Ao excluir, escolha entre Mover para a Lixeira e Apagar permanentemente. A barra inferior traz a contagem sobre o ícone e o espaço ocupado ao lado em formato curto; o total aparece na tela Lixeira. Os itens não expiram automaticamente. Na Lixeira você pode restaurar, apagar definitivamente ou esvaziar tudo.",
-        "Painel de Ferramentas" to "Abra Ferramentas na barra inferior para acessar em uma grade Aplicativos, Armazenamento, Dispositivo, Rede, Lixeira, Configurações, Ajuda e Sobre. Ordenar arquivos e Pastas primeiro ficam em Configurações > Organização de arquivos.",
+        "Painel de Ferramentas" to "Abra Ferramentas na barra inferior para acessar em uma grade Aplicativos, Armazenamento, Dispositivo, Rede, Lixeira, Configurações, Ajuda e Sobre. Classificar por Nome/Data/Tamanho/Tipo, Pastas primeiro e Lista compacta ficam no menu Exibir.",
         "Armazenamento" to "A barra inferior mostra os valores gerais do volume informados pelo Android. Na tela Armazenamento, esses números ficam separados dos arquivos efetivamente analisados pelo Explorador XP. Categorias e pastas usam somente o conjunto que pôde ser enumerado; áreas protegidas não são estimadas.",
         "Aplicativos instalados" to "Em Ferramentas > Aplicativos instalados você pode pesquisar apps de usuário e do sistema, consultar versão, tamanho, SDK, datas, instalador e permissões. Sem Acesso ao uso, o tamanho mostrado é somente o dos APKs instalados; com essa autorização, o Android também fornece código, dados e cache. Desinstalar usa a confirmação do sistema. Por proteção do Android, Limpar dados abre os detalhes oficiais do aplicativo para você concluir a ação.",
         "Pesquisa" to "Use Pesquisar para filtrar rapidamente os itens da pasta atual. Ao entrar na busca, a interface é compactada para dar mais espaço aos resultados e ao teclado.",
@@ -4667,6 +4670,7 @@ private fun FileList(
     items: List<FileItem>,
     searchRoot: File? = null,
     selectedPaths: Set<String>,
+    compact: Boolean,
     onItemClick: (FileItem) -> Unit,
     onMenuAction: (FileItem, FileMenuAction) -> Unit,
     onLongSelect: (FileItem) -> Unit,
@@ -4700,6 +4704,7 @@ private fun FileList(
                 item = item,
                 selected = item.path in selectedPaths,
                 loadThumbnail = loadThumbnails,
+                compact = compact,
                 searchRoot = searchRoot,
                 onClick = { onItemClick(item) },
                 onLongSelect = { onLongSelect(item) },
@@ -4716,6 +4721,7 @@ private fun FileListRow(
     item: FileItem,
     selected: Boolean,
     loadThumbnail: Boolean,
+    compact: Boolean,
     searchRoot: File? = null,
     onClick: () -> Unit,
     onLongSelect: () -> Unit,
@@ -4729,26 +4735,26 @@ private fun FileListRow(
             .background(if (selected) Color(0xFFDCEBFC) else Color.Transparent)
             .border(if (selected) 1.dp else 0.dp, if (selected) XpBlue else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongSelect)
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(horizontal = 8.dp, vertical = if (compact) 3.dp else 6.dp)
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(42.dp)) {
-            FileVisual(item = item, size = 38.dp, loadThumbnail = loadThumbnail)
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(if (compact) 27.dp else 42.dp)) {
+            FileVisual(item = item, size = if (compact) 24.dp else 38.dp, loadThumbnail = loadThumbnail)
             if (selected) {
                 androidx.compose.foundation.Image(
                     painter = painterResource(R.drawable.check),
                     contentDescription = "Selecionado",
-                    modifier = Modifier.align(Alignment.BottomEnd).size(17.dp),
+                    modifier = Modifier.align(Alignment.BottomEnd).size(if (compact) 13.dp else 17.dp),
                     contentScale = ContentScale.Fit,
                 )
             }
         }
-        Spacer(Modifier.width(9.dp))
+        Spacer(Modifier.width(if (compact) 6.dp else 9.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     item.name,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
-                    fontSize = 15.sp,
+                    fontSize = if (compact) 12.5.sp else 15.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -4761,10 +4767,11 @@ private fun FileListRow(
                     )
                 }
             }
+            val description = if (item.isDirectory) item.typeLabel else "${item.typeLabel} • ${formatBytes(item.size)}"
             Text(
-                text = if (item.isDirectory) item.typeLabel else "${item.typeLabel} • ${formatBytes(item.size)}",
+                text = if (compact) "$description • ${FileDisplayFormatter.date(item.modifiedAt)}" else description,
                 color = Color(0xFF4E6077),
-                fontSize = 11.sp,
+                fontSize = if (compact) 9.5.sp else 11.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -4778,17 +4785,19 @@ private fun FileListRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text(
-                text = "${FileDisplayFormatter.date(item.modifiedAt)} • ${FileDisplayFormatter.time(item.modifiedAt)}",
-                color = XpTextSecondary,
-                fontSize = 10.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (!compact) {
+                Text(
+                    text = "${FileDisplayFormatter.date(item.modifiedAt)} • ${FileDisplayFormatter.time(item.modifiedAt)}",
+                    color = XpTextSecondary,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         var menuExpanded by remember(item.path) { mutableStateOf(false) }
         Box {
-            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = 22, buttonSize = 30)
+            XpIconButton(R.drawable.more, "Opções", onClick = { menuExpanded = true }, iconSize = if (compact) 19 else 22, buttonSize = 32)
             XpFileDropdownMenu(
                 item = item,
                 expanded = menuExpanded,

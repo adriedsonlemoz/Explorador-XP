@@ -86,4 +86,45 @@ class InstalledAppsLogicTest {
         assertEquals("2 KB", AppManagerLogic.displayBytes(2048))
         assertEquals("Não disponível", AppManagerLogic.displayBytes(null))
     }
+    @Test
+    fun filtersSizeWithExactBoundaryAndUsesMeasuredTotal() {
+        val mb = 1024L * 1024L
+        val small = userApp.copy(apkBytes = 49L * mb)
+        val medium = systemApp.copy(apkBytes = 50L * mb)
+        val large = userApp.copy(packageName = "large", label = "Large", apkBytes = 200L * mb)
+        val apps = listOf(small, medium, large)
+        val mediumMatches = AppManagerLogic.filterAndSort(
+            apps, "", AppManagerFilter.ALL, AppManagerSort.NAME, emptyMap(),
+            AppManagerSizeFilter.FROM_50_TO_200_MB,
+        )
+        assertEquals(listOf("android.alpha"), mediumMatches.map { it.packageName })
+        val largeMatches = AppManagerLogic.filterAndSort(
+            apps, "", AppManagerFilter.ALL, AppManagerSort.NAME, emptyMap(),
+            AppManagerSizeFilter.OVER_200_MB,
+        )
+        assertEquals(listOf("large"), largeMatches.map { it.packageName })
+        val overridden = mapOf(small.packageName to AppStorageInfo(200L * mb, 0, 0))
+        assertEquals(listOf(small.packageName, "large"), AppManagerLogic.filterAndSort(
+            apps, "", AppManagerFilter.ALL, AppManagerSort.NAME, overridden,
+            AppManagerSizeFilter.OVER_200_MB,
+        ).map { it.packageName })
+    }
+
+    @Test
+    fun filtersStateAndDateOrder() {
+        val disabled = systemApp.copy(enabled = false, lastUpdateTime = 100, firstInstallTime = 1)
+        val enabled = userApp.copy(lastUpdateTime = 20, firstInstallTime = 200)
+        val apps = listOf(enabled, disabled)
+        assertEquals(listOf(disabled.packageName), AppManagerLogic.filterAndSort(
+            apps, "", AppManagerFilter.ALL, AppManagerSort.NAME, emptyMap(),
+            statusFilter = AppManagerStatusFilter.DISABLED,
+        ).map { it.packageName })
+        assertEquals(listOf(disabled.packageName, enabled.packageName), AppManagerLogic.filterAndSort(
+            apps, "", AppManagerFilter.ALL, AppManagerSort.LAST_UPDATE, emptyMap(),
+        ).map { it.packageName })
+        assertEquals(listOf(enabled.packageName, disabled.packageName), AppManagerLogic.filterAndSort(
+            apps, "", AppManagerFilter.ALL, AppManagerSort.INSTALL_DATE, emptyMap(),
+        ).map { it.packageName })
+    }
+
 }

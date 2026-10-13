@@ -40,6 +40,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Text
@@ -217,6 +219,8 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(AppManagerFilter.ALL) }
     var sort by remember { mutableStateOf(AppManagerSort.NAME) }
+    var sizeFilter by remember { mutableStateOf(AppManagerSizeFilter.ALL) }
+    var statusFilter by remember { mutableStateOf(AppManagerStatusFilter.ALL) }
     var selected by remember { mutableStateOf<ManagedApp?>(null) }
 
     val settingsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -248,8 +252,8 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
         }
     }
 
-    val visibleApps = remember(apps, storage, query, filter, sort) {
-        AppManagerLogic.filterAndSort(apps, query, filter, sort, storage)
+    val visibleApps = remember(apps, storage, query, filter, sort, sizeFilter, statusFilter) {
+        AppManagerLogic.filterAndSort(apps, query, filter, sort, storage, sizeFilter, statusFilter)
     }
 
     BackHandler(enabled = selected == null, onBack = onDismiss)
@@ -290,7 +294,22 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
             .fillMaxSize()
             .background(Color(0xFFF6F8FB)),
     ) {
-        AppManagerTitle(onDismiss = onDismiss, onRefresh = { refreshToken++ })
+        AppManagerTitle(
+            onDismiss = onDismiss,
+            onRefresh = { refreshToken++ },
+            sort = sort,
+            sizeFilter = sizeFilter,
+            statusFilter = statusFilter,
+            onSortChange = { sort = it },
+            onSizeFilterChange = { sizeFilter = it },
+            onStatusFilterChange = { statusFilter = it },
+            onClearFilters = {
+                filter = AppManagerFilter.ALL
+                sort = AppManagerSort.NAME
+                sizeFilter = AppManagerSizeFilter.ALL
+                statusFilter = AppManagerStatusFilter.ALL
+            },
+        )
         HorizontalDivider(color = XpChromeBorder)
 
         Column(
@@ -327,15 +346,24 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
                 AppManagerChip("Usuário", filter == AppManagerFilter.USER) { filter = AppManagerFilter.USER }
                 AppManagerChip("Sistema", filter == AppManagerFilter.SYSTEM) { filter = AppManagerFilter.SYSTEM }
                 Spacer(Modifier.weight(1f))
-                AppManagerChip(if (sort == AppManagerSort.NAME) "Nome" else "Tamanho", true) {
-                    sort = if (sort == AppManagerSort.NAME) AppManagerSort.SIZE else AppManagerSort.NAME
-                }
+                // Filtros detalhados ficam no ícone discreto do cabeçalho.
+                Text(
+                    when (sort) {
+                        AppManagerSort.NAME -> "Nome"
+                        AppManagerSort.SIZE -> "Tamanho ↓"
+                        AppManagerSort.LAST_UPDATE -> "Atualização ↓"
+                        AppManagerSort.INSTALL_DATE -> "Instalação ↓"
+                    },
+                    fontSize = 10.sp,
+                    color = XpTextSecondary,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                )
             }
             Spacer(Modifier.height(7.dp))
             val userCount = apps.count { !it.isSystem }
             val systemCount = apps.count { it.isSystem }
             Text(
-                "${apps.size} aplicativos • $userCount de usuário • $systemCount do sistema",
+                "${visibleApps.size} de ${apps.size} aplicativos • $userCount de usuário • $systemCount do sistema",
                 fontSize = 11.sp,
                 color = XpTextSecondary,
             )
@@ -445,7 +473,21 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun AppManagerTitle(onDismiss: () -> Unit, onRefresh: () -> Unit) {
+private fun AppManagerTitle(
+    onDismiss: () -> Unit,
+    onRefresh: () -> Unit,
+    sort: AppManagerSort,
+    sizeFilter: AppManagerSizeFilter,
+    statusFilter: AppManagerStatusFilter,
+    onSortChange: (AppManagerSort) -> Unit,
+    onSizeFilterChange: (AppManagerSizeFilter) -> Unit,
+    onStatusFilterChange: (AppManagerStatusFilter) -> Unit,
+    onClearFilters: () -> Unit,
+) {
+    var filtersExpanded by remember { mutableStateOf(false) }
+    val filtersActive = sort != AppManagerSort.NAME || sizeFilter != AppManagerSizeFilter.ALL ||
+        statusFilter != AppManagerStatusFilter.ALL
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -468,6 +510,69 @@ private fun AppManagerTitle(onDismiss: () -> Unit, onRefresh: () -> Unit) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
+        Box {
+            Box(
+                modifier = Modifier.size(44.dp).clickable { filtersExpanded = true },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painterResource(R.drawable.xp_sort), "Filtrar e ordenar aplicativos",
+                    tint = if (filtersActive) Color(0xFFFFDA64) else Color.White,
+                    modifier = Modifier.size(23.dp),
+                )
+            }
+            DropdownMenu(
+                expanded = filtersExpanded,
+                onDismissRequest = { filtersExpanded = false },
+                modifier = Modifier.background(Color.White).width(232.dp),
+            ) {
+                Text("Ordenar por", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    color = XpTextSecondary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                listOf(
+                    AppManagerSort.NAME to "Nome (A–Z)",
+                    AppManagerSort.SIZE to "Tamanho (maiores)",
+                    AppManagerSort.LAST_UPDATE to "Atualizados recentemente",
+                    AppManagerSort.INSTALL_DATE to "Instalados recentemente",
+                ).forEach { (mode, label) ->
+                    DropdownMenuItem(
+                        text = { Text("${if (sort == mode) "✓ " else ""}$label", fontSize = 12.sp) },
+                        onClick = { onSortChange(mode); filtersExpanded = false },
+                    )
+                }
+                HorizontalDivider()
+                Text("Filtrar por tamanho", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    color = XpTextSecondary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                listOf(
+                    AppManagerSizeFilter.ALL to "Todos os tamanhos",
+                    AppManagerSizeFilter.UNDER_50_MB to "Menos de 50 MB",
+                    AppManagerSizeFilter.FROM_50_TO_200_MB to "De 50 a 200 MB",
+                    AppManagerSizeFilter.OVER_200_MB to "200 MB ou mais",
+                ).forEach { (mode, label) ->
+                    DropdownMenuItem(
+                        text = { Text("${if (sizeFilter == mode) "✓ " else ""}$label", fontSize = 12.sp) },
+                        onClick = { onSizeFilterChange(mode); filtersExpanded = false },
+                    )
+                }
+                HorizontalDivider()
+                Text("Estado", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    color = XpTextSecondary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                listOf(
+                    AppManagerStatusFilter.ALL to "Todos",
+                    AppManagerStatusFilter.ENABLED to "Habilitados",
+                    AppManagerStatusFilter.DISABLED to "Desativados",
+                ).forEach { (mode, label) ->
+                    DropdownMenuItem(
+                        text = { Text("${if (statusFilter == mode) "✓ " else ""}$label", fontSize = 12.sp) },
+                        onClick = { onStatusFilterChange(mode); filtersExpanded = false },
+                    )
+                }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text("Limpar filtros", fontSize = 12.sp) },
+                    onClick = { onClearFilters(); filtersExpanded = false },
+                )
+            }
+        }
         Box(
             modifier = Modifier.size(44.dp).clickable(onClick = onRefresh),
             contentAlignment = Alignment.Center,

@@ -1,3 +1,11 @@
+## 0.1.0-alpha.112 — 2026-10-12
+
+- Arquivos APK: leitura do ícone real do pacote pelo PackageManager (sem executar ou instalar), com decodificação em I/O limitado a dois trabalhos, cache LRU de 8 MiB e fallback vetorial para APKs incompatíveis ou inválidos.
+- Listagem: novo modo "Lista compacta" em Exibir com ícones de 24 dp, duas linhas de informação e altura aproximadamente metade do modo normal; preferência salva nas configurações locais. Grade e lista normal continuam disponíveis.
+- Exibir: comandos diretos de classificação por nome, data mais recente, tamanho e tipo/extensão; opção Pastas primeiro. "Organizar" removido do menu Ferramentas. Preferências avançadas anteriormente disponíveis em Configurações são preservadas.
+- Aplicativos instalados: botão discreto de filtro/ordenação ao lado de Atualizar; tamanho menos de 50 MiB, de 50 a 200 MiB e acima de 200 MiB, habilitados/desativados e classificações por nome, tamanho, última atualização e instalação. Usa estatística total se o Android autorizar; caso contrário, tamanho do APK (explicitado em tela).
+- Indicador de quantidade mostra número filtrado e total original, sem bloquear a busca por nome/pacote. Testes de limites e ordenação adicionados. Gradle/Android completo e teste físico ainda pendentes.
+
 ## 0.1.0-alpha.111 — 2026-10-12
 
 - Detalhes dos aplicativos: indicadores Sistema/Usuário e Habilitado/Desativado passam para a direita do nome; quatro ações (Abrir, Limpar, Remover, Sistema) ocupam a faixa abaixo do pacote antes usada pelos indicadores.

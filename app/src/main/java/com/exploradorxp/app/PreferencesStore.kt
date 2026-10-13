@@ -28,6 +28,12 @@ class PreferencesStore(context: Context) {
         prefs.edit().putBoolean(KEY_SHOW_HIDDEN, show).apply()
     }
 
+    fun compactFileList(): Boolean = prefs.getBoolean(KEY_COMPACT_FILE_LIST, false)
+
+    fun setCompactFileList(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_COMPACT_FILE_LIST, enabled).apply()
+    }
+
     fun foldersFirst(): Boolean = prefs.getBoolean(KEY_FOLDERS_FIRST, true)
 
     fun setFoldersFirst(enabled: Boolean) {
@@ -81,6 +87,7 @@ class PreferencesStore(context: Context) {
         private const val KEY_RECENTS = "recents"
         private const val KEY_SHOW_HIDDEN = "show_hidden"
         private const val KEY_FOLDERS_FIRST = "folders_first"
+        private const val KEY_COMPACT_FILE_LIST = "compact_file_list"
         private const val KEY_LAST_SEEN_UPDATE_VERSION_CODE = "last_seen_update_version_code"
         private const val KEY_LAST_SEEN_USAGE_ACCESS_EDUCATION_VERSION_CODE = "last_seen_usage_access_education_version_code"
         private const val KEY_DEVICE_IMAGES_ENABLED = "device_images_enabled"

@@ -2,6 +2,10 @@ package com.exploradorxp.app
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.platform.LocalContext
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.util.LruCache
@@ -36,6 +40,45 @@ import java.io.File
 private val thumbnailImageExtensions = setOf("jpg", "jpeg", "png", "bmp", "webp", "gif", "heic")
 private val thumbnailVideoExtensions = setOf("mp4", "m4v", "3gp", "webm", "mkv", "avi", "mov")
 
+/** Os APKs são analisados somente quando visíveis; sem instalar nem executar seus conteúdos. */
+private object ApkIconCache {
+    private const val MAX_BYTES = 8 * 1024 * 1024
+    private val slots = Semaphore(permits = 2)
+    private val cache = object : LruCache<String, Bitmap>(MAX_BYTES) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
+    }
+
+    fun peek(key: String): Bitmap? = synchronized(cache) { cache.get(key) }
+
+    suspend fun load(context: Context, file: File, key: String, targetPx: Int): Bitmap? {
+        peek(key)?.let { return it }
+        val bitmap = withContext(Dispatchers.IO) {
+            slots.withPermit {
+                runCatching {
+                    if (!file.isFile) return@runCatching null
+                    val pm = context.packageManager
+                    @Suppress("DEPRECATION")
+                    val packageInfo = if (Build.VERSION.SDK_INT >= 33) {
+                        pm.getPackageArchiveInfo(file.absolutePath, PackageManager.PackageInfoFlags.of(0L))
+                    } else {
+                        pm.getPackageArchiveInfo(file.absolutePath, 0)
+                    }
+                    val appInfo = packageInfo?.applicationInfo ?: return@runCatching null
+                    appInfo.sourceDir = file.absolutePath
+                    appInfo.publicSourceDir = file.absolutePath
+                    appInfo.loadIcon(pm).toBitmap(
+                        width = targetPx.coerceIn(48, 128),
+                        height = targetPx.coerceIn(48, 128),
+                        config = Bitmap.Config.ARGB_8888,
+                    )
+                }.getOrNull()
+            }
+        }
+        if (bitmap != null) synchronized(cache) { cache.put(key, bitmap) }
+        return bitmap
+    }
+}
+
 private object FileThumbnailCache {
     private const val MAX_CACHE_BYTES = 18 * 1024 * 1024
     private val imageSlots = Semaphore(permits = 2)
@@ -69,12 +112,24 @@ fun FileVisual(
 ) {
     val extension = item.extension.lowercase()
     val isVideo = !item.isDirectory && extension in thumbnailVideoExtensions
+    val isApk = !item.isDirectory && extension == "apk"
     val supportsThumbnail = !item.isDirectory && (extension in thumbnailImageExtensions || isVideo)
+    val context = LocalContext.current.applicationContext
     val targetPx = with(LocalDensity.current) { size.roundToPx().coerceAtLeast(48) }
     val cacheKey = remember(item.path, item.modifiedAt, targetPx, isVideo) {
         "${item.path}:${item.modifiedAt}:$targetPx:${if (isVideo) 1 else 0}"
     }
     var bitmap by remember(cacheKey) { mutableStateOf(FileThumbnailCache.peek(cacheKey)) }
+    val apkKey = remember(item.path, item.modifiedAt, item.size, targetPx) {
+        "${item.path}:${item.modifiedAt}:${item.size}:$targetPx:apk"
+    }
+    var apkBitmap by remember(apkKey) { mutableStateOf(ApkIconCache.peek(apkKey)) }
+    if (isApk && loadThumbnail) {
+        LaunchedEffect(apkKey, loadThumbnail) {
+            delay(90L)
+            apkBitmap = ApkIconCache.load(context, item.file, apkKey, targetPx)
+        }
+    }
 
     if (supportsThumbnail && loadThumbnail) {
         LaunchedEffect(cacheKey, loadThumbnail) {
@@ -86,8 +141,8 @@ fun FileVisual(
         }
     }
 
-    val preview = bitmap
-    if (supportsThumbnail && preview != null) {
+    val preview = if (isApk) apkBitmap else bitmap
+    if ((isApk || supportsThumbnail) && preview != null) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = modifier
@@ -99,7 +154,7 @@ fun FileVisual(
                 bitmap = preview.asImageBitmap(),
                 contentDescription = item.name,
                 modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop,
+                contentScale = if (isApk) ContentScale.Fit else ContentScale.Crop,
             )
             if (isVideo) {
                 Box(

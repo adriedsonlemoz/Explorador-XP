@@ -1,6 +1,8 @@
-> **Versão atual:** 0.1.0-alpha.111 (`versionCode 111`). Painel compacto, botões de aplicativos reorganizados e contador da Lixeira dentro do ícone. Build Android e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.112 (`versionCode 112`). Ícones reais de APK (quando legíveis), lista compacta persistente, classificação em Exibir e filtros discretos de aplicativos. Build Android e testes físicos pendentes.
 
 # Explorador XP
+
+**alpha.112 (arquivos e filtros):** Ícones reais de APK via Android em lista/grade, LRU limitado e fallback; opção Lista compacta de ícones menores persistente; classificação Nome/Data/Tamanho/Tipo e Pastas primeiro no menu Exibir em vez de Ferramentas; filtro discreto de aplicativos por tamanho e estado, com ordenação por tamanho e datas. Sem permissão para estatísticas de armazenamento, apenas tamanho de APK é usado.
 
 **alpha.111 (ajustes visuais):** Botões de abrir/limpar/remover/sistema posicionados abaixo do pacote, etiquetas de tipo e estado ao lado do nome, Voltar/Atualizar sem fundo branco, Ferramentas em grade compacta e número da Lixeira dentro do ícone.
 
@@ -30,7 +32,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.111` (`versionCode 111`)  
+**Versão atual:** `0.1.0-alpha.112` (`versionCode 112`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

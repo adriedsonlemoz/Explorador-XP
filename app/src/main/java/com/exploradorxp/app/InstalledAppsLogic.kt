@@ -3,7 +3,9 @@ package com.exploradorxp.app
 import java.util.Locale
 
 internal enum class AppManagerFilter { ALL, USER, SYSTEM }
-internal enum class AppManagerSort { NAME, SIZE }
+internal enum class AppManagerSort { NAME, SIZE, LAST_UPDATE, INSTALL_DATE }
+internal enum class AppManagerSizeFilter { ALL, UNDER_50_MB, FROM_50_TO_200_MB, OVER_200_MB }
+internal enum class AppManagerStatusFilter { ALL, ENABLED, DISABLED }
 
 internal data class ManagedApp(
     val label: String,
@@ -44,6 +46,8 @@ internal object AppManagerLogic {
         filter: AppManagerFilter,
         sort: AppManagerSort,
         storage: Map<String, AppStorageInfo>,
+        sizeFilter: AppManagerSizeFilter = AppManagerSizeFilter.ALL,
+        statusFilter: AppManagerStatusFilter = AppManagerStatusFilter.ALL,
     ): List<ManagedApp> {
         val needle = query.trim().lowercase(Locale.ROOT)
         val filtered = apps.filter { app ->
@@ -55,7 +59,19 @@ internal object AppManagerLogic {
             val searchMatches = needle.isBlank() ||
                 app.label.lowercase(Locale.ROOT).contains(needle) ||
                 app.packageName.lowercase(Locale.ROOT).contains(needle)
-            typeMatches && searchMatches
+            val size = storage[app.packageName]?.totalBytes ?: app.apkBytes
+            val sizeMatches = when (sizeFilter) {
+                AppManagerSizeFilter.ALL -> true
+                AppManagerSizeFilter.UNDER_50_MB -> size < 50L * 1024 * 1024
+                AppManagerSizeFilter.FROM_50_TO_200_MB -> size >= 50L * 1024 * 1024 && size < 200L * 1024 * 1024
+                AppManagerSizeFilter.OVER_200_MB -> size >= 200L * 1024 * 1024
+            }
+            val statusMatches = when (statusFilter) {
+                AppManagerStatusFilter.ALL -> true
+                AppManagerStatusFilter.ENABLED -> app.enabled
+                AppManagerStatusFilter.DISABLED -> !app.enabled
+            }
+            typeMatches && searchMatches && sizeMatches && statusMatches
         }
         return when (sort) {
             AppManagerSort.NAME -> filtered.sortedWith(
@@ -64,6 +80,14 @@ internal object AppManagerLogic {
             )
             AppManagerSort.SIZE -> filtered.sortedWith(
                 compareByDescending<ManagedApp> { storage[it.packageName]?.totalBytes ?: it.apkBytes }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.label }
+            )
+            AppManagerSort.LAST_UPDATE -> filtered.sortedWith(
+                compareByDescending<ManagedApp> { it.lastUpdateTime }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.label }
+            )
+            AppManagerSort.INSTALL_DATE -> filtered.sortedWith(
+                compareByDescending<ManagedApp> { it.firstInstallTime }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.label }
             )
         }

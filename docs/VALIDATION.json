@@ -1,54 +1,59 @@
 {
-  "version_build": "0.1.0-alpha.111",
-  "version_code": 111,
-  "manager_version": "0.1.0-alpha.111",
+  "version_build": "0.1.0-alpha.112",
+  "version_code": 112,
+  "manager_version": "0.1.0-alpha.112",
   "application_id": "com.exploradorxp.app",
-  "scope": "Alpha.111: ações e indicadores dos aplicativos, botão Voltar, ferramentas compactas, lixeira somente no ícone",
+  "scope": "Alpha.112: ícones reais de APK, lista compacta, classificação em Exibir, filtros discretos de aplicativos",
   "checks": [
     {
-      "name": "apps_detail_layout",
+      "name": "apk_icon_loader",
       "status": "source_review",
-      "details": "Tipo/estado ao lado do título; quatro ações movidas para abaixo do pacote."
+      "details": "PackageManager em Dispatchers.IO com LRU de 8 MiB, Semaphore(2), fallback vetorial."
     },
     {
-      "name": "apps_title_back_button",
+      "name": "compact_file_list",
       "status": "source_review",
-      "details": "Botões de 44dp, ícones brancos sem fundo e título separado da seta."
+      "details": "24dp ícones; duas linhas; preferência persistida."
     },
     {
-      "name": "tools_panel_4_columns",
+      "name": "sort_in_view_menu",
       "status": "source_review",
-      "details": "Grade adaptativa mínimo 76dp, normalmente 4 colunas em ~393dp, sem cartão branco."
+      "details": "Nome, data, tamanho, tipo e pastas primeiro diretamente em Exibir; Ferramentas removido."
     },
     {
-      "name": "trash_icon_count",
+      "name": "app_filters",
       "status": "source_review",
-      "details": "Número sobre ícone, sem indicador lateral; descrição acessível mantém contagem/bytes."
+      "details": "Tamanho por faixas, estado, última atualização e instalação com fallback tamanho APK."
     },
     {
-      "name": "android_gradle_build",
-      "status": "not_run",
-      "details": "Depende de toolchain Android e dependências Gradle."
-    },
-    {
-      "name": "real_device_ui",
-      "status": "not_run",
-      "details": "Pendente verificar densidades/fontes diferentes em Android."
+      "name": "logic_test",
+      "status": "passed_local",
+      "details": "Compilado Kotlin/JVM puro: 7 verificações de filtros de tamanho, estado, datas e fallback de armazenamento passaram. Testes JUnit Android ainda pendentes."
     },
     {
       "name": "kotlin_syntax",
       "status": "passed_local",
-      "details": "Análise PSI Kotlin em InstalledAppsManager, ExplorerQuickAccess, ToolsPanelScreen, ReleaseNotes e ReleaseNotesScopeTest: sem erros."
-    },
-    {
-      "name": "version_sync",
-      "status": "passed_local",
-      "details": "VersionCode 111 sincronizado em Gradle, app_identity, github-manager, VERSION, README e documentação."
+      "details": "Parser Kotlin PSI aplicado a 8 fontes e testes modificados: 0 erros sintáticos."
     },
     {
       "name": "xml_json_structure",
       "status": "passed_local",
-      "details": "79 XML e 6 JSON analisados estruturalmente com sucesso."
+      "details": "80 XML e 6 JSON válidos estruturalmente."
+    },
+    {
+      "name": "android_gradle_build",
+      "status": "not_run",
+      "details": "Gradle wrapper/toolchain Android ausentes no ambiente local."
+    },
+    {
+      "name": "real_device_ui",
+      "status": "not_run",
+      "details": "Pendente executar APK no dispositivo."
+    },
+    {
+      "name": "version_sync",
+      "status": "passed_local",
+      "details": "VERSION, Gradle, metadados, README, CHANGELOG, release e novidade de atualização sincronizados na alpha.112."
     }
   ]
 }

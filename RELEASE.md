@@ -1,14 +1,13 @@
-# Explorador XP 0.1.0-alpha.111
+# Explorador XP 0.1.0-alpha.112
 
-## Ajustes de interface
+## Ícones de APK, lista compacta e ordenação
 
-- **Aplicativos instalados:** indicadores de tipo e estado sobem ao lado do nome do app e as quatro ações compactas ocupam a linha inferior do cabeçalho. Seta Voltar separada corretamente do título.
-- **Cabeçalhos:** Voltar e Atualizar exibidos diretamente sobre o azul, em branco, com toques de 44 dp.
-- **Ferramentas:** grade compacta de quatro colunas em telas com largura suficiente, sem cartões brancos nem bordas decorativas.
-- **Lixeira:** somente o número de itens dentro do ícone, sem tamanho lateral. Resumo exato disponível via leitor de tela e na tela Lixeira.
-- **Preservado:** galeria, histórico de Voltar, armazenamento, SMB2/3, WebDAV HTTPS e pin SHA-256.
+- **APK:** ícone real extraído do APK quando reconhecido pelo Android, em lista e grade. Cache limitado e fallback para arquivos ilegíveis.
+- **Exibir:** modo Lista compacta de ícones menores com preferência persistente; classificar por Nome/Data/Tamanho/Tipo e escolher Pastas primeiro. Removida a classificação de Ferramentas.
+- **Aplicativos instalados:** ícone de filtros na barra superior, opções por tamanho/estado e ordenação por data de instalação/atualização ou tamanho. Tamanho total só quando autorizado pelo Android; sem permissão usa o tamanho dos APKs.
+- **Preservados:** módulos de arquivos, rede SMB/WebDAV, lixeira, galeria e ferramentas.
 
-**Versão:** `0.1.0-alpha.111`  
-**Version code:** `111`
+**Versão:** `0.1.0-alpha.112`  
+**Version code:** `112`
 
-**Validação:** verificações estáticas; compilação Android pelo GitHub Actions e testes em aparelho pendentes.
+**Validação:** sintaxe Kotlin e testes isolados; build Android no GitHub Actions e teste físico pendentes.
