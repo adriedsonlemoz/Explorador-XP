@@ -1,16 +1,14 @@
-# Explorador XP 0.1.0-alpha.121
+# Explorador XP 0.1.0-alpha.122
 
-**Versão:** `0.1.0-alpha.121`  
-**Version code:** `121`
+**Versão:** `0.1.0-alpha.122`  
+**Version code:** `122`
 
-## Correção do build 112
+## Mudanças
+- Abas de análise de Armazenamento e filtros de arquivos grandes.
+- Dados OBB como categoria própria e informação de espaço dos apps com total/total parcial, sujeitos a Acesso ao uso.
+- Filtros rápidos de apps por tamanho crescente/decrescente, instalação e atualização.
+- Abrir arquivos ZIP sem extensão do GitHub Manager via ação Abrir com e pelo explorador.
+- Limitações: seleção e suporte dependem do MIME enviado pelo app de origem; somente ZIPs reconhecidos são aceitos no fluxo genérico.
 
-- Em `AudioPlayerViewer.kt`, substituídas duas construções `produceState` sinalizadas pelo Android Lint por `remember` + `mutableStateOf` e `LaunchedEffect`, mantendo a fila, metadados e capas carregados em `Dispatchers.IO`.
-- Verificação preventiva de padrão de estado do player adicionada ao workflow.
-- Teste de Novidades atualizado para mostrar somente as correções da alpha.121.
-- Media3, mini-player, notificação, segundo plano e demais funcionalidades anteriores preservadas.
-
-## Pendências
-
-- Confirmar `:app:testDebugUnitTest`, `:app:lintDebug` e `:app:assemblePerformance` no GitHub Actions.
-- Validar o player real no aparelho com diferentes formatos e ao trocar rapidamente as faixas.
+## Validação
+- Kotlin/JVM e análise estática locais; build Android completo e testes no dispositivo pendentes.

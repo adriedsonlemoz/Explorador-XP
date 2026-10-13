@@ -1,3 +1,12 @@
+## 0.1.0-alpha.122 (2026-10-13)
+- Armazenamento agora oferece abas Categorias/Pastas/Arquivos, conservando o resultado da análise. Os 100 maiores arquivos analisados podem ser filtrados por tipo.
+- Arquivos OBB classificados como Dados de jogos; arquivos não acessíveis permanecem fora da varredura.
+- Resumo do armazenamento dos aplicativos medidos via StorageStatsManager somente com Acesso ao uso; informa total parcial quando alguma consulta falha, sem misturar APK com total de dados nem somar cache duas vezes.
+- Aplicativos instalados com botões rápidos Todos/Usuário/Sistema e Nome/Maiores/Menores/Instalados/Atualizados; ao abrir via Armazenamento começa em Maiores.
+- Abertura externa opcional de MIME genérico para artefatos ZIP sem extensão enviados por outros apps, incluindo GitHub Manager; pré-checagem de assinatura, validação de formato depois da cópia e limite de cache mantidos.
+- Extração ZIP disponível no menu mesmo sem extensão, com assinatura ZIP; não altera os arquivos originais.
+- Versão/versionCode, CHANGELOG, README, RELEASE, Novidades, metadados e testes atualizados.
+
 ## 0.1.0-alpha.121 (2026-10-13)
 
 - Corrigidos os 2 erros fatais `ProduceStateDoesNotAssignValue` em `AudioPlayerViewer.kt` (linhas 155 e 232 da alpha.120); `:app:lintDebug` interrompia o workflow 112 com 40 avisos não fatais.

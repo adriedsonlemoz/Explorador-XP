@@ -195,6 +195,7 @@ fun ExplorerScreen(
     var showNetworkExplorer by remember { mutableStateOf(false) }
     var mediaShortcut by remember { mutableStateOf<MediaShortcutKind?>(null) }
     var showInstalledApps by remember { mutableStateOf(false) }
+    var appsOpenedFromStorage by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     var showToolsPanel by remember { mutableStateOf(false) }
     var returnToToolsPanel by remember { mutableStateOf(false) }
@@ -293,7 +294,10 @@ fun ExplorerScreen(
                     )
                     showNetworkExplorer -> NetworkExplorerScreen(onDismiss = { showNetworkExplorer = false; returnFromTool() })
                     showDeviceInfo -> DeviceInfoScreen(onDismiss = { showDeviceInfo = false; returnFromTool() })
-                    showInstalledApps -> InstalledAppsManagerScreen(onDismiss = { showInstalledApps = false; returnFromTool() })
+                    showInstalledApps -> InstalledAppsManagerScreen(
+                        onDismiss = { showInstalledApps = false; appsOpenedFromStorage = false; returnFromTool() },
+                        initialSort = if (appsOpenedFromStorage) AppManagerSort.SIZE else AppManagerSort.NAME,
+                    )
                     showSettings -> AppSettingsScreen(
                         sortMode = state.sortMode,
                         foldersFirst = state.foldersFirst,
@@ -330,7 +334,7 @@ fun ExplorerScreen(
                         onOpenFolder = { folder -> showStorageDetails = false; returnToToolsPanel = false; onNavigateTo(folder) },
                         onOpenFile = { file -> showStorageDetails = false; returnToToolsPanel = false; onOpenTarget(file) },
                         onOpenTrash = { showStorageDetails = false; showTrash = true; onLoadTrash() },
-                        onOpenInstalledApps = { showStorageDetails = false; showInstalledApps = true },
+                        onOpenInstalledApps = { showStorageDetails = false; appsOpenedFromStorage = true; showInstalledApps = true },
                     )
                 }
             }
@@ -3245,6 +3249,35 @@ private fun StorageDetailsScreen(
 ) {
     val analysis = state.analysis
     val info = analysis?.storageInfo ?: fallbackInfo
+    val context = LocalContext.current
+    val appRepo = remember(context) { InstalledAppsRepository(context.applicationContext) }
+    var appUsageSummary by remember { mutableStateOf<AppUsageSummary?>(null) }
+    var appUsageStatus by remember { mutableStateOf("Consultando aplicativos…") }
+    var appUsageRefresh by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var selectedSection by remember { mutableStateOf(StorageDisplaySection.CATEGORIES) }
+    var largeFileFilter by remember { mutableStateOf(LargeFileFilter.ALL) }
+    LaunchedEffect(appUsageRefresh) {
+        appUsageSummary = null
+        if (!appRepo.hasUsageAccess()) {
+            appUsageStatus = "Ative Acesso ao uso para medir os aplicativos"
+        } else {
+            appUsageStatus = "Calculando espaço dos aplicativos…"
+            val result = runCatching {
+                val apps = appRepo.loadApps()
+                val storage = appRepo.loadStorageInfo(apps)
+                AppUsageSummary.from(apps, storage)
+            }
+            result.onSuccess { summary ->
+                appUsageSummary = summary
+                appUsageStatus = if (summary.measuredApps == 0) {
+                    "Nenhum aplicativo pôde ser medido"
+                } else {
+                    val label = if (summary.complete) "Total medido" else "Total parcial"
+                    "$label: ${formatBytes(summary.measuredBytes)} • ${summary.measuredApps}/${summary.totalApps} apps"
+                }
+            }.onFailure { appUsageStatus = "Não foi possível medir os aplicativos" }
+        }
+    }
 
     BackHandler(onBack = onDismiss)
 
@@ -3270,8 +3303,12 @@ private fun StorageDetailsScreen(
                 scannedFiles = state.scannedFiles,
                 trashCount = analysis?.trashItemCount,
                 trashBytes = analysis?.trashBytes,
+                appUsageSubtitle = appUsageStatus,
                 onOpenInstalledApps = onOpenInstalledApps,
-                onAnalyze = if (state.analyzing) onCancel else onRefresh,
+                onAnalyze = {
+                    if (state.analyzing) onCancel()
+                    else { appUsageRefresh++; onRefresh() }
+                },
                 onOpenTrash = onOpenTrash,
             )
 
@@ -3303,51 +3340,49 @@ private fun StorageDetailsScreen(
             } else {
                 StorageAnalysisOverviewV2(analysis)
 
-                StorageSectionHeaderV2(
-                    title = "O que ocupa espaço",
-                    subtitle = "Somente arquivos que o Android permitiu analisar",
-                )
-                val categories = buildStorageDisplayCategories(analysis.categories)
-                if (categories.isEmpty()) {
-                    StorageEmptyPanelV2("Nenhuma categoria foi encontrada nesta análise.")
-                } else {
-                    StorageCategoryListV2(categories = categories, totalBytes = analysis.scannedBytes)
-                }
-
-                StorageSectionHeaderV2(
-                    title = "Pastas maiores",
-                    subtitle = "Toque em uma pasta para abrir",
-                )
-                if (analysis.topFolders.isEmpty()) {
-                    StorageEmptyPanelV2("Nenhuma pasta pôde ser analisada.")
-                } else {
-                    StorageRankedPanelV2 {
-                        analysis.topFolders.forEachIndexed { index, folder ->
-                            StorageFolderRow(index + 1, folder) { onOpenFolder(folder.folder) }
-                            if (index != analysis.topFolders.lastIndex) {
-                                HorizontalDivider(color = Color(0xFFE7EDF4))
+                StorageSectionTabs(selectedSection, onSelect = { selectedSection = it })
+                when (selectedSection) {
+                    StorageDisplaySection.CATEGORIES -> {
+                        StorageSectionHeaderV2("O que ocupa espaço", "Apenas arquivos acessíveis ao Android")
+                        val categories = buildStorageDisplayCategories(analysis.categories)
+                        if (categories.isEmpty()) StorageEmptyPanelV2("Nenhuma categoria encontrada.")
+                        else StorageCategoryListV2(categories = categories, totalBytes = analysis.scannedBytes)
+                    }
+                    StorageDisplaySection.FOLDERS -> {
+                        StorageSectionHeaderV2("Pastas maiores", "Toque em uma pasta para abrir")
+                        if (analysis.topFolders.isEmpty()) StorageEmptyPanelV2("Nenhuma pasta analisada.")
+                        else StorageRankedPanelV2 {
+                            analysis.topFolders.forEachIndexed { index, folder ->
+                                StorageFolderRow(index + 1, folder) { onOpenFolder(folder.folder) }
+                                if (index != analysis.topFolders.lastIndex) HorizontalDivider(color = Color(0xFFE7EDF4))
+                            }
+                        }
+                    }
+                    StorageDisplaySection.FILES -> {
+                        StorageSectionHeaderV2("Arquivos grandes", "Até 100 maiores arquivos detectados")
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            listOf(
+                                LargeFileFilter.ALL to "Todos", LargeFileFilter.GAMES to "Jogos/OBB",
+                                LargeFileFilter.VIDEOS to "Vídeos", LargeFileFilter.IMAGES to "Imagens",
+                                LargeFileFilter.APK to "APKs", LargeFileFilter.ARCHIVES to "Compactados",
+                                LargeFileFilter.OTHER to "Outros",
+                            ).forEach { (value, label) ->
+                                StorageFilterChip(label, largeFileFilter == value) { largeFileFilter = value }
+                            }
+                        }
+                        val visibleLargeFiles = StorageDisplayRules.filterLargeFiles(analysis.largeFiles, largeFileFilter)
+                        if (visibleLargeFiles.isEmpty()) StorageEmptyPanelV2("Nenhum dos maiores arquivos corresponde ao filtro.")
+                        else StorageRankedPanelV2 {
+                            visibleLargeFiles.forEachIndexed { index, file ->
+                                StorageLargeFileRow(index + 1, file) { onOpenFile(file.file) }
+                                if (index != visibleLargeFiles.lastIndex) HorizontalDivider(color = Color(0xFFE7EDF4))
                             }
                         }
                     }
                 }
-
-                StorageSectionHeaderV2(
-                    title = "Arquivos grandes",
-                    subtitle = "Arquivos maiores dentro do conjunto analisado",
-                )
-                if (analysis.largeFiles.isEmpty()) {
-                    StorageEmptyPanelV2("Nenhum arquivo grande foi encontrado.")
-                } else {
-                    StorageRankedPanelV2 {
-                        analysis.largeFiles.forEachIndexed { index, file ->
-                            StorageLargeFileRow(index + 1, file) { onOpenFile(file.file) }
-                            if (index != analysis.largeFiles.lastIndex) {
-                                HorizontalDivider(color = Color(0xFFE7EDF4))
-                            }
-                        }
-                    }
-                }
-
                 StorageTruthNoticeV2(analysis)
             }
             Spacer(Modifier.height(4.dp))
@@ -3505,19 +3540,58 @@ private fun StorageMetricTileV2(label: String, value: String, accent: Color, mod
     }
 }
 
+private enum class StorageDisplaySection { CATEGORIES, FOLDERS, FILES }
+
+@Composable
+private fun StorageFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.clip(RoundedCornerShape(7.dp))
+            .background(if (selected) Color(0xFFDDEEFF) else Color.White)
+            .border(1.dp, if (selected) XpBlue else XpControlBorder, RoundedCornerShape(7.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 11.dp, vertical = 9.dp),
+    ) {
+        Text(label, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, color = XpBlueDark)
+    }
+}
+
+@Composable
+private fun StorageSectionTabs(selected: StorageDisplaySection, onSelect: (StorageDisplaySection) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        listOf(
+            StorageDisplaySection.CATEGORIES to "Categorias",
+            StorageDisplaySection.FOLDERS to "Pastas",
+            StorageDisplaySection.FILES to "Arquivos",
+        ).forEach { (section, label) ->
+            Box(modifier = Modifier.weight(1f)) {
+                // A largura dividida em três evita rolagem horizontal nos celulares pequenos.
+                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(7.dp))
+                    .background(if (section == selected) Color(0xFFDDEEFF) else Color.White)
+                    .border(1.dp, if (section == selected) XpBlue else XpControlBorder, RoundedCornerShape(7.dp))
+                    .clickable { onSelect(section) }
+                    .padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center) {
+                    Text(label, fontSize = 11.sp, maxLines = 1, color = XpBlueDark,
+                        fontWeight = if (section == selected) FontWeight.Bold else FontWeight.Normal)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun StorageQuickActionsV2(
     analyzing: Boolean,
     scannedFiles: Int,
     trashCount: Int?,
     trashBytes: Long?,
+    appUsageSubtitle: String,
     onOpenInstalledApps: () -> Unit,
     onAnalyze: () -> Unit,
     onOpenTrash: () -> Unit,
 ) {
     StoragePrimaryActionV2(
         title = "Aplicativos instalados",
-        subtitle = "Gerencie apps, armazenamento, permissões e desinstalação",
+        subtitle = appUsageSubtitle,
         icon = R.drawable.file_apk,
         onClick = onOpenInstalledApps,
     )
@@ -4364,6 +4438,7 @@ private fun storageCategoryIcon(key: String): Int = when (key) {
     "archives" -> R.drawable.folder_compressed
     "documents" -> R.drawable.documents
     "apps" -> R.drawable.file_apk
+    "game_data" -> R.drawable.file_unknown
     else -> R.drawable.file_unknown
 }
 
@@ -4526,7 +4601,8 @@ private fun XpFileDropdownMenu(
         if (!item.isDirectory) {
             XpContextMenuItem(R.drawable.folder_open, "Abrir com...") { onAction(FileMenuAction.OPEN_WITH) }
         }
-        if (!item.isDirectory && item.file.extension.equals("zip", ignoreCase = true)) {
+        if (!item.isDirectory && (item.file.extension.equals("zip", ignoreCase = true) ||
+            (FileContentDetector.needsContentDetection(item.file) && FileContentDetector.hasZipSignature(item.file)))) {
             HorizontalDivider(color = Color(0xFFD2D2C8))
             XpContextMenuItem(R.drawable.folder_compressed, "Extrair aqui") { onAction(FileMenuAction.EXTRACT_HERE) }
             XpContextMenuItem(R.drawable.folder_open, "Extrair para...") { onAction(FileMenuAction.EXTRACT_TO) }

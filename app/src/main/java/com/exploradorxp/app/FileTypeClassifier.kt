@@ -29,7 +29,7 @@ object FileTypeClassifier {
         "sh" to "Script Shell", "bat" to "Script do Windows", "ini" to "Arquivo de configuração",
         "properties" to "Arquivo de propriedades", "toml" to "Arquivo TOML", "gradle" to "Script Gradle",
         "sql" to "Script SQL", "db" to "Banco de dados", "sqlite" to "Banco de dados SQLite",
-        "apk" to "Aplicativo Android (APK)", "iso" to "Imagem de disco ISO", "exe" to "Executável do Windows",
+        "apk" to "Aplicativo Android (APK)", "obb" to "Dados de jogo (OBB)", "iso" to "Imagem de disco ISO", "exe" to "Executável do Windows",
         "deb" to "Pacote Debian", "rpm" to "Pacote RPM", "dmg" to "Imagem de disco macOS", "bin" to "Arquivo binário",
         "torrent" to "Arquivo Torrent", "ttf" to "Fonte TrueType", "epub" to "Livro EPUB", "mobi" to "Livro MOBI",
     )
@@ -57,6 +57,7 @@ object FileTypeClassifier {
             ext in videoExtensions -> "videos" to "Vídeos"
             ext in audioExtensions -> "audio" to "Áudio"
             ext in documentExtensions -> "documents" to "Documentos"
+            ext == "obb" -> "game_data" to "Dados de jogos (OBB)"
             ext == "apk" -> "apps" to "Aplicativos/APK"
             ext in archiveExtensions -> "archives" to "Compactados"
             else -> "other" to "Outros"

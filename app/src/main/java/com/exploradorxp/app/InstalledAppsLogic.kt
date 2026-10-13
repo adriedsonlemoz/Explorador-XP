@@ -3,7 +3,7 @@ package com.exploradorxp.app
 import java.util.Locale
 
 internal enum class AppManagerFilter { ALL, USER, SYSTEM }
-internal enum class AppManagerSort { NAME, SIZE, LAST_UPDATE, INSTALL_DATE }
+internal enum class AppManagerSort { NAME, SIZE, SIZE_ASC, LAST_UPDATE, INSTALL_DATE }
 internal enum class AppManagerSizeFilter { ALL, UNDER_50_MB, FROM_50_TO_200_MB, OVER_200_MB }
 internal enum class AppManagerStatusFilter { ALL, ENABLED, DISABLED }
 
@@ -38,6 +38,20 @@ internal data class ManagedPermission(
     val name: String,
     val granted: Boolean,
 )
+
+internal data class AppUsageSummary(val measuredBytes: Long, val measuredApps: Int, val totalApps: Int) {
+    val complete: Boolean get() = totalApps > 0 && measuredApps == totalApps
+    companion object {
+        fun from(apps: List<ManagedApp>, measured: Map<String, AppStorageInfo>): AppUsageSummary {
+            val unique = apps.distinctBy { it.packageName }
+            return AppUsageSummary(
+                measuredBytes = unique.sumOf { measured[it.packageName]?.totalBytes ?: 0L },
+                measuredApps = unique.count { measured.containsKey(it.packageName) },
+                totalApps = unique.size,
+            )
+        }
+    }
+}
 
 internal object AppManagerLogic {
     fun filterAndSort(
@@ -80,6 +94,10 @@ internal object AppManagerLogic {
             )
             AppManagerSort.SIZE -> filtered.sortedWith(
                 compareByDescending<ManagedApp> { storage[it.packageName]?.totalBytes ?: it.apkBytes }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.label }
+            )
+            AppManagerSort.SIZE_ASC -> filtered.sortedWith(
+                compareBy<ManagedApp> { storage[it.packageName]?.totalBytes ?: it.apkBytes }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.label }
             )
             AppManagerSort.LAST_UPDATE -> filtered.sortedWith(

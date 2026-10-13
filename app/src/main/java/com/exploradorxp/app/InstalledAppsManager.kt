@@ -20,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -206,7 +207,7 @@ internal class InstalledAppsRepository(private val context: Context) {
 }
 
 @Composable
-fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
+internal fun InstalledAppsManagerScreen(onDismiss: () -> Unit, initialSort: AppManagerSort = AppManagerSort.NAME) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val repository = remember(context) { InstalledAppsRepository(context.applicationContext) }
     var refreshToken by remember { mutableIntStateOf(0) }
@@ -218,7 +219,7 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
     var loadError by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(AppManagerFilter.ALL) }
-    var sort by remember { mutableStateOf(AppManagerSort.NAME) }
+    var sort by remember(initialSort) { mutableStateOf(initialSort) }
     var sizeFilter by remember { mutableStateOf(AppManagerSizeFilter.ALL) }
     var statusFilter by remember { mutableStateOf(AppManagerStatusFilter.ALL) }
     var selected by remember { mutableStateOf<ManagedApp?>(null) }
@@ -345,19 +346,17 @@ fun InstalledAppsManagerScreen(onDismiss: () -> Unit) {
                 AppManagerChip("Todos", filter == AppManagerFilter.ALL) { filter = AppManagerFilter.ALL }
                 AppManagerChip("Usuário", filter == AppManagerFilter.USER) { filter = AppManagerFilter.USER }
                 AppManagerChip("Sistema", filter == AppManagerFilter.SYSTEM) { filter = AppManagerFilter.SYSTEM }
-                Spacer(Modifier.weight(1f))
-                // Filtros detalhados ficam no ícone discreto do cabeçalho.
-                Text(
-                    when (sort) {
-                        AppManagerSort.NAME -> "Nome"
-                        AppManagerSort.SIZE -> "Tamanho ↓"
-                        AppManagerSort.LAST_UPDATE -> "Atualização ↓"
-                        AppManagerSort.INSTALL_DATE -> "Instalação ↓"
-                    },
-                    fontSize = 10.sp,
-                    color = XpTextSecondary,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
-                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                AppManagerChip("Nome", sort == AppManagerSort.NAME) { sort = AppManagerSort.NAME }
+                AppManagerChip("Maiores ↓", sort == AppManagerSort.SIZE) { sort = AppManagerSort.SIZE }
+                AppManagerChip("Menores ↑", sort == AppManagerSort.SIZE_ASC) { sort = AppManagerSort.SIZE_ASC }
+                AppManagerChip("Instalados", sort == AppManagerSort.INSTALL_DATE) { sort = AppManagerSort.INSTALL_DATE }
+                AppManagerChip("Atualizados", sort == AppManagerSort.LAST_UPDATE) { sort = AppManagerSort.LAST_UPDATE }
             }
             Spacer(Modifier.height(7.dp))
             val userCount = apps.count { !it.isSystem }
@@ -531,6 +530,7 @@ private fun AppManagerTitle(
                 listOf(
                     AppManagerSort.NAME to "Nome (A–Z)",
                     AppManagerSort.SIZE to "Tamanho (maiores)",
+                    AppManagerSort.SIZE_ASC to "Tamanho (menores)",
                     AppManagerSort.LAST_UPDATE to "Atualizados recentemente",
                     AppManagerSort.INSTALL_DATE to "Instalados recentemente",
                 ).forEach { (mode, label) ->

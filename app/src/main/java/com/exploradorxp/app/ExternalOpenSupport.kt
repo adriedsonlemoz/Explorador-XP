@@ -78,6 +78,15 @@ object ExternalOpenSupport {
             mime in supportedMimeTypes
     }
 
+    /** O filtro genérico é aceito somente após confirmar a assinatura ZIP do arquivo recebido. */
+    fun mayBeUnlabeledArchive(fileName: String?, mimeType: String?): Boolean {
+        val mime = normalizeMime(mimeType)
+        val name = fileName.orEmpty().substringAfterLast('/')
+        val ext = name.substringAfterLast('.', "").lowercase()
+        return mime in setOf("application/octet-stream", "application/x-binary", "application/x-octet-stream") &&
+            (ext.isBlank() || ext in setOf("bin", "dat", "download", "file"))
+    }
+
     fun normalizeMime(mimeType: String?): String =
         mimeType.orEmpty().substringBefore(';').trim().lowercase()
 

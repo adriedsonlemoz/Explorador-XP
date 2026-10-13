@@ -574,7 +574,8 @@ private suspend fun prepareExternalFile(context: Context, request: ExternalOpenR
             ?: request.uri.lastPathSegment?.substringAfterLast('/')
             ?: "arquivo"
 
-        if (!ExternalOpenSupport.isCompatible(displayName, resolvedMime)) {
+        val unlabeledArchive = ExternalOpenSupport.mayBeUnlabeledArchive(displayName, resolvedMime)
+        if (!ExternalOpenSupport.isCompatible(displayName, resolvedMime) && !unlabeledArchive) {
             throw IllegalArgumentException("Este tipo de arquivo não é compatível com o Explorador XP.")
         }
 
@@ -585,7 +586,17 @@ private suspend fun prepareExternalFile(context: Context, request: ExternalOpenR
         val destination = File(requestDir, safeName)
 
         try {
-            resolver.openInputStream(request.uri)?.use { input ->
+            resolver.openInputStream(request.uri)?.buffered()?.use { input ->
+                // Evita copiar arquivos genéricos muito grandes que não são ZIPs.
+                if (unlabeledArchive) {
+                    input.mark(8)
+                    val magic = ByteArray(4)
+                    val count = input.read(magic)
+                    input.reset()
+                    if (count != 4 || !FileContentDetector.isZipSignature(magic)) {
+                        throw IllegalArgumentException("Arquivo sem extensão não possui assinatura ZIP.")
+                    }
+                }
                 destination.outputStream().buffered().use { output ->
                     val buffer = ByteArray(256 * 1024)
                     var copied = 0L
@@ -614,6 +625,10 @@ private suspend fun prepareExternalFile(context: Context, request: ExternalOpenR
         if (!destination.isFile) {
             requestDir.deleteRecursively()
             throw IllegalStateException("Não foi possível copiar o arquivo para leitura.")
+        }
+        if (unlabeledArchive && !FileContentDetector.isValidZipContainer(destination)) {
+            requestDir.deleteRecursively()
+            throw IllegalArgumentException("O arquivo sem extensão não contém um ZIP válido. Nenhum arquivo foi extraído.")
         }
 
         PreparedExternalFile(

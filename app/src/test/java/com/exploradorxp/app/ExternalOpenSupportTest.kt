@@ -20,4 +20,13 @@ class ExternalOpenSupportTest {
         assertFalse(ExternalOpenSupport.isCompatible("imagem.svg", "image/svg+xml"))
         assertFalse(ExternalOpenSupport.isCompatible("desconhecido.bin", "application/octet-stream"))
     }
+    @Test
+    fun genericMimeOnlyEntersArchiveCandidatePathForUnlabeledFiles() {
+        assertTrue(ExternalOpenSupport.mayBeUnlabeledArchive("build-artifact", "application/octet-stream"))
+        assertTrue(ExternalOpenSupport.mayBeUnlabeledArchive("build.dat", "application/x-binary"))
+        assertFalse(ExternalOpenSupport.mayBeUnlabeledArchive("foto.jpg", "application/octet-stream"))
+        assertFalse(ExternalOpenSupport.mayBeUnlabeledArchive("build-artifact", "video/mp4"))
+        assertFalse(ExternalOpenSupport.isCompatible("build-artifact", "application/octet-stream"))
+    }
+
 }

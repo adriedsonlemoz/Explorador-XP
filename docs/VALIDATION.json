@@ -1,39 +1,29 @@
 {
-  "version_build": "0.1.0-alpha.121",
-  "version_code": 121,
-  "manager_version": "0.1.0-alpha.121",
+  "version_build": "0.1.0-alpha.122",
+  "version_code": 122,
+  "manager_version": "0.1.0-alpha.122",
   "application_id": "com.exploradorxp.app",
-  "scope": "alpha.121: correção dos dois erros Android Lint Compose ProduceStateDoesNotAssignValue do build 112",
+  "scope": "alpha.122: abas de armazenamento, aplicativos e artefatos ZIP sem extensão",
   "checks": [
     {
-      "name": "build112_diagnosis",
-      "status": "confirmed_from_ci_logs",
-      "details": "workflow 112: :app:testDebugUnitTest aprovado; :app:lintDebug falhou com 2 errors/40 warnings no AudioPlayerViewer.kt, linhas 155 e 232 da alpha.120."
-    },
-    {
-      "name": "audio_state_guard",
+      "name": "storage_tabs_and_filters",
       "status": "passed_local_static",
-      "details": "2 estados Compose verificados, I/O mantido em Dispatcher.IO; teste negativo detectou reintrodução de produceState."
+      "details": "3 abas e filtragem por tipo dos 100 maiores analisados sem refazer scan."
     },
     {
-      "name": "release_notes",
+      "name": "apps_summary",
       "status": "passed_local_jvm",
-      "details": "11 verificações JVM isoladas (escopo das novidades, versão, fila OPUS, renomeação) aprovadas; JUnit Android pendente."
+      "details": "Apuração de totais medidos/parciais sem dobrar o cache; tamanho crescente/decrescente."
     },
     {
-      "name": "kotlin_syntax",
-      "status": "passed_local_psi",
-      "details": "111 arquivos Kotlin passaram no parser PSI 1.9; não substitui compilação Android."
-    },
-    {
-      "name": "resources_metadata",
-      "status": "passed_local_static",
-      "details": "81 XML, 6 JSON válidos, versionCode 121 e integridade CRC do ZIP validada."
+      "name": "extensionless_zip",
+      "status": "passed_local_jvm",
+      "details": "MIME genérico só habilita recepção para nomes genéricos; após a cópia arquivo deve ser ZIP detectado, com checagem antecipada de magic."
     },
     {
       "name": "android_build",
       "status": "not_run",
-      "details": "Novo :app:lintDebug/:app:assemblePerformance requer GitHub Actions com Android SDK."
+      "details": "Compilação e validação do Android Lint completas dependem de CI."
     }
   ]
 }

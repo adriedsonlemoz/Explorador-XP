@@ -11,9 +11,9 @@ class ReleaseNotesScopeTest {
         assertEquals(BuildConfig.VERSION_NAME, info.versionName)
         assertEquals(BuildConfig.VERSION_CODE, info.versionCode)
         assertEquals(3, info.changes.size)
-        assertTrue(info.changes.any { it.contains("Android Lint") })
-        assertTrue(info.changes.any { it.contains("fila") && it.contains("tags") })
-        assertTrue(info.changes.any { it.contains("verificação preventiva") })
-        assertFalse(info.changes.any { it.contains("fillMaxHeight") || it.contains("Mini-player") })
+        assertTrue(info.changes.any { it.contains("abas") && it.contains("OBB") })
+        assertTrue(info.changes.any { it.contains("aplicativos") && it.contains("parciais") })
+        assertTrue(info.changes.any { it.contains("ZIP") && it.contains("GitHub Manager") })
+        assertFalse(info.changes.any { it.contains("ProduceState") || it.contains("fillMaxHeight") })
     }
 }

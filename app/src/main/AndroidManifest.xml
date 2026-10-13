@@ -46,8 +46,9 @@
             </intent-filter>
 
             <!--
-                O Explorador XP aparece no seletor "Abrir com" somente para formatos que
-                possuem leitor interno. Não é registrado MIME coringa nem octet-stream.
+                Tipos genéricos de arquivos sem extensão entram pelo seletor somente se
+                o usuário escolher o app; o conteúdo deve ser validado como ZIP antes de abrir.
+                Não registramos MIME coringa (*/*).
             -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -76,6 +77,10 @@
                 <data android:mimeType="application/zip" />
                 <data android:mimeType="application/x-zip" />
                 <data android:mimeType="application/x-zip-compressed" />
+                <!-- GitHub Actions artifacts frequentemente usam application/octet-stream sem .zip. -->
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-binary" />
+                <data android:mimeType="application/x-octet-stream" />
                 <data android:mimeType="application/vnd.android.package-archive" />
                 <data android:mimeType="application/x-android-package-archive" />
 

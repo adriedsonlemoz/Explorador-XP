@@ -958,7 +958,7 @@ class FileRepository(
     companion object {
         private const val TRASH_DIR_NAME = ".ExploradorXP_Lixeira"
         private const val TRASH_INFO_FILE = ".trashinfo.json"
-        private const val LARGE_FILE_LIMIT = 20
+        private const val LARGE_FILE_LIMIT = 100
         private const val FILE_ITEM_CACHE_LIMIT = 2_048
     }
 }

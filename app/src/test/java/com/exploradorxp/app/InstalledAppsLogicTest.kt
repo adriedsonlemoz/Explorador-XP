@@ -127,4 +127,26 @@ class InstalledAppsLogicTest {
         ).map { it.packageName })
     }
 
+    @Test
+    fun sortsSmallestFirstUsingMeasuredSize() {
+        val storage = mapOf(userApp.packageName to AppStorageInfo(500, 0, 0))
+        assertEquals(listOf(systemApp.packageName, userApp.packageName), AppManagerLogic.filterAndSort(
+            listOf(userApp, systemApp), "", AppManagerFilter.ALL, AppManagerSort.SIZE_ASC, storage,
+        ).map { it.packageName })
+    }
+
+    @Test
+    fun measuredSummaryNeverReplacesMissingSizesWithApks() {
+        val measured = mapOf(userApp.packageName to AppStorageInfo(100, 500, 20))
+        val partial = AppUsageSummary.from(listOf(userApp, systemApp), measured)
+        assertEquals(600L, partial.measuredBytes)
+        assertEquals(1, partial.measuredApps)
+        assertEquals(2, partial.totalApps)
+        assertEquals(false, partial.complete)
+        val full = AppUsageSummary.from(listOf(userApp, systemApp), measured +
+            (systemApp.packageName to AppStorageInfo(200, 200, 10)))
+        assertEquals(1000L, full.measuredBytes)
+        assertEquals(true, full.complete)
+    }
+
 }

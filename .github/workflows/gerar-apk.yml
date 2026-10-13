@@ -30,8 +30,8 @@ jobs:
       - name: Conferir estados de áudio Compose
         run: python3 tools/validate_audio_compose_state.py
 
-      - name: Validar áudio e correção lint build 112 alpha.121
-        run: python3 tools/validate_alpha121.py
+      - name: Validar armazenamento e ZIP sem extensão alpha.122
+        run: python3 tools/validate_alpha122.py
 
       - name: Testar
         run: gradle :app:testDebugUnitTest --stacktrace

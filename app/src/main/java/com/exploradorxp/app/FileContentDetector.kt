@@ -27,6 +27,22 @@ internal object FileContentDetector {
         "pdf", "zip", "apk",
     )
 
+    /** Leitura curta para habilitar "Extrair" em arquivos ZIP sem extensão. */
+    fun isZipSignature(bytes: ByteArray): Boolean = looksLikeZip(bytes)
+
+    /** Confirma a estrutura central do ZIP antes de aceitar MIME binário genérico. */
+    fun isValidZipContainer(file: File): Boolean = hasZipSignature(file) && runCatching {
+        ZipFile(file).use { zip -> zip.entries().hasMoreElements() || zip.size() == 0 }
+    }.getOrDefault(false)
+
+    fun hasZipSignature(file: File): Boolean = runCatching {
+        if (!file.isFile || file.length() < 4) return@runCatching false
+        FileInputStream(file).use { input ->
+            val sig = ByteArray(4)
+            input.read(sig) == 4 && looksLikeZip(sig)
+        }
+    }.getOrDefault(false)
+
     fun needsContentDetection(file: File): Boolean {
         val extension = file.extension.lowercase()
         if (extension in internalExtensions) return false

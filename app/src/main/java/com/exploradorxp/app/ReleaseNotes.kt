@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigidos dois erros do Android Lint no carregamento assíncrono de músicas e capas.",
-                "Mantidas a fila, as tags e a arte do álbum fora da thread principal, com estado Compose seguro.",
-                "Adicionada verificação preventiva de estados assíncronos ao workflow de compilação.",
+                "Armazenamento organizado em abas Categorias, Pastas e Arquivos, com filtros de arquivos grandes e dados OBB.",
+                "Resumo medido dos aplicativos com indicação de resultados parciais e classificação rápida por tamanho e datas.",
+                "Abertura de arquivos ZIP sem extensão recebidos do GitHub Manager, com verificação de assinatura antes de copiar.",
             )
         )
 }

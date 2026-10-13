@@ -1,4 +1,6 @@
-> **Versão atual:** 0.1.0-alpha.121 (`versionCode 121`). Corrigidos os dois erros `ProduceStateDoesNotAssignValue` do Android Lint no player de música. Compilação completa e teste em aparelho aguardam novo build do GitHub Actions.
+> **Versão atual:** 0.1.0-alpha.122 (`versionCode 122`). Armazenamento em abas, filtros rápidos de aplicativos e abertura de ZIP sem extensão enviados pelo GitHub Manager. Build Android completo e testes em aparelho ainda pendentes.
+
+**alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 
 **alpha.121 (correção build 112):** em `AudioPlayerViewer.kt`, leitura da fila e metadados/capa continuam em `Dispatchers.IO`, mas o estado Compose agora usa `remember` + `mutableStateOf` e `LaunchedEffect`, em vez das duas chamadas `produceState` sinalizadas pelo Lint. Adicionado `tools/validate_audio_compose_state.py` ao workflow. Player Media3, mini-player e reprodução em segundo plano preservados.
 

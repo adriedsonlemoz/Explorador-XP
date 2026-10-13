@@ -19,6 +19,7 @@ class FileContentDetectorTest {
                 zip.closeEntry()
             }
             assertEquals("zip", FileContentDetector.detectExtension(file))
+            assertEquals(true, FileContentDetector.isValidZipContainer(file))
         } finally {
             dir.deleteRecursively()
         }
@@ -66,4 +67,11 @@ class FileContentDetectorTest {
             dir.deleteRecursively()
         }
     }
+    @Test
+    fun zipSignaturesAcceptedAndOtherBinaryRejected() {
+        assertEquals(true, FileContentDetector.isZipSignature(byteArrayOf(0x50, 0x4B, 0x03, 0x04)))
+        assertEquals(true, FileContentDetector.isZipSignature(byteArrayOf(0x50, 0x4B, 0x05, 0x06)))
+        assertEquals(false, FileContentDetector.isZipSignature(byteArrayOf(0x4D, 0x5A, 0x00, 0x00)))
+    }
+
 }
