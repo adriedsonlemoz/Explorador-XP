@@ -18,9 +18,8 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Mini-player de música durante a navegação, com pausar, avançar, voltar e encerrar.",
-                "Reprodução em segundo plano pelo Media3 MediaSessionService e controles na notificação/tela bloqueada.",
-                "Mesmo player e fila ao voltar para a música, inclusive por controles do sistema.",
+                "Corrigida a compilação dos controles de Fotos e Vídeos (importação fillMaxHeight).",
+                "Nova verificação preventiva de importações Compose antes dos testes Android.",
             )
         )
 }

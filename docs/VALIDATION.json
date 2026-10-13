@@ -1,34 +1,44 @@
 {
-  "version_build": "0.1.0-alpha.119",
-  "version_code": 119,
-  "manager_version": "0.1.0-alpha.119",
+  "version_build": "0.1.0-alpha.120",
+  "version_code": 120,
+  "manager_version": "0.1.0-alpha.120",
   "application_id": "com.exploradorxp.app",
-  "scope": "alpha.119: MediaSessionService, notificação de mídia e mini-player compartilhado",
+  "scope": "alpha.120: correção da compilação Kotlin (fillMaxHeight) do build 111 e prevenção de imports Compose",
   "checks": [
+    {
+      "name": "compose_imports",
+      "status": "passed_local_static",
+      "details": "Verificação de importações obrigatórias horizontalScroll e fillMaxHeight em todos os arquivos Kotlin, incluindo teste negativo por remoção temporária."
+    },
     {
       "name": "music_service_contracts",
       "status": "passed_local_static",
-      "details": "Verificador estático valida declaração de serviço, permissões, dependências, controlador, mini-player, sessão única e entrada de notificação."
+      "details": "Integração Media3 MediaSessionService e mini-player da alpha.119 preservada; validador alpha.120 executado."
+    },
+    {
+      "name": "isolated_jvm_tests",
+      "status": "passed_local_jvm",
+      "details": "10 verificações JVM para escopo da versão, fila de áudio, OPUS e renomeação, utilizando stubs locais de BuildConfig (não substituem JUnit/Android)."
     },
     {
       "name": "release_notes",
       "status": "passed_local_static",
-      "details": "Notas de versão e teste de escopo sincronizados; execução JUnit/Android em CI pendente."
+      "details": "Notas da alpha.120 e teste de escopo atualizados; compilação/teste JUnit Android aguardando CI."
     },
     {
-      "name": "kotlin_psi",
+      "name": "kotlin_syntax",
       "status": "passed_local_psi",
-      "details": "Fontes Kotlin alteradas analisadas pelo parser Kotlin PSI; não é compilação Android."
+      "details": "111 arquivos Kotlin (app/src/main e app/src/test) analisados com parser PSI Kotlin 1.9 sem erros sintáticos; não equivale à compilação Android."
     },
     {
       "name": "resources_metadata",
       "status": "passed_local_static",
-      "details": "Arquivos XML/JSON analisados e referências de versão sincronizadas."
+      "details": "81 arquivos XML, 6 JSON válidos e versionCode 120 consistente em Gradle, VERSION, identidade, README e release."
     },
     {
       "name": "android_build",
       "status": "not_run",
-      "details": "SDK/Gradle Android não disponíveis no ambiente local; teste completo no GitHub Actions pendente."
+      "details": "Gradle/Android SDK não disponíveis no ambiente local; workflow 111 falhou antes dos testes por import ausente. Novo build pendente."
     }
   ]
 }

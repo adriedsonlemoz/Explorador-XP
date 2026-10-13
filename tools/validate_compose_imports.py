@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
-"""Check Compose extension imports that caused alpha.114 build 108 to fail.
+"""Guard known Compose extension imports before Android compilation.
 
-Source guard, not a substitute for compiling with the Android Gradle plugin.
+Catches the build-108 horizontalScroll and build-111 fillMaxHeight regressions.
+This is a *static* preflight, not an Android compiler substitute.
 """
 from pathlib import Path
 import re
 
-source = Path(__file__).resolve().parents[1] / "app/src/main/java/com/exploradorxp/app/ExplorerQuickAccess.kt"
-content = source.read_text(encoding="utf-8")
-needed = {
-    "horizontalScroll": "androidx.compose.foundation.horizontalScroll",
+root = Path(__file__).resolve().parents[1] / 'app/src/main/java'
+required_imports = {
+    'horizontalScroll': 'androidx.compose.foundation.horizontalScroll',
+    'fillMaxHeight': 'androidx.compose.foundation.layout.fillMaxHeight',
 }
-for modifier, expected_import in needed.items():
-    if re.search(rf"\.\s*{modifier}\s*\(", content):
-        if not re.search(rf"^import\s+{re.escape(expected_import)}\s*$", content, re.M):
-            raise SystemExit(f"FALHA: {source.name} utiliza {modifier} sem importar {expected_import}")
-        print(f"OK: {source.name} importa {modifier}")
-print("Compose imports: verificação estática aprovada")
+checked = 0
+for file in root.rglob('*.kt'):
+    source = file.read_text(encoding='utf-8')
+    for extension, fqname in required_imports.items():
+        if not re.search(rf'\.\s*{extension}\s*\(', source):
+            continue
+        checked += 1
+        namespace = fqname.rsplit('.', 1)[0]
+        direct = re.search(rf'^import\s+{re.escape(fqname)}(?:\s+as\s+\w+)?\s*$', source, re.M)
+        wildcard = re.search(rf'^import\s+{re.escape(namespace)}\.\*\s*$', source, re.M)
+        if not (direct or wildcard):
+            raise SystemExit(f'FALHA: {file.relative_to(root)} usa {extension} sem importar {fqname}')
+        print(f'OK: {file.name} importa {extension}')
+print(f'Compose imports: {checked} usos verificados')

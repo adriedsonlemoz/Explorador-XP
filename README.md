@@ -1,8 +1,12 @@
-> **Versão atual:** 0.1.0-alpha.119 (`versionCode 119`). Mini-player de música e reprodução em segundo plano via Media3 MediaSessionService. Build Android e teste em aparelho ainda pendentes.
+> **Versão atual:** 0.1.0-alpha.120 (`versionCode 120`). Corrigida a importação `fillMaxHeight` usada na seleção das galerias; verificação preventiva de importações Compose ampliada. Android build e testes no aparelho pendentes.
+
+**alpha.120 (correção build 111):** compilação da alpha.119 falhou em `:app:compileDebugKotlin` porque `ExplorerQuickAccess.kt` usava `Modifier.fillMaxHeight()` sem a extensão importada. A alpha.120 corrige esse erro e passa a verificar tanto `fillMaxHeight` quanto `horizontalScroll` antes do Gradle. Player e mini-player da alpha.119 mantidos.
+
+> **Versão histórica:** 0.1.0-alpha.119 (`versionCode 119`). Mini-player de música e reprodução em segundo plano via Media3 MediaSessionService. Build Android e teste em aparelho ainda pendentes.
 
 **alpha.119:** o player Media3 foi transferido da tela para um serviço de sessão de mídia, com controles de notificação/tela bloqueada, mini-player persistente durante a navegação e retorno ao player pelo mini-player e pela notificação. A fila da pasta e os controles da alpha.118 foram preservados.
 
-> **Versão atual:** 0.1.0-alpha.118 (`versionCode 118`). Player de música interno com Media3, capa e tags, fila por pasta e controles. Build Android e teste físico pendentes.
+> **Versão histórica:** 0.1.0-alpha.118 (`versionCode 118`). Player de música interno com Media3, capa e tags, fila por pasta e controles. Build Android e teste físico pendentes.
 
 # Explorador XP
 
@@ -48,7 +52,7 @@
 
 Gerenciador de arquivos Android nativo em **Kotlin + Jetpack Compose**, inspirado no Windows XP e redesenhado para uso confortável em telas de celular.
 
-**Versão atual:** `0.1.0-alpha.116` (`versionCode 116`)  
+**Versão histórica:** `0.1.0-alpha.116` (`versionCode 116`)  
 
 - A alpha.92 corrige o fechamento ao abrir **Ferramentas > Informações do dispositivo**. O rótulo da tela usava `Modifier.padding(bottom = (-3).dp)`, que o Compose rejeita durante a composição. A margem inválida foi removida; a proteção anterior continua tratando falhas na coleta do Android.
 - As **Novidades da atualização** agora explicam esta correção e lembram a busca opcional de nome/imagem do modelo pela internet (alpha.82), o funcionamento offline e as ferramentas recentes de Armazenamento/Aplicativos instalados.

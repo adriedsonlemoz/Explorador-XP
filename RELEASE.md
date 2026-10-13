@@ -1,17 +1,16 @@
-# Explorador XP 0.1.0-alpha.119
+# Explorador XP 0.1.0-alpha.120
 
-**Versão:** `0.1.0-alpha.119`  
-**Version code:** `119`
+**Versão:** `0.1.0-alpha.120`  
+**Version code:** `120`
 
-## Novidades
+## Correção do build 111
 
-- Mini-player na navegação com nome da faixa e controles anterior/pausar/retomar/próxima/encerrar.
-- Reprodução de música continua ao sair do player ou bloquear a tela com Media3 `MediaSessionService` e sessão de mídia do Android.
-- Controles do sistema na notificação e tela bloqueada; tocar a notificação retorna ao player.
-- A fila da pasta e a posição são preservadas ao reabrir, sem criar um segundo ExoPlayer.
-- Limpeza conservadora dos arquivos temporários compartilhados por outras aplicações.
+- Em `ExplorerQuickAccess.kt`, importada a extensão Compose `androidx.compose.foundation.layout.fillMaxHeight`, utilizada na barra de seleção de Fotos/Vídeos.
+- Verificação de importações Compose antes do Gradle estendida a todos os arquivos Kotlin, cobrindo `horizontalScroll` e `fillMaxHeight`.
+- Teste de Novidades adaptado para exibir somente o escopo da alpha.120.
+- Funcionalidades da alpha.119 preservadas (mini-player, Media3, reprodução de fundo e controles de mídia).
 
-## Testes pendentes
+## Pendências
 
-- Build completo do Gradle/Android, testes com MP3/FLAC/OPUS, fila, chamadas telefônicas, Bluetooth/fones, tela bloqueada, consumo de bateria e restrições em segundo plano do sistema.
-- A notificação de mídia fica sob responsabilidade do Media3; visibilidade depende das configurações e versão do Android.
+- Executar o workflow `Gerar APK` e confirmar `:app:testDebugUnitTest`, `:app:lintDebug` e `:app:assemblePerformance`.
+- Testar player de áudio, notificação, fones/Bluetooth, retomada e economia de bateria em aparelho Android.

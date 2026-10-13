@@ -1,3 +1,10 @@
+## 0.1.0-alpha.120 (2026-10-13)
+
+- Corrigida falha do workflow **Gerar APK 111** em `:app:compileDebugKotlin`: ausência do import `androidx.compose.foundation.layout.fillMaxHeight` em `ExplorerQuickAccess.kt` (linha 689 na alpha.119).
+- Ampliado `tools/validate_compose_imports.py` para verificar `fillMaxHeight` e `horizontalScroll` em todos os fontes Kotlin e interromper o workflow se faltar uma importação exigida.
+- Sincronizados `versionCode 120`, `versionName 0.1.0-alpha.120`, tela Novidades, escopo do teste, README, Release, metadados e verificador de arquitetura da versão.
+- Preservados player Media3, mini-player, segundo plano, controles de notificação e demais recursos anteriores. Build Android completo e testes em aparelho ainda pendentes.
+
 ## 0.1.0-alpha.119 (2026-10-13)
 
 - Serviço `MusicPlaybackService` com Media3 `MediaSessionService`, player único e `MediaSession`; sessão de mídia fornece os controles de sistema e a notificação, usando foreground service tipo `mediaPlayback`.
@@ -15,7 +22,7 @@
 - Reconhecimento de .opus harmonizado nos ícones, tipos e análise de armazenamento.
 - versionCode 118, documentação e notas da versão sincronizados. Compilação Android/validação física pendentes.
 
-## 0.1.0-alpha.118 (2026-10-13)
+## 0.1.0-alpha.117 (2026-10-13)
 
 - Fotos/Vídeos: barra de menus e navegação extraídas para componentes compartilhados com Arquivos (ExplorerChrome); comandos e destinos Ferramentas/Ajuda unificados. Grade, lista e filtros de origem continuam próprios de cada mídia.
 - Galerias: Pesquisar pastas/arquivos carregados, Novo arquivo/Nova pasta na pasta real, Colar com destino explícito e tratamento de conflito, seleção múltipla com Copiar/Mover/Renomear/Compartilhar/ZIP/Lixeira. Ações indisponíveis na raiz virtual "Pastas" permanecem desativadas.
