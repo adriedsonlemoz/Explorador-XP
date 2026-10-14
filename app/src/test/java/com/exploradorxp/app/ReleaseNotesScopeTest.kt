@@ -11,9 +11,9 @@ class ReleaseNotesScopeTest {
         assertEquals(BuildConfig.VERSION_NAME, info.versionName)
         assertEquals(BuildConfig.VERSION_CODE, info.versionCode)
         assertEquals(3, info.changes.size)
-        assertTrue(info.changes.any { it.contains("abas") && it.contains("OBB") })
-        assertTrue(info.changes.any { it.contains("aplicativos") && it.contains("parciais") })
-        assertTrue(info.changes.any { it.contains("ZIP") && it.contains("GitHub Manager") })
+        assertTrue(info.changes.any { it.contains("chips") && it.contains("ícones") })
+        assertTrue(info.changes.any { it.contains("Usuário") && it.contains("Sistema") })
+        assertTrue(info.changes.any { it.contains("Início") && it.contains("acessíveis") })
         assertFalse(info.changes.any { it.contains("ProduceState") || it.contains("fillMaxHeight") })
     }
 }

@@ -1,9 +1,10 @@
 {
-  "version_build": "0.1.0-alpha.123",
-  "version_code": 123,
-  "manager_version": "0.1.0-alpha.123",
+  "version_build": "0.1.0-alpha.124",
+  "version_code": 124,
+  "manager_version": "0.1.0-alpha.124",
   "notes": [
-    "Filtros de aplicativos em uma linha rolável.",
-    "Barra inferior com botão Início para voltar à pasta principal do armazenamento."
+    "Filtros de Aplicativos instalados em uma linha com chips compactos e ícones distintos.",
+    "Seleção e acessibilidade dos filtros preservadas.",
+    "Atalho Início na barra inferior com sete destinos preservado."
   ]
 }

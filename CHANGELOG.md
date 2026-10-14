@@ -1,4 +1,11 @@
-## 0.1.0-alpha.123 (2026-10-13)
+## 0.1.0-alpha.124 (2026-10-14)
+
+- Redesenha os filtros rápidos de Aplicativos instalados como chips compactos com ícones, todos em uma linha rolável.
+- Diferencia visualmente Todos, Usuário, Sistema, Nome, Maiores, Menores, Instalados e Atualizados; conserva filtro de tipo e ordenação simultâneos.
+- Mantém realce dos filtros ativos e descrição de acessibilidade para estado selecionado.
+- Preserva o botão Início central da barra inferior com sete atalhos e as demais funcionalidades da alpha.123.
+
+## 0.1.0-alpha.124 (2026-10-13)
 
 - Unifica os filtros de Aplicativos instalados em uma única linha horizontal com Todos, Usuário, Sistema, Nome, Maiores, Menores, Instalados e Atualizados.
 - Adiciona o botão Início na barra inferior fixa do Explorador XP, posicionado entre Downloads e Rede.

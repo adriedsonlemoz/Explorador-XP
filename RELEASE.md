@@ -1,15 +1,15 @@
-# Explorador XP 0.1.0-alpha.123
+# Explorador XP 0.1.0-alpha.124
 
-**Versão:** `0.1.0-alpha.123`  
-**versionCode:** `123`
+**Versão:** `0.1.0-alpha.124`  
+**versionCode:** `124`
 
 ## Destaques
 
-- Filtros da tela Aplicativos instalados unificados em uma única linha rolável.
-- Novo botão **Início** na barra inferior fixa, entre Downloads e Rede.
-- O botão Início leva para a pasta principal do armazenamento e fica destacado quando a tela principal está ativa.
-- Mantidas as melhorias anteriores de armazenamento, ZIP sem extensão, player de música e mini-player.
+- Filtros rápidos de Aplicativos instalados em chips menores com ícones: Todos, Usuário, Sistema, Nome, Maiores, Menores, Instalados e Atualizados.
+- Uma única faixa horizontal rolável, com realce do filtro de tipo e do critério de ordem ativos.
+- Barra inferior de sete atalhos com Início no centro preservada.
+- Sem mudança na lógica dos filtros, na consulta de tamanho, nas permissões ou nas operações de arquivos.
 
-## Observações
+## Validação
 
-- A compilação Android completa e os testes visuais no aparelho continuam pendentes.
+- Verificações locais de estrutura, metadados e XML/JSON; build Android completo e testes visuais no aparelho ainda pendentes.

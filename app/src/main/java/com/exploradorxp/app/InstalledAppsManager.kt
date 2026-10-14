@@ -44,6 +44,15 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.SortByAlpha
+import androidx.compose.material.icons.rounded.Update
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,6 +66,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -342,18 +356,21 @@ internal fun InstalledAppsManagerScreen(onDismiss: () -> Unit, initialSort: AppM
                 }
             }
             Spacer(Modifier.height(8.dp))
+            // Os oito atalhos permanecem em uma única faixa rolável, mesmo com fontes maiores.
+            // Os ícones substituem as setas textuais e ajudam a identificar a classificação.
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                AppManagerChip("Todos", filter == AppManagerFilter.ALL) { filter = AppManagerFilter.ALL }
-                AppManagerChip("Usuário", filter == AppManagerFilter.USER) { filter = AppManagerFilter.USER }
-                AppManagerChip("Sistema", filter == AppManagerFilter.SYSTEM) { filter = AppManagerFilter.SYSTEM }
-                AppManagerChip("Nome", sort == AppManagerSort.NAME) { sort = AppManagerSort.NAME }
-                AppManagerChip("Maiores ↓", sort == AppManagerSort.SIZE) { sort = AppManagerSort.SIZE }
-                AppManagerChip("Menores ↑", sort == AppManagerSort.SIZE_ASC) { sort = AppManagerSort.SIZE_ASC }
-                AppManagerChip("Instalados", sort == AppManagerSort.INSTALL_DATE) { sort = AppManagerSort.INSTALL_DATE }
-                AppManagerChip("Atualizados", sort == AppManagerSort.LAST_UPDATE) { sort = AppManagerSort.LAST_UPDATE }
+                AppManagerChip("Todos", Icons.Rounded.Apps, filter == AppManagerFilter.ALL) { filter = AppManagerFilter.ALL }
+                AppManagerChip("Usuário", Icons.Rounded.Person, filter == AppManagerFilter.USER) { filter = AppManagerFilter.USER }
+                AppManagerChip("Sistema", Icons.Rounded.Android, filter == AppManagerFilter.SYSTEM) { filter = AppManagerFilter.SYSTEM }
+                AppManagerChip("Nome", Icons.Rounded.SortByAlpha, sort == AppManagerSort.NAME) { sort = AppManagerSort.NAME }
+                AppManagerChip("Maiores", Icons.Rounded.ArrowDownward, sort == AppManagerSort.SIZE) { sort = AppManagerSort.SIZE }
+                AppManagerChip("Menores", Icons.Rounded.ArrowUpward, sort == AppManagerSort.SIZE_ASC) { sort = AppManagerSort.SIZE_ASC }
+                AppManagerChip("Instalados", Icons.Rounded.AccessTime, sort == AppManagerSort.INSTALL_DATE) { sort = AppManagerSort.INSTALL_DATE }
+                AppManagerChip("Atualizados", Icons.Rounded.Update, sort == AppManagerSort.LAST_UPDATE) { sort = AppManagerSort.LAST_UPDATE }
             }
             Spacer(Modifier.height(7.dp))
             val userCount = apps.count { !it.isSystem }
@@ -580,16 +597,41 @@ private fun AppManagerTitle(
 }
 
 @Composable
-private fun AppManagerChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
+private fun AppManagerChip(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (selected) Color(0xFFDDEEFF) else Color.White)
-            .border(1.dp, if (selected) XpBlue else XpControlBorder, RoundedCornerShape(6.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 9.dp, vertical = 6.dp),
+            .height(34.dp)
+            .clip(shape)
+            .background(if (selected) XpSelection else Color.White)
+            .border(1.dp, if (selected) XpBlue else XpControlBorder, shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics {
+                this.selected = selected
+                stateDescription = if (selected) "Selecionado" else "Não selecionado"
+            }
+            .padding(horizontal = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(label, fontSize = 10.5.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, color = Color(0xFF27435F))
+        Icon(
+            imageVector = icon,
+            contentDescription = null, // Rótulo do chip já identifica a ação.
+            tint = if (selected) XpBlueDark else XpTextSecondary,
+            modifier = Modifier.size(14.dp),
+        )
+        Text(
+            text = label,
+            fontSize = 10.3.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = Color(0xFF27435F),
+            maxLines = 1,
+        )
     }
 }
 
