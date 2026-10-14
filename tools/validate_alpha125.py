@@ -3,12 +3,12 @@
 import json
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
-assert (root/'VERSION').read_text().strip() == '0.1.0-alpha.124'
+assert (root/'VERSION').read_text().strip() == '0.1.0-alpha.125'
 gradle = (root/'app/build.gradle.kts').read_text()
-assert 'versionCode = 124' in gradle and 'versionName = "0.1.0-alpha.124"' in gradle
+assert 'versionCode = 125' in gradle and 'versionName = "0.1.0-alpha.125"' in gradle
 for meta in ('github-manager.json', 'app_identity.json'):
     data = json.loads((root/meta).read_text())
-    assert data.get('versionCode') == 124 and data.get('versionName', data.get('version')) == '0.1.0-alpha.124'
+    assert data.get('versionCode') == 125 and data.get('versionName', data.get('version')) == '0.1.0-alpha.125'
 src = (root/'app/src/main/java/com/exploradorxp/app/InstalledAppsManager.kt').read_text()
 assert src.count('AppManagerChip("') == 8
 for name in ('Todos','Usuário','Sistema','Nome','Maiores','Menores','Instalados','Atualizados'):
@@ -23,5 +23,14 @@ screen=(root/'app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt').read_te
 assert 'ExplorerQuickDestination.HOME -> {' in screen
 assert 'onTabChange(ExplorerTab.FILES)' in screen and 'onHome()' in screen
 news=(root/'app/src/main/java/com/exploradorxp/app/ReleaseNotes.kt').read_text()
-assert 'chips compactos com ícones' in news
-print('OK: alpha.124 chips, navigation, version metadata, release notes')
+assert 'sete atalhos' in news
+print('OK: alpha.125 chips, navigation, version metadata, release notes')
+
+quicktest=(root/'app/src/test/java/com/exploradorxp/app/ExplorerQuickAccessTest.kt').read_text()
+assert 'bottomBarKeepsSevenShortcutsWithHomeCentered' in quicktest
+expected=['PHOTOS','VIDEOS','DOWNLOADS','HOME','NETWORK','TRASH','TOOLS']
+start=quicktest.index('assertEquals(listOf(')
+end=quicktest.index('), ExplorerQuickDestination.values()',start)
+import re
+assert re.findall(r'ExplorerQuickDestination\.([A-Z_]+),', quicktest[start:end]) == expected
+assert quicktest[start:end].count('ExplorerQuickDestination.') == 7

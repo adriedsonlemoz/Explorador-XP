@@ -30,8 +30,8 @@ jobs:
       - name: Conferir estados de áudio Compose
         run: python3 tools/validate_audio_compose_state.py
 
-      - name: Validar filtros compactos e versão alpha.124
-        run: python3 tools/validate_alpha124.py
+      - name: Validar barra de sete atalhos e versão alpha.125
+        run: python3 tools/validate_alpha125.py
 
       - name: Testar
         run: gradle :app:testDebugUnitTest --stacktrace

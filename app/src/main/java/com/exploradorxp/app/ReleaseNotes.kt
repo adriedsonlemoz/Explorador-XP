@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Filtros rápidos de aplicativos redesenhados em chips compactos com ícones, numa única linha rolável.",
-                "Identificação visual de Todos, Usuário, Sistema e das classificações por nome, tamanho e datas.",
-                "Seleção dos filtros mantida, com estados acessíveis e botão Início da barra inferior preservado.",
+                "Corrigido teste da barra inferior para reconhecer os sete atalhos, com Início no centro.",
+                "Mantidos os filtros compactos de aplicativos e as funcionalidades da versão anterior.",
+                "Verificação preventiva de ordem e quantidade de atalhos atualizada para evitar regressões.",
             )
         )
 }
