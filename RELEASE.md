@@ -1,14 +1,15 @@
-# Explorador XP 0.1.0-alpha.122
+# Explorador XP 0.1.0-alpha.123
 
-**Versão:** `0.1.0-alpha.122`  
-**Version code:** `122`
+**Versão:** `0.1.0-alpha.123`  
+**versionCode:** `123`
 
-## Mudanças
-- Abas de análise de Armazenamento e filtros de arquivos grandes.
-- Dados OBB como categoria própria e informação de espaço dos apps com total/total parcial, sujeitos a Acesso ao uso.
-- Filtros rápidos de apps por tamanho crescente/decrescente, instalação e atualização.
-- Abrir arquivos ZIP sem extensão do GitHub Manager via ação Abrir com e pelo explorador.
-- Limitações: seleção e suporte dependem do MIME enviado pelo app de origem; somente ZIPs reconhecidos são aceitos no fluxo genérico.
+## Destaques
 
-## Validação
-- Kotlin/JVM e análise estática locais; build Android completo e testes no dispositivo pendentes.
+- Filtros da tela Aplicativos instalados unificados em uma única linha rolável.
+- Novo botão **Início** na barra inferior fixa, entre Downloads e Rede.
+- O botão Início leva para a pasta principal do armazenamento e fica destacado quando a tela principal está ativa.
+- Mantidas as melhorias anteriores de armazenamento, ZIP sem extensão, player de música e mini-player.
+
+## Observações
+
+- A compilação Android completa e os testes visuais no aparelho continuam pendentes.

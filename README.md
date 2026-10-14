@@ -1,4 +1,4 @@
-> **Versão atual:** 0.1.0-alpha.122 (`versionCode 122`). Armazenamento em abas, filtros rápidos de aplicativos e abertura de ZIP sem extensão enviados pelo GitHub Manager. Build Android completo e testes em aparelho ainda pendentes.
+> **Versão atual:** 0.1.0-alpha.123 (`versionCode 123`). Filtros de aplicativos em linha única e botão Início na barra inferior para voltar à pasta principal do armazenamento. Build Android completo e testes em aparelho ainda pendentes.
 
 **alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 

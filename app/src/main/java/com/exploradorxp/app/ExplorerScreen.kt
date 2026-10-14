@@ -249,6 +249,10 @@ fun ExplorerScreen(
             ExplorerQuickDestination.PHOTOS -> mediaShortcut = MediaShortcutKind.PHOTOS
             ExplorerQuickDestination.VIDEOS -> mediaShortcut = MediaShortcutKind.VIDEOS
             ExplorerQuickDestination.DOWNLOADS -> onTabChange(ExplorerTab.DOWNLOADS)
+            ExplorerQuickDestination.HOME -> {
+                onTabChange(ExplorerTab.FILES)
+                onHome()
+            }
             ExplorerQuickDestination.NETWORK -> showNetworkExplorer = true
             ExplorerQuickDestination.TRASH -> { showTrash = true; onLoadTrash() }
             ExplorerQuickDestination.TOOLS -> showToolsPanel = true
@@ -551,7 +555,11 @@ fun ExplorerScreen(
             },
         )
         ExplorerQuickAccessBar(
-            active = if (state.tab == ExplorerTab.DOWNLOADS) ExplorerQuickDestination.DOWNLOADS else null,
+            active = when (state.tab) {
+                ExplorerTab.DOWNLOADS -> ExplorerQuickDestination.DOWNLOADS
+                ExplorerTab.FILES -> ExplorerQuickDestination.HOME
+                else -> null
+            },
             onNavigate = ::navigateShortcut,
             trashCount = trashCount,
             trashBytes = trashBytes,

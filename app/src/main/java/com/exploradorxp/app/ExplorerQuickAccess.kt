@@ -91,7 +91,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /** Barra persistente para o explorador e todas as páginas internas. */
-internal enum class ExplorerQuickDestination { PHOTOS, VIDEOS, DOWNLOADS, NETWORK, TRASH, TOOLS }
+internal enum class ExplorerQuickDestination { PHOTOS, VIDEOS, DOWNLOADS, HOME, NETWORK, TRASH, TOOLS }
 internal enum class MediaShortcutKind { PHOTOS, VIDEOS }
 
 @Composable
@@ -105,6 +105,7 @@ internal fun ExplorerQuickAccessBar(
         Triple(ExplorerQuickDestination.PHOTOS, "Fotos", R.drawable.xp_folder_image),
         Triple(ExplorerQuickDestination.VIDEOS, "Vídeos", R.drawable.xp_folder_video),
         Triple(ExplorerQuickDestination.DOWNLOADS, "Downloads", R.drawable.folder_downloads),
+        Triple(ExplorerQuickDestination.HOME, "Início", R.drawable.xp_home),
         Triple(ExplorerQuickDestination.NETWORK, "Rede", R.drawable.device_mobile),
         Triple(ExplorerQuickDestination.TRASH, "Lixeira", if ((trashCount ?: 0) > 0) R.drawable.trash_full else R.drawable.trash_empty),
         Triple(ExplorerQuickDestination.TOOLS, "Ferramentas", R.drawable.settings),

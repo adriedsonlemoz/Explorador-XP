@@ -342,16 +342,13 @@ internal fun InstalledAppsManagerScreen(onDismiss: () -> Unit, initialSort: AppM
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AppManagerChip("Todos", filter == AppManagerFilter.ALL) { filter = AppManagerFilter.ALL }
-                AppManagerChip("Usuário", filter == AppManagerFilter.USER) { filter = AppManagerFilter.USER }
-                AppManagerChip("Sistema", filter == AppManagerFilter.SYSTEM) { filter = AppManagerFilter.SYSTEM }
-            }
-            Spacer(Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                AppManagerChip("Todos", filter == AppManagerFilter.ALL) { filter = AppManagerFilter.ALL }
+                AppManagerChip("Usuário", filter == AppManagerFilter.USER) { filter = AppManagerFilter.USER }
+                AppManagerChip("Sistema", filter == AppManagerFilter.SYSTEM) { filter = AppManagerFilter.SYSTEM }
                 AppManagerChip("Nome", sort == AppManagerSort.NAME) { sort = AppManagerSort.NAME }
                 AppManagerChip("Maiores ↓", sort == AppManagerSort.SIZE) { sort = AppManagerSort.SIZE }
                 AppManagerChip("Menores ↑", sort == AppManagerSort.SIZE_ASC) { sort = AppManagerSort.SIZE_ASC }

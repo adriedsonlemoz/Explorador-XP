@@ -1,29 +1,9 @@
 {
-  "version_build": "0.1.0-alpha.122",
-  "version_code": 122,
-  "manager_version": "0.1.0-alpha.122",
-  "application_id": "com.exploradorxp.app",
-  "scope": "alpha.122: abas de armazenamento, aplicativos e artefatos ZIP sem extensão",
-  "checks": [
-    {
-      "name": "storage_tabs_and_filters",
-      "status": "passed_local_static",
-      "details": "3 abas e filtragem por tipo dos 100 maiores analisados sem refazer scan."
-    },
-    {
-      "name": "apps_summary",
-      "status": "passed_local_jvm",
-      "details": "Apuração de totais medidos/parciais sem dobrar o cache; tamanho crescente/decrescente."
-    },
-    {
-      "name": "extensionless_zip",
-      "status": "passed_local_jvm",
-      "details": "MIME genérico só habilita recepção para nomes genéricos; após a cópia arquivo deve ser ZIP detectado, com checagem antecipada de magic."
-    },
-    {
-      "name": "android_build",
-      "status": "not_run",
-      "details": "Compilação e validação do Android Lint completas dependem de CI."
-    }
+  "version_build": "0.1.0-alpha.123",
+  "version_code": 123,
+  "manager_version": "0.1.0-alpha.123",
+  "notes": [
+    "Filtros de aplicativos em uma linha rolável.",
+    "Barra inferior com botão Início para voltar à pasta principal do armazenamento."
   ]
 }
