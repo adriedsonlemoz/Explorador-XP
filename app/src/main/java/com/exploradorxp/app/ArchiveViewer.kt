@@ -303,12 +303,6 @@ internal fun ArchiveZipViewer(
                     modifier = Modifier.weight(1f),
                     enabled = archiveInfo != null,
                 ) { verifyArchive() }
-                ArchiveCompactActionButton(
-                    label = "Info",
-                    icon = R.drawable.info,
-                    modifier = Modifier.weight(1f),
-                    enabled = archiveInfo != null,
-                ) { showArchiveDetails = true }
             }
         }
 

@@ -1,4 +1,4 @@
-> **Versão atual:** 0.1.0-alpha.128 (`versionCode 128`). Corrigido o teste das novidades que bloqueava o build 119; o workflow agora valida metadados e interface sem versão fixa. Compilação Kotlin da alpha.127 confirmada no CI; geração do APK e teste em aparelho ainda pendentes.
+> **Versão atual:** 0.1.0-alpha.129 (`versionCode 129`). Visualizador ZIP com 3 ações rápidas e Info mantida no menu; APK mostra versão instalada/arquivo em destaque e 4 ações na mesma linha. Compilação Android completa e testes físicos pendentes.
 
 **alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 

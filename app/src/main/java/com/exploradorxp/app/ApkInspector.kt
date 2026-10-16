@@ -63,14 +63,14 @@ internal data class ApkInfo(
 
     val newPermissions: List<ApkPermission>
         get() {
-            if (installedVersion == null) return emptyList()
+            if (installedVersionCode == null) return emptyList()
             val installedNames = installedPermissions.mapTo(hashSetOf()) { it.name }
             return requestedPermissions.filterNot { it.name in installedNames }
         }
 
     val removedPermissions: List<ApkPermission>
         get() {
-            if (installedVersion == null) return emptyList()
+            if (installedVersionCode == null) return emptyList()
             val apkNames = requestedPermissions.mapTo(hashSetOf()) { it.name }
             return installedPermissions.filterNot { it.name in apkNames }
         }

@@ -45,6 +45,17 @@ internal fun apkInstallPlan(
     else -> ApkInstallPlan.DIRECT
 }
 
+/** Nome legível quando o Android fornece apenas versionCode, sem versionName. */
+internal fun apkVersionLabel(versionName: String?, versionCode: Long?): String {
+    val name = versionName?.trim().orEmpty().takeUnless { it.isBlank() || it == "Desconhecida" }
+    return when {
+        name != null && versionCode != null -> "$name (cód. $versionCode)"
+        name != null -> name
+        versionCode != null -> "cód. $versionCode"
+        else -> "Não informada"
+    }
+}
+
 internal fun apkVersionRelation(apkVersionCode: Long, installedVersionCode: Long?): ApkVersionRelation = when {
     installedVersionCode == null -> ApkVersionRelation.NOT_INSTALLED
     apkVersionCode > installedVersionCode -> ApkVersionRelation.UPGRADE

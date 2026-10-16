@@ -1,3 +1,12 @@
+## 0.1.0-alpha.129 (2026-10-16)
+
+- ZIP: botão Info removido somente da faixa superior; detalhes do arquivo permanecem disponíveis no menu ⋮.
+- A faixa superior ZIP usa três ações uniformes: Extrair, Salvar e Verificar.
+- APK: versão instalada (quando disponível) e versão do APK agora aparecem no cartão de identificação, antes do nome de pacote/certificado; comparação detalhada segue expansível.
+- APK: ações de Instalar/Reinstalar/Atualizar, Abrir, Desinstalar e Gerenciar em linha única, com ícones acima dos títulos. O fluxo de downgrade e confirmações foi preservado.
+- Versões sem `versionName` usam `versionCode`, evitando ocultar ações quando o aplicativo está instalado.
+- Testes adicionados para rotulagem de versões com e sem `versionName`. Build Android e testes visuais pendentes.
+
 ## 0.1.0-alpha.128 (2026-10-16)
 
 - Corrige o build 119: o teste `ReleaseNotesScopeTest` não exige mais as frases antigas da alpha.126, que causaram falha na tarefa `:app:testDebugUnitTest` mesmo após compilação Kotlin bem-sucedida (168 testes, uma falha).

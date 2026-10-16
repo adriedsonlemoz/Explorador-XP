@@ -58,9 +58,21 @@ assert re.findall(r'ExplorerQuickDestination\.([A-Z_]+),', quicktest[start:end])
 assert quicktest[start:end].count('ExplorerQuickDestination.') == 7
 
 # Regressões de interface: ZIP e editor
-assert zip_ui.count('ArchiveCompactActionButton(') == 5  # quatro usos + declaração
+assert zip_ui.count('ArchiveCompactActionButton(') == 4  # três usos + declaração
 assert 'ArchivePrimaryActionButton(' not in zip_ui and 'ArchiveSecondaryActionButton(' not in zip_ui
 assert 'height(49.dp)' in zip_ui
+assert 'ArchiveMenuText("Informações")' in zip_ui  # Acesso pelo menu preservado.
+assert 'label = "Info"' not in zip_ui
+assert all(f'label = "{label}"' in zip_ui for label in ('Verificar',))
+apk_ui = (root/'app/src/main/java/com/exploradorxp/app/InternalViewer.kt').read_text()
+apk_support = (root/'app/src/main/java/com/exploradorxp/app/ApkInspectorSupport.kt').read_text()
+assert '"Instalada: ${apkVersionLabel(info.installedVersion, info.installedVersionCode)}"' in apk_ui
+assert '"No APK: ${apkVersionLabel(info.versionName, info.versionCode)}"' in apk_ui
+assert apk_ui.count('ApkCompactActionButton(') == 5  # Quatro ações + declaração.
+assert 'label = "Desinstalar"' in apk_ui and 'label = "Gerenciar"' in apk_ui
+assert 'showDowngradeConfirm = true' in apk_ui and 'showUninstallConfirm = true' in apk_ui
+assert 'apkVersionLabel(versionName: String?, versionCode: Long?)' in apk_support
+assert 'visibleVersionLabelHandlesMissingVersionName' in (root/'app/src/test/java/com/exploradorxp/app/ApkInspectorSupportTest.kt').read_text()
 editor = (root/'app/src/main/java/com/exploradorxp/app/TextCodeEditorViewer.kt').read_text()
 assert 'EditorClipboardBar(' in editor and 'EditorClipboardAction(' in editor
 assert editor.count('EditorClipboardAction(') == 6

@@ -1,13 +1,19 @@
-# Explorador XP 0.1.0-alpha.128
+# Explorador XP 0.1.0-alpha.129
 
-**Versão:** `0.1.0-alpha.128`  
-**versionCode:** `128`
+**Versão:** `0.1.0-alpha.129`  
+**versionCode:** `129`
 
-## Correção do build 119
+## Interface ZIP
 
-- Ajustado o teste unitário da tela **Novidades** que procurava textos da alpha.126, mas era executado sobre a alpha.127.
-- Agora o teste valida as propriedades estáveis das novidades, sem exigir frases específicas de lançamentos antigos.
-- O workflow valida a versão atual dinamicamente, evitando que o verificador fique preso ao número de uma versão anterior.
-- Mantidos os quatro botões compactos do visualizador ZIP e a barra de comandos do editor.
+- Faixa superior com **Extrair, Salvar e Verificar** em uma única linha, de larguras iguais.
+- **Informações** continua disponível em **⋮ > Informações**, sem perda da função.
 
-**Validação:** o build 119 compilou o Kotlin da alpha.127 e falhou por um dos 168 testes. Esta versão inclui correção da causa detectada. Compilação Android completa, lint e teste em aparelho devem ser repetidos no GitHub Actions.
+## Interface de APK
+
+- Cartão do aplicativo destaca a **versão instalada** quando identificada e a **versão do APK selecionado**, utilizando dados reais do PackageManager.
+- Se o Android não fornecer `versionName`, o `versionCode` aparece como alternativa, sem inventar versões.
+- Quando há aplicativo instalado, as quatro ações **Instalar/Reinstalar/Atualizar, Abrir, Desinstalar e Gerenciar** aparecem em uma única linha com ícone acima do texto. Versão anterior usa o rótulo compacto **Anterior**, mantendo confirmação de remoção antes da instalação.
+- Quando não há aplicativo instalado, o botão **Instalar** permanece em largura total.
+- Fluxos de permissões, assinatura, confirmação de desinstalação e atualização não foram alterados.
+
+**Validação:** testes isolados e inspeção estrutural do código; Gradle/Android, visualização em aparelhos e geração de APK ainda pendentes.

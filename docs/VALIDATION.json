@@ -1,10 +1,11 @@
 {
-  "version_build": "0.1.0-alpha.128",
-  "version_code": 128,
-  "manager_version": "0.1.0-alpha.128",
+  "version_build": "0.1.0-alpha.129",
+  "version_code": 129,
+  "manager_version": "0.1.0-alpha.129",
   "notes": [
-    "Build 119: falha em ReleaseNotesScopeTest por expectativa desatualizada; compilação Kotlin anterior aprovada.",
-    "Teste das novidades generalizado e workflow com validação de metadados dinâmica.",
-    "As interfaces ZIP e editor da alpha.127 foram preservadas; build Android e lint ainda não reexecutados."
+    "ZIP agora mostra três botões, Info continua disponível no menu ⋮.",
+    "Versões do APK e do aplicativo instalado destacadas no cabeçalho; quatro ações em faixa única.",
+    "Versão sem versionName usa versionCode; teste de rotulagem atualizado.",
+    "Compilação Gradle/Android, lint e testes em aparelho ainda pendentes."
   ]
 }

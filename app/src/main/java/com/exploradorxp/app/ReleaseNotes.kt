@@ -18,7 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigido um teste desatualizado das novidades que interrompia a geração do APK no GitHub Actions.",
+                "Visualizador ZIP com Extrair, Salvar e Verificar na mesma linha; informações seguem no menu.",
+                "APK: versão instalada e versão do arquivo destacadas no cartão superior.",
+                "APK instalado: Reinstalar/Atualizar, Abrir, Desinstalar e Gerenciar em uma linha compacta.",
             )
         )
 }

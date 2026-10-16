@@ -18,6 +18,15 @@ class ApkInspectorSupportTest {
     }
 
     @Test
+    fun visibleVersionLabelHandlesMissingVersionName() {
+        assertEquals("1.4.58 (cód. 66)", apkVersionLabel("1.4.58", 66L))
+        assertEquals("cód. 66", apkVersionLabel(null, 66L))
+        assertEquals("cód. 66", apkVersionLabel("Desconhecida", 66L))
+        assertEquals("2.0", apkVersionLabel("2.0", null))
+        assertEquals("Não informada", apkVersionLabel(null, null))
+    }
+
+    @Test
     fun comparesSignerDigestsByCommonCertificate() {
         assertEquals(ApkSignatureRelation.NOT_APPLICABLE, apkSignatureRelation(listOf("A"), null))
         assertEquals(ApkSignatureRelation.UNKNOWN, apkSignatureRelation(emptyList(), listOf("A")))
