@@ -1,10 +1,10 @@
 {
-  "version_build": "0.1.0-alpha.127",
-  "version_code": 127,
-  "manager_version": "0.1.0-alpha.127",
+  "version_build": "0.1.0-alpha.128",
+  "version_code": 128,
+  "manager_version": "0.1.0-alpha.128",
   "notes": [
-    "Quatro ações do ZIP em uma única linha com ícones e textos compactos.",
-    "Barra inferior do editor com selecionar palavra, copiar, colar, recortar e selecionar tudo.",
-    "Ações de recortar e colar respeitam somente leitura; seleção de palavra testada."
+    "Build 119: falha em ReleaseNotesScopeTest por expectativa desatualizada; compilação Kotlin anterior aprovada.",
+    "Teste das novidades generalizado e workflow com validação de metadados dinâmica.",
+    "As interfaces ZIP e editor da alpha.127 foram preservadas; build Android e lint ainda não reexecutados."
   ]
 }

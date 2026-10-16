@@ -1,10 +1,10 @@
-> **Versão atual:** 0.1.0-alpha.127 (`versionCode 127`). ZIP com quatro botões em uma linha; editor com ações rápidas de seleção e área de transferência no rodapé. Compilação Android e testes em aparelho pendentes.
+> **Versão atual:** 0.1.0-alpha.128 (`versionCode 128`). Corrigido o teste das novidades que bloqueava o build 119; o workflow agora valida metadados e interface sem versão fixa. Compilação Kotlin da alpha.127 confirmada no CI; geração do APK e teste em aparelho ainda pendentes.
 
 **alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 
 **alpha.121 (correção build 112):** em `AudioPlayerViewer.kt`, leitura da fila e metadados/capa continuam em `Dispatchers.IO`, mas o estado Compose agora usa `remember` + `mutableStateOf` e `LaunchedEffect`, em vez das duas chamadas `produceState` sinalizadas pelo Lint. Adicionado `tools/validate_audio_compose_state.py` ao workflow. Player Media3, mini-player e reprodução em segundo plano preservados.
 
-> **Versão atual:** 0.1.0-alpha.120 (`versionCode 120`). Corrigida a importação `fillMaxHeight` usada na seleção das galerias; verificação preventiva de importações Compose ampliada. Android build e testes no aparelho pendentes.
+> **Versão histórica:** 0.1.0-alpha.120 (`versionCode 120`). Corrigida a importação `fillMaxHeight` usada na seleção das galerias; verificação preventiva de importações Compose ampliada. Android build e testes no aparelho pendentes.
 
 **alpha.120 (correção build 111):** compilação da alpha.119 falhou em `:app:compileDebugKotlin` porque `ExplorerQuickAccess.kt` usava `Modifier.fillMaxHeight()` sem a extensão importada. A alpha.120 corrige esse erro e passa a verificar tanto `fillMaxHeight` quanto `horizontalScroll` antes do Gradle. Player e mini-player da alpha.119 mantidos.
 

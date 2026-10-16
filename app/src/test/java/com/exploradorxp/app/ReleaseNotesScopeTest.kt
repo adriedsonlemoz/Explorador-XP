@@ -10,10 +10,17 @@ class ReleaseNotesScopeTest {
         val info = ReleaseNotes.current
         assertEquals(BuildConfig.VERSION_NAME, info.versionName)
         assertEquals(BuildConfig.VERSION_CODE, info.versionCode)
-        assertEquals(3, info.changes.size)
-        assertTrue(info.changes.any { it.contains("Salvar ZIP") })
-        assertTrue(info.changes.any { it.contains("duas linhas") })
-        assertTrue(info.changes.any { it.contains("streaming") })
-        assertFalse(info.changes.any { it.contains("ProduceState") || it.contains("fillMaxHeight") })
+        assertTrue(info.title.isNotBlank())
+        assertTrue("A tela de novidades precisa conter alterações.", info.changes.isNotEmpty())
+        assertTrue("A tela de novidades deve ser compacta.", info.changes.size <= 5)
+        assertEquals("Novidades não podem estar duplicadas.", info.changes.size, info.changes.toSet().size)
+        assertTrue("Itens vazios ou longos demais.", info.changes.all {
+            it.isNotBlank() && it == it.trim() && it.length <= 280
+        })
+        // Não exigir frases de uma versão específica: isso bloqueava o próximo release.
+        // Menções a números de versões antigas também não são novidades da versão atual.
+        val versionReference = Regex("""(?i)\balpha\.\d+\b""")
+        assertFalse("A tela de novidades não deve conter o histórico de versões.",
+            info.changes.any { versionReference.containsMatchIn(it) })
     }
 }

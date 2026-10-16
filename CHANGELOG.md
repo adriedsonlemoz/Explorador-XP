@@ -1,3 +1,11 @@
+## 0.1.0-alpha.128 (2026-10-16)
+
+- Corrige o build 119: o teste `ReleaseNotesScopeTest` não exige mais as frases antigas da alpha.126, que causaram falha na tarefa `:app:testDebugUnitTest` mesmo após compilação Kotlin bem-sucedida (168 testes, uma falha).
+- O teste agora verifica metadados da versão, conteúdo não vazio, limite de entradas e ausência de itens duplicados ou histórico de versões na tela de novidades.
+- O workflow passa a usar `tools/validate_source.py`, com versão obtida de `VERSION` e validação cruzada com Gradle, JSON, README, CHANGELOG e RELEASE, sem valor fixo de alpha.127.
+- Preservados quatro botões do ZIP na mesma linha e cinco ações rápidas de edição de código, sem alterações de comportamento.
+- Build Android completo, lint e teste físico continuam pendentes nesta entrega; não foi gerado APK localmente.
+
 ## 0.1.0-alpha.127 (2026-10-16)
 
 - Visualizador ZIP: **Extrair, Salvar, Verificar, Info** agora dividem uma única faixa horizontal, com ícones e textos compactos e 49 dp de altura.

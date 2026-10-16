@@ -30,8 +30,8 @@ jobs:
       - name: Conferir estados de áudio Compose
         run: python3 tools/validate_audio_compose_state.py
 
-      - name: Validar barra compacta ZIP, editor e versão alpha.127
-        run: python3 tools/validate_alpha127.py
+      - name: Validar interface ZIP, editor e metadados da versão
+        run: python3 tools/validate_source.py
 
       - name: Testar
         run: gradle :app:testDebugUnitTest --stacktrace

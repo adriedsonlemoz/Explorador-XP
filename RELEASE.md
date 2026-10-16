@@ -1,14 +1,13 @@
-# Explorador XP 0.1.0-alpha.127
+# Explorador XP 0.1.0-alpha.128
 
-**Versão:** `0.1.0-alpha.127`  
-**versionCode:** `127`
+**Versão:** `0.1.0-alpha.128`  
+**versionCode:** `128`
 
-## ZIP e editor de código
+## Correção do build 119
 
-- ZIP: as quatro ações **Extrair / Salvar / Verificar / Info** cabem na mesma linha, com ícone acima do título.
-- Editor: cinco atalhos no rodapé **Selec. / Copiar / Colar / Cortar / Tudo**, acima da barra de posição do cursor.
-- **Selec.** destaca a palavra de código no cursor; **Tudo** seleciona todo o trecho carregado (no modo de arquivos grandes, não o arquivo inteiro).
-- Ações de copiar/recortar exigem seleção, enquanto colar/recortar respeitam modo somente leitura.
-- Preservados salvamento, desfazer/refazer, acesso a ZIPs externos e fluxo SAF.
+- Ajustado o teste unitário da tela **Novidades** que procurava textos da alpha.126, mas era executado sobre a alpha.127.
+- Agora o teste valida as propriedades estáveis das novidades, sem exigir frases específicas de lançamentos antigos.
+- O workflow valida a versão atual dinamicamente, evitando que o verificador fique preso ao número de uma versão anterior.
+- Mantidos os quatro botões compactos do visualizador ZIP e a barra de comandos do editor.
 
-**Validação:** inspeção estrutural e testes locais; Android/Gradle completo e testes no aparelho ainda pendentes.
+**Validação:** o build 119 compilou o Kotlin da alpha.127 e falhou por um dos 168 testes. Esta versão inclui correção da causa detectada. Compilação Android completa, lint e teste em aparelho devem ser repetidos no GitHub Actions.
