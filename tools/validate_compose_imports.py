@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Guard known Compose extension imports before Android compilation.
 
-Catches the build-108 horizontalScroll and build-111 fillMaxHeight regressions.
+Catches build-108 horizontalScroll, build-111 fillMaxHeight and build-122 Activity Result imports.
 This is a *static* preflight, not an Android compiler substitute.
 """
 from pathlib import Path
@@ -11,12 +11,19 @@ root = Path(__file__).resolve().parents[1] / 'app/src/main/java'
 required_imports = {
     'horizontalScroll': 'androidx.compose.foundation.horizontalScroll',
     'fillMaxHeight': 'androidx.compose.foundation.layout.fillMaxHeight',
+    'rememberLauncherForActivityResult': 'androidx.activity.compose.rememberLauncherForActivityResult',
+    'ActivityResultContracts': 'androidx.activity.result.contract.ActivityResultContracts',
 }
 checked = 0
 for file in root.rglob('*.kt'):
     source = file.read_text(encoding='utf-8')
     for extension, fqname in required_imports.items():
-        if not re.search(rf'\.\s*{extension}\s*\(', source):
+        # Modificadores Compose aparecem após ponto; lançadores e contratos são símbolos diretos.
+        if extension in ('rememberLauncherForActivityResult', 'ActivityResultContracts'):
+            usage = rf'(?<![\w.]){extension}\s*' + (r'\(' if extension == 'rememberLauncherForActivityResult' else r'\.')
+        else:
+            usage = rf'\.\s*{extension}\s*\('
+        if not re.search(usage, source):
             continue
         checked += 1
         namespace = fqname.rsplit('.', 1)[0]

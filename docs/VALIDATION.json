@@ -1,10 +1,10 @@
 {
-  "version_build": "0.1.0-alpha.130",
-  "version_code": 130,
-  "manager_version": "0.1.0-alpha.130",
+  "version_build": "0.1.0-alpha.131",
+  "version_code": 131,
+  "manager_version": "0.1.0-alpha.131",
   "notes": [
-    "ZIP: botões Extrair, Verificar, Salvar; último salva automaticamente em Armazenamento interno/XP.",
-    "Cópia preserva bytes; nomes repetidos recebem sufixo; erros limpam ZIP parcial.",
-    "Mantidos visualizador APK e demais funções anteriores; build Android e testes físicos pendentes."
+    "Build 122: corrigidos imports AndroidX Activity Result em ArchiveViewer.kt (rememberLauncherForActivityResult e ActivityResultContracts).",
+    "Validador preventivo de importações Compose/Activity Result ampliado; detecta regressão antes do Gradle.",
+    "Salvamento ZIP automático em Armazenamento interno/XP e ordem Extrair/Verificar/Salvar preservados. Build Android integral pendente."
   ]
 }

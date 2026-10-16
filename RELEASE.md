@@ -1,19 +1,17 @@
-# Explorador XP 0.1.0-alpha.130
+# Explorador XP 0.1.0-alpha.131
 
-**Versão:** `0.1.0-alpha.130`  
-**versionCode:** `130`
+**Versão:** `0.1.0-alpha.131`  
+**versionCode:** `131`
 
-## Interface ZIP
+## Correção do workflow Gerar APK 122
 
-- Faixa superior com **Extrair, Verificar e Salvar** em uma única linha, de larguras iguais.
-- **Informações** continua disponível em **⋮ > Informações**, sem perda da função.
+- O compilador Kotlin parava em `ArchiveViewer.kt:656-657` porque as chamadas `rememberLauncherForActivityResult` e `ActivityResultContracts.RequestPermission` estavam sem importação.
+- Adicionados os imports `androidx.activity.compose.rememberLauncherForActivityResult` e `androidx.activity.result.contract.ActivityResultContracts`.
+- `tools/validate_compose_imports.py` agora também impede o uso desses símbolos sem importação adequada, antes da etapa Gradle.
 
-## Interface de APK
+## Recursos preservados
 
-- Cartão do aplicativo destaca a **versão instalada** quando identificada e a **versão do APK selecionado**, utilizando dados reais do PackageManager.
-- Se o Android não fornecer `versionName`, o `versionCode` aparece como alternativa, sem inventar versões.
-- Quando há aplicativo instalado, as quatro ações **Instalar/Reinstalar/Atualizar, Abrir, Desinstalar e Gerenciar** aparecem em uma única linha com ícone acima do texto. Versão anterior usa o rótulo compacto **Anterior**, mantendo confirmação de remoção antes da instalação.
-- Quando não há aplicativo instalado, o botão **Instalar** permanece em largura total.
-- Fluxos de permissões, assinatura, confirmação de desinstalação e atualização não foram alterados.
+- Visualizador ZIP: faixa **Extrair / Verificar / Salvar**; Salvar copia automaticamente para **Armazenamento interno/XP/** sem seletor e sem sobrescrever arquivos de mesmo nome.
+- APK: versões visíveis e quatro ações compactas em linha; editor: comandos rápidos no rodapé.
 
-**Validação:** testes isolados e inspeção estrutural do código; Gradle/Android, visualização em aparelhos e geração de APK ainda pendentes.
+**Validação:** importações e estrutura verificadas localmente. Build Android completo e teste em aparelho ainda pendentes.

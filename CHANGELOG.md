@@ -1,3 +1,11 @@
+## 0.1.0-alpha.131 (2026-10-16)
+
+- Corrige o workflow **Gerar APK 122**: `:app:compileDebugKotlin` falhava em `ArchiveViewer.kt:656-657` por falta dos imports `androidx.activity.compose.rememberLauncherForActivityResult` e `androidx.activity.result.contract.ActivityResultContracts`.
+- Mantém o fluxo existente de solicitação de notificação na extração; a dependência `androidx.activity:activity-compose` já estava presente, sem necessidade de alteração do Gradle.
+- Amplia a checagem preventiva `tools/validate_compose_imports.py` para cobrir esses símbolos AndroidX, evitando repetição da falha nos próximos builds.
+- Preserva o salvamento automático de ZIP em `Armazenamento interno/XP/` (sem seletor e sem sobrescrita), a ordem Extrair / Verificar / Salvar e todas as demais funções.
+- Testes estáticos e verificações locais aprovados; compilação Gradle/Android e testes no dispositivo pendentes.
+
 ## 0.1.0-alpha.130 (2026-10-16)
 
 - ZIP: botões na ordem **Extrair, Verificar, Salvar**.

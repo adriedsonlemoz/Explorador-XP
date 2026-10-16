@@ -1,4 +1,4 @@
-> **Versão atual:** 0.1.0-alpha.130 (`versionCode 130`). ZIP: Extrair / Verificar / Salvar, com salvamento automático em Armazenamento interno/XP, sem seletor, sem substituir arquivos existentes. Teste de build Android e teste físico pendentes.
+> **Versão atual:** 0.1.0-alpha.131 (`versionCode 131`). Corrige a compilação do build 122 (imports AndroidX Activity Result para permissão de notificação na extração ZIP), adiciona verificação preventiva. ZIP mantém Extrair / Verificar / Salvar e cópia automática para Armazenamento interno/XP. Build Android completo e teste físico pendentes.
 
 **alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 
