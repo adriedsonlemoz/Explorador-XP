@@ -1,14 +1,16 @@
-# Explorador XP 0.1.0-alpha.133
+# Explorador XP 0.1.0-alpha.134
 
-**Versão:** `0.1.0-alpha.133`  
-**versionCode:** `133`
+**Versão:** `0.1.0-alpha.134`  
+**versionCode:** `134`
 
-## Visualizador de APK
+## Destaques
 
-- Versão do APK em selo arredondado à direita do nome, com exibição exclusiva da `versionName` (sem código no resumo).
-- Versão instalada destacada em azul. Identificador de pacote e certificado retirados apenas do resumo; dados técnicos seguem disponíveis conforme o caso.
-- Indicadores: atualização/novo **verde**, mesma versão **azul**, APK anterior **vermelho**.
-- Botões na ordem: Instalar/Atualizar, Gerenciar, Desinstalar e Abrir; funções preservadas.
-- ZIP continua salvando em Downloads/XP e fechando somente em sucesso.
+- Cartão do APK sem o texto fixo **Versão Instalada:** no resumo.
+- Linha inferior do cabeçalho do APK com selo azul da versão instalada e selo de status colorido ao lado.
+- Botões reorganizados para **Abrir, Gerenciar, Desinstalar, Instalar/Atualizar**.
+- Fluxos de assinatura, compatibilidade e downgrade preservados.
 
-**Validação:** testes locais e verificações estruturais. Build Android e testes de tela em dispositivo pendentes.
+## Validação
+
+- Validações locais e sincronização de metadados.
+- Build Android completo e testes físicos ainda pendentes nesta entrega.

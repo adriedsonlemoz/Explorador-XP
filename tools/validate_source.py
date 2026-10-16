@@ -77,14 +77,13 @@ assert 'label = "Info"' not in zip_ui
 assert all(f'label = "{label}"' in zip_ui for label in ('Verificar',))
 apk_ui = (root/'app/src/main/java/com/exploradorxp/app/InternalViewer.kt').read_text()
 apk_support = (root/'app/src/main/java/com/exploradorxp/app/ApkInspectorSupport.kt').read_text()
-assert '"Versão Instalada:"' in apk_ui
 assert 'apkPlainVersionName(info.versionName)' in apk_ui
 assert 'apkPlainVersionName(info.installedVersion)' in apk_ui
 assert '"No APK:' not in apk_ui and '"Certificado:' not in apk_ui
-assert 'ApkVersionPill(text = relationLabel, color = relationColor)' in apk_ui
-assert apk_ui.index('label = "Gerenciar"') < apk_ui.index('label = "Desinstalar"') < apk_ui.index('label = "Abrir"')
+assert 'text = relationLabel,' in apk_ui and 'color = relationColor,' in apk_ui
+assert apk_ui.index('label = "Abrir"') < apk_ui.index('label = "Gerenciar"') < apk_ui.index('label = "Desinstalar"')
 assert apk_ui.count('ApkCompactActionButton(') == 5  # Quatro ações + declaração.
-assert 'label = "Desinstalar"' in apk_ui and 'label = "Gerenciar"' in apk_ui
+assert 'label = "Desinstalar"' in apk_ui and 'label = "Gerenciar"' in apk_ui and 'label = "Abrir"' in apk_ui
 assert 'showDowngradeConfirm = true' in apk_ui and 'showUninstallConfirm = true' in apk_ui
 assert 'apkVersionLabel(versionName: String?, versionCode: Long?)' in apk_support
 assert 'visibleVersionLabelHandlesMissingVersionName' in (root/'app/src/test/java/com/exploradorxp/app/ApkInspectorSupportTest.kt').read_text()

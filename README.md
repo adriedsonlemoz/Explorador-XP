@@ -1,4 +1,4 @@
-> **Versão atual:** 0.1.0-alpha.133 (`versionCode 133`). Resumo do APK com versão à direita do nome, selos verde/azul/vermelho conforme atualização, atual ou anterior, e ações Gerenciar/Abrir reposicionadas. O ZIP segue salvando em Downloads/XP e fechando somente após sucesso. Build Android e teste físico pendentes.
+> **Versão atual:** 0.1.0-alpha.134 (`versionCode 134`). Resumo do APK com versão do arquivo à direita do nome, linha inferior só com os selos da versão instalada e do status, e ações rápidas em Abrir/Gerenciar/Desinstalar/Instalar-Atualizar. O ZIP segue salvando em Downloads/XP e fechando somente após sucesso. Build Android e teste físico pendentes.
 
 **alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 

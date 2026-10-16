@@ -1,3 +1,10 @@
+## 0.1.0-alpha.134 (2026-10-16)
+
+- APK: o texto fixo **Versão Instalada:** foi removido do cartão principal. A linha abaixo do nome agora mostra apenas o selo azul da versão instalada e, ao lado, o selo de status (**Atualização**, **Atual** ou **Anterior**) com a cor correspondente.
+- APK: a versão do arquivo continua em destaque à direita do nome do aplicativo, preservando o resumo compacto sem identificador de pacote nem certificado.
+- Ações rápidas reorganizadas para **Abrir, Gerenciar, Desinstalar, Instalar/Atualizar**, mantendo **Desinstalar** na mesma posição intermediária e preservando o fluxo de downgrade.
+- Mantidos os detalhes técnicos, comparações expansíveis, verificação de assinatura e proteções de compatibilidade. Validações locais aprovadas; build Android e teste físico seguem pendentes.
+
 ## 0.1.0-alpha.133 (2026-10-16)
 
 - APK: número da versão do arquivo em selo arredondado à direita do nome, sem `versionCode` no resumo.

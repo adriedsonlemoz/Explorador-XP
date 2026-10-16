@@ -1127,20 +1127,20 @@ private fun ApkViewer(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                Text(
-                                    "Versão Instalada:",
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 10.5.sp,
-                                    color = Color(0xFF53657B),
-                                )
                                 ApkVersionPill(
                                     text = apkPlainVersionName(info.installedVersion),
                                     color = Color(0xFF256BD9),
                                     modifier = Modifier.weight(1f, fill = false),
                                 )
+                                ApkVersionPill(
+                                    text = relationLabel,
+                                    color = relationColor,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
                             }
+                        } else {
+                            ApkVersionPill(text = relationLabel, color = relationColor)
                         }
-                        ApkVersionPill(text = relationLabel, color = relationColor)
                     }
                 }
 
@@ -1457,19 +1457,15 @@ private fun ApkViewer(
                         // a legibilidade em telas pequenas, sem rolagem horizontal.
                         Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.fillMaxWidth()) {
                             ApkCompactActionButton(
-                                label = if (requiresRemovalBeforeInstall) "Anterior" else installLabel,
-                                accessibilityLabel = installLabel,
-                                icon = R.drawable.file_apk,
-                                primary = true,
-                                enabled = if (requiresRemovalBeforeInstall) {
-                                    info.canAttemptInstallAfterRemoval && info.packageName != context.packageName
-                                } else {
-                                    info.canAttemptInstall
-                                },
+                                label = "Abrir",
+                                icon = R.drawable.visible,
+                                primary = false,
+                                enabled = info.canLaunchInstalled,
                                 modifier = Modifier.weight(1f),
                             ) {
-                                if (requiresRemovalBeforeInstall) showDowngradeConfirm = true
-                                else requestInstall()
+                                val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
+                                if (launchIntent != null) context.startActivity(launchIntent)
+                                else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
                             }
                             ApkCompactActionButton(
                                 label = "Gerenciar",
@@ -1489,15 +1485,19 @@ private fun ApkViewer(
                                 modifier = Modifier.weight(1f),
                             ) { showUninstallConfirm = true }
                             ApkCompactActionButton(
-                                label = "Abrir",
-                                icon = R.drawable.visible,
-                                primary = false,
-                                enabled = info.canLaunchInstalled,
+                                label = if (requiresRemovalBeforeInstall) "Anterior" else installLabel,
+                                accessibilityLabel = installLabel,
+                                icon = R.drawable.file_apk,
+                                primary = true,
+                                enabled = if (requiresRemovalBeforeInstall) {
+                                    info.canAttemptInstallAfterRemoval && info.packageName != context.packageName
+                                } else {
+                                    info.canAttemptInstall
+                                },
                                 modifier = Modifier.weight(1f),
                             ) {
-                                val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
-                                if (launchIntent != null) context.startActivity(launchIntent)
-                                else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
+                                if (requiresRemovalBeforeInstall) showDowngradeConfirm = true
+                                else requestInstall()
                             }
                         }
                     } else {
