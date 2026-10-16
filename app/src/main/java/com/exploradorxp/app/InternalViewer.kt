@@ -1024,11 +1024,11 @@ private fun ApkViewer(
             }
             is ViewerLoadState.Success -> {
                 val info = state.value
-                val relationLabel = when (info.versionRelation) {
-                    ApkVersionRelation.NOT_INSTALLED -> "Novo aplicativo"
-                    ApkVersionRelation.UPGRADE -> "Atualização disponível"
-                    ApkVersionRelation.SAME -> "Mesma versão instalada"
-                    ApkVersionRelation.DOWNGRADE -> "Versão anterior ao app instalado"
+                val relationLabel = apkStatusLabel(info.versionRelation)
+                val relationColor = when (apkVersionTone(info.versionRelation)) {
+                    ApkVersionTone.NEWER -> Color(0xFF16834D) // Versão mais recente ou aplicativo novo.
+                    ApkVersionTone.CURRENT -> Color(0xFF256BD9) // Mesma versão instalada.
+                    ApkVersionTone.OLDER -> Color(0xFFC93B3B) // APK anterior à versão instalada.
                 }
                 val installLabel = when (info.versionRelation) {
                     ApkVersionRelation.NOT_INSTALLED -> "Instalar"
@@ -1097,79 +1097,50 @@ private fun ApkViewer(
                         )
                     }
                     Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            info.appName,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Color(0xFF152A48),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        // Versões sempre visíveis: versão instalada vem primeiro, quando identificada.
-                        // A comparação expandida continua disponível para os detalhes técnicos.
-                        if (info.installedVersionCode != null) {
-                            Text(
-                                "Instalada: ${apkVersionLabel(info.installedVersion, info.installedVersionCode)}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = Color(0xFF14519A),
-                                maxLines = 2,
-                            )
-                        }
-                        Text(
-                            "No APK: ${apkVersionLabel(info.versionName, info.versionCode)}",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.5.sp,
-                            color = Color(0xFF2D4A69),
-                            maxLines = 2,
-                        )
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            info.packageName,
-                            color = Color(0xFF53657B),
-                            fontSize = 10.5.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (!info.signerName.isNullOrBlank()) {
-                            Text(
-                                "Certificado: ${info.signerName}",
-                                color = XpTextSecondary,
-                                fontSize = 10.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        Spacer(Modifier.height(5.dp))
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    when {
-                                        blockedReason != null || requiresRemovalBeforeInstall -> Color(0xFFFFEEE6)
-                                        info.versionRelation == ApkVersionRelation.UPGRADE -> Color(0xFFE1F3E4)
-                                        else -> Color(0xFFE7F0FB)
-                                    },
-                                    RoundedCornerShape(6.dp),
-                                )
-                                .border(
-                                    1.dp,
-                                    when {
-                                        blockedReason != null || requiresRemovalBeforeInstall -> Color(0xFFD89A78)
-                                        info.versionRelation == ApkVersionRelation.UPGRADE -> Color(0xFF82AF87)
-                                        else -> Color(0xFFABC0D9)
-                                    },
-                                    RoundedCornerShape(6.dp),
-                                )
-                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Mantém a versão do APK à DIREITA do nome e preserva o nome
+                        // em largura flexível para aparelhos com telas estreitas.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
                         ) {
                             Text(
-                                if (blockedReason != null) "Atenção necessária" else relationLabel,
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF30475F),
+                                info.appName,
+                                modifier = Modifier.weight(1f),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                lineHeight = 19.sp,
+                                color = Color(0xFF152A48),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            ApkVersionPill(
+                                text = apkPlainVersionName(info.versionName),
+                                color = relationColor,
+                                modifier = Modifier.widthIn(max = 125.dp),
                             )
                         }
+                        if (info.installedVersionCode != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(
+                                    "Versão Instalada:",
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 10.5.sp,
+                                    color = Color(0xFF53657B),
+                                )
+                                ApkVersionPill(
+                                    text = apkPlainVersionName(info.installedVersion),
+                                    color = Color(0xFF256BD9),
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                            }
+                        }
+                        ApkVersionPill(text = relationLabel, color = relationColor)
                     }
                 }
 
@@ -1501,23 +1472,6 @@ private fun ApkViewer(
                                 else requestInstall()
                             }
                             ApkCompactActionButton(
-                                label = "Abrir",
-                                icon = R.drawable.visible,
-                                primary = false,
-                                enabled = info.canLaunchInstalled,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
-                                if (launchIntent != null) context.startActivity(launchIntent)
-                                else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
-                            }
-                            ApkCompactActionButton(
-                                label = "Desinstalar",
-                                icon = R.drawable.delete,
-                                primary = false,
-                                modifier = Modifier.weight(1f),
-                            ) { showUninstallConfirm = true }
-                            ApkCompactActionButton(
                                 label = "Gerenciar",
                                 icon = R.drawable.settings,
                                 primary = false,
@@ -1527,6 +1481,23 @@ private fun ApkViewer(
                                 runCatching { appDetailsLauncher.launch(details) }.onFailure {
                                     Toast.makeText(context, "Não foi possível abrir as informações do aplicativo.", Toast.LENGTH_SHORT).show()
                                 }
+                            }
+                            ApkCompactActionButton(
+                                label = "Desinstalar",
+                                icon = R.drawable.delete,
+                                primary = false,
+                                modifier = Modifier.weight(1f),
+                            ) { showUninstallConfirm = true }
+                            ApkCompactActionButton(
+                                label = "Abrir",
+                                icon = R.drawable.visible,
+                                primary = false,
+                                enabled = info.canLaunchInstalled,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                val launchIntent = context.packageManager.getLaunchIntentForPackage(info.packageName)
+                                if (launchIntent != null) context.startActivity(launchIntent)
+                                else Toast.makeText(context, "O aplicativo não possui tela inicial para abrir.", Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
@@ -1821,6 +1792,32 @@ private fun saveApkIcon(apkFile: File, info: ApkInfo): File {
 }
 
 /** Ações de APK em quatro colunas, com o título sob o ícone. */
+/** Etiqueta compacta, com alto contraste e largura adaptável ao dispositivo. */
+@Composable
+private fun ApkVersionPill(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color)
+            .padding(horizontal = 9.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.5.sp,
+            lineHeight = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
 @Composable
 private fun ApkCompactActionButton(
     label: String,

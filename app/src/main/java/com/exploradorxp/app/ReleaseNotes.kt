@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Botão Salvar do ZIP agora grava automaticamente em Downloads/XP, sem escolher pasta.",
-                "Após salvar o ZIP com sucesso, o Explorador XP fecha e retorna à tela anterior.",
-                "Falhas de salvamento não fecham o aplicativo; verificação e extração continuam inalteradas.",
+                "Versão do APK aparece à direita do nome, em selo verde, azul ou vermelho conforme a comparação.",
+                "Versão instalada destacada em azul e resumo sem identificador de pacote ou certificado.",
+                "Ações de APK reorganizadas: Instalar/Atualizar, Gerenciar, Desinstalar e Abrir.",
             )
         )
 }

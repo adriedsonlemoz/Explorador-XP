@@ -1,4 +1,12 @@
-## 0.1.0-alpha.132 (2026-10-16)
+## 0.1.0-alpha.133 (2026-10-16)
+
+- APK: número da versão do arquivo em selo arredondado à direita do nome, sem `versionCode` no resumo.
+- No lugar do identificador de pacote e do certificado, a faixa mostra **Versão Instalada** em selo azul (quando instalada).
+- Estados consistentes no selo da versão do APK e no status inferior: **verde** para atualização/novo app, **azul** quando as versões coincidem e **vermelho** para APK anterior.
+- Faixa inferior de ações reorganizada para **Instalar/Atualizar, Gerenciar, Desinstalar, Abrir**, sem mudar os comportamentos dos botões.
+- Mantidos os detalhes técnicos expansíveis, assinatura e proteções de downgrade; validações estruturais locais, build Android e teste físico pendentes.
+
+## 0.1.0-alpha.133 (2026-10-16)
 
 - ZIP: o botão **Salvar** grava em **Downloads/XP/** (diretório Android `Download/XP`), sem abrir seletor de pasta.
 - Somente depois que o ZIP é salvo com sucesso, o visualizador dispara callback exclusivo que encerra a Activity principal com `finish()`. Em erro, permissão negada ou cópia interrompida, mantém o app aberto.

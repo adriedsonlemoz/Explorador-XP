@@ -12,6 +12,26 @@ internal enum class ApkVersionRelation {
     DOWNGRADE,
 }
 
+/** Estado visual determinado exclusivamente pela comparação de versionCode. */
+internal enum class ApkVersionTone { NEWER, CURRENT, OLDER }
+
+internal fun apkVersionTone(relation: ApkVersionRelation): ApkVersionTone = when (relation) {
+    ApkVersionRelation.NOT_INSTALLED, ApkVersionRelation.UPGRADE -> ApkVersionTone.NEWER
+    ApkVersionRelation.SAME -> ApkVersionTone.CURRENT
+    ApkVersionRelation.DOWNGRADE -> ApkVersionTone.OLDER
+}
+
+internal fun apkStatusLabel(relation: ApkVersionRelation): String = when (relation) {
+    ApkVersionRelation.NOT_INSTALLED -> "Novo aplicativo"
+    ApkVersionRelation.UPGRADE -> "Atualização"
+    ApkVersionRelation.SAME -> "Atual"
+    ApkVersionRelation.DOWNGRADE -> "Anterior"
+}
+
+/** Exibe apenas a versionName (sem versionCode) nos selos de resumo. */
+internal fun apkPlainVersionName(versionName: String?): String =
+    versionName?.trim()?.takeIf { it.isNotEmpty() && it != "Desconhecida" } ?: "Não informada"
+
 internal enum class ApkSignatureRelation {
     NOT_APPLICABLE,
     MATCH,

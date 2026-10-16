@@ -27,6 +27,27 @@ class ApkInspectorSupportTest {
     }
 
     @Test
+    fun apkSummaryShowsVersionNameWithoutCode() {
+        assertEquals("0.1.0-alpha.11", apkPlainVersionName("0.1.0-alpha.11"))
+        assertEquals("Não informada", apkPlainVersionName(null))
+        assertEquals("Não informada", apkPlainVersionName("  "))
+    }
+
+    @Test
+    fun badgeColorsAndStatusFollowInstalledVersionComparison() {
+        val cases = listOf(
+            Triple(ApkVersionRelation.NOT_INSTALLED, ApkVersionTone.NEWER, "Novo aplicativo"),
+            Triple(ApkVersionRelation.UPGRADE, ApkVersionTone.NEWER, "Atualização"),
+            Triple(ApkVersionRelation.SAME, ApkVersionTone.CURRENT, "Atual"),
+            Triple(ApkVersionRelation.DOWNGRADE, ApkVersionTone.OLDER, "Anterior"),
+        )
+        for ((relation, tone, label) in cases) {
+            assertEquals(tone, apkVersionTone(relation))
+            assertEquals(label, apkStatusLabel(relation))
+        }
+    }
+
+    @Test
     fun comparesSignerDigestsByCommonCertificate() {
         assertEquals(ApkSignatureRelation.NOT_APPLICABLE, apkSignatureRelation(listOf("A"), null))
         assertEquals(ApkSignatureRelation.UNKNOWN, apkSignatureRelation(emptyList(), listOf("A")))

@@ -1,11 +1,11 @@
 {
-  "version_build": "0.1.0-alpha.132",
-  "version_code": 132,
-  "manager_version": "0.1.0-alpha.132",
+  "version_build": "0.1.0-alpha.133",
+  "version_code": 133,
+  "manager_version": "0.1.0-alpha.133",
   "notes": [
-    "ZIP: botão Salvar usa a pasta pública Downloads/XP (Android: Download/XP) sem solicitar pasta.",
-    "Somente após o sucesso do botão Salvar do visualizador ZIP a Activity principal é encerrada via finish().",
-    "Em falha de cópia ou permissão não encerra; cópia atômica e sem sobrescrita preservada.",
-    "Build Android e teste no dispositivo pendentes."
+    "APK: selo da versão do APK à direita do nome; versão instalada em azul e sem versionCode no cartão.",
+    "Selo e status por relação: atualização/novo verde, igual azul, anterior vermelho; sem pacote ou certificado no resumo.",
+    "Ações de APK instalado: Instalar/Atualizar, Gerenciar, Desinstalar, Abrir; segurança da instalação preservada.",
+    "Build Gradle/Android e inspeção visual em dispositivo ainda pendentes."
   ]
 }
