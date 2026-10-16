@@ -1,4 +1,4 @@
-> **Versão atual:** 0.1.0-alpha.129 (`versionCode 129`). Visualizador ZIP com 3 ações rápidas e Info mantida no menu; APK mostra versão instalada/arquivo em destaque e 4 ações na mesma linha. Compilação Android completa e testes físicos pendentes.
+> **Versão atual:** 0.1.0-alpha.130 (`versionCode 130`). ZIP: Extrair / Verificar / Salvar, com salvamento automático em Armazenamento interno/XP, sem seletor, sem substituir arquivos existentes. Teste de build Android e teste físico pendentes.
 
 **alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 

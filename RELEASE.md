@@ -1,11 +1,11 @@
-# Explorador XP 0.1.0-alpha.129
+# Explorador XP 0.1.0-alpha.130
 
-**Versão:** `0.1.0-alpha.129`  
-**versionCode:** `129`
+**Versão:** `0.1.0-alpha.130`  
+**versionCode:** `130`
 
 ## Interface ZIP
 
-- Faixa superior com **Extrair, Salvar e Verificar** em uma única linha, de larguras iguais.
+- Faixa superior com **Extrair, Verificar e Salvar** em uma única linha, de larguras iguais.
 - **Informações** continua disponível em **⋮ > Informações**, sem perda da função.
 
 ## Interface de APK

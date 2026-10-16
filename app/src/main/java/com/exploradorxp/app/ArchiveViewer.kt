@@ -6,7 +6,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.provider.DocumentsContract
 import android.os.Build
 import android.os.Environment
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -34,8 +33,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -74,7 +71,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
@@ -116,47 +112,45 @@ internal fun ArchiveZipViewer(
     var previewJob by remember { mutableStateOf<Job?>(null) }
     var previewRequestId by remember { mutableStateOf(0L) }
 
-    // O seletor SAF aceita uma pasta local ou um provedor de documentos (incluindo Drive).
-    // Copiamos os bytes originais do ZIP: nenhuma extração ou recompressão é necessária.
-    val saveZipLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/zip"),
-    ) { destination ->
-        if (destination != null && !savingZip) {
-            savingZip = true
-            saveMessage = null
-            scope.launch {
-                try {
-                    val result = withContext(Dispatchers.IO) {
-                        var completed = false
-                        try {
-                            if (!file.isFile || !file.canRead()) throw IOException("ZIP de origem indisponível para leitura.")
-                            val expected = file.length()
-                            FileInputStream(file).use { input ->
-                                context.contentResolver.openOutputStream(destination, "wt")?.use { output ->
-                                    val copyContext = currentCoroutineContext()
-                                    ArchiveZipCopy.copy(input, output, expected) { copyContext.ensureActive() }
-                                } ?: throw IOException("Não foi possível gravar o ZIP no destino selecionado.")
-                            }
-                            completed = true
-                            Result.success(Unit)
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (error: Exception) {
-                            Result.failure<Unit>(error)
-                        } finally {
-                            // ACTION_CREATE_DOCUMENT cria um novo arquivo. Não deixar um ZIP parcial.
-                            if (!completed) runCatching {
-                                DocumentsContract.deleteDocument(context.contentResolver, destination)
-                            }
-                        }
+    // Salva o ZIP original em Armazenamento interno/XP, sem seletor SAF ou recompressão.
+    // Necessita do acesso aos arquivos que o Explorador XP já solicita no Android.
+    fun saveZipToXp() {
+        if (savingZip) return
+        saveMessage = null
+        if (!hasFileAccess(context)) {
+            saveMessage = "Para salvar na pasta XP, permita o acesso aos arquivos nas configurações do Explorador XP."
+            return
+        }
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        ) {
+            saveMessage = "Permita o acesso de gravação ao armazenamento para salvar na pasta XP."
+            return
+        }
+        savingZip = true
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    val copyContext = currentCoroutineContext()
+                    try {
+                        Result.success(ArchiveZipAutoSave.save(file, Environment.getExternalStorageDirectory()) {
+                            copyContext.ensureActive()
+                        })
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        Result.failure(error)
                     }
-                    saveMessage = result.fold(
-                        onSuccess = { "ZIP salvo com sucesso na pasta selecionada." },
-                        onFailure = { "Falha ao salvar ZIP: ${it.message ?: "erro de gravação"}" },
-                    )
-                } finally {
-                    savingZip = false
                 }
+                saveMessage = result.fold(
+                    onSuccess = { saved ->
+                        if (saved.alreadyInFolder) "Este ZIP já está salvo em Armazenamento interno/XP."
+                        else "ZIP salvo em Armazenamento interno/XP/${saved.fileName}."
+                    },
+                    onFailure = { error -> "Falha ao salvar ZIP na pasta XP: ${error.message ?: "erro de gravação"}" },
+                )
+            } finally {
+                savingZip = false
             }
         }
     }
@@ -291,18 +285,18 @@ internal fun ArchiveZipViewer(
                     enabled = archiveInfo != null,
                 ) { showExtraction = true }
                 ArchiveCompactActionButton(
-                    label = if (savingZip) "Salvando…" else "Salvar",
-                    icon = R.drawable.xp_file_disk,
-                    modifier = Modifier.weight(1f),
-                    primary = true,
-                    enabled = !savingZip && file.isFile && file.canRead(),
-                ) { saveMessage = null; saveZipLauncher.launch(file.name) }
-                ArchiveCompactActionButton(
                     label = "Verificar",
                     icon = R.drawable.check,
                     modifier = Modifier.weight(1f),
                     enabled = archiveInfo != null,
                 ) { verifyArchive() }
+                ArchiveCompactActionButton(
+                    label = if (savingZip) "Salvando…" else "Salvar",
+                    icon = R.drawable.xp_file_disk,
+                    modifier = Modifier.weight(1f),
+                    primary = true,
+                    enabled = !savingZip && file.isFile && file.canRead(),
+                ) { saveZipToXp() }
             }
         }
 

@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Visualizador ZIP com Extrair, Salvar e Verificar na mesma linha; informações seguem no menu.",
-                "APK: versão instalada e versão do arquivo destacadas no cartão superior.",
-                "APK instalado: Reinstalar/Atualizar, Abrir, Desinstalar e Gerenciar em uma linha compacta.",
+                "ZIP: Extrair, Verificar e Salvar na mesma linha; Salvar copia automaticamente para Armazenamento interno/XP.",
+                "Nomes de ZIP repetidos recebem numeração, sem sobrescrever arquivos da pasta XP.",
+                "A cópia do ZIP preserva os bytes originais e remove arquivo parcial se falhar.",
             )
         )
 }

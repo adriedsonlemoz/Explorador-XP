@@ -1,3 +1,11 @@
+## 0.1.0-alpha.130 (2026-10-16)
+
+- ZIP: botões na ordem **Extrair, Verificar, Salvar**.
+- Salvar copia o ZIP original diretamente para `Armazenamento interno/XP/`, criando a pasta se faltar e sem abrir seletor SAF.
+- Arquivos de mesmo nome ganham sufixo `(1)`, `(2)` etc. sem sobrescrita; cópia incompleta é removida em caso de falha.
+- Se o ZIP já estiver na pasta XP, não duplica. Falta de autorização de armazenamento é informada sem abrir seletor de destino.
+- Demais ferramentas e interfaces da alpha.129 preservadas. Compilação Gradle/Android e teste físico pendentes.
+
 ## 0.1.0-alpha.129 (2026-10-16)
 
 - ZIP: botão Info removido somente da faixa superior; detalhes do arquivo permanecem disponíveis no menu ⋮.

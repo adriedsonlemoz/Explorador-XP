@@ -40,10 +40,15 @@ assert 'changes = listOf(' in news and 'BuildConfig.VERSION_NAME' in news and 'B
 zip_ui=(root/'app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt').read_text()
 assert 'ArchiveCompactActionButton(' in zip_ui
 assert 'else "Salvar"' in zip_ui
-assert 'ActivityResultContracts.CreateDocument("application/zip")' in zip_ui
-assert 'ArchiveZipCopy.copy(input, output, expected)' in zip_ui
+assert 'ActivityResultContracts.CreateDocument("application/zip")' not in zip_ui
+assert 'ArchiveZipAutoSave.save(file, Environment.getExternalStorageDirectory())' in zip_ui
 zip_logic=(root/'app/src/main/java/com/exploradorxp/app/ArchiveZipCopy.kt').read_text()
 assert 'copied != expectedBytes' in zip_logic and 'output.flush()' in zip_logic
+zip_auto=(root/'app/src/main/java/com/exploradorxp/app/ArchiveZipAutoSave.kt').read_text()
+assert 'File(storageRoot, "XP")' in zip_auto and 'createNewFile()' in zip_auto
+assert 'if (!complete) target.delete()' in zip_auto
+assert zip_ui.index('label = "Verificar"') < zip_ui.index('label = if (savingZip) "Salvando…" else "Salvar"')
+assert (root/'app/src/test/java/com/exploradorxp/app/ArchiveZipAutoSaveTest.kt').exists()
 zip_tests=(root/'app/src/test/java/com/exploradorxp/app/ArchiveZipCopyTest.kt').read_text()
 assert 'preservesBytesWithoutRecompressing' in zip_tests and 'rejectsTruncatedInput' in zip_tests
 print(f'OK: {version} chips, navigation, ZIP UI, editor, version metadata, release notes')

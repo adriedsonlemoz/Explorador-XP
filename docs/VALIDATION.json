@@ -1,11 +1,10 @@
 {
-  "version_build": "0.1.0-alpha.129",
-  "version_code": 129,
-  "manager_version": "0.1.0-alpha.129",
+  "version_build": "0.1.0-alpha.130",
+  "version_code": 130,
+  "manager_version": "0.1.0-alpha.130",
   "notes": [
-    "ZIP agora mostra três botões, Info continua disponível no menu ⋮.",
-    "Versões do APK e do aplicativo instalado destacadas no cabeçalho; quatro ações em faixa única.",
-    "Versão sem versionName usa versionCode; teste de rotulagem atualizado.",
-    "Compilação Gradle/Android, lint e testes em aparelho ainda pendentes."
+    "ZIP: botões Extrair, Verificar, Salvar; último salva automaticamente em Armazenamento interno/XP.",
+    "Cópia preserva bytes; nomes repetidos recebem sufixo; erros limpam ZIP parcial.",
+    "Mantidos visualizador APK e demais funções anteriores; build Android e testes físicos pendentes."
   ]
 }
