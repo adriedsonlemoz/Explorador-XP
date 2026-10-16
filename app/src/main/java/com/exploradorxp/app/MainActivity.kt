@@ -440,6 +440,12 @@ private fun ExplorerApp(
                 if (accessGranted) viewModel.navigateTo(target)
                 else Toast.makeText(context, "Libere o acesso aos arquivos para abrir esta pasta.", Toast.LENGTH_SHORT).show()
             },
+            // Evento exclusivo do botão Salvar no visualizador ZIP, disparado após cópia completa.
+            onSavedZip = {
+                viewerCleanupDirectory?.let { File(it).deleteRecursively() }
+                viewerCleanupDirectory = null
+                (context as? android.app.Activity)?.finish()
+            },
             onShareFile = viewModel::shareFile,
             onMoveToTrash = viewModel::moveFileToTrash,
             audioController = musicController,

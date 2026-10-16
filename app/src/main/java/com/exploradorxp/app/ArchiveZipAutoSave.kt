@@ -5,15 +5,17 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 
-/** Copia o ZIP original para a pasta pública /XP do armazenamento interno, sem diálogo. */
+/** Copia o ZIP original para Downloads/XP no armazenamento compartilhado, sem diálogo. */
 internal object ArchiveZipAutoSave {
     data class Saved(val fileName: String, val alreadyInFolder: Boolean)
 
-    fun save(source: File, storageRoot: File, onChunk: (Long) -> Unit = {}): Saved {
+    fun save(source: File, downloadsFolder: File, onChunk: (Long) -> Unit = {}): Saved {
         if (!source.isFile || !source.canRead()) throw IOException("ZIP de origem indisponível para leitura.")
-        if (!storageRoot.isDirectory) throw IOException("Armazenamento interno indisponível.")
+        if (!downloadsFolder.isDirectory && !downloadsFolder.mkdirs() && !downloadsFolder.isDirectory) {
+            throw IOException("Pasta Downloads indisponível para gravação.")
+        }
 
-        val folder = File(storageRoot, "XP")
+        val folder = File(downloadsFolder, "XP")
         if (!folder.isDirectory && !folder.mkdirs() && !folder.isDirectory) {
             throw IOException("Não foi possível criar a pasta XP.")
         }

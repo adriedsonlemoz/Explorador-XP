@@ -41,12 +41,18 @@ zip_ui=(root/'app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt').read_tex
 assert 'ArchiveCompactActionButton(' in zip_ui
 assert 'else "Salvar"' in zip_ui
 assert 'ActivityResultContracts.CreateDocument("application/zip")' not in zip_ui
-assert 'ArchiveZipAutoSave.save(file, Environment.getExternalStorageDirectory())' in zip_ui
+assert 'ArchiveZipAutoSave.save(file, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS))' in zip_ui
 zip_logic=(root/'app/src/main/java/com/exploradorxp/app/ArchiveZipCopy.kt').read_text()
 assert 'copied != expectedBytes' in zip_logic and 'output.flush()' in zip_logic
 zip_auto=(root/'app/src/main/java/com/exploradorxp/app/ArchiveZipAutoSave.kt').read_text()
-assert 'File(storageRoot, "XP")' in zip_auto and 'createNewFile()' in zip_auto
+assert 'File(downloadsFolder, "XP")' in zip_auto and 'createNewFile()' in zip_auto
 assert 'if (!complete) target.delete()' in zip_auto
+assert 'onSavedZip()' in zip_ui and zip_ui.index('onSavedZip()') > zip_ui.index('onSuccess = { saved ->')
+assert 'onSavedZip()' not in zip_ui[zip_ui.index('onFailure = { error ->'):zip_ui.index('savingZip = false')]
+assert 'onSavedZip = onSavedZip' in (root/'app/src/main/java/com/exploradorxp/app/InternalViewer.kt').read_text()
+assert 'onSavedZip = {' in (root/'app/src/main/java/com/exploradorxp/app/MainActivity.kt').read_text()
+assert '(context as? android.app.Activity)?.finish()' in (root/'app/src/main/java/com/exploradorxp/app/MainActivity.kt').read_text()
+assert 'Downloads/XP' in zip_ui
 assert zip_ui.index('label = "Verificar"') < zip_ui.index('label = if (savingZip) "Salvando…" else "Salvar"')
 assert (root/'app/src/test/java/com/exploradorxp/app/ArchiveZipAutoSaveTest.kt').exists()
 zip_tests=(root/'app/src/test/java/com/exploradorxp/app/ArchiveZipCopyTest.kt').read_text()

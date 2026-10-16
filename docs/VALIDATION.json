@@ -1,10 +1,11 @@
 {
-  "version_build": "0.1.0-alpha.131",
-  "version_code": 131,
-  "manager_version": "0.1.0-alpha.131",
+  "version_build": "0.1.0-alpha.132",
+  "version_code": 132,
+  "manager_version": "0.1.0-alpha.132",
   "notes": [
-    "Build 122: corrigidos imports AndroidX Activity Result em ArchiveViewer.kt (rememberLauncherForActivityResult e ActivityResultContracts).",
-    "Validador preventivo de importações Compose/Activity Result ampliado; detecta regressão antes do Gradle.",
-    "Salvamento ZIP automático em Armazenamento interno/XP e ordem Extrair/Verificar/Salvar preservados. Build Android integral pendente."
+    "ZIP: botão Salvar usa a pasta pública Downloads/XP (Android: Download/XP) sem solicitar pasta.",
+    "Somente após o sucesso do botão Salvar do visualizador ZIP a Activity principal é encerrada via finish().",
+    "Em falha de cópia ou permissão não encerra; cópia atômica e sem sobrescrita preservada.",
+    "Build Android e teste no dispositivo pendentes."
   ]
 }

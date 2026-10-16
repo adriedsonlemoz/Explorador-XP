@@ -1,3 +1,11 @@
+## 0.1.0-alpha.132 (2026-10-16)
+
+- ZIP: o botão **Salvar** grava em **Downloads/XP/** (diretório Android `Download/XP`), sem abrir seletor de pasta.
+- Somente depois que o ZIP é salvo com sucesso, o visualizador dispara callback exclusivo que encerra a Activity principal com `finish()`. Em erro, permissão negada ou cópia interrompida, mantém o app aberto.
+- Notificação breve de sucesso por Toast antes do fechamento. ZIPs com nomes iguais não são sobrescritos; arquivo parcial continua sendo removido em caso de falha.
+- Preservada ordem dos botões **Extrair / Verificar / Salvar**, sem efeitos de fechamento nas outras funções.
+- Testes locais e verificações estruturais; build Android completo e testes físicos pendentes.
+
 ## 0.1.0-alpha.131 (2026-10-16)
 
 - Corrige o workflow **Gerar APK 122**: `:app:compileDebugKotlin` falhava em `ArchiveViewer.kt:656-657` por falta dos imports `androidx.activity.compose.rememberLauncherForActivityResult` e `androidx.activity.result.contract.ActivityResultContracts`.

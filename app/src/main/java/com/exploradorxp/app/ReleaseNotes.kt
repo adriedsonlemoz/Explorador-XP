@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigida a compilação do visualizador ZIP: importações AndroidX para permissão de notificações durante a extração.",
-                "Verificação preventiva de importações reforçada para detectar a mesma falha antes do build.",
-                "Mantidos Extrair, Verificar e Salvar, com cópia automática do ZIP para Armazenamento interno/XP.",
+                "Botão Salvar do ZIP agora grava automaticamente em Downloads/XP, sem escolher pasta.",
+                "Após salvar o ZIP com sucesso, o Explorador XP fecha e retorna à tela anterior.",
+                "Falhas de salvamento não fecham o aplicativo; verificação e extração continuam inalteradas.",
             )
         )
 }

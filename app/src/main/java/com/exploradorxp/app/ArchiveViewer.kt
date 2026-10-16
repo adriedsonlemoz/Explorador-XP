@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -88,6 +89,7 @@ internal fun ArchiveZipViewer(
     onPreviewFile: (File) -> Unit,
     onOpenExternal: (File) -> Unit,
     onOpenFolder: (File) -> Unit,
+    onSavedZip: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -114,19 +116,19 @@ internal fun ArchiveZipViewer(
     var previewJob by remember { mutableStateOf<Job?>(null) }
     var previewRequestId by remember { mutableStateOf(0L) }
 
-    // Salva o ZIP original em Armazenamento interno/XP, sem seletor SAF ou recompressão.
+    // Apenas o botão Salvar do visualizador ZIP chama esta rotina; fecha a Activity só após sucesso.
     // Necessita do acesso aos arquivos que o Explorador XP já solicita no Android.
     fun saveZipToXp() {
         if (savingZip) return
         saveMessage = null
         if (!hasFileAccess(context)) {
-            saveMessage = "Para salvar na pasta XP, permita o acesso aos arquivos nas configurações do Explorador XP."
+            saveMessage = "Para salvar em Downloads/XP, permita o acesso aos arquivos nas configurações do Explorador XP."
             return
         }
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         ) {
-            saveMessage = "Permita o acesso de gravação ao armazenamento para salvar na pasta XP."
+            saveMessage = "Permita o acesso de gravação ao armazenamento para salvar em Downloads/XP."
             return
         }
         savingZip = true
@@ -135,7 +137,7 @@ internal fun ArchiveZipViewer(
                 val result = withContext(Dispatchers.IO) {
                     val copyContext = currentCoroutineContext()
                     try {
-                        Result.success(ArchiveZipAutoSave.save(file, Environment.getExternalStorageDirectory()) {
+                        Result.success(ArchiveZipAutoSave.save(file, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)) {
                             copyContext.ensureActive()
                         })
                     } catch (cancelled: CancellationException) {
@@ -144,12 +146,21 @@ internal fun ArchiveZipViewer(
                         Result.failure(error)
                     }
                 }
-                saveMessage = result.fold(
+                result.fold(
                     onSuccess = { saved ->
-                        if (saved.alreadyInFolder) "Este ZIP já está salvo em Armazenamento interno/XP."
-                        else "ZIP salvo em Armazenamento interno/XP/${saved.fileName}."
+                        // Confirma o término da cópia antes de encerrar a Activity. Nada mais fecha o app.
+                        val message = if (saved.alreadyInFolder) {
+                            "Este ZIP já está salvo em Downloads/XP."
+                        } else {
+                            "ZIP salvo em Downloads/XP/${saved.fileName}."
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        onSavedZip()
                     },
-                    onFailure = { error -> "Falha ao salvar ZIP na pasta XP: ${error.message ?: "erro de gravação"}" },
+                    onFailure = { error ->
+                        // Sem fechamento ao negar permissões, falhar a cópia ou faltar espaço.
+                        saveMessage = "Falha ao salvar ZIP em Downloads/XP: ${error.message ?: "erro de gravação"}"
+                    },
                 )
             } finally {
                 savingZip = false

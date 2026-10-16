@@ -134,6 +134,7 @@ fun InternalViewerScreen(
     onClose: () -> Unit,
     onOpenExternal: (File) -> Unit,
     onOpenFolder: (File) -> Unit,
+    onSavedZip: () -> Unit,
     onShareFile: (File) -> Unit,
     onMoveToTrash: (File) -> Unit,
     audioController: androidx.media3.session.MediaController? = null,
@@ -243,6 +244,7 @@ fun InternalViewerScreen(
                     },
                     onOpenExternal = onOpenExternal,
                     onOpenFolder = onOpenFolder,
+                    onSavedZip = onSavedZip,
                 )
                 extension == "apk" -> ApkViewer(
                     file = activeFile,
