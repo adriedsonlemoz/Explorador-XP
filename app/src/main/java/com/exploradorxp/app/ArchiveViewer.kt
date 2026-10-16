@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.DocumentsContract
 import android.os.Build
 import android.os.Environment
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -65,9 +66,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -100,11 +108,58 @@ internal fun ArchiveZipViewer(
     var showExtraction by remember { mutableStateOf(false) }
     var verifyProgress by remember { mutableStateOf<ArchiveProgress?>(null) }
     var verifyMessage by remember { mutableStateOf<String?>(null) }
+    var savingZip by remember(file.absolutePath) { mutableStateOf(false) }
+    var saveMessage by remember(file.absolutePath) { mutableStateOf<String?>(null) }
     var password by remember { mutableStateOf<CharArray?>(null) }
     var passwordRequest by remember { mutableStateOf<ArchivePasswordRequest?>(null) }
     var previewProgress by remember { mutableStateOf<ArchiveProgress?>(null) }
     var previewJob by remember { mutableStateOf<Job?>(null) }
     var previewRequestId by remember { mutableStateOf(0L) }
+
+    // O seletor SAF aceita uma pasta local ou um provedor de documentos (incluindo Drive).
+    // Copiamos os bytes originais do ZIP: nenhuma extração ou recompressão é necessária.
+    val saveZipLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip"),
+    ) { destination ->
+        if (destination != null && !savingZip) {
+            savingZip = true
+            saveMessage = null
+            scope.launch {
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        var completed = false
+                        try {
+                            if (!file.isFile || !file.canRead()) throw IOException("ZIP de origem indisponível para leitura.")
+                            val expected = file.length()
+                            FileInputStream(file).use { input ->
+                                context.contentResolver.openOutputStream(destination, "wt")?.use { output ->
+                                    val copyContext = currentCoroutineContext()
+                                    ArchiveZipCopy.copy(input, output, expected) { copyContext.ensureActive() }
+                                } ?: throw IOException("Não foi possível gravar o ZIP no destino selecionado.")
+                            }
+                            completed = true
+                            Result.success(Unit)
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (error: Exception) {
+                            Result.failure<Unit>(error)
+                        } finally {
+                            // ACTION_CREATE_DOCUMENT cria um novo arquivo. Não deixar um ZIP parcial.
+                            if (!completed) runCatching {
+                                DocumentsContract.deleteDocument(context.contentResolver, destination)
+                            }
+                        }
+                    }
+                    saveMessage = result.fold(
+                        onSuccess = { "ZIP salvo com sucesso na pasta selecionada." },
+                        onFailure = { "Falha ao salvar ZIP: ${it.message ?: "erro de gravação"}" },
+                    )
+                } finally {
+                    savingZip = false
+                }
+            }
+        }
+    }
 
     LaunchedEffect(file.absolutePath, file.lastModified()) {
         infoResult = ArchiveManager.readZip(file)
@@ -226,6 +281,7 @@ internal fun ArchiveZipViewer(
                     }
                 }
             }
+            // Quatro ações em duas linhas evitam botões apertados em telas de 360 dp.
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 ArchivePrimaryActionButton(
                     if (selected.isEmpty()) "Extrair" else "Extrair ${selected.size}",
@@ -233,6 +289,14 @@ internal fun ArchiveZipViewer(
                     modifier = Modifier.weight(1f),
                     enabled = archiveInfo != null,
                 ) { showExtraction = true }
+                ArchivePrimaryActionButton(
+                    if (savingZip) "Salvando…" else "Salvar ZIP",
+                    R.drawable.xp_file_disk,
+                    modifier = Modifier.weight(1f),
+                    enabled = !savingZip && file.isFile && file.canRead(),
+                ) { saveMessage = null; saveZipLauncher.launch(file.name) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 ArchiveSecondaryActionButton("Verificar", R.drawable.check, Modifier.weight(1f), archiveInfo != null) { verifyArchive() }
                 ArchiveSecondaryActionButton("Info", R.drawable.info, Modifier.weight(1f), archiveInfo != null) { showArchiveDetails = true }
             }
@@ -337,6 +401,15 @@ internal fun ArchiveZipViewer(
                     }
                 }
             }
+        }
+
+        if (savingZip || saveMessage != null) {
+            Text(
+                if (savingZip) "Salvando cópia do arquivo ZIP…" else saveMessage.orEmpty(),
+                fontSize = 11.sp,
+                color = Color(0xFF334455),
+                modifier = Modifier.fillMaxWidth().background(Color(0xFFEAF2FB)).padding(horizontal = 9.dp, vertical = 6.dp),
+            )
         }
 
         if (verifyMessage != null) {

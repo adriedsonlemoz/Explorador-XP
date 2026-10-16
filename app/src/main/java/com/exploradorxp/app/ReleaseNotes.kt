@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Corrigido teste da barra inferior para reconhecer os sete atalhos, com Início no centro.",
-                "Mantidos os filtros compactos de aplicativos e as funcionalidades da versão anterior.",
-                "Verificação preventiva de ordem e quantidade de atalhos atualizada para evitar regressões.",
+                "Adicionado botão Salvar ZIP, com escolha de pasta pelo Android e cópia sem recompressão.",
+                "Ações de arquivos ZIP reorganizadas em duas linhas para telas pequenas.",
+                "Cópia em streaming, com verificação do tamanho e limpeza de destino incompleto quando possível.",
             )
         )
 }

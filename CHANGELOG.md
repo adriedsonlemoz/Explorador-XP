@@ -1,3 +1,11 @@
+## 0.1.0-alpha.126 (2026-10-16)
+
+- Adicionado **Salvar ZIP** na visualização de arquivos ZIP, usando o seletor de documentos do Android.
+- Copia o ZIP original sem recompressão ou extração, inclusive quando recebido por abertura externa.
+- Verifica bytes transferidos e tenta limpar cópias incompletas após erro; a interface exibe sucesso ou falha.
+- Organiza ações em duas linhas para facilitar uso em telas estreitas.
+- Corrige o versionCode incorreto do cabeçalho do README e sincroniza os metadados da nova versão.
+
 ## 0.1.0-alpha.125 (2026-10-14)
 
 - Corrigido teste unitário desatualizado da barra inferior, que esperava seis atalhos apesar da inclusão de Início.

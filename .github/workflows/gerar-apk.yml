@@ -30,8 +30,8 @@ jobs:
       - name: Conferir estados de áudio Compose
         run: python3 tools/validate_audio_compose_state.py
 
-      - name: Validar barra de sete atalhos e versão alpha.125
-        run: python3 tools/validate_alpha125.py
+      - name: Validar barra de atalhos, Salvar ZIP e versão alpha.126
+        run: python3 tools/validate_alpha126.py
 
       - name: Testar
         run: gradle :app:testDebugUnitTest --stacktrace

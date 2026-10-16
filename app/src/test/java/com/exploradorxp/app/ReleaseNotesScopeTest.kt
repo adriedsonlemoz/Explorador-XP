@@ -11,9 +11,9 @@ class ReleaseNotesScopeTest {
         assertEquals(BuildConfig.VERSION_NAME, info.versionName)
         assertEquals(BuildConfig.VERSION_CODE, info.versionCode)
         assertEquals(3, info.changes.size)
-        assertTrue(info.changes.any { it.contains("sete atalhos") && it.contains("Início") })
-        assertTrue(info.changes.any { it.contains("filtros compactos") })
-        assertTrue(info.changes.any { it.contains("Verificação preventiva") })
+        assertTrue(info.changes.any { it.contains("Salvar ZIP") })
+        assertTrue(info.changes.any { it.contains("duas linhas") })
+        assertTrue(info.changes.any { it.contains("streaming") })
         assertFalse(info.changes.any { it.contains("ProduceState") || it.contains("fillMaxHeight") })
     }
 }

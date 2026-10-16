@@ -1,4 +1,4 @@
-> **Versão atual:** 0.1.0-alpha.125 (`versionCode 124`). Chips compactos com ícones nos filtros de aplicativos, em linha única com rolagem horizontal. Botão Início na barra inferior preservado. Build Android completo e testes em aparelho ainda pendentes.
+> **Versão atual:** 0.1.0-alpha.126 (`versionCode 126`). Botão Salvar ZIP com seleção do destino pelo Android, sem extração nem recompressão; mantém os recursos anteriores. Build Android completo e testes em aparelho ainda pendentes.
 
 **alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 

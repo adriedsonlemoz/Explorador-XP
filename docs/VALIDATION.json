@@ -1,10 +1,10 @@
 {
-  "version_build": "0.1.0-alpha.125",
-  "version_code": 125,
-  "manager_version": "0.1.0-alpha.125",
+  "version_build": "0.1.0-alpha.126",
+  "version_code": 126,
+  "manager_version": "0.1.0-alpha.126",
   "notes": [
-    "Filtros de Aplicativos instalados em uma linha com chips compactos e ícones distintos.",
-    "Seleção e acessibilidade dos filtros preservadas.",
-    "Atalho Início na barra inferior com sete destinos preservado."
+    "Novo botão Salvar ZIP pelo seletor de documentos SAF, sem extrair/recomprimir.",
+    "Cópia em streaming, verifica tamanho e remove saída parcial após falha.",
+    "Ações ZIP reorganizadas em grade de duas linhas para melhorar toque e leitura."
   ]
 }

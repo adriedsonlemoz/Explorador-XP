@@ -3,12 +3,12 @@
 import json
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
-assert (root/'VERSION').read_text().strip() == '0.1.0-alpha.125'
+assert (root/'VERSION').read_text().strip() == '0.1.0-alpha.126'
 gradle = (root/'app/build.gradle.kts').read_text()
-assert 'versionCode = 125' in gradle and 'versionName = "0.1.0-alpha.125"' in gradle
+assert 'versionCode = 126' in gradle and 'versionName = "0.1.0-alpha.126"' in gradle
 for meta in ('github-manager.json', 'app_identity.json'):
     data = json.loads((root/meta).read_text())
-    assert data.get('versionCode') == 125 and data.get('versionName', data.get('version')) == '0.1.0-alpha.125'
+    assert data.get('versionCode') == 126 and data.get('versionName', data.get('version')) == '0.1.0-alpha.126'
 src = (root/'app/src/main/java/com/exploradorxp/app/InstalledAppsManager.kt').read_text()
 assert src.count('AppManagerChip("') == 8
 for name in ('Todos','Usuário','Sistema','Nome','Maiores','Menores','Instalados','Atualizados'):
@@ -23,8 +23,17 @@ screen=(root/'app/src/main/java/com/exploradorxp/app/ExplorerScreen.kt').read_te
 assert 'ExplorerQuickDestination.HOME -> {' in screen
 assert 'onTabChange(ExplorerTab.FILES)' in screen and 'onHome()' in screen
 news=(root/'app/src/main/java/com/exploradorxp/app/ReleaseNotes.kt').read_text()
-assert 'sete atalhos' in news
-print('OK: alpha.125 chips, navigation, version metadata, release notes')
+assert 'Salvar ZIP' in news
+zip_ui=(root/'app/src/main/java/com/exploradorxp/app/ArchiveViewer.kt').read_text()
+assert 'ArchivePrimaryActionButton(' in zip_ui
+assert '"Salvar ZIP"' in zip_ui
+assert 'ActivityResultContracts.CreateDocument("application/zip")' in zip_ui
+assert 'ArchiveZipCopy.copy(input, output, expected)' in zip_ui
+zip_logic=(root/'app/src/main/java/com/exploradorxp/app/ArchiveZipCopy.kt').read_text()
+assert 'copied != expectedBytes' in zip_logic and 'output.flush()' in zip_logic
+zip_tests=(root/'app/src/test/java/com/exploradorxp/app/ArchiveZipCopyTest.kt').read_text()
+assert 'preservesBytesWithoutRecompressing' in zip_tests and 'rejectsTruncatedInput' in zip_tests
+print('OK: alpha.126 chips, navigation, ZIP copy, version metadata, release notes')
 
 quicktest=(root/'app/src/test/java/com/exploradorxp/app/ExplorerQuickAccessTest.kt').read_text()
 assert 'bottomBarKeepsSevenShortcutsWithHomeCentered' in quicktest

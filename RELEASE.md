@@ -1,13 +1,14 @@
-# Explorador XP 0.1.0-alpha.125
+# Explorador XP 0.1.0-alpha.126
 
-**Versão:** `0.1.0-alpha.125`  
-**versionCode:** `125`
+**Versão:** `0.1.0-alpha.126`  
+**versionCode:** `126`
 
-## Correção do workflow 116
+## Salvar cópia de arquivo ZIP
 
-- Teste ExplorerQuickAccessTest atualizado para a barra com sete atalhos.
-- Ordem esperada: Fotos, Vídeos, Downloads, Início, Rede, Lixeira e Ferramentas.
-- Verificador preventivo atualizado para evitar regressão.
-- Funcionalidades da alpha.124 preservadas.
+- Botão **Salvar ZIP** na visualização de arquivos compactados, inclusive ZIPs recebidos de outros aplicativos.
+- O seletor de documentos do Android permite escolher a pasta e o nome da cópia, inclusive em provedores compatíveis.
+- Cópia binária em streaming sem descompactar ou modificar conteúdo, com conferência de tamanho e limpeza do destino incompleto quando possível.
+- Ações reorganizadas em duas linhas: Extrair / Salvar ZIP e Verificar / Info.
+- Corrigida a referência de versionCode no topo do README que estava em 124.
 
-Compilação Android completa e testes em aparelho ainda pendentes.
+**Validação:** testes da rotina de cópia e inspeção estrutural; compilação Android e teste físico ainda pendentes.
