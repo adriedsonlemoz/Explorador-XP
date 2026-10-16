@@ -1,3 +1,10 @@
+## 0.1.0-alpha.127 (2026-10-16)
+
+- Visualizador ZIP: **Extrair, Salvar, Verificar, Info** agora dividem uma única faixa horizontal, com ícones e textos compactos e 49 dp de altura.
+- Editor de texto/código: nova faixa inferior acima das informações de linha/coluna para **Selecionar palavra, Copiar, Colar, Recortar, Selecionar tudo**.
+- Recortar e Copiar dependem de seleção; Recortar e Colar são desabilitados em modo somente leitura. A seleção preserva o cursor e funciona sobre identificadores de código.
+- Novos testes de seleção de palavra, testes estruturais e metadados sincronizados. Testes Android físicos pendentes.
+
 ## 0.1.0-alpha.126 (2026-10-16)
 
 - Adicionado **Salvar ZIP** na visualização de arquivos ZIP, usando o seletor de documentos do Android.

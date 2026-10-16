@@ -18,9 +18,9 @@ object ReleaseNotes {
             versionCode = BuildConfig.VERSION_CODE,
             title = "O Explorador XP foi atualizado",
             changes = listOf(
-                "Adicionado botão Salvar ZIP, com escolha de pasta pelo Android e cópia sem recompressão.",
-                "Ações de arquivos ZIP reorganizadas em duas linhas para telas pequenas.",
-                "Cópia em streaming, com verificação do tamanho e limpeza de destino incompleto quando possível.",
+                "Os quatro botões do ZIP agora ficam em uma única linha: Extrair, Salvar, Verificar e Info.",
+                "Editor de texto/código com barra inferior de seleção, copiar, colar, recortar e selecionar tudo.",
+                "Ações respeitam seleção e somente leitura; preservados salvamento e histórico do editor.",
             )
         )
 }

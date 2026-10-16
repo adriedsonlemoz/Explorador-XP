@@ -69,6 +69,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
@@ -242,6 +244,7 @@ fun TextCodeEditorViewer(
     var dirty by remember(file.absolutePath) { mutableStateOf(false) }
     var metrics by remember(file.absolutePath) { mutableStateOf(EditorMetrics()) }
     var historyState by remember(file.absolutePath) { mutableStateOf(EditorHistoryState()) }
+    var hasEditorSelection by remember(file.absolutePath) { mutableStateOf(false) }
     var statusMessage by remember(file.absolutePath) { mutableStateOf("") }
     var viewMode by remember(file.absolutePath) { mutableStateOf(EditorViewMode.CODE) }
     var showFindPanel by remember(file.absolutePath) { mutableStateOf(false) }
@@ -1481,6 +1484,7 @@ fun TextCodeEditorViewer(
                                 }
                             },
                             onMetricsState = { updatedMetrics -> metrics = updatedMetrics },
+                            onSelectionState = { hasSelection -> hasEditorSelection = hasSelection },
                             onContentChanged = {
                                 if (showFindPanel && findQuery.isNotBlank() && !state.document.isLargeFile) {
                                     searchState = editorView?.searchState(findQuery) ?: EditorSearchState()
@@ -1526,6 +1530,23 @@ fun TextCodeEditorViewer(
             )
         }
 
+        if (viewMode == EditorViewMode.CODE && ready != null) {
+            val canEditText = !ready.document.truncated && !isArchivePreview && editorView?.isReadOnlyMode() == false
+            EditorClipboardBar(
+                hasSelection = hasEditorSelection,
+                editable = canEditText,
+                onSelectWord = {
+                    val view = editorView
+                    if (view != null && !view.selectWordAtCursor()) {
+                        statusMessage = "Nenhum caractere disponível para selecionar."
+                    }
+                },
+                onCopy = { editorView?.onTextContextMenuItem(android.R.id.copy) },
+                onPaste = { editorView?.onTextContextMenuItem(android.R.id.paste) },
+                onCut = { editorView?.onTextContextMenuItem(android.R.id.cut) },
+                onSelectAll = { editorView?.selectAll() },
+            )
+        }
         EditorStatusBar(
             state = loadState,
             metrics = metrics,
@@ -1934,6 +1955,7 @@ private fun CodeEditorView(
     initialHistory: EditorUndoRedoSnapshot?,
     onViewReady: (CodeEditText) -> Unit,
     onMetricsState: (EditorMetrics) -> Unit,
+    onSelectionState: (Boolean) -> Unit,
     onContentChanged: () -> Unit,
     onHistoryState: (EditorHistoryState) -> Unit,
 ) {
@@ -1956,6 +1978,7 @@ private fun CodeEditorView(
                         initialSelectionEnd = initialSelectionEnd,
                         initialHistory = initialHistory,
                         onMetricsState = onMetricsState,
+                        onSelectionState = onSelectionState,
                         onContentChanged = onContentChanged,
                         onHistoryState = onHistoryState,
                     )
@@ -2018,6 +2041,7 @@ private class CodeEditText(context: Context) : EditText(context) {
     // Android/TextView pode chamar onSelectionChanged() ainda durante o construtor da superclasse.
     // Os callbacks permanecem anuláveis até configure() terminar.
     private var callbackMetricsState: ((EditorMetrics) -> Unit)? = null
+    private var callbackSelectionState: ((Boolean) -> Unit)? = null
     private var callbackContentChanged: (() -> Unit)? = null
     private var callbackHistoryState: ((EditorHistoryState) -> Unit)? = null
     private var sourceExtension: String = ""
@@ -2052,10 +2076,12 @@ private class CodeEditText(context: Context) : EditText(context) {
         initialSelectionEnd: Int,
         initialHistory: EditorUndoRedoSnapshot?,
         onMetricsState: (EditorMetrics) -> Unit,
+        onSelectionState: (Boolean) -> Unit,
         onContentChanged: () -> Unit,
         onHistoryState: (EditorHistoryState) -> Unit,
     ) {
         callbackMetricsState = onMetricsState
+        callbackSelectionState = onSelectionState
         callbackContentChanged = onContentChanged
         callbackHistoryState = onHistoryState
         sourceExtension = extension
@@ -2096,6 +2122,7 @@ private class CodeEditText(context: Context) : EditText(context) {
         }
         addTextChangedListener(historyWatcher)
         notifyMetrics()
+        notifySelectionState()
         notifyHistory()
         scheduleHighlight()
     }
@@ -2325,7 +2352,22 @@ private class CodeEditText(context: Context) : EditText(context) {
 
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
-        if (!suppressHistory) notifyMetrics()
+        if (!suppressHistory) {
+            notifyMetrics()
+            notifySelectionState()
+        }
+    }
+
+    private fun notifySelectionState() {
+        callbackSelectionState?.invoke(selectionStart >= 0 && selectionEnd > selectionStart)
+    }
+
+    fun selectWordAtCursor(): Boolean {
+        val source = text ?: return false
+        val range = EditorSelectionRules.wordRange(source, selectionStart) ?: return false
+        requestFocus()
+        setSelection(range.first, range.last + 1)
+        return true
     }
 
     fun changeIndent(outdent: Boolean) {
@@ -3021,6 +3063,66 @@ private fun FullScreenWebPreview(
             Text(error, color = Color(0xFF8A251D), fontSize = 11.sp, modifier = Modifier.fillMaxWidth().background(Color(0xFFFFE8E5)).padding(6.dp))
         }
         WebPreview(file, extension, source, revision, scriptsEnabled, onError, Modifier.weight(1f).fillMaxWidth())
+    }
+}
+
+@Composable
+private fun EditorClipboardBar(
+    hasSelection: Boolean,
+    editable: Boolean,
+    onSelectWord: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit,
+    onCut: () -> Unit,
+    onSelectAll: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .background(XpChrome)
+            .border(1.dp, XpChromeBorder)
+            .padding(horizontal = 5.dp, vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        EditorClipboardAction("Selec.", "Selecionar palavra", R.drawable.xp_file_text, Modifier.weight(1f), onClick = onSelectWord)
+        EditorClipboardAction("Copiar", "Copiar seleção", R.drawable.xp_copy, Modifier.weight(1f), enabled = hasSelection, onClick = onCopy)
+        EditorClipboardAction("Colar", "Colar", R.drawable.xp_paste, Modifier.weight(1f), enabled = editable, onClick = onPaste)
+        EditorClipboardAction("Cortar", "Recortar seleção", R.drawable.xp_cut, Modifier.weight(1f), enabled = editable && hasSelection, onClick = onCut)
+        EditorClipboardAction("Tudo", "Selecionar tudo", R.drawable.xp_select_all, Modifier.weight(1f), onClick = onSelectAll)
+    }
+}
+
+@Composable
+private fun EditorClipboardAction(
+    label: String,
+    accessibleName: String,
+    icon: Int,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(4.dp)
+    Column(
+        modifier = modifier
+            .height(45.dp)
+            .background(if (enabled) Color.White else Color(0xFFF0F2F4), shape)
+            .border(1.dp, if (enabled) XpControlBorder else Color(0xFFD3D9E0), shape)
+            .semantics { contentDescription = accessibleName }
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 1.dp, vertical = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CachedResourceIcon(icon, accessibleName, modifier = Modifier.size(17.dp))
+        Spacer(Modifier.height(2.dp))
+        Text(
+            label,
+            fontSize = 9.5.sp,
+            color = if (enabled) Color(0xFF273544) else Color(0xFF999999),
+            fontWeight = FontWeight.SemiBold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

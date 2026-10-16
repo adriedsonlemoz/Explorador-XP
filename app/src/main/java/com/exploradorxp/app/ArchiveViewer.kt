@@ -281,24 +281,34 @@ internal fun ArchiveZipViewer(
                     }
                 }
             }
-            // Quatro ações em duas linhas evitam botões apertados em telas de 360 dp.
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                ArchivePrimaryActionButton(
-                    if (selected.isEmpty()) "Extrair" else "Extrair ${selected.size}",
-                    R.drawable.folder_open,
+            // Uma única linha com ações compactas e largura idêntica, inclusive em telas de 360 dp.
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.fillMaxWidth()) {
+                ArchiveCompactActionButton(
+                    label = if (selected.isEmpty()) "Extrair" else "Extrair (${selected.size})",
+                    icon = R.drawable.folder_open,
                     modifier = Modifier.weight(1f),
+                    primary = true,
                     enabled = archiveInfo != null,
                 ) { showExtraction = true }
-                ArchivePrimaryActionButton(
-                    if (savingZip) "Salvando…" else "Salvar ZIP",
-                    R.drawable.xp_file_disk,
+                ArchiveCompactActionButton(
+                    label = if (savingZip) "Salvando…" else "Salvar",
+                    icon = R.drawable.xp_file_disk,
                     modifier = Modifier.weight(1f),
+                    primary = true,
                     enabled = !savingZip && file.isFile && file.canRead(),
                 ) { saveMessage = null; saveZipLauncher.launch(file.name) }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                ArchiveSecondaryActionButton("Verificar", R.drawable.check, Modifier.weight(1f), archiveInfo != null) { verifyArchive() }
-                ArchiveSecondaryActionButton("Info", R.drawable.info, Modifier.weight(1f), archiveInfo != null) { showArchiveDetails = true }
+                ArchiveCompactActionButton(
+                    label = "Verificar",
+                    icon = R.drawable.check,
+                    modifier = Modifier.weight(1f),
+                    enabled = archiveInfo != null,
+                ) { verifyArchive() }
+                ArchiveCompactActionButton(
+                    label = "Info",
+                    icon = R.drawable.info,
+                    modifier = Modifier.weight(1f),
+                    enabled = archiveInfo != null,
+                ) { showArchiveDetails = true }
             }
         }
 
@@ -1313,61 +1323,40 @@ private fun ArchiveMetric(label: String, value: String, modifier: Modifier = Mod
 }
 
 @Composable
-private fun ArchivePrimaryActionButton(
+private fun ArchiveCompactActionButton(
     label: String,
     icon: Int,
     modifier: Modifier = Modifier,
+    primary: Boolean = false,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
+    val shape = RoundedCornerShape(5.dp)
+    val background = when {
+        !enabled -> Color(0xFFF0F0F0)
+        primary -> Color(0xFFDCEBFC)
+        else -> Color.White
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
         modifier = modifier
-            .height(38.dp)
-            .background(if (enabled) Color(0xFFDCEBFC) else Color(0xFFF0F0F0), RoundedCornerShape(5.dp))
-            .border(1.dp, if (enabled) XpBlue else Color(0xFFD1D6DC), RoundedCornerShape(5.dp))
+            .height(49.dp)
+            .background(background, shape)
+            .border(1.dp, if (primary && enabled) XpBlue else XpControlBorder, shape)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 9.dp),
+            .padding(horizontal = 2.dp, vertical = 4.dp),
     ) {
         CachedResourceIcon(icon, label, modifier = Modifier.size(17.dp), contentScale = ContentScale.Fit)
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.height(3.dp))
         Text(
-            label,
-            fontSize = 11.sp,
-            color = if (enabled) Color(0xFF173A67) else Color(0xFF999999),
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun ArchiveSecondaryActionButton(
-    label: String,
-    icon: Int,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-        modifier = modifier
-            .height(33.dp)
-            .background(if (enabled) Color.White else Color(0xFFF0F0F0), RoundedCornerShape(5.dp))
-            .border(1.dp, XpControlBorder, RoundedCornerShape(5.dp))
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 8.dp),
-    ) {
-        CachedResourceIcon(icon, label, modifier = Modifier.size(14.dp), contentScale = ContentScale.Fit)
-        Spacer(Modifier.width(5.dp))
-        Text(
-            label,
-            fontSize = 10.5.sp,
-            color = if (enabled) Color(0xFF303030) else Color(0xFF999999),
+            text = label,
+            fontSize = 10.sp,
+            color = if (!enabled) Color(0xFF999999) else if (primary) Color(0xFF173A67) else Color(0xFF303030),
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }

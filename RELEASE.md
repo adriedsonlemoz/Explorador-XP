@@ -1,14 +1,14 @@
-# Explorador XP 0.1.0-alpha.126
+# Explorador XP 0.1.0-alpha.127
 
-**Versão:** `0.1.0-alpha.126`  
-**versionCode:** `126`
+**Versão:** `0.1.0-alpha.127`  
+**versionCode:** `127`
 
-## Salvar cópia de arquivo ZIP
+## ZIP e editor de código
 
-- Botão **Salvar ZIP** na visualização de arquivos compactados, inclusive ZIPs recebidos de outros aplicativos.
-- O seletor de documentos do Android permite escolher a pasta e o nome da cópia, inclusive em provedores compatíveis.
-- Cópia binária em streaming sem descompactar ou modificar conteúdo, com conferência de tamanho e limpeza do destino incompleto quando possível.
-- Ações reorganizadas em duas linhas: Extrair / Salvar ZIP e Verificar / Info.
-- Corrigida a referência de versionCode no topo do README que estava em 124.
+- ZIP: as quatro ações **Extrair / Salvar / Verificar / Info** cabem na mesma linha, com ícone acima do título.
+- Editor: cinco atalhos no rodapé **Selec. / Copiar / Colar / Cortar / Tudo**, acima da barra de posição do cursor.
+- **Selec.** destaca a palavra de código no cursor; **Tudo** seleciona todo o trecho carregado (no modo de arquivos grandes, não o arquivo inteiro).
+- Ações de copiar/recortar exigem seleção, enquanto colar/recortar respeitam modo somente leitura.
+- Preservados salvamento, desfazer/refazer, acesso a ZIPs externos e fluxo SAF.
 
-**Validação:** testes da rotina de cópia e inspeção estrutural; compilação Android e teste físico ainda pendentes.
+**Validação:** inspeção estrutural e testes locais; Android/Gradle completo e testes no aparelho ainda pendentes.

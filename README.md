@@ -1,4 +1,4 @@
-> **Versão atual:** 0.1.0-alpha.126 (`versionCode 126`). Botão Salvar ZIP com seleção do destino pelo Android, sem extração nem recompressão; mantém os recursos anteriores. Build Android completo e testes em aparelho ainda pendentes.
+> **Versão atual:** 0.1.0-alpha.127 (`versionCode 127`). ZIP com quatro botões em uma linha; editor com ações rápidas de seleção e área de transferência no rodapé. Compilação Android e testes em aparelho pendentes.
 
 **alpha.122 (novidades):** abas Categorias/Pastas/Arquivos no armazenamento, soma verificada ou parcial dos aplicativos quando o Android permite, Maiores/Menores/Instalados/Atualizados nos filtros rápidos, OBB como dados de jogos, filtro por tipo nos maiores arquivos e abertura de artefatos ZIP sem extensão recebidos pelo Abrir com.
 
